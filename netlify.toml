@@ -9,6 +9,11 @@
   [headers.values]
     Cache-Control = "no-cache, must-revalidate"
 
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
 [[edge_functions]]
   path     = "/api/anthropic-proxy"
   function = "anthropic-proxy"
