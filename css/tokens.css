@@ -1,0 +1,83 @@
+/* ==========================================================================
+   TEAMTOWERS SOS V11 — DESIGN TOKENS
+   Única fuente de verdad visual.
+   ========================================================================== */
+
+:root {
+    /* ── PALETA BASE ────────────────────────────────────────── */
+    --bg-dark:       #050507;
+    --bg-panel:      #0a0a0f;
+    --bg-elevated:   #111118;
+
+    /* ── ACENTOS ────────────────────────────────────────────── */
+    --accent-indigo:  #6366f1;
+    --accent-blue:    #00b0ff;
+    --accent-purple:  #e040fb;
+    --accent-green:   #00e676;
+    --accent-orange:  #ff9100;
+    --accent-red:     #ff5252;
+    --accent-claude:  #d4a853;
+
+    /* ── SUPERFICIES GLASS ──────────────────────────────────── */
+    --glass-border:  rgba(255,255,255,0.07);
+    --glass-surface: rgba(255,255,255,0.02);
+    --glass-hover:   rgba(255,255,255,0.05);
+    --shadow-lux:    0 20px 50px rgba(0,0,0,0.6);
+    --shadow-indigo: 0 8px 30px rgba(99,102,241,0.25);
+
+    /* ── BLUR ───────────────────────────────────────────────── */
+    --blur-sm: blur(8px);
+    --blur-md: blur(16px);
+
+    /* ── TIPOGRAFÍA ─────────────────────────────────────────── */
+    --font-base: 'Space Grotesk', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    --text-main:      #ffffff;
+    --text-secondary: #b0b0ba;
+    --text-muted:     #5c5c70;
+
+    --text-xs:   0.72rem;
+    --text-sm:   0.875rem;
+    --text-base: 1rem;
+    --text-lg:   1.25rem;
+    --text-xl:   1.5rem;
+    --text-2xl:  2rem;
+    --text-3xl:  3rem;
+
+    /* ── ESPACIADO (4px base) ───────────────────────────────── */
+    --space-1:  0.25rem;
+    --space-2:  0.5rem;
+    --space-3:  0.75rem;
+    --space-4:  1rem;
+    --space-6:  1.5rem;
+    --space-8:  2rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+
+    /* ── RADIOS ─────────────────────────────────────────────── */
+    --radius-sm:   0.5rem;
+    --radius-md:   0.75rem;
+    --radius-lg:   1rem;
+    --radius-xl:   1.5rem;
+    --radius-full: 9999px;
+
+    /* ── DIMENSIONES ────────────────────────────────────────── */
+    --sidebar-width:     260px;
+    --sidebar-collapsed: 72px;
+    --topbar-height:     64px;
+
+    /* ── TRANSICIONES ───────────────────────────────────────── */
+    --ease-out:    cubic-bezier(0.2,0.8,0.2,1);
+    --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+    --dur-fast:  150ms;
+    --dur-base:  250ms;
+    --dur-slow:  400ms;
+
+    /* ── Z-INDEX ────────────────────────────────────────────── */
+    --z-dropdown: 100;
+    --z-sidebar:  200;
+    --z-modal:    1000;
+    --z-toast:    2000;
+    --z-boot:     99999;
+}
