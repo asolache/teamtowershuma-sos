@@ -580,6 +580,7 @@ export default class DashboardView {
         };
 
         let html = '';
+        var self = this;
         Object.keys(groups).sort().forEach(function(sectorId) {
             const sProjects = groups[sectorId];
             const label     = sectorName(sectorId);
@@ -595,13 +596,13 @@ export default class DashboardView {
                 const score  = projectHealth(p);
                 const hColor = score !== null ? healthColor(score) : 'var(--text-muted)';
                 const hLabel = score !== null ? score + '' : '—';
-                const rel    = this._relativeDate(p.updatedAt || p.createdAt);
+                const rel    = self._relativeDate(p.updatedAt || p.createdAt);
 
                 // Mini preview de nodos — puntos de color por nivel
                 var nodeDots = '';
                 (p.vna_roles || []).slice(0, 12).forEach(function(r) {
-                    nodeDots += '<div class="dash-card-node-dot" style="background:' + this._levelColor(r.castell_level) + ';opacity:.7;"></div>';
-                }.bind(this));
+                    nodeDots += '<div class="dash-card-node-dot" style="background:' + self._levelColor(r.castell_level) + ';opacity:.7;"></div>';
+                });
 
                 html += '<a class="dash-card' + (isDemo ? ' dash-card-demo' : '') + '" href="/map?project=' + p.id + '" data-link>' +
                     '<div class="dash-card-top">' +
@@ -629,7 +630,7 @@ export default class DashboardView {
                         '<button class="dash-card-action-btn" data-archive="' + p.id + '">Archive</button>' +
                     '</div>' +
                 '</a>';
-            }.bind(this));
+            });
 
             // Tarjeta "Nuevo proyecto" al final de cada grupo
             html += '<div class="dash-card-new" id="dashNewInGroup">' +
