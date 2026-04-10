@@ -2,6 +2,7 @@
 sector_id: Q
 sector_name: "Educación"
 cnae: Q
+sector_name_en: "Education"
 version: "v11.1"
 tags: [educación, universidad, formación, edtech, reskilling, postgrado, escuela, colegios]
 

@@ -2,6 +2,7 @@
 sector_id: F
 sector_name: "Construcción"
 cnae: F
+sector_name_en: "Construction"
 version: "v11.1"
 tags: [construcción, edificación, obra civil, reformas, promotora, residencial, infraestructuras, proptech]
 

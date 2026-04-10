@@ -2,6 +2,7 @@
 sector_id: K
 sector_name: "Telecomunicaciones, Programación Informática y Servicios de Información"
 cnae: K
+sector_name_en: "Tech / Software / AI"
 version: "v11.1"
 tags: [tech, software, SaaS, IA, ciberseguridad, digital, plataforma, datos]
 

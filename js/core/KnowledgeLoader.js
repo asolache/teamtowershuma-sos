@@ -121,9 +121,12 @@ export class KnowledgeLoader {
         if (!path) return null;
         const parsed = await this.parseFile(path);
         if (!parsed) return null;
+        const lang2  = (typeof window !== 'undefined' && window.__lang) ? window.__lang : 'en';
+        const snEn   = parsed.frontmatter.sector_name_en || parsed.sectorName || '';
+        const snEs   = parsed.sectorName || snEn;
         return {
-            sectorId:     parsed.sectorId    || sectorId,
-            sectorName:   parsed.sectorName  || '',
+            sectorId:     parsed.sectorId || sectorId,
+            sectorName:   lang2 === 'en' ? snEn : snEs,
             roles:        parsed.roles        || [],
             transactions: parsed.transactions || [],
             patterns:     parsed.patterns     || [],
@@ -311,13 +314,19 @@ export class KnowledgeLoader {
                 if (sectors.length > 0) return sectors;
             }
         }
-        // Fallback Tier 1
+        // Fallback Tier 1 — bilingual names
+        const lang = (typeof window !== 'undefined' && window.__lang) ? window.__lang : 'en';
+        const names = {
+            en: { N: 'Consulting / Professional Services', K: 'Tech / Software / AI', Q: 'Education', F: 'Construction', R: 'Health & Social Services' },
+            es: { N: 'Consultoría / Actividades Profesionales', K: 'Tech / Software / IA', Q: 'Educación', F: 'Construcción', R: 'Salud y Servicios Sociales' },
+        };
+        const n = names[lang] || names['en'];
         return [
-            { id: 'N', file: 'sectors/N.md', name: 'Consultoría / Actividades Profesionales' },
-            { id: 'K', file: 'sectors/K.md', name: 'Tech / Software / IA' },
-            { id: 'Q', file: 'sectors/Q.md', name: 'Educación' },
-            { id: 'F', file: 'sectors/F.md', name: 'Construcción' },
-            { id: 'R', file: 'sectors/R.md', name: 'Salud y Servicios Sociales' },
+            { id: 'N', file: 'sectors/N.md', name: n.N },
+            { id: 'K', file: 'sectors/K.md', name: n.K },
+            { id: 'Q', file: 'sectors/Q.md', name: n.Q },
+            { id: 'F', file: 'sectors/F.md', name: n.F },
+            { id: 'R', file: 'sectors/R.md', name: n.R },
         ];
     }
 

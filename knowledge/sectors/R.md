@@ -2,6 +2,7 @@
 sector_id: R
 sector_name: "Actividades Sanitarias y de Servicios Sociales"
 cnae: R
+sector_name_en: "Health & Social Services"
 version: "v11.1"
 tags: [salud, sanidad, hospital, clínica, biotech, healthtech, servicios sociales, bienestar, farmacia]
 

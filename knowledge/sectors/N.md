@@ -2,6 +2,7 @@
 sector_id: N
 sector_name: "Actividades Profesionales, Científicas y Técnicas"
 cnae: N
+sector_name_en: "Consulting / Professional Services"
 version: "v11.1"
 tags: [consultoría, B2B, I+D, diseño, marketing, arquitectura, legal, auditoría, estrategia]
 

@@ -15,7 +15,7 @@ import { store }           from '../core/store.js';
 import { KB }              from '../core/kb.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { Orchestrator }     from '../core/Orchestrator.js';
-import { t, langSelectorHtml } from '../i18n.js';
+import { t, langSelectorHtml, getLang } from '../i18n.js';
 
 // ─── Constantes visuales ─────────────────────────────────────────────────────
 const COLOR_TANGIBLE   = '#00e676';   // accent-green
@@ -1822,7 +1822,7 @@ export default class ValueMapView {
 
     _openTxModal(presetFrom, tx) {
         if (this._state.roles.length < 2) {
-            alert('Necesitas al menos 2 roles para crear una transacción.');
+            alert(t('ai.roles.2min'));
             return;
         }
         const modal  = document.getElementById('modalTx');
@@ -1962,13 +1962,13 @@ export default class ValueMapView {
 
     _showLegend() {
         alert(
-            'Leyenda del mapa de valor\n\n' +
-            '─── Verde sólido = Transacción tangible (contractual, MUST)\n' +
-            '- - - Dorado punteado = Transacción intangible (informal, EXTRA)\n\n' +
-            'Colores de nivel de rol:\n' +
-            '● Azul = Base operativa (pinya)\n' +
-            '● Índigo = Núcleo de valor (tronc)\n' +
-            '● Púrpura = Cúspide estratégica (pom de dalt)'
+            t('legend.title') + '\n\n' +
+            t('legend.tangible') + '\n' +
+            t('legend.intangible') + '\n\n' +
+            t('legend.levels') + '\n' +
+            t('legend.pinya') + '\n' +
+            t('legend.tronc') + '\n' +
+            t('legend.pom')
         );
     }
 
@@ -2000,7 +2000,7 @@ export default class ValueMapView {
         const status = document.getElementById('vmapAIStatus');
         if (status) status.textContent = '';
         const btn = document.getElementById('vmapAIGenerate');
-        if (btn) { btn.disabled = false; document.getElementById('vmapAIBtnText').textContent = '✦ Generar mapa de valor'; }
+        if (btn) { btn.disabled = false; document.getElementById('vmapAIBtnText').textContent = t('ai.generate'); }
         const spinner = document.getElementById('vmapAISpinner');
         if (spinner) spinner.style.display = 'none';
         this._aiProposals = { roles: [], transactions: [] };
@@ -2009,7 +2009,7 @@ export default class ValueMapView {
     async _runAISuggestion() {
         const apiKey = await Orchestrator.getApiKey('anthropic');
         if (!apiKey) {
-            document.getElementById('vmapAIStatus').textContent = '⚠ Sin API Key — configura en Settings';
+            document.getElementById('vmapAIStatus').textContent = t('ai.no.key');
             document.getElementById('vmapAIStatus').style.color = 'var(--accent-red)';
             setTimeout(() => { window.navigateTo('/settings'); }, 1800);
             return;
@@ -2017,7 +2017,7 @@ export default class ValueMapView {
 
         const freeText   = (document.getElementById('vmapAIPromptText').value || '').trim();
         const hasRoles   = this._state.roles.length > 0;
-        const modeLabel  = hasRoles ? 'Completando el mapa…' : 'Generando mapa de valor…';
+        const modeLabel  = hasRoles ? t('ai.completing') : t('ai.generating');
 
         // Estado visual: cargando
         const btn     = document.getElementById('vmapAIGenerate');
@@ -2027,7 +2027,7 @@ export default class ValueMapView {
         spinner.style.display = 'block';
         document.getElementById('vmapAIBtnText').textContent = modeLabel;
         status.style.color   = 'var(--text-muted)';
-        status.textContent   = 'Enriqueciendo contexto con knowledge base…';
+        status.textContent   = t('ai.enriching');
 
         try {
             // Context-First: enriquecer con sector + roles existentes
@@ -2038,22 +2038,25 @@ export default class ValueMapView {
                 existingMap: hasRoles ? { roles: this._state.roles, transactions: this._state.transactions } : null,
                 includeVna:  true,
                 taskContext: hasRoles
-                    ? 'Sugiere roles y transacciones que FALTAN en el mapa. No repitas los existentes. Sé conciso.'
-                    : 'Genera un mapa VNA completo para la organización descrita. Mínimo 6 roles, mínimo 2 por nivel.',
+                    ? (getLang() === 'en' ? 'Suggest roles and transactions MISSING from the map. Do not repeat existing ones. Be concise.' : 'Sugiere roles y transacciones que FALTAN en el mapa. No repitas los existentes. Sé conciso.')
+                    : (getLang() === 'en' ? 'Generate a complete VNA map for the described organization. Minimum 6 roles, minimum 2 per level.' : 'Genera un mapa VNA completo para la organización descrita. Mínimo 6 roles, mínimo 2 por nivel.'),
             });
 
-            status.textContent = 'Llamando a Anthropic…';
+            status.textContent = t('ai.calling');
 
-            const systemPrompt = `Eres un experto en Value Network Analysis (metodología Verna Allee).
-Genera un mapa VNA en formato JSON estricto.
+            const isEn = getLang() === 'en';
+            const systemPrompt = (isEn
+                ? 'You are an expert in Value Network Analysis (Verna Allee methodology). Generate a VNA map in strict JSON format.'
+                : 'Eres un experto en Value Network Analysis (metodología Verna Allee). Genera un mapa VNA en formato JSON estricto.') + `
 
-REGLAS:
-- Roles = actividades del flujo de valor, NO puestos de trabajo
-- Responde SOLO con JSON válido, sin texto adicional ni bloques markdown
-- fmv_usd_h siempre null
-- open_question siempre null
-- ids en kebab-case únicos
-${hasRoles ? '- NO repitas roles ya existentes: ' + this._state.roles.map(function(r){ return r.id; }).join(', ') : ''}
+RULES:
+- Roles = value flow activities, NOT job titles
+- Respond ONLY with valid JSON, no markdown blocks, no extra text
+- fmv_usd_h always null
+- open_question always null
+- ids in kebab-case, unique
+- ALL role names, descriptions, deliverables and health_hints MUST be written in ${isEn ? 'English' : 'Spanish'}
+${hasRoles ? '- DO NOT repeat existing roles: ' + this._state.roles.map(function(r){ return r.id; }).join(', ') : ''}
 
 CONTEXTO:
 ${ctxResult.systemPrompt}`;
@@ -2062,7 +2065,7 @@ ${ctxResult.systemPrompt}`;
                 ? 'Organización: ' + freeText
                 : (hasRoles ? 'Completa el mapa con los roles y transacciones que faltan.' : 'Genera un mapa VNA completo para el sector indicado en el contexto.');
 
-            status.textContent = 'Procesando respuesta…';
+            status.textContent = t('ai.processing');
 
             const result = await Orchestrator.callLLM({
                 preferredEngine: 'anthropic',
@@ -2077,7 +2080,7 @@ ${ctxResult.systemPrompt}`;
             const txs   = Array.isArray(data.transactions) ? data.transactions : [];
 
             if (roles.length === 0 && txs.length === 0) {
-                status.textContent = '⚠ La IA no devolvió propuestas. Intenta con más contexto.';
+                status.textContent = t('ai.no.results');
                 status.style.color = 'var(--accent-orange)';
                 btn.disabled = false;
                 spinner.style.display = 'none';
