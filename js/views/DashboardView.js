@@ -300,6 +300,111 @@ export default class DashboardView {
             .dash-modal-confirm { background: var(--accent-indigo); border: none; color: white; padding: 9px 20px; border-radius: var(--radius-md); cursor: pointer; font-weight: 900; font-size: var(--text-sm); font-family: var(--font-base); }
             .dash-modal-confirm:hover { filter: brightness(1.1); }
 
+            
+            /* ── Hero v2 ── */
+            .dash-hero-bg {
+                position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0;
+            }
+            .dash-hero-bg svg { width: 100%; height: 100%; opacity: .04; }
+            .dash-hero-inner { position: relative; z-index: 1; }
+            .dash-hero { position: relative; margin-bottom: 32px; padding: 28px 0 24px;
+                border-bottom: 1px solid var(--glass-border); animation: fadeIn 0.5s var(--ease-out); }
+            .dash-hero h1 { font-size: 2rem; font-weight: 900; color: white;
+                letter-spacing: -0.5px; margin-bottom: 4px; line-height: 1.2; }
+            .dash-hero h1 span { color: var(--accent-indigo); }
+            .dash-hero-sub { font-size: var(--text-sm); color: var(--text-muted);
+                font-family: var(--font-mono); margin-top: 6px; }
+            .dash-hero-tagline { font-size: var(--text-xs); color: var(--text-muted);
+                font-family: var(--font-mono); margin-top: 4px; opacity: .7; }
+
+            /* ── Stats v2 ── */
+            .dash-stat { background: rgba(25,25,32,0.7); border: 1px solid var(--glass-border);
+                border-radius: var(--radius-md); padding: 12px 18px; min-width: 120px;
+                position: relative; overflow: hidden; }
+            .dash-stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+                letter-spacing: 0.1em; font-family: var(--font-mono); margin-bottom: 4px; }
+            .dash-stat-value { font-size: var(--text-xl); font-weight: 900; color: white;
+                font-family: var(--font-mono); }
+            .dash-stat-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+                background: var(--glass-border); }
+            .dash-stat-bar-fill { height: 100%; border-radius: 0 2px 2px 0; transition: width .6s ease; }
+
+            /* ── Card v2 ── */
+            .dash-card-demo { border-color: rgba(201,168,83,0.4) !important; }
+            .dash-card-demo:hover { border-color: rgba(201,168,83,0.8) !important;
+                box-shadow: 0 8px 30px rgba(201,168,83,0.15) !important; }
+            .dash-card-demo-badge {
+                font-size: 8px; font-family: var(--font-mono); font-weight: 700;
+                letter-spacing: .1em; text-transform: uppercase;
+                background: rgba(201,168,83,0.15); color: var(--accent-gold);
+                padding: 2px 6px; border-radius: 2px; flex-shrink: 0;
+            }
+            .dash-card-health-bar {
+                height: 3px; border-radius: 2px; margin-top: 2px;
+                background: var(--glass-border); overflow: hidden;
+            }
+            .dash-card-health-fill { height: 100%; border-radius: 2px; transition: width .5s ease; }
+            .dash-card-nodes {
+                display: flex; gap: 3px; flex-wrap: wrap; margin-top: 4px;
+            }
+            .dash-card-node-dot {
+                width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+            }
+            .dash-card-date-rel {
+                font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);
+                font-style: italic;
+            }
+
+            /* ── Empty state v2 ── */
+            .dash-empty-v2 {
+                display: flex; flex-direction: column; align-items: center;
+                justify-content: center; min-height: 340px; gap: 16px;
+                animation: fadeIn .5s var(--ease-out);
+            }
+            .dash-empty-icon { font-size: 2.5rem; opacity: .5; }
+            .dash-empty-title { font-size: var(--text-lg); font-weight: 900; color: white;
+                text-align: center; }
+            .dash-empty-sub { font-size: var(--text-xs); color: var(--text-muted);
+                font-family: var(--font-mono); text-align: center; }
+            .dash-empty-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+                margin-top: 8px; }
+            .dash-empty-cta {
+                background: var(--accent-indigo); border: none; color: white;
+                padding: 9px 20px; border-radius: var(--radius-md); cursor: pointer;
+                font-weight: 900; font-size: var(--text-xs); font-family: var(--font-base);
+                transition: filter .2s; text-decoration: none; display: inline-block;
+            }
+            .dash-empty-cta:hover { filter: brightness(1.12); }
+            .dash-empty-cta-ghost {
+                background: transparent; border: 1px solid rgba(201,168,83,0.4);
+                color: var(--accent-gold); padding: 9px 20px; border-radius: var(--radius-md);
+                cursor: pointer; font-weight: 700; font-size: var(--text-xs);
+                font-family: var(--font-base); transition: all .2s; text-decoration: none;
+                display: inline-block;
+            }
+            .dash-empty-cta-ghost:hover { background: rgba(201,168,83,0.08); }
+
+            /* ── KB mini-map ── */
+            .dash-kb-mini-map {
+                margin: 10px 0 12px; background: rgba(5,5,7,0.8);
+                border-radius: var(--radius-sm); padding: 8px; overflow: hidden;
+            }
+            .dash-kb-mini-map svg { width: 100%; height: 80px; }
+
+            /* ── Topbar v2 ── */
+            .dash-topbar-version {
+                font-size: 9px; color: var(--text-muted); font-family: var(--font-mono);
+                letter-spacing: .08em; text-transform: uppercase;
+            }
+            .dash-topbar-sep {
+                width: 1px; height: 16px; background: var(--glass-border); flex-shrink: 0;
+            }
+            .dash-topbar-web {
+                font-size: var(--text-xs); color: var(--text-muted); text-decoration: none;
+                font-family: var(--font-mono); transition: color .15s;
+            }
+            .dash-topbar-web:hover { color: var(--accent-gold); }
+
             @media (max-width: 768px) {
                 .dash-content { padding: 16px; }
                 .dash-main.kb-open { grid-template-columns: 1fr; }
@@ -311,7 +416,10 @@ export default class DashboardView {
 
             <!-- TOPBAR -->
             <div class="dash-topbar">
-                <a href="/" data-link class="dash-logo">🗼 Team<span>Towers</span> <span style="color:var(--text-muted);font-weight:400;font-size:10px;font-family:var(--font-mono);">SOS V11</span></a>
+                <a href="/" data-link class="dash-logo">🗼 Team<span>Towers</span></a>
+                <div class="dash-topbar-sep"></div>
+                <span class="dash-topbar-version">SOS V11</span>
+                <a href="https://teamtowershuma.com" target="_blank" class="dash-topbar-web">teamtowershuma.com ↗</a>
                 <div class="dash-topbar-right">
                     <button class="dash-btn dash-btn-kb" id="dashBtnKB">📚 Knowledge Base</button>
                     <button class="dash-btn dash-btn-primary" id="dashBtnNew">＋ New Project</button>
@@ -326,8 +434,26 @@ export default class DashboardView {
                 <!-- CONTENT -->
                 <div class="dash-content" id="dashContent">
                     <div class="dash-hero">
-                        <h1>Value <span>Map</span> Dashboard</h1>
-                        <div class="dash-hero-sub" id="dashHeroSub">Loading projects…</div>
+                        <div class="dash-hero-bg">
+                            <svg viewBox="0 0 800 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                                <line x1="100" y1="60" x2="400" y2="60" stroke="rgba(99,102,241,1)" stroke-width="1"/>
+                                <line x1="400" y1="60" x2="700" y2="30" stroke="rgba(99,102,241,1)" stroke-width="1"/>
+                                <line x1="400" y1="60" x2="600" y2="90" stroke="rgba(201,168,83,1)" stroke-width="1" stroke-dasharray="4 5"/>
+                                <line x1="100" y1="60" x2="250" y2="20" stroke="rgba(201,168,83,1)" stroke-width="1" stroke-dasharray="4 5"/>
+                                <circle cx="100" cy="60" r="5" fill="rgba(99,102,241,0.6)"/>
+                                <circle cx="400" cy="60" r="7" fill="rgba(99,102,241,0.8)"/>
+                                <circle cx="700" cy="30" r="5" fill="rgba(99,102,241,0.5)"/>
+                                <circle cx="600" cy="90" r="4" fill="rgba(201,168,83,0.6)"/>
+                                <circle cx="250" cy="20" r="4" fill="rgba(201,168,83,0.5)"/>
+                                <circle r="2.5" fill="rgba(99,102,241,0.8)"><animateMotion dur="3s" repeatCount="indefinite" path="M100,60 L400,60"/></circle>
+                                <circle r="2" fill="rgba(201,168,83,0.7)"><animateMotion dur="4s" repeatCount="indefinite" begin="1s" path="M400,60 L600,90"/></circle>
+                            </svg>
+                        </div>
+                        <div class="dash-hero-inner">
+                            <h1>Value <span>Network</span> Dashboard</h1>
+                            <div class="dash-hero-sub" id="dashHeroSub">Loading projects…</div>
+                            <div class="dash-hero-tagline">Every organization has two structures. This maps the real one.</div>
+                        </div>
                     </div>
                     <div class="dash-stats" id="dashStats"></div>
                     <div id="dashProjectList"></div>
@@ -381,18 +507,41 @@ export default class DashboardView {
         await this._loadKBSectors();
     }
 
-    // ── Render projects ───────────────────────────────────────────────────────
+    // ── Render projects v2 ───────────────────────────────────────────────────
+    _relativeDate(ts) {
+        if (!ts) return '';
+        const diff = Date.now() - ts;
+        const mins = Math.floor(diff / 60000);
+        if (mins < 60) return mins <= 1 ? 'just now' : mins + 'm ago';
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return hrs === 1 ? '1h ago' : hrs + 'h ago';
+        const days = Math.floor(hrs / 24);
+        if (days < 7) return days === 1 ? 'yesterday' : days + 'd ago';
+        return formatDate(ts);
+    }
+
+    _levelColor(level) {
+        if (level === 'pinya')       return '#00b0ff';
+        if (level === 'pom_de_dalt') return '#e040fb';
+        return '#6366f1';
+    }
+
     async _renderProjects() {
         const state    = store.getState();
         const projects = (state.projects || []).filter(function(p) { return !p.isArchived; });
 
-        // Stats
+        // Stats v2 con health global y barras
         const totalRoles = projects.reduce(function(acc, p) { return acc + (p.vna_roles || []).length; }, 0);
         const totalTxs   = projects.reduce(function(acc, p) { return acc + (p.vna_transactions || []).length; }, 0);
+        const healthScores = projects.map(function(p) { return projectHealth(p); }).filter(function(s) { return s !== null; });
+        const avgHealth  = healthScores.length > 0 ? Math.round(healthScores.reduce(function(a, b) { return a + b; }, 0) / healthScores.length) : null;
+        const hColor     = avgHealth !== null ? healthColor(avgHealth) : 'var(--text-muted)';
+
         document.getElementById('dashStats').innerHTML =
-            '<div class="dash-stat"><div class="dash-stat-label">Projects</div><div class="dash-stat-value">' + projects.length + '</div></div>' +
-            '<div class="dash-stat"><div class="dash-stat-label">Total roles</div><div class="dash-stat-value">' + totalRoles + '</div></div>' +
-            '<div class="dash-stat"><div class="dash-stat-label">Transactions</div><div class="dash-stat-value">' + totalTxs + '</div></div>';
+            '<div class="dash-stat"><div class="dash-stat-label">Projects</div><div class="dash-stat-value">' + projects.length + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:100%;background:var(--accent-indigo);"></div></div></div>' +
+            '<div class="dash-stat"><div class="dash-stat-label">Total roles</div><div class="dash-stat-value">' + totalRoles + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:' + Math.min(totalRoles * 4, 100) + '%;background:var(--accent-blue);"></div></div></div>' +
+            '<div class="dash-stat"><div class="dash-stat-label">Transactions</div><div class="dash-stat-value">' + totalTxs + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:' + Math.min(totalTxs * 2, 100) + '%;background:var(--accent-green);"></div></div></div>' +
+            (avgHealth !== null ? '<div class="dash-stat"><div class="dash-stat-label">Ecosystem health</div><div class="dash-stat-value" style="color:' + hColor + '">' + avgHealth + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:' + avgHealth + '%;background:' + hColor + ';"></div></div></div>' : '');
 
         document.getElementById('dashHeroSub').textContent =
             projects.length === 0
@@ -401,10 +550,18 @@ export default class DashboardView {
 
         if (projects.length === 0) {
             document.getElementById('dashProjectList').innerHTML =
-                '<div class="dash-empty">' +
+                '<div class="dash-empty-v2">' +
                 '<div class="dash-empty-icon">🗺</div>' +
-                '<div class="dash-empty-text">No value maps yet.<br>Click "+ New Project" to start.</div>' +
-                '</div>';
+                '<div class="dash-empty-title">No value maps yet</div>' +
+                '<div class="dash-empty-sub">Start by creating your first project or exploring the demo</div>' +
+                '<div class="dash-empty-actions">' +
+                '<button class="dash-empty-cta" id="emptyBtnNew">＋ New project</button>' +
+                '<a class="dash-empty-cta-ghost" href="/map?project=proj-colla-demo-v11" data-link>✦ View demo map →</a>' +
+                '</div></div>';
+            document.getElementById('emptyBtnNew')?.addEventListener('click', function() {
+                document.getElementById('dashModalNew').classList.add('open');
+                document.getElementById('newProjName').focus();
+            });
             return;
         }
 
@@ -432,30 +589,47 @@ export default class DashboardView {
                 '<div class="dash-cards">';
 
             sProjects.forEach(function(p) {
+                const isDemo = p.id === 'proj-colla-demo-v11';
                 const roles  = (p.vna_roles        || []).length;
                 const txs    = (p.vna_transactions || []).length;
                 const score  = projectHealth(p);
                 const hColor = score !== null ? healthColor(score) : 'var(--text-muted)';
-                const hLabel = score !== null ? score + ' health' : 'empty';
+                const hLabel = score !== null ? score + '' : '—';
+                const rel    = this._relativeDate(p.updatedAt || p.createdAt);
 
-                html += '<a class="dash-card" href="/map?project=' + p.id + '" data-link>' +
+                // Mini preview de nodos — puntos de color por nivel
+                var nodeDots = '';
+                (p.vna_roles || []).slice(0, 12).forEach(function(r) {
+                    nodeDots += '<div class="dash-card-node-dot" style="background:' + this._levelColor(r.castell_level) + ';opacity:.7;"></div>';
+                }.bind(this));
+
+                html += '<a class="dash-card' + (isDemo ? ' dash-card-demo' : '') + '" href="/map?project=' + p.id + '" data-link>' +
                     '<div class="dash-card-top">' +
                         '<div class="dash-card-name">' + (p.nombre || p.name || 'Unnamed') + '</div>' +
-                        (sectorId !== 'general' ? '<div class="dash-card-sector-badge">' + sectorId + '</div>' : '') +
+                        '<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">' +
+                            (isDemo ? '<div class="dash-card-demo-badge">DEMO</div>' : '') +
+                            (sectorId !== 'general' ? '<div class="dash-card-sector-badge">' + sectorId + '</div>' : '') +
+                        '</div>' +
                     '</div>' +
+                    (nodeDots ? '<div class="dash-card-nodes">' + nodeDots + '</div>' : '') +
                     '<div class="dash-card-meta">' +
-                        '<span>⬤ ' + roles + ' roles</span>' +
-                        '<span>→ ' + txs + ' transactions</span>' +
+                        '<span>' + roles + ' roles</span>' +
+                        '<span>' + txs + ' transactions</span>' +
+                    '</div>' +
+                    '<div style="margin-top:2px;">' +
+                        '<div class="dash-card-health-bar">' +
+                            '<div class="dash-card-health-fill" style="width:' + (score || 0) + '%;background:' + hColor + ';"></div>' +
+                        '</div>' +
                     '</div>' +
                     '<div class="dash-card-footer">' +
-                        '<div class="dash-card-date">' + formatDate(p.updatedAt || p.createdAt) + '</div>' +
+                        '<div class="dash-card-date-rel">' + rel + '</div>' +
                         '<div class="dash-card-health" style="background:' + hColor + '18;color:' + hColor + ';">' + hLabel + '</div>' +
                     '</div>' +
                     '<div class="dash-card-actions">' +
                         '<button class="dash-card-action-btn" data-archive="' + p.id + '">Archive</button>' +
                     '</div>' +
                 '</a>';
-            });
+            }.bind(this));
 
             // Tarjeta "Nuevo proyecto" al final de cada grupo
             html += '<div class="dash-card-new" id="dashNewInGroup">' +
@@ -612,6 +786,42 @@ export default class DashboardView {
             html += '<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:6px;">+' + (seed.transactions.length - 6) + ' more transactions</div>';
         }
 
-        detail.innerHTML = html;
+        detail.innerHTML = this._generateMiniMap(seed.roles, seed.transactions) + html;
+    }
+
+    // ── Mini-mapa SVG generativo para el KB panel ─────────────────────────────
+    _generateMiniMap(roles, txs) {
+        if (!roles || roles.length === 0) return '';
+        const W = 320, H = 80;
+        const count   = Math.min(roles.length, 8);
+        const spacing = W / (count + 1);
+        const levelColors = { pinya: '#00b0ff', tronc: '#6366f1', pom_de_dalt: '#e040fb' };
+
+        // Posicionar nodos en fila con altura variable por nivel
+        var nodes = roles.slice(0, count).map(function(r, i) {
+            var y = r.castell_level === 'pom_de_dalt' ? 20 : r.castell_level === 'tronc' ? 40 : 60;
+            return { x: spacing * (i + 1), y: y, color: levelColors[r.castell_level] || '#6366f1', id: r.id };
+        });
+
+        var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
+
+        // Aristas
+        var drawn = 0;
+        txs.slice(0, 10).forEach(function(tx) {
+            var from = nodes.find(function(n) { return n.id === tx.from; });
+            var to   = nodes.find(function(n) { return n.id === tx.to; });
+            if (!from || !to) return;
+            var color = tx.type === 'intangible' ? '#c9a84c' : '#4ade80';
+            var dash  = tx.type === 'intangible' ? ' stroke-dasharray="3,3"' : '';
+            svg += '<line x1="' + from.x + '" y1="' + from.y + '" x2="' + to.x + '" y2="' + to.y + '" stroke="' + color + '" stroke-width="1" stroke-opacity=".5"' + dash + '/>';
+        });
+
+        // Nodos
+        nodes.forEach(function(n) {
+            svg += '<circle cx="' + n.x + '" cy="' + n.y + '" r="5" fill="rgba(10,10,14,0.9)" stroke="' + n.color + '" stroke-width="1.5" stroke-opacity=".7"/>';
+        });
+
+        svg += '</svg>';
+        return '<div class="dash-kb-mini-map">' + svg + '</div>';
     }
 }
