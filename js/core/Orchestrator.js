@@ -303,3 +303,44 @@ class OrchestratorCore {
 }
 
 export const Orchestrator = new OrchestratorCore();
+
+// ── Extensión V11: método designVnaMap con contexto rico ─────────
+// Se añade al prototipo para no tocar el singleton ya exportado
+OrchestratorCore.prototype.designVnaMap = async function({ projectId, description, sector }) {
+    const { KnowledgeLoader } = await import('./KnowledgeLoader.js');
+    const { systemPrompt: context } = await KnowledgeLoader.buildContext({
+        sector,
+        freeText:    description,
+        includeVision: false
+    });
+
+    const basePrompt = `Eres @agent_genesis_architect, experto en Value Network Analysis (VNA) según Verna Allee.
+Genera un mapa de valor completo y de alta calidad usando tu conocimiento interno y el contexto dado.
+NO hagas preguntas. Infiere todo lo que puedas. Usa tus tokens para razonar y construir.
+
+REGLAS:
+- Entre 5 y 10 roles. Cada rol con al menos 2 intercambios (entrada + salida).
+- Incluir siempre flujos intangibles (confianza, conocimiento, reputación).
+- health_score = reciprocidad de intercambios × diversidad de roles.
+
+DEVUELVE SOLO JSON-LD:
+{
+  "@context": "https://teamtowers.io/sos/v11/vna",
+  "@type": "VnaNetwork",
+  "id": "vna-${projectId}",
+  "mission": "...",
+  "nodes": [{ "id", "label", "role", "tier", "fmv", "levelId" }],
+  "exchanges": [{ "id", "from", "to", "type", "category", "label", "automatable" }],
+  "meta": { "health_score": 0.0, "reasoning": "..." }
+}`;
+
+    const enrichedPrompt = context ? `${basePrompt}\n\n${context}` : basePrompt;
+
+    return await this.callLLM({
+        preferredEngine: 'anthropic',
+        systemPrompt:    enrichedPrompt,
+        userPrompt:      `DESCRIPCIÓN DEL PROYECTO: ${description}\nSECTOR: ${sector || 'detectar automáticamente'}`,
+        responseFormat:  'json_object',
+        temperature:     0.3
+    });
+};
