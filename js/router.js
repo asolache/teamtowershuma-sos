@@ -2,8 +2,8 @@
 import { store } from './core/store.js';
 
 const ROUTES = [
-    { path: '/',          view: () => import('./views/HomeView.js')     },
-    { path: '/dashboard', view: () => import('./views/HomeView.js')     },
+    { path: '/',          view: () => import('./views/DashboardView.js') },
+    { path: '/dashboard', view: () => import('./views/DashboardView.js') },
     { path: '/team',      view: () => import('./views/HomeView.js')     },
     { path: '/paper',     view: () => import('./views/HomeView.js')     },
     { path: '/lms',       view: () => import('./views/HomeView.js')     },

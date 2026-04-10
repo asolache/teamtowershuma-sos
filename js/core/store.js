@@ -1,6 +1,8 @@
 // TEAMTOWERS SOS V11 — STORE.JS · Redux Inmutable
 
-import { KB } from './kb.js';
+import { KB }           from './kb.js';
+import { injectSeeds }  from './skill-seeds.js';
+import { initLang }     from '../i18n.js';
 
 const initialState = {
     config: {
@@ -65,6 +67,17 @@ class Store {
         } catch (err) {
             console.warn('[Store V11] Init fallback:', err.message);
         }
+
+        // ─── Inyectar semillas del swarm (idempotente por version) ────
+        try { await injectSeeds(); } catch (e) { console.warn('[Store V11] Seeds fallback:', e.message); }
+
+        // ─── Inicializar idioma desde KB ──────────────────────────────────
+        try { await initLang(); } catch (_) { window.__lang = 'en'; }
+
+        // ─── Exponer setLang en window para el selector HTML ──────────────
+        const { setLang } = await import('../i18n.js');
+        window.__setLang = setLang;
+
         this.isInitialized = true;
         this.state.lastUpdated = Date.now();
     }

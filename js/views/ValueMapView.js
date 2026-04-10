@@ -15,6 +15,7 @@ import { store }           from '../core/store.js';
 import { KB }              from '../core/kb.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { Orchestrator }     from '../core/Orchestrator.js';
+import { t, langSelectorHtml } from '../i18n.js';
 
 // ─── Constantes visuales ─────────────────────────────────────────────────────
 const COLOR_TANGIBLE   = '#00e676';   // accent-green
@@ -25,10 +26,11 @@ const COLOR_NODE_SEL   = '#e040fb';   // accent-purple (seleccionado)
 const LABEL_MAX_CHARS  = 22;
 
 // Niveles castelleros → labels UI
+// Niveles — las strings vienen de i18n para soportar EN/ES
 const CASTELL_LEVELS = {
-    pinya:       { label: 'Base operativa',    tooltip: 'pinya — el cimiento que sostiene todo' },
-    tronc:       { label: 'Núcleo de valor',   tooltip: 'tronc — donde se genera y transforma el valor' },
-    pom_de_dalt: { label: 'Cúspide estratégica', tooltip: 'pom de dalt — quien define el rumbo y recibe el resultado' },
+    pinya:       { get label() { return t('level.pinya'); }, get tooltip() { return t('level.pinya.tip'); } },
+    tronc:       { get label() { return t('level.tronc'); }, get tooltip() { return t('level.tronc.tip'); } },
+    pom_de_dalt: { get label() { return t('level.pom');   }, get tooltip() { return t('level.pom.tip');   } },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -69,13 +71,26 @@ export default class ValueMapView {
     async getHtml() {
         await store.init();
         const storeState = store.getState();
-        const projects   = (storeState.projects || []).filter(p => !p.isArchived);
-        const proj       = projects[0] || null;
+
+        // Leer projectId y sector del query param: /map?project=proj-xxx&sector=N
+        const params    = new URLSearchParams(window.location.search);
+        const paramPid  = params.get('project');
+        const paramSect = params.get('sector');
+
+        const projects  = (storeState.projects || []).filter(p => !p.isArchived);
+        const proj      = paramPid
+            ? projects.find(p => p.id === paramPid) || null
+            : projects[0] || null;
 
         if (proj) {
             this._state.projectId    = proj.id;
             this._state.roles        = JSON.parse(JSON.stringify(proj.vna_roles        || []));
             this._state.transactions = JSON.parse(JSON.stringify(proj.vna_transactions || []));
+            this._state.currentSector = proj.sector_id || paramSect || null;
+        } else if (paramPid) {
+            // Proyecto nuevo recién creado (aún no tiene datos en store)
+            this._state.projectId     = paramPid;
+            this._state.currentSector = paramSect || null;
         }
 
         // Opciones de sector para el selector
@@ -736,10 +751,11 @@ export default class ValueMapView {
                     <span class="vmap-project-name" id="vmapProjectName">Sin proyecto</span>
                 </div>
                 <div class="vmap-topbar-actions">
-                    <button class="vmap-btn" style="border-color:var(--accent-purple);color:var(--accent-purple);" id="vmapBtnAI">✦ Sugerir con IA</button>
-                    <button class="vmap-btn" id="vmapBtnFit">⊡ Ajustar</button>
-                    <button class="vmap-btn" id="vmapBtnReset">↺ Reorganizar</button>
-                    <button class="vmap-btn vmap-btn-save" id="vmapBtnSave">💾 Guardar</button>
+                    <button class="vmap-btn" style="border-color:var(--accent-purple);color:var(--accent-purple);" id="vmapBtnAI">${t('vmap.suggest')}</button>
+                    <button class="vmap-btn" id="vmapBtnFit">⊡ ${t('vmap.fit')}</button>
+                    <button class="vmap-btn" id="vmapBtnReset">↺ ${t('vmap.reset')}</button>
+                    <button class="vmap-btn vmap-btn-save" id="vmapBtnSave">💾 ${t('vmap.save')}</button>
+                    <div id="vmapLangSel"></div>
                 </div>
             </div>
 
@@ -765,8 +781,8 @@ export default class ValueMapView {
             <div class="vmap-canvas" id="vmapCanvas">
                 <!-- Selector de modo inicio (visible solo si no hay roles) -->
                 <div class="vmap-mode-selector" id="vmapModeSelector">
-                    <div class="vmap-mode-title">🗺 Nuevo mapa de valor</div>
-                    <div class="vmap-mode-subtitle">¿Cómo quieres empezar?</div>
+                    <div class="vmap-mode-title">🗺 ${t('vmap.mode.title')}</div>
+                    <div class="vmap-mode-subtitle">${t('vmap.mode.sub')}</div>
                     <div class="vmap-mode-cards">
                         <div class="vmap-mode-card" id="vmapModeBlank">
                             <div class="vmap-mode-card-icon">✏️</div>
@@ -807,7 +823,7 @@ export default class ValueMapView {
             <!-- INSPECTOR DERECHO -->
             <div class="vmap-right" id="vmapRight">
                 <div class="vmap-inspector-empty" id="vmapInspectorEmpty">
-                    Selecciona un rol<br>o transacción<br>para ver su detalle
+    ${t('insp.empty').replace(/\\n/g, '<br>')}
                 </div>
                 <div id="vmapInspectorContent" style="display:none;"></div>
             </div>
@@ -815,19 +831,19 @@ export default class ValueMapView {
         <!-- ── PANEL IA ───────────────────────────────────────────────── -->
             <div class="vmap-ai-panel" id="vmapAIPanel">
                 <div class="vmap-ai-panel-head">
-                    <div class="vmap-ai-panel-title">✦ Sugerir con IA</div>
+                    <div class="vmap-ai-panel-title">✦ ${t('ai.panel.title')}</div>
                     <button class="vmap-ai-panel-close" id="vmapAIPanelClose">✕</button>
                 </div>
                 <div class="vmap-ai-panel-body" id="vmapAIPanelBody">
 
                     <!-- Fase 1: input del usuario -->
                     <div id="vmapAIPhase1">
-                        <div class="vmap-ai-prompt-label">Describe la organización</div>
+                        <div class="vmap-ai-prompt-label">${t('ai.prompt.label')}</div>
                         <textarea class="vmap-ai-textarea" id="vmapAIPromptText"
                                   placeholder="Ej: Consultora de 15 personas especializada en transformación digital para pymes industriales. Tenemos un equipo técnico, uno comercial y trabajamos con red de partners freelance..."></textarea>
 
                         <div class="vmap-ai-tips">
-                            <div class="vmap-ai-tips-title">✦ Antigravity prompt tips</div>
+                            <div class="vmap-ai-tips-title">${t('ai.tips.title')}</div>
                             <div class="vmap-ai-tip">Sé específico sobre el sector y tamaño: "clínica privada de 8 especialistas" mejor que "empresa de salud"</div>
                             <div class="vmap-ai-tip">Nombra los actores clave reales: clientes, proveedores, socios, equipos internos</div>
                             <div class="vmap-ai-tip">Menciona el problema o el objetivo: "queremos reducir el tiempo de onboarding" da contexto estratégico</div>
@@ -839,15 +855,15 @@ export default class ValueMapView {
 
                         <button class="vmap-ai-generate-btn" id="vmapAIGenerate">
                             <div class="vmap-ai-spinner" id="vmapAISpinner"></div>
-                            <span id="vmapAIBtnText">✦ Generar mapa de valor</span>
+                            <span id="vmapAIBtnText">${t('ai.generate')}</span>
                         </button>
                     </div>
 
                     <!-- Fase 2: propuestas (oculto hasta que llega respuesta) -->
                     <div id="vmapAIPhase2" style="display:none;">
                         <div id="vmapProposalList"></div>
-                        <button class="vmap-ai-bulk-btn" id="vmapAIBulkAccept" style="margin-top:8px;">✓ Aceptar todos los pendientes</button>
-                        <button class="vmap-ai-generate-btn" id="vmapAIRetry" style="margin-top:6px;background:transparent;border:1px solid var(--glass-border);color:var(--text-muted);">↺ Volver a generar</button>
+                        <button class="vmap-ai-bulk-btn" id="vmapAIBulkAccept" style="margin-top:8px;">${t('ai.bulk')}</button>
+                        <button class="vmap-ai-generate-btn" id="vmapAIRetry" style="margin-top:6px;background:transparent;border:1px solid var(--glass-border);color:var(--text-muted);">${t('ai.retry')}</button>
                     </div>
 
                 </div>
@@ -941,6 +957,18 @@ export default class ValueMapView {
 
     // ══════════════════════════════════════════════════════════════════════════
     async afterRender() {
+        // Selector de idioma
+        const langSel = document.getElementById('vmapLangSel');
+        if (langSel) langSel.innerHTML = langSelectorHtml();
+
+        // Mostrar nombre del proyecto en topbar
+        if (this._state.projectId) {
+            const proj = (store.getState().projects || []).find(p => p.id === this._state.projectId);
+            if (proj) {
+                document.getElementById('vmapProjectName').textContent = proj.nombre || proj.name || this._state.projectId;
+            }
+        }
+
         // Cargar D3 dinámicamente desde CDN permitido
         await this._loadD3();
         this._bindTopbar();
@@ -999,6 +1027,7 @@ export default class ValueMapView {
         this._state.roles        = seed.roles.map(r => ({ ...r }));
         this._state.transactions = seed.transactions.map(t => ({ ...t }));
         document.getElementById('vmapProjectName').textContent = seed.sectorName || sectorId;
+        this._state.currentSector = sectorId;
         this._hideModeSelector();
         this._renderLists();
         this._mountGraph();

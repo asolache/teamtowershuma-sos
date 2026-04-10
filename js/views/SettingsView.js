@@ -1,7 +1,8 @@
 // TEAMTOWERS SOS V11 — SETTINGS VIEW
 import { store }       from '../core/store.js';
 import { KB }          from '../core/kb.js';
-import { Orchestrator } from '../core/Orchestrator.js';
+import { Orchestrator }       from '../core/Orchestrator.js';
+import { t, langSelectorHtml } from '../i18n.js';
 
 export default class SettingsView {
     constructor() { document.title = 'Settings · SOS V11'; }
@@ -29,13 +30,13 @@ export default class SettingsView {
         </style>
 
         <div class="settings-wrap">
-            <a href="/" data-link class="sv-back">← Inicio</a>
-            <h1>Settings <span>·</span> Bóveda</h1>
-            <p style="color:var(--text-muted);margin-bottom:var(--space-8);">API Keys · Motor IA · IndexedDB (zero localStorage)</p>
+            <a href="/" data-link class="sv-back">${t('settings.back')}</a>
+            <h1>${t('settings.title').split('·')[0]} <span>·</span> ${t('settings.title').split('·')[1] || 'Vault'}</h1>
+            <p style="color:var(--text-muted);margin-bottom:var(--space-8);">${t('settings.sub')}</p>
 
             <div class="sv-card">
                 <div style="margin-bottom:var(--space-6);">
-                    <label class="sv-label">Motor primario</label>
+                    <label class="sv-label">${t('settings.engine')}</label>
                     <select id="svProvider" class="sv-input sv-select">
                         <option value="anthropic" ${provider==='anthropic'?'selected':''}>✦ Anthropic (claude-sonnet-4-20250514)</option>
                         <option value="openai"    ${provider==='openai'   ?'selected':''}>OpenAI (GPT-4o)</option>
@@ -45,39 +46,46 @@ export default class SettingsView {
                     </select>
                 </div>
                 <div style="margin-bottom:var(--space-4);">
-                    <label class="sv-label">Anthropic API Key <span style="color:var(--accent-green);">(primario · via proxy Netlify)</span></label>
+                    <label class="sv-label">${t('settings.key.ant')} <span style="color:var(--accent-green);">${t('settings.key.ant.hint')}</span></label>
                     <input type="password" id="svKeyAnt" class="sv-input" value="${keyAnt}" placeholder="sk-ant-api03-...">
                 </div>
-                <button id="svSave" class="sv-btn">💾 Guardar en KB</button>
+                <button id="svSave" class="sv-btn">💾 ${t('settings.save')}</button>
                 <div id="svStatus" class="sv-status">✅ Guardado en IndexedDB</div>
             </div>
 
             <div class="sv-card" style="border-top:3px solid var(--accent-red);">
-                <h3 style="color:var(--accent-red);margin-top:0;">⚠️ Zona de peligro</h3>
-                <button id="svPurge" style="background:rgba(255,82,82,0.1);border:1px solid var(--accent-red);color:var(--accent-red);padding:10px 18px;border-radius:var(--radius-md);cursor:pointer;font-weight:bold;">🔥 Purgar IndexedDB</button>
+                <h3 style="color:var(--accent-red);margin-top:0;">⚠️ ${t('settings.danger')}</h3>
+                <button id="svPurge" style="background:rgba(255,82,82,0.1);border:1px solid var(--accent-red);color:var(--accent-red);padding:10px 18px;border-radius:var(--radius-md);cursor:pointer;font-weight:bold;">🔥 ${t('settings.purge')}</button>
+            </div>
+            <div style="margin-top:var(--space-6);display:flex;align-items:center;gap:12px;">
+                <span style="font-size:var(--text-xs);color:var(--text-muted);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em;">${t('settings.lang')}</span>
+                <div id="settLangSel"></div>
             </div>
         </div>`;
     }
 
     async afterRender() {
+        const sel2 = document.getElementById('settLangSel');
+        if (sel2) sel2.innerHTML = langSelectorHtml();
+
         document.getElementById('svSave')?.addEventListener('click', async () => {
             const btn      = document.getElementById('svSave');
             const provider = document.getElementById('svProvider').value;
             const keyAnt   = document.getElementById('svKeyAnt').value.trim();
             btn.disabled   = true;
-            btn.textContent= '⏳ Guardando…';
+            btn.textContent= t('settings.saving');
             await Orchestrator.setDefaultProvider(provider);
             if (keyAnt) await Orchestrator.saveApiKey('anthropic', keyAnt);
-            btn.textContent= '✅ Guardado';
+            btn.textContent= t('settings.saved');
             btn.disabled   = false;
             document.getElementById('svStatus').style.display = 'block';
             setTimeout(() => { document.getElementById('svStatus').style.display = 'none'; btn.textContent = '💾 Guardar en KB'; }, 3000);
         });
 
         document.getElementById('svPurge')?.addEventListener('click', () => {
-            if (confirm('¿Purgar toda la IndexedDB? Esto borra API Keys y estado.')) {
+            if (confirm(t('settings.purge.confirm'))) {
                 indexedDB.deleteDatabase('TeamTowers_V11');
-                alert('Purgado. Recargando…');
+                alert(t('settings.purged'));
                 window.location.reload();
             }
         });
