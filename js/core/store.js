@@ -38,6 +38,54 @@ const initialState = {
     projects: []
 };
 
+
+// ─── Proyecto demo: Castellers VNA ─────────────────────────────────
+const DEMO_PROJECT_ID = 'proj-colla-demo-v11';
+const DEMO_PROJECT = {
+    id:               DEMO_PROJECT_ID,
+    nombre:           'Castellers · VNA Live Demo',
+    sector_id:        'S',
+    isArchived:       false,
+    createdAt:        1744243200000,
+    updatedAt:        1744243200000,
+    vna_roles: [
+        { id:'baixos',      name:'Baixos — Ground Anchor',    castell_level:'pinya',       description:'Transmits all structural compression to the ground. Every value flow rests here.',                    typical_actor:'Senior ops, infrastructure leads', fmv_usd_h:null, tags:['foundation','anchor'] },
+        { id:'crosses',     name:'Crosses — Axilla Brace',    castell_level:'pinya',       description:'Prevents the Baixos from sinking. Communicates exclusively through touch — no verbal exchange.',      typical_actor:'Cross-functional support roles',    fmv_usd_h:null, tags:['support','haptic'] },
+        { id:'contraforts', name:'Contraforts — Back Pressure',castell_level:'pinya',       description:'Absorbs rear pressure. Operates blind — cannot see the tower, only feel it through pressure.',        typical_actor:'Backend ops, blind-trust roles',    fmv_usd_h:null, tags:['alignment','blind-trust'] },
+        { id:'mans',        name:'Mans — Hip Stabilizers',    castell_level:'pinya',       description:'If stable, confidence propagates upward. If they falter, panic cascades through the network.',         typical_actor:'Team enablers, support layer',      fmv_usd_h:null, tags:['stabilizer','cascade'] },
+        { id:'laterals',    name:'Laterals — Side Guard',     castell_level:'pinya',       description:'Detects micro-sways before they become visible collapses. First early-warning in the network.',        typical_actor:'Risk monitors, QA, coordinators',  fmv_usd_h:null, tags:['risk','early-warning'] },
+        { id:'segons',      name:'Segons — 2nd Floor',        castell_level:'tronc',       description:'Distributes weight geometrically. The bridge between base and superstructure.',                        typical_actor:'Mid-level managers, senior ICs',   fmv_usd_h:null, tags:['distribution','bridge'] },
+        { id:'tercos',      name:'Terços — 3rd Floor',        castell_level:'tronc',       description:'Maximum cognitive focus required. No bandwidth for anything beyond pure execution.',                   typical_actor:'Senior specialists under pressure',fmv_usd_h:null, tags:['focus','compression'] },
+        { id:'musics',      name:'Músics — Network Clock',    castell_level:'tronc',       description:'Acoustic telemetry to blind nodes. Synchronizes breathing, focus and flow state across all nodes.',    typical_actor:'Dashboards, status broadcasts',    fmv_usd_h:null, tags:['telemetry','rhythm'] },
+        { id:'dosos',       name:'Dosos — Crown Base',        castell_level:'pom_de_dalt', description:'The emotional handoff zone — where technical execution meets psychological support.',                  typical_actor:'Executive sponsors, C-suite',      fmv_usd_h:null, tags:['crown','emotional-handoff'] },
+        { id:'acotxador',   name:'Acotxador — Safety Bridge', castell_level:'pom_de_dalt', description:'Eye contact and touch at maximum height — the only intangible that prevents paralysis at the apex.',  typical_actor:'Executive coach, direct mentor',   fmv_usd_h:null, tags:['safety','empathy'] },
+        { id:'enxaneta',    name:'Enxaneta — The Apex',       castell_level:'pom_de_dalt', description:'One gesture — la aleta — delivers collective catharsis to every node simultaneously.',                 typical_actor:'The milestone that validates all', fmv_usd_h:null, tags:['apex','catharsis'] },
+        { id:'cap',         name:'Cap de Colla — Director',   castell_level:'pom_de_dalt', description:'The only node with full macroscopic visibility. In complex castles, authority must distribute.',       typical_actor:'CEO, CTO, transformation lead',    fmv_usd_h:null, tags:['director','vision'] },
+    ],
+    vna_transactions: [
+        { id:'tx-baixos-segons-t',   from:'baixos',    to:'segons',     deliverable:'Structural compression platform — stable shoulders',                    type:'tangible',    is_must:true,  frequency:'alta', health_hint:'Unstable foundation = entire network at risk. No recovery once it breaks.' },
+        { id:'tx-segons-baixos-t',   from:'segons',    to:'baixos',     deliverable:'Geometric weight distribution — equitable load',                         type:'tangible',    is_must:true,  frequency:'alta', health_hint:'Uneven distribution is invisible until collapse.' },
+        { id:'tx-baixos-segons-i',   from:'baixos',    to:'segons',     deliverable:'Psychological security — certainty the foundation holds',                 type:'intangible',  is_must:false, frequency:'alta', health_hint:'Without this intangible, Segons cannot focus. Fear consumes cognitive bandwidth.' },
+        { id:'tx-crosses-baixos-t',  from:'crosses',   to:'baixos',     deliverable:'Axial load prevention — physical bracing',                               type:'tangible',    is_must:true,  frequency:'alta', health_hint:'2mm slip cascades to full network failure.' },
+        { id:'tx-baixos-crosses-i',  from:'baixos',    to:'crosses',    deliverable:'Haptic signals — micro-pressure communication',                           type:'intangible',  is_must:false, frequency:'alta', health_hint:'No verbal exchange possible. If tactile breaks, Crosses operate blind.' },
+        { id:'tx-segons-tercos-t',   from:'segons',    to:'tercos',     deliverable:'Shoulder platform — anchored ascent surface',                            type:'tangible',    is_must:true,  frequency:'alta', health_hint:'Platform instability doubles cognitive load on Terços.' },
+        { id:'tx-segons-tercos-i',   from:'segons',    to:'tercos',     deliverable:'Biomechanical confidence — calm transmitted upward',                      type:'intangible',  is_must:false, frequency:'alta', health_hint:'If Segons tremble, panic propagates instantly. Confidence is contagious.' },
+        { id:'tx-tercos-dosos-t',    from:'tercos',    to:'dosos',      deliverable:'Upper platform — stable base for crown',                                 type:'tangible',    is_must:true,  frequency:'alta', health_hint:'At this height, any instability is amplified.' },
+        { id:'tx-dosos-acot-t',      from:'dosos',     to:'acotxador',  deliverable:'Final physical platform — stable surface at apex',                       type:'tangible',    is_must:true,  frequency:'alta', health_hint:'Last tangible handoff. No second chances.' },
+        { id:'tx-acot-enx-t',        from:'acotxador', to:'enxaneta',   deliverable:'Back surface — physical step to the apex',                               type:'tangible',    is_must:true,  frequency:'alta', health_hint:'Most visible transaction. Failure here is public.' },
+        { id:'tx-acot-enx-i',        from:'acotxador', to:'enxaneta',   deliverable:'Empathy at altitude — eye contact that eliminates vertigo',               type:'intangible',  is_must:false, frequency:'alta', health_hint:'At maximum vulnerability, this is the only thing preventing paralysis.' },
+        { id:'tx-enx-cap-t',         from:'enxaneta',  to:'cap',        deliverable:'La Aleta — raised arm that validates the entire network',                 type:'tangible',    is_must:true,  frequency:'alta', health_hint:'One gesture, systemic value delivery to every node.' },
+        { id:'tx-enx-baixos-i',      from:'enxaneta',  to:'baixos',     deliverable:'Collective catharsis — simultaneous tension release',                     type:'intangible',  is_must:false, frequency:'alta', health_hint:'The purpose that justifies every sacrifice. Without it, the network loses meaning.' },
+        { id:'tx-cap-segons-t',      from:'cap',       to:'segons',     deliverable:'Operational commands — timing, phase signals, abort decisions',           type:'tangible',    is_must:true,  frequency:'alta', health_hint:'In complex castles, Cap cannot see core. Authority must distribute.' },
+        { id:'tx-cap-baixos-i',      from:'cap',       to:'baixos',     deliverable:'Macroscopic vision — the only node that sees the whole system',           type:'intangible',  is_must:false, frequency:'alta', health_hint:'Every node reads the Cap's emotional state. Loss of confidence is systemic.' },
+        { id:'tx-musics-baixos-t',   from:'musics',    to:'baixos',     deliverable:'Acoustic telemetry — melody signals exact apex phase to blind nodes',    type:'tangible',    is_must:true,  frequency:'alta', health_hint:'Baixos are blind to the apex. Without this, base operates on stale information.' },
+        { id:'tx-musics-tercos-i',   from:'musics',    to:'tercos',     deliverable:'Group flow state — synchronized breathing and collective motivation',     type:'intangible',  is_must:false, frequency:'alta', health_hint:'Rhythm synchronizes the entire nervous system. Without it, individuals optimize locally.' },
+        { id:'tx-mans-tercos-i',     from:'mans',      to:'tercos',     deliverable:'Distributed calm — steady base confidence traveling upward',              type:'intangible',  is_must:false, frequency:'alta', health_hint:'Nervous Mans cascade panic upward. Steady Mans enable upper floor focus.' },
+        { id:'tx-laterals-baixos-i', from:'laterals',  to:'baixos',     deliverable:'Early-warning — oscillation detection before visible collapse',           type:'intangible',  is_must:false, frequency:'alta', health_hint:'Detects micro-sways 2-3 seconds before visible. Earliest signal in the system.' },
+    ],
+    ledger: [], telemetry: [], workOrders: [], roles: [], vna_flows: []
+};
+
 class Store {
     constructor() {
         this.state = JSON.parse(JSON.stringify(initialState));
@@ -77,6 +125,14 @@ class Store {
         // ─── Exponer setLang en window para el selector HTML ──────────────
         const { setLang } = await import('../i18n.js');
         window.__setLang = setLang;
+
+        // ─── Inyectar proyecto demo (idempotente) ────────────────────────
+        if (!this.state.projects) this.state.projects = [];
+        if (!this.state.projects.find(function(p){ return p.id === DEMO_PROJECT_ID; })) {
+            this.state.projects.unshift(DEMO_PROJECT);
+            await this.persistState();
+            console.log('[Store V11] Demo project injected.');
+        }
 
         this.isInitialized = true;
         this.state.lastUpdated = Date.now();
