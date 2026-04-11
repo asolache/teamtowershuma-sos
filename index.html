@@ -226,6 +226,7 @@
             .butterfly-chain { flex-direction:column; }
             .butterfly-step::after { display:none; }
             .nav-links { display:none; }
+            .lang-switch { display:flex !important; }
         }
         @media (max-width:600px) { .steps-grid { grid-template-columns:1fr; } .clients-grid { gap:1.5rem 2rem; } }
     </style>
@@ -242,7 +243,7 @@
             <li><a href="#ai" data-i18n="nav.ai">AI Readiness</a></li>
             <li><a href="https://sos.teamtowershuma.com" target="_blank" class="nav-cta" data-i18n="nav.demo">Live Demo →</a></li>
         </ul>
-        <div class="lang-switch">
+        <div class="lang-switch" style="flex-shrink:0;">
             <button class="lang-btn active" data-lang="en">EN</button>
             <button class="lang-btn" data-lang="es">ES</button>
         </div>
