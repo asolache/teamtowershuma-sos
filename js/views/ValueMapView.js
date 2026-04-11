@@ -980,6 +980,9 @@ export default class ValueMapView {
         if (this._state.roles.length > 0) {
             this._hideModeSelector();
             this._mountGraph();
+        } else if (this._state.currentSector && this._state.projectId) {
+            // Auto-cargar seed del sector si viene del dashboard con sector preseleccionado
+            await this._loadSectorSeed(this._state.currentSector);
         }
     }
 
@@ -1113,6 +1116,7 @@ export default class ValueMapView {
         const d3 = window.d3;
         const grp = container || this._zoomGroup;
         if (!grp) return;
+        try {
         grp.selectAll('.link-group,.node-group').remove();
 
         const roles = this._state.roles;
@@ -1140,12 +1144,16 @@ export default class ValueMapView {
             }
         });
 
-        const links = txs.map(t => ({
-            id:     t.id,
-            source: t.from,
-            target: t.to,
-            data:   t,
-        }));
+        // Filtrar transacciones cuyos roles no existen (evita "node not found" en D3)
+        const nodeIds = new Set(roles.map(r => r.id));
+        const links = txs
+            .filter(t => t.from && t.to && nodeIds.has(t.from) && nodeIds.has(t.to))
+            .map(t => ({
+                id:     t.id,
+                source: t.from,
+                target: t.to,
+                data:   t,
+            }));
 
         // Fuerza D3
         if (this._state.d3Sim) this._state.d3Sim.stop();
@@ -1333,6 +1341,24 @@ export default class ValueMapView {
             // Actualizar posición de nodos
             nodeSel.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
         });
+        } catch (err) {
+            console.error('[ValueMapView] _rebuildGraph error:', err.message);
+            // Limpiar SVG para evitar estado inconsistente
+            if (grp) grp.selectAll('*').remove();
+            // Mostrar mensaje de error recuperable sin perder datos
+            const canvas = document.getElementById('vmapCanvas');
+            if (canvas) {
+                const existing = canvas.querySelector('.vmap-rebuild-error');
+                if (!existing) {
+                    const div = document.createElement('div');
+                    div.className = 'vmap-rebuild-error';
+                    div.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:var(--accent-orange);font-family:var(--font-mono);font-size:var(--text-xs);pointer-events:none;';
+                    div.innerHTML = '⚠ Graph render error<br><span style="opacity:.6;font-size:9px;">Data preserved — try reorganizing</span>';
+                    canvas.appendChild(div);
+                    setTimeout(function() { if (div.parentNode) div.parentNode.removeChild(div); }, 4000);
+                }
+            }
+        }
     }
 
     // Devuelve el color según nivel castellero
@@ -2196,12 +2222,26 @@ ${ctxResult.systemPrompt}`;
         }
         else if (propType === 'tx') {
             const tx = props.transactions.find(function(t){ return t.id === propId; });
-            if (tx && !this._state.transactions.find(function(t){ return t.id === tx.id; })) {
-                this._state.transactions.push(tx);
+            if (tx) {
+                // Verificar que los roles referenciados existen en el mapa
+                const roleIds = new Set(this._state.roles.map(function(r){ return r.id; }));
+                if (!roleIds.has(tx.from) || !roleIds.has(tx.to)) {
+                    // Los roles aún no están en el mapa — avisar al usuario
+                    const status = document.getElementById('vmapAIStatus');
+                    if (status) {
+                        status.style.color = 'var(--accent-orange)';
+                        status.textContent = 'Accept the roles first before adding this transaction.';
+                        setTimeout(function() { if (status) status.textContent = ''; }, 3000);
+                    }
+                    return;
+                }
+                if (!this._state.transactions.find(function(t){ return t.id === tx.id; })) {
+                    this._state.transactions.push(tx);
+                }
             }
             this._markProposal(propId, 'accepted');
             this._renderLists();
-            this._rebuildGraph(this._zoomGroup);
+            if (!this._zoomGroup) { this._mountGraph(); } else { this._rebuildGraph(this._zoomGroup); }
         }
         else if (propType === 'tx-edit') {
             const tx = props.transactions.find(function(t){ return t.id === propId; });
@@ -2236,9 +2276,13 @@ ${ctxResult.systemPrompt}`;
             }
         }.bind(this));
         this._renderLists();
-        this._rebuildGraph(this._zoomGroup);
-        // Asegurarse de que el mapa es visible si estaba en modo selector
         this._hideModeSelector();
+        // Si el grafo no estaba montado (canvas vacío), montarlo ahora
+        if (!this._zoomGroup) {
+            this._mountGraph();
+        } else {
+            this._rebuildGraph(this._zoomGroup);
+        }
     }
 
     // ── Guardar en KB ─────────────────────────────────────────────────────────

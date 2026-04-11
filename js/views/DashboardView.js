@@ -114,6 +114,7 @@ export default class DashboardView {
                 flex: 1; display: grid;
                 grid-template-columns: 1fr;
                 gap: 0;
+                min-height: 0;
             }
             .dash-main.kb-open { grid-template-columns: 1fr 360px; }
 
@@ -121,6 +122,8 @@ export default class DashboardView {
             .dash-content {
                 padding: 28px 32px;
                 overflow-y: auto;
+                flex: 1;
+                height: 0;
             }
 
             .dash-hero {
