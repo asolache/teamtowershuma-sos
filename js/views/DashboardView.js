@@ -72,6 +72,7 @@ export default class DashboardView {
         <style>
             .dash-shell {
                 height: 100dvh;
+                width: 100%;
                 background: var(--bg-dark);
                 font-family: var(--font-base);
                 display: flex;
