@@ -121,15 +121,27 @@ export class KnowledgeLoader {
         if (!path) return null;
         const parsed = await this.parseFile(path);
         if (!parsed) return null;
-        const lang2  = (typeof window !== 'undefined' && window.__lang) ? window.__lang : 'en';
-        const snEn   = parsed.frontmatter.sector_name_en || parsed.sectorName || '';
-        const snEs   = parsed.sectorName || snEn;
+        var lang2  = (typeof window !== 'undefined' && window.__lang) ? window.__lang : 'en';
+        var snEn   = parsed.frontmatter.sector_name_en || parsed.sectorName || '';
+        var snEs   = parsed.sectorName || snEn;
+        // Opción A: aplicar campos bilingüe a roles y transactions
+        var roles = (parsed.roles || []).map(function(r) {
+            return Object.assign({}, r, {
+                name:        (lang2 === 'en' && r.name_en)        ? r.name_en        : (r.name || r.id),
+                description: (lang2 === 'en' && r.description_en) ? r.description_en : (r.description || ''),
+            });
+        });
+        var transactions = (parsed.transactions || []).map(function(t) {
+            return Object.assign({}, t, {
+                deliverable: (lang2 === 'en' && t.deliverable_en) ? t.deliverable_en : (t.deliverable || ''),
+            });
+        });
         return {
             sectorId:     parsed.sectorId || sectorId,
             sectorName:   lang2 === 'en' ? snEn : snEs,
-            roles:        parsed.roles        || [],
-            transactions: parsed.transactions || [],
-            patterns:     parsed.patterns     || [],
+            roles:        roles,
+            transactions: transactions,
+            patterns:     parsed.patterns || [],
         };
     }
 
@@ -515,21 +527,26 @@ export class KnowledgeLoader {
 
     static _rolesToContext(roles) {
         if (!roles || roles.length === 0) return '(sin roles definidos)\n';
-        return roles.map(r =>
-            '- **' + (r.name || r.id) + '** [' + (r.castell_level || '?') + '] — ' +
-            (r.description || '') +
-            (r.typical_actor ? ' (típic.: ' + r.typical_actor + ')' : '')
-        ).join('\n') + '\n';
+        var lang = (typeof window !== 'undefined' && window.__lang) ? window.__lang : 'en';
+        return roles.map(function(r) {
+            var displayName = (lang === 'en' && r.name_en) ? r.name_en : (r.name || r.id);
+            var displayDesc = (lang === 'en' && r.description_en) ? r.description_en : (r.description || '');
+            var actor       = r.typical_actor_en && lang === 'en' ? r.typical_actor_en : (r.typical_actor || '');
+            return '- **' + displayName + '** [' + (r.castell_level || '?') + '] — ' +
+                displayDesc + (actor ? ' (típic.: ' + actor + ')' : '');
+        }).join('\n') + '\n';
     }
 
     static _transactionsToContext(transactions) {
         if (!transactions || transactions.length === 0) return '(sin transacciones)\n';
-        return transactions.map(t => {
-            const type = t.type === 'intangible' ? '- - -' : '———';
-            const must = t.is_must ? '[MUST]' : '[EXTRA]';
-            const hint = t.health_hint ? ' ⚠ ' + t.health_hint : '';
+        var lang = (typeof window !== 'undefined' && window.__lang) ? window.__lang : 'en';
+        return transactions.map(function(t) {
+            var type        = t.type === 'intangible' ? '- - -' : '———';
+            var must        = t.is_must ? '[MUST]' : '[EXTRA]';
+            var deliverable = (lang === 'en' && t.deliverable_en) ? t.deliverable_en : (t.deliverable || '');
+            var hint        = t.health_hint ? ' ⚠ ' + t.health_hint : '';
             return type + ' ' + must + ' ' + (t.from || '?') + ' → ' + (t.to || '?') +
-                ': "' + (t.deliverable || '') + '"' + hint;
+                ': "' + deliverable + '"' + hint;
         }).join('\n') + '\n';
     }
 
