@@ -71,11 +71,12 @@ export default class DashboardView {
         return `
         <style>
             .dash-shell {
-                min-height: 100dvh;
+                height: 100dvh;
                 background: var(--bg-dark);
                 font-family: var(--font-base);
                 display: flex;
                 flex-direction: column;
+                overflow: hidden;
             }
 
             /* ── Topbar ── */
@@ -111,10 +112,13 @@ export default class DashboardView {
 
             /* ── Main layout ── */
             .dash-main {
-                flex: 1; display: grid;
+                flex: 1;
+                display: grid;
                 grid-template-columns: 1fr;
                 gap: 0;
+                overflow: hidden;
                 min-height: 0;
+                height: 0;
             }
             .dash-main.kb-open { grid-template-columns: 1fr 360px; }
 
@@ -122,8 +126,9 @@ export default class DashboardView {
             .dash-content {
                 padding: 28px 32px;
                 overflow-y: auto;
-                flex: 1;
-                height: 0;
+                overflow-x: hidden;
+                height: 100%;
+                box-sizing: border-box;
             }
 
             .dash-hero {

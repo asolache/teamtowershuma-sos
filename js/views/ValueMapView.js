@@ -2232,20 +2232,27 @@ ${ctxResult.systemPrompt}`;
         else if (propType === 'tx') {
             const tx = props.transactions.find(function(t){ return t.id === propId; });
             if (tx) {
-                // Verificar que los roles referenciados existen en el mapa
-                const roleIds = new Set(this._state.roles.map(function(r){ return r.id; }));
-                if (!roleIds.has(tx.from) || !roleIds.has(tx.to)) {
-                    // Los roles aún no están en el mapa — avisar al usuario
-                    const status = document.getElementById('vmapAIStatus');
-                    if (status) {
-                        status.style.color = 'var(--accent-orange)';
-                        status.textContent = 'Accept the roles first before adding this transaction.';
-                        setTimeout(function() { if (status) status.textContent = ''; }, 3000);
+                var roleIds = new Set(this._state.roles.map(function(r){ return r.id; }));
+                var txFrom = tx.from, txTo = tx.to;
+                // Match exacto falla — intentar match parcial (trim/lowercase)
+                if (!roleIds.has(txFrom) || !roleIds.has(txTo)) {
+                    roleIds.forEach(function(rid) {
+                        if (rid.toLowerCase().trim() === (txFrom || '').toLowerCase().trim()) txFrom = rid;
+                        if (rid.toLowerCase().trim() === (txTo   || '').toLowerCase().trim()) txTo   = rid;
+                    });
+                }
+                if (!roleIds.has(txFrom) || !roleIds.has(txTo)) {
+                    var status2 = document.getElementById('vmapAIStatus');
+                    if (status2) {
+                        status2.style.color = 'var(--accent-orange)';
+                        status2.textContent = 'Accept the roles first before adding this transaction.';
+                        setTimeout(function() { if (status2) status2.textContent = ''; }, 3000);
                     }
                     return;
                 }
-                if (!this._state.transactions.find(function(t){ return t.id === tx.id; })) {
-                    this._state.transactions.push(tx);
+                var txFinal = Object.assign({}, tx, { from: txFrom, to: txTo });
+                if (!this._state.transactions.find(function(t){ return t.id === txFinal.id; })) {
+                    this._state.transactions.push(txFinal);
                 }
             }
             this._markProposal(propId, 'accepted');
@@ -2271,26 +2278,64 @@ ${ctxResult.systemPrompt}`;
     }
 
     _bulkAccept() {
-        const props = this._aiProposals;
+        var self = this;
+        var props = self._aiProposals;
+
+        // 1. Añadir roles primero
         props.roles.forEach(function(r) {
-            if (this._proposalState[r.id] !== 'rejected' && !this._state.roles.find(function(x){ return x.id === r.id; })) {
-                this._state.roles.push({ fmv_usd_h: null, tags: [], ...r });
-                this._markProposal(r.id, 'accepted');
+            if (self._proposalState[r.id] !== 'rejected' && !self._state.roles.find(function(x){ return x.id === r.id; })) {
+                self._state.roles.push({ fmv_usd_h: null, tags: [], castell_level: r.castell_level || 'tronc', ...r });
+                self._markProposal(r.id, 'accepted');
             }
-        }.bind(this));
+        });
+
+        // 2. Construir set de IDs de roles disponibles AHORA (tras añadir los nuevos)
+        var availableRoleIds = new Set(self._state.roles.map(function(r){ return r.id; }));
+
+        // 3. Añadir transacciones — solo las que tienen from/to resueltos
+        var skipped = 0;
         props.transactions.forEach(function(t) {
-            if (this._proposalState[t.id] !== 'rejected' && !this._state.transactions.find(function(x){ return x.id === t.id; })) {
-                this._state.transactions.push(t);
-                this._markProposal(t.id, 'accepted');
+            if (self._proposalState[t.id] === 'rejected') return;
+            if (self._state.transactions.find(function(x){ return x.id === t.id; })) return;
+            // Verificar que los roles existen
+            var fromOk = availableRoleIds.has(t.from);
+            var toOk   = availableRoleIds.has(t.to);
+            if (fromOk && toOk) {
+                self._state.transactions.push(t);
+                self._markProposal(t.id, 'accepted');
+            } else {
+                // Intentar match parcial (lower/trim por si acaso)
+                var fromMatch = null, toMatch = null;
+                availableRoleIds.forEach(function(rid) {
+                    if (rid.toLowerCase().trim() === (t.from || '').toLowerCase().trim()) fromMatch = rid;
+                    if (rid.toLowerCase().trim() === (t.to   || '').toLowerCase().trim()) toMatch   = rid;
+                });
+                if (fromMatch && toMatch) {
+                    var fixedTx = Object.assign({}, t, { from: fromMatch, to: toMatch });
+                    self._state.transactions.push(fixedTx);
+                    self._markProposal(t.id, 'accepted');
+                } else {
+                    skipped++;
+                    console.warn('[VNA] tx skipped, missing roles — from:', t.from, 'to:', t.to);
+                }
             }
-        }.bind(this));
-        this._renderLists();
-        this._hideModeSelector();
-        // Si el grafo no estaba montado (canvas vacío), montarlo ahora
-        if (!this._zoomGroup) {
-            this._mountGraph();
+        });
+
+        if (skipped > 0) {
+            var status = document.getElementById('vmapAIStatus');
+            if (status) {
+                status.style.color = 'var(--accent-orange)';
+                status.textContent = skipped + ' transaction(s) skipped — roles not found.';
+                setTimeout(function() { if (status) status.textContent = ''; }, 4000);
+            }
+        }
+
+        self._renderLists();
+        self._hideModeSelector();
+        if (!self._zoomGroup) {
+            self._mountGraph();
         } else {
-            this._rebuildGraph(this._zoomGroup);
+            self._rebuildGraph(self._zoomGroup);
         }
     }
 
