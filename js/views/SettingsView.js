@@ -120,7 +120,9 @@ export default class SettingsView {
 
         // Actualizar badge cuando cambia el provider
         document.getElementById('svProvider')?.addEventListener('change', () => {
-            window.location.reload();
+            // Recargar la vista sin hard reload para que Netlify no 404
+            if (window.navigateTo) window.navigateTo('/settings');
+            else window.location.replace('/settings');
         });
 
         // Guardar todas las keys
@@ -142,9 +144,12 @@ export default class SettingsView {
             btn.disabled    = false;
             document.getElementById('svStatus').style.display = 'block';
             setTimeout(() => {
-                document.getElementById('svStatus').style.display = 'none';
+                var st = document.getElementById('svStatus');
+                if (st) st.style.display = 'none';
                 btn.textContent = '💾 Save to KB';
-                window.location.reload();
+                // Recargar vista SPA para refrescar badges sin hard reload
+                if (window.navigateTo) window.navigateTo('/settings');
+                else window.location.replace('/settings');
             }, 1800);
         });
 
