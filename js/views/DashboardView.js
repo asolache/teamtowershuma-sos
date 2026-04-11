@@ -652,15 +652,85 @@ export default class DashboardView {
 
         document.getElementById('dashProjectList').innerHTML = html;
 
+        // ── Sección de archivados ────────────────────────────────────────────
+        var archived = (state.projects || []).filter(function(p) { return p.isArchived; });
+        var archDiv = document.getElementById('dashArchivedSection');
+        if (!archDiv) {
+            archDiv = document.createElement('div');
+            archDiv.id = 'dashArchivedSection';
+            archDiv.style.cssText = 'margin-top:32px;';
+            var plEl = document.getElementById('dashProjectList');
+            if (plEl && plEl.parentNode) plEl.parentNode.insertBefore(archDiv, plEl.nextSibling);
+        }
+        if (archived.length === 0) {
+            archDiv.innerHTML = '';
+        } else {
+            var archHtml = '<div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">' +
+                '<button id="dashArchiveToggle" style="background:transparent;border:none;color:var(--text-muted);' +
+                'font-size:var(--text-xs);font-family:var(--font-base);cursor:pointer;padding:4px 0;' +
+                'display:flex;align-items:center;gap:6px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">' +
+                '<span id="dashArchiveChevron">▶</span> Archived (' + archived.length + ')</button></div>' +
+                '<div id="dashArchivedList" style="display:none;">';
+            archived.forEach(function(p) {
+                archHtml += '<div style="display:flex;align-items:center;justify-content:space-between;' +
+                    'background:rgba(10,10,15,0.6);border:1px solid var(--glass-border);border-radius:var(--radius-md);' +
+                    'padding:12px 16px;margin-bottom:8px;opacity:0.6;">' +
+                    '<div>' +
+                    '<div style="color:var(--text-secondary);font-weight:700;font-size:var(--text-sm);">🗼 ' + (p.nombre || p.name || 'Unnamed') + '</div>' +
+                    '<div style="color:var(--text-muted);font-size:var(--text-xs);font-family:var(--font-mono);margin-top:2px;">' +
+                    (p.roles || []).length + ' roles · ' + (p.vna_flows || p.transactions || []).length + ' flows</div>' +
+                    '</div>' +
+                    '<button data-unarchive="' + p.id + '" style="background:transparent;border:1px solid var(--glass-border);' +
+                    'color:var(--text-muted);padding:5px 12px;border-radius:var(--radius-sm);font-size:var(--text-xs);' +
+                    'font-weight:700;cursor:pointer;font-family:var(--font-base);">↩ Recover</button>' +
+                    '</div>';
+            });
+            archHtml += '</div>';
+            archDiv.innerHTML = archHtml;
+
+            // Toggle collapsed/expanded
+            var toggleBtn = document.getElementById('dashArchiveToggle');
+            var archList  = document.getElementById('dashArchivedList');
+            var chevron   = document.getElementById('dashArchiveChevron');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    var open = archList.style.display === 'block';
+                    archList.style.display = open ? 'none' : 'block';
+                    chevron.textContent = open ? '▶' : '▼';
+                });
+            }
+        }
+
         // Bind archive buttons
         document.querySelectorAll('[data-archive]').forEach(function(btn) {
             btn.addEventListener('click', function(e) {
                 e.preventDefault(); e.stopPropagation();
-                const pid = e.currentTarget.dataset.archive;
-                if (confirm('Archive this project?')) {
+                var pid = e.currentTarget.dataset.archive;
+                if (confirm('Archive this project? You can recover it from the Archived tab.')) {
                     store.dispatch({ type: 'ARCHIVE_PROJECT', payload: { projectId: pid } })
-                        .then(function() { window.location.reload(); });
+                        .then(function() {
+                            // Esperar a que la persistencia KB termine antes de re-render
+                            return store.persistState();
+                        })
+                        .then(function() {
+                            if (window.navigateTo) window.navigateTo('/dashboard');
+                            else window.location.replace('/dashboard');
+                        });
                 }
+            });
+        });
+
+        // Bind unarchive buttons
+        document.querySelectorAll('[data-unarchive]').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                var pid = e.currentTarget.dataset.unarchive;
+                store.dispatch({ type: 'UNARCHIVE_PROJECT', payload: { projectId: pid } })
+                    .then(function() { return store.persistState(); })
+                    .then(function() {
+                        if (window.navigateTo) window.navigateTo('/dashboard');
+                        else window.location.replace('/dashboard');
+                    });
             });
         });
 

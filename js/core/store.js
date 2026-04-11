@@ -221,6 +221,14 @@ class Store {
                 idx = findProject(action.payload.projectId);
                 if (idx > -1) Object.assign(newState.projects[idx], action.payload.updates);
                 break;
+            case 'ARCHIVE_PROJECT':
+                idx = findProject(action.payload.projectId);
+                if (idx > -1) newState.projects[idx].isArchived = true;
+                break;
+            case 'UNARCHIVE_PROJECT':
+                idx = findProject(action.payload.projectId);
+                if (idx > -1) newState.projects[idx].isArchived = false;
+                break;
             case 'ADD_ROLE':
                 idx = findProject(action.payload.projectId);
                 if (idx > -1) { if (!newState.projects[idx].roles) newState.projects[idx].roles = []; newState.projects[idx].roles.push(action.payload.role); }
