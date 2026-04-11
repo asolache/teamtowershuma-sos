@@ -93,11 +93,7 @@ export default class ValueMapView {
             this._state.currentSector = paramSect || null;
         }
 
-        // Opciones de sector para el selector
-        const sectors = await KnowledgeLoader.listSectors();
-        const sectorOptions = sectors.map(s =>
-            `<option value="${s.id}">${s.id} · ${s.name}</option>`
-        ).join('');
+        // Opciones de sector: se poblan dinámicamente en afterRender() con el idioma correcto
 
         return `
         <style>
@@ -863,7 +859,6 @@ export default class ValueMapView {
                         <div class="vmap-sector-picker-label">Selecciona el sector CNAE</div>
                         <select class="vmap-sector-picker-select" id="vmapSectorPicker">
                             <option value="">— Elige sector —</option>
-                            ${sectorOptions}
                         </select>
                         <div class="vmap-sector-picker-actions">
                             <button class="vmap-btn" id="vmapSectorPickerBack">← Volver</button>
@@ -1026,9 +1021,19 @@ export default class ValueMapView {
 
     // ══════════════════════════════════════════════════════════════════════════
     async afterRender() {
+        var self = this;
+
         // Selector de idioma
         const langSel = document.getElementById('vmapLangSel');
         if (langSel) langSel.innerHTML = langSelectorHtml();
+
+        // Poblar el select de sectores con el idioma actual
+        await this._populateSectorSelect();
+
+        // Repoblar cuando cambia el idioma
+        document.addEventListener('sos:lang-changed', function() {
+            self._populateSectorSelect();
+        });
 
         // Mostrar nombre del proyecto en topbar
         if (this._state.projectId) {
@@ -1053,6 +1058,32 @@ export default class ValueMapView {
             // Auto-cargar seed del sector si viene del dashboard con sector preseleccionado
             await this._loadSectorSeed(this._state.currentSector);
         }
+    }
+
+    // Poblar el <select> de sectores con los nombres en el idioma actual
+    async _populateSectorSelect() {
+        var sel = document.getElementById('vmapSectorPicker');
+        if (!sel) return;
+        var current = sel.value;
+        // Limpiar y resetear
+        sel.innerHTML = '<option value="">— ' + (window.__lang === 'en' ? 'Choose sector' : 'Elige sector') + ' —</option>';
+        try {
+            // Invalidar caché del índice para que relea con el nuevo idioma
+            KnowledgeLoader._cache  && delete KnowledgeLoader._cache['_index.md'];
+            KnowledgeLoader._parsed && delete KnowledgeLoader._parsed['_index.md'];
+            var sectors = await KnowledgeLoader.listSectors();
+            for (var i = 0; i < sectors.length; i++) {
+                var s   = sectors[i];
+                var opt = document.createElement('option');
+                opt.value       = s.id;
+                opt.textContent = s.id + ' · ' + s.name;
+                sel.appendChild(opt);
+            }
+        } catch (e) {
+            console.warn('[ValueMapView] _populateSectorSelect error:', e);
+        }
+        // Restaurar selección previa si sigue disponible
+        if (current) sel.value = current;
     }
 
     // ── Cleanup al navegar (SPA teardown) ───────────────────────────────────────
