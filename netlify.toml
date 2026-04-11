@@ -1,7 +1,7 @@
 [build]
   publish = "."
 
-# Cache para assets estáticos
+# Sin cache — assets cambian frecuentemente
 [[headers]]
   for = "/*.js"
   [headers.values]
@@ -12,7 +12,7 @@
   [headers.values]
     Cache-Control = "no-cache, must-revalidate"
 
-# SPAs internas (versiones legacy que siguen en el repo)
+# SPAs internas legacy (siguen en el mismo repo)
 [[redirects]]
   from   = "/ia/dev/*"
   to     = "/ia/dev/index.html"
