@@ -889,7 +889,7 @@ document.querySelectorAll('.lang-btn').forEach(function(btn) {
 });
 
 // ── Fade-up observer ──────────────────────────────────────────────────────────
-const COLLA_DATA = {
+var COLLA_DATA = {
     baixos:      { title:'Baixos — Ground Anchor',      t:'⬤ Tangible: transmits all structural compression to the ground', i:'◌ Intangible: psychological security for every level above — the certainty that the foundation holds' },
     crosses:     { title:'Crosses — Axilla Brace',      t:'⬤ Tangible: prevents the Baixos from sinking under axial load', i:'◌ Intangible: micro-adjustments through touch — no words, just pressure signals' },
     contraforts: { title:'Contraforts — Back Pressure',  t:'⬤ Tangible: absorbs rear pressure to maintain vertical alignment', i:'◌ Intangible: blind trust — they cannot see the tower, only feel it' },
@@ -904,36 +904,36 @@ const COLLA_DATA = {
     musics:      { title:'Músics — Network Clock',       t:'⬤ Tangible: acoustic telemetry — the melody signals exact Enxaneta phase to the Baixos who cannot see', i:'◌ Intangible: group flow state — rhythm synchronizes breathing, focus and motivation across all nodes' },
 };
 
-const tooltip  = document.getElementById('collaTooltip');
-const tTitle   = document.getElementById('collaTooltipTitle');
-const tT       = document.getElementById('collaTooltipT');
-const tI       = document.getElementById('collaTooltipI');
-const svgEl    = document.getElementById('collaSvg');
+var tooltip  = document.getElementById('collaTooltip');
+var tTitle   = document.getElementById('collaTooltipTitle');
+var tT       = document.getElementById('collaTooltipT');
+var tI       = document.getElementById('collaTooltipI');
+var svgEl    = document.getElementById('collaSvg');
 
-document.querySelectorAll('.colla-node').forEach(node => {
+document.querySelectorAll('.colla-node').forEach(function(node) {
     node.addEventListener('mouseenter', function(e) {
-        const id   = this.dataset.id;
-        const data = (currentLang === "es" && COLLA_ES[id]) ? COLLA_ES[id] : COLLA_DATA[id];
+        var id   = this.dataset.id;
+        var data = (currentLang === 'es' && COLLA_ES[id]) ? COLLA_ES[id] : COLLA_DATA[id];
         if (!data) return;
         tTitle.textContent = data.title;
         tT.textContent     = data.t;
         tI.textContent     = data.i;
         tooltip.style.display = 'block';
         // Highlight node
-        const circle = this.querySelector('circle');
+        var circle = this.querySelector('circle');
         if (circle) { circle.style.filter = 'brightness(1.4)'; circle.setAttribute('stroke-width','3'); }
     });
     node.addEventListener('mousemove', function(e) {
-        const rect = svgEl.parentElement.getBoundingClientRect();
-        let x = e.clientX - rect.left + 14;
-        let y = e.clientY - rect.top  - 10;
+        var rect = svgEl.parentElement.getBoundingClientRect();
+        var x = e.clientX - rect.left + 14;
+        var y = e.clientY - rect.top  - 10;
         if (x + 230 > rect.width) x = e.clientX - rect.left - 244;
         tooltip.style.left = x + 'px';
         tooltip.style.top  = y + 'px';
     });
     node.addEventListener('mouseleave', function() {
         tooltip.style.display = 'none';
-        const circle = this.querySelector('circle');
+        var circle = this.querySelector('circle');
         if (circle) { circle.style.filter = ''; circle.removeAttribute('stroke-width'); }
     });
 });
