@@ -179,10 +179,18 @@ export default class SettingsView {
 
         // Purge
         document.getElementById('svPurge')?.addEventListener('click', () => {
-            if (confirm('Purge all IndexedDB? This deletes API Keys and state.')) {
-                indexedDB.deleteDatabase('TeamTowers_V11');
-                alert('Purged. Reloading…');
-                window.location.reload();
+            if (confirm('WARNING: This deletes ALL data (projects, roles, API keys). Cannot be undone. Continue?')) {
+                localStorage.removeItem('tt_v11_fallback');
+                const req = indexedDB.deleteDatabase('TeamTowers_V11');
+                req.onsuccess = function() {
+                    alert('Purged. Reloading…');
+                    window.location.reload();
+                };
+                req.onerror = function() {
+                    localStorage.removeItem('tt_v11_fallback');
+                    alert('Purged (localStorage). Reloading…');
+                    window.location.reload();
+                };
             }
         });
     }

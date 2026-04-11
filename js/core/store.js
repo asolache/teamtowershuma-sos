@@ -101,19 +101,35 @@ class Store {
                 new Promise((_, r) => setTimeout(() => r(new Error('KB timeout')), 4000))
             ]);
             const saved = await KB.getNode('global_kernel_state_v11');
-            if (saved?.content) {
-                this.state = saved.content;
+            if (saved && saved.content && typeof saved.content === 'object') {
+                this.state = JSON.parse(JSON.stringify(saved.content));
+                console.log('[Store V11] State restored from IndexedDB.');
+            } else {
+                // Intentar fallback localStorage
+                var fallback = localStorage.getItem('tt_v11_fallback');
+                if (fallback) {
+                    try { this.state = JSON.parse(fallback); console.log('[Store V11] State restored from localStorage fallback.'); }
+                    catch(_) { /* estado fresco */ }
+                }
             }
+            // Siempre forzar versión y economics actuales
+            if (!this.state.config) this.state.config = {};
             this.state.config.version   = initialState.config.version;
             this.state.config.economics = initialState.config.economics;
+            // Asegurar arrays
             if (!this.state.globalUsers) this.state.globalUsers = [];
+            if (!this.state.projects)    this.state.projects    = [];
+            // Hard sync agentes
             initialState.globalUsers.forEach(agent => {
                 if (!this.state.globalUsers.find(u => u.id === agent.id)) {
                     this.state.globalUsers.push(agent);
                 }
             });
         } catch (err) {
-            console.warn('[Store V11] Init fallback:', err.message);
+            console.warn('[Store V11] Init fallback (fresh state):', err.message);
+            // Asegurar arrays mínimos en estado fresco
+            if (!this.state.projects)    this.state.projects    = [];
+            if (!this.state.globalUsers) this.state.globalUsers = initialState.globalUsers.slice();
         }
 
         // ─── Inyectar semillas del swarm (idempotente por version) ────
@@ -126,12 +142,13 @@ class Store {
         const { setLang } = await import('../i18n.js');
         window.__setLang = setLang;
 
-        // ─── Inyectar proyecto demo (idempotente) ────────────────────────
+        // ─── Inyectar proyecto demo (SIEMPRE, idempotente) ──────────────
         if (!this.state.projects) this.state.projects = [];
-        if (!this.state.projects.find(function(p){ return p.id === DEMO_PROJECT_ID; })) {
-            this.state.projects.unshift(DEMO_PROJECT);
-            await this.persistState();
+        const demoExists = this.state.projects.find(function(p){ return p.id === DEMO_PROJECT_ID; });
+        if (!demoExists) {
+            this.state.projects.unshift(JSON.parse(JSON.stringify(DEMO_PROJECT)));
             console.log('[Store V11] Demo project injected.');
+            await this.persistState();
         }
 
         this.isInitialized = true;
@@ -156,8 +173,11 @@ class Store {
     async persistState() {
         try {
             await KB.saveNode({ id: 'global_kernel_state_v11', type: 'kernel', content: this.state });
-        } catch (_) {
-            localStorage.setItem('tt_v11_fallback', JSON.stringify(this.state));
+            // Doble escritura en localStorage como fallback siempre
+            try { localStorage.setItem('tt_v11_fallback', JSON.stringify(this.state)); } catch(_) {}
+        } catch (err) {
+            console.warn('[Store V11] IndexedDB persist failed, using localStorage:', err.message);
+            try { localStorage.setItem('tt_v11_fallback', JSON.stringify(this.state)); } catch(_) {}
         }
     }
 
