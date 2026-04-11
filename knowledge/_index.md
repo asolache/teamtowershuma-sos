@@ -17,14 +17,27 @@ Ficheros disponibles. KnowledgeLoader los carga por id CNAE o alias.
 
 | ID | `sectors/X.md` | Nombre completo |
 |----|----------------|-----------------|
-| `N` | `sectors/N.md` | `Consultoría / Actividades Profesionales` |
-| `K` | `sectors/K.md` | `Tech / Software / IA` |
-| `Q` | `sectors/Q.md` | `Educación` |
+| `A` | `sectors/A.md` | `Agricultura, Ganadería, Silvicultura y Pesca` |
+| `B` | `sectors/B.md` | `Industrias Extractivas` |
+| `C` | `sectors/C.md` | `Industria Manufacturera` |
+| `D` | `sectors/D.md` | `Suministro de Energía Eléctrica, Gas y Vapor` |
+| `E` | `sectors/E.md` | `Suministro de Agua, Saneamiento y Gestión de Residuos` |
 | `F` | `sectors/F.md` | `Construcción` |
+| `G` | `sectors/G.md` | `Comercio al por Mayor y Menor` |
+| `H` | `sectors/H.md` | `Transporte y Almacenamiento` |
+| `I` | `sectors/I.md` | `Hostelería y Turismo` |
+| `J` | `sectors/J.md` | `Información y Comunicaciones` |
+| `K` | `sectors/K.md` | `Tech / Software / IA` |
+| `L` | `sectors/L.md` | `Actividades Financieras y de Seguros` |
+| `M` | `sectors/M.md` | `Actividades Inmobiliarias` |
+| `N` | `sectors/N.md` | `Consultoría / Actividades Profesionales` |
+| `O` | `sectors/O.md` | `Administración Pública y Defensa` |
+| `P` | `sectors/P.md` | `Educación Reglada (K-12)` |
+| `Q` | `sectors/Q.md` | `Educación Superior y Formación` |
 | `R` | `sectors/R.md` | `Salud y Servicios Sociales` |
-
-Sectores Tier 2 (pendientes — KnowledgeLoader los infiere desde la IA si no existen):
-`A` Agricultura · `B` Extractivas · `C` Manufactura · `D` Energía · `E` Agua/Medioambiente · `G` Comercio · `H` Transporte · `I` Hostelería · `J` Media · `L` Finanzas · `M` Inmobiliaria · `O` Servicios administrativos · `P` Administración pública · `S` Entretenimiento · `T` Otros servicios · `UV` Hogares/Extraterritoriales
+| `S` | `sectors/S.md` | `Arte, Deporte, Cultura y Servicios Personales` |
+| `T` | `sectors/T.md` | `Actividades de los Hogares como Empleadores` |
+| `UV` | `sectors/UV.md` | `Organismos Extraterritoriales e Internacionales` |
 
 ---
 
