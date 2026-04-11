@@ -311,35 +311,56 @@ export class KnowledgeLoader {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  listSectors — sectores disponibles. Tier 1 garantizados, resto on demand.
+    //  listSectors — sectores disponibles. Lee _index.md y parsea la tabla.
     // ══════════════════════════════════════════════════════════════════════════
     static async listSectors() {
-        const index = await this.loadFile('_index.md');
+        var index = await this.loadFile('_index.md');
         if (index) {
-            const match = index.match(/##\s*[Ss]ectores([\s\S]*?)(?=##|$)/);
+            var match = index.match(/##\s*[Ss]ectores([\s\S]*?)(?=##|$)/);
             if (match) {
-                const sectors = [];
-                for (const line of match[1].split('\n')) {
-                    const m = line.match(/`([A-Z]{1,2})\.md`[^`]*`([^`]+)`/);
-                    if (m) sectors.push({ id: m[1], file: 'sectors/' + m[1] + '.md', name: m[2] });
+                var sectors = [];
+                var lines   = match[1].split('\n');
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i];
+                    // Formato tabla: | `ID` | `sectors/X.md` | `Nombre` |
+                    // Captura: col1 = ID (1-2 letras mayúsculas), col3 = nombre
+                    var m = line.match(/\|\s*`([A-Z]{1,2})`\s*\|\s*`[^`]+`\s*\|\s*`([^`]+)`/);
+                    if (m) {
+                        sectors.push({
+                            id:   m[1],
+                            file: 'sectors/' + m[1] + '.md',
+                            name: m[2]
+                        });
+                    }
                 }
                 if (sectors.length > 0) return sectors;
             }
         }
         // Fallback Tier 1 — bilingual names
-        const lang = (typeof window !== 'undefined' && window.__lang) ? window.__lang : 'en';
-        const names = {
-            en: { N: 'Consulting / Professional Services', K: 'Tech / Software / AI', Q: 'Education', F: 'Construction', R: 'Health & Social Services' },
-            es: { N: 'Consultoría / Actividades Profesionales', K: 'Tech / Software / IA', Q: 'Educación', F: 'Construcción', R: 'Salud y Servicios Sociales' },
+        var lang = (typeof window !== 'undefined' && window.__lang) ? window.__lang : 'en';
+        var names = {
+            en: { A:'Agriculture', B:'Mining & Quarrying', C:'Manufacturing', D:'Energy Supply',
+                  E:'Water & Waste', F:'Construction', G:'Wholesale & Retail', H:'Transport & Storage',
+                  I:'Accommodation & Food', J:'Information & Media', K:'Tech / Software / AI',
+                  L:'Financial & Insurance', M:'Real Estate', N:'Consulting / Professional Services',
+                  O:'Public Administration', P:'Education K-12', Q:'Higher Education',
+                  R:'Health & Social Services', S:'Arts, Sport & Personal Services',
+                  T:'Households as Employers', UV:'Extraterritorial Organisations' },
+            es: { A:'Agricultura, Ganadería y Pesca', B:'Industrias Extractivas', C:'Industria Manufacturera',
+                  D:'Suministro de Energía', E:'Agua, Saneamiento y Residuos', F:'Construcción',
+                  G:'Comercio al por Mayor y Menor', H:'Transporte y Almacenamiento',
+                  I:'Hostelería y Turismo', J:'Información y Comunicaciones', K:'Tech / Software / IA',
+                  L:'Actividades Financieras y de Seguros', M:'Actividades Inmobiliarias',
+                  N:'Consultoría / Actividades Profesionales', O:'Administración Pública y Defensa',
+                  P:'Educación Reglada (K-12)', Q:'Educación Superior y Formación',
+                  R:'Salud y Servicios Sociales', S:'Arte, Deporte y Servicios Personales',
+                  T:'Actividades de los Hogares como Empleadores', UV:'Organismos Extraterritoriales' }
         };
-        const n = names[lang] || names['en'];
-        return [
-            { id: 'N', file: 'sectors/N.md', name: n.N },
-            { id: 'K', file: 'sectors/K.md', name: n.K },
-            { id: 'Q', file: 'sectors/Q.md', name: n.Q },
-            { id: 'F', file: 'sectors/F.md', name: n.F },
-            { id: 'R', file: 'sectors/R.md', name: n.R },
-        ];
+        var n  = names[lang] || names['en'];
+        var ids = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','UV'];
+        return ids.map(function(id) {
+            return { id: id, file: 'sectors/' + id + '.md', name: n[id] || id };
+        });
     }
 
     // ══════════════════════════════════════════════════════════════════════════
