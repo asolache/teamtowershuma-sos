@@ -119,8 +119,12 @@ export default class SettingsView {
         if (sel) sel.innerHTML = langSelectorHtml();
 
         // Actualizar badge cuando cambia el provider
-        document.getElementById('svProvider')?.addEventListener('change', () => {
-            // Recargar la vista sin hard reload para que Netlify no 404
+        document.getElementById('svProvider')?.addEventListener('change', async () => {
+            // Guardar el provider inmediatamente antes de recargar
+            var sel = document.getElementById('svProvider');
+            var prov = sel ? sel.value : 'anthropic';
+            try { await Orchestrator.setDefaultProvider(prov); } catch(_) {}
+            // Recargar la vista SPA para refrescar el badge activo
             if (window.navigateTo) window.navigateTo('/settings');
             else window.location.replace('/settings');
         });
