@@ -481,12 +481,12 @@ export default class ValueMapView {
                 font-size: var(--text-xl);
                 font-weight: 900;
                 color: white;
-                margin-bottom: 8px;
+                margin-bottom: 4px;
             }
             .vmap-mode-subtitle {
                 font-size: var(--text-sm);
                 color: var(--text-muted);
-                margin-bottom: 20px;
+                margin-bottom: 8px;
                 font-family: var(--font-mono);
             }
             .vmap-mode-cards {
@@ -511,10 +511,72 @@ export default class ValueMapView {
                 transform: translateY(-3px);
                 box-shadow: var(--shadow-indigo);
             }
+            .vmap-mode-card.active {
+                border-color: var(--accent-indigo);
+                background: rgba(99,102,241,0.12);
+                box-shadow: var(--shadow-indigo);
+            }
             .vmap-mode-card-icon { font-size: 2rem; margin-bottom: 8px; }
             .vmap-mode-card-title { font-size: var(--text-sm); font-weight: 900; color: white; margin-bottom: 4px; }
             .vmap-mode-card-desc { font-size: var(--text-xs); color: var(--text-muted); line-height: 1.5; }
-            .vmap-sector-select-wrap { margin-top: 12px; width: 300px; }
+
+            /* Selector de sector — fila independiente bajo las cards */
+            .vmap-sector-picker-row {
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                width: 100%;
+                max-width: 500px;
+                animation: slideUp 0.25s var(--ease-out);
+            }
+            .vmap-sector-picker-row.visible { display: flex; }
+            .vmap-sector-picker-label {
+                font-size: var(--text-xs);
+                color: var(--text-muted);
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                font-family: var(--font-mono);
+            }
+            .vmap-sector-picker-select {
+                width: 100%;
+                background: rgba(10,10,15,0.95);
+                border: 1px solid var(--accent-indigo);
+                color: white;
+                padding: 10px 14px;
+                border-radius: var(--radius-md);
+                font-family: var(--font-base);
+                font-size: var(--text-sm);
+                font-weight: 600;
+                outline: none;
+                cursor: pointer;
+                -webkit-appearance: none;
+                appearance: none;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236366f1' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 14px center;
+                padding-right: 36px;
+                box-sizing: border-box;
+            }
+            .vmap-sector-picker-select:focus {
+                box-shadow: 0 0 0 2px rgba(99,102,241,0.35);
+            }
+            .vmap-sector-picker-select option {
+                background: #111118;
+                color: white;
+            }
+            .vmap-sector-picker-actions {
+                display: flex;
+                gap: 10px;
+                width: 100%;
+            }
+            .vmap-sector-picker-actions .vmap-btn {
+                flex: 1;
+                justify-content: center;
+                padding: 10px;
+                font-size: var(--text-xs);
+            }
 
 
             /* ── Panel IA ───────────────────────────────────────────── */
@@ -792,13 +854,20 @@ export default class ValueMapView {
                         <div class="vmap-mode-card" id="vmapModeSector">
                             <div class="vmap-mode-card-icon">📂</div>
                             <div class="vmap-mode-card-title">Desde sector</div>
-                            <div class="vmap-mode-card-desc">Carga roles y transacciones típicos del sector como punto de partida.</div>
-                            <div class="vmap-sector-select-wrap">
-                                <select class="vmap-form-input vmap-form-select" id="vmapSectorPicker" style="margin-top:8px;font-size:var(--text-xs);">
-                                    <option value="">Elige sector…</option>
-                                    ${sectorOptions}
-                                </select>
-                            </div>
+                            <div class="vmap-mode-card-desc">Carga roles y transacciones típicos del sector CNAE como punto de partida.</div>
+                        </div>
+                    </div>
+
+                    <!-- Selector de sector — aparece solo al elegir "Desde sector" -->
+                    <div class="vmap-sector-picker-row" id="vmapSectorPickerRow">
+                        <div class="vmap-sector-picker-label">Selecciona el sector CNAE</div>
+                        <select class="vmap-sector-picker-select" id="vmapSectorPicker">
+                            <option value="">— Elige sector —</option>
+                            ${sectorOptions}
+                        </select>
+                        <div class="vmap-sector-picker-actions">
+                            <button class="vmap-btn" id="vmapSectorPickerBack">← Volver</button>
+                            <button class="vmap-btn vmap-btn-primary" id="vmapSectorPickerConfirm">Cargar sector →</button>
                         </div>
                     </div>
                 </div>
@@ -1008,24 +1077,57 @@ export default class ValueMapView {
 
     // ── Selector de modo inicial ──────────────────────────────────────────────
     _bindModeSelector() {
-        document.getElementById('vmapModeBlank')?.addEventListener('click', () => {
-            this._hideModeSelector();
-            this._mountGraph();
+        var self = this;
+
+        // Card "Desde cero" → lanzar canvas vacío
+        document.getElementById('vmapModeBlank') && document.getElementById('vmapModeBlank').addEventListener('click', function() {
+            self._hideModeSelector();
+            self._mountGraph();
         });
 
-        document.getElementById('vmapModeSector')?.addEventListener('click', async (e) => {
-            if (e.target.id === 'vmapSectorPicker' || e.target.closest('#vmapSectorPicker')) return;
-            const sectorId = document.getElementById('vmapSectorPicker').value;
+        // Card "Desde sector" → mostrar fila de selector (no cargar aún)
+        document.getElementById('vmapModeSector') && document.getElementById('vmapModeSector').addEventListener('click', function() {
+            var card = document.getElementById('vmapModeSector');
+            var row  = document.getElementById('vmapSectorPickerRow');
+            if (!card || !row) return;
+            card.classList.add('active');
+            var blankCard = document.getElementById('vmapModeBlank');
+            if (blankCard) blankCard.style.opacity = '0.4';
+            row.classList.add('visible');
+            var sel = document.getElementById('vmapSectorPicker');
+            if (sel) sel.focus();
+        });
+
+        // Botón "← Volver" → ocultar fila, resetear estado
+        document.getElementById('vmapSectorPickerBack') && document.getElementById('vmapSectorPickerBack').addEventListener('click', function() {
+            var row = document.getElementById('vmapSectorPickerRow');
+            if (row) row.classList.remove('visible');
+            var card = document.getElementById('vmapModeSector');
+            if (card) card.classList.remove('active');
+            var blankCard = document.getElementById('vmapModeBlank');
+            if (blankCard) blankCard.style.opacity = '';
+            var sel = document.getElementById('vmapSectorPicker');
+            if (sel) sel.value = '';
+        });
+
+        // Botón "Cargar sector →" → cargar seed
+        document.getElementById('vmapSectorPickerConfirm') && document.getElementById('vmapSectorPickerConfirm').addEventListener('click', async function() {
+            var sel = document.getElementById('vmapSectorPicker');
+            var sectorId = sel ? sel.value : '';
             if (!sectorId) {
-                document.getElementById('vmapSectorPicker').focus();
+                if (sel) sel.focus();
+                // Shake visual
+                var row = document.getElementById('vmapSectorPickerRow');
+                if (row) {
+                    row.style.outline = '1px solid var(--accent-red)';
+                    setTimeout(function() { row.style.outline = ''; }, 1200);
+                }
                 return;
             }
-            await this._loadSectorSeed(sectorId);
-        });
-
-        document.getElementById('vmapSectorPicker')?.addEventListener('change', async (e) => {
-            const sectorId = e.target.value;
-            if (sectorId) await this._loadSectorSeed(sectorId);
+            var btn = document.getElementById('vmapSectorPickerConfirm');
+            if (btn) { btn.textContent = '⏳ Cargando…'; btn.disabled = true; }
+            await self._loadSectorSeed(sectorId);
+            if (btn) { btn.textContent = 'Cargar sector →'; btn.disabled = false; }
         });
     }
 
