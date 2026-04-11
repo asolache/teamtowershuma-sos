@@ -986,6 +986,14 @@ export default class ValueMapView {
         }
     }
 
+    // ── Cleanup al navegar (SPA teardown) ───────────────────────────────────────
+    destroy() {
+        if (this._state && this._state.d3Sim) {
+            this._state.d3Sim.stop();
+            this._state.d3Sim = null;
+        }
+    }
+
     // ── Cargar D3 desde CDN ───────────────────────────────────────────────────
     async _loadD3() {
         if (window.d3) return;
@@ -1329,7 +1337,8 @@ export default class ValueMapView {
 
                 const labelG2 = d3.select('[data-id="' + d.id + '"] .link-label-g');
                 const textEl  = labelG2.select('.link-label-text');
-                const textStr = textEl.text();
+                if (!textEl || !textEl.node()) return; // nodo desmontado — skip
+                const textStr = textEl.text() || '';
                 const tw      = textStr.length * 5.4 + 10;
                 const th      = 14;
                 labelG2.select('rect')

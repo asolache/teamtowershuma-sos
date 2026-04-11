@@ -19,9 +19,14 @@ async function router() {
 
     try {
         await store.init();
+        // Destruir vista anterior (detener simulaciones D3, etc.)
+        if (window.__currentView && typeof window.__currentView.destroy === 'function') {
+            window.__currentView.destroy();
+        }
         const module    = await match.view();
         const ViewClass = module.default;
         const view      = new ViewClass();
+        window.__currentView = view;
         const app       = document.getElementById('app');
         app.innerHTML   = await view.getHtml();
         if (typeof view.afterRender === 'function') await view.afterRender();

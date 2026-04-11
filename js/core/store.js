@@ -155,7 +155,21 @@ class Store {
         this.state.lastUpdated = Date.now();
     }
 
-    getState() { return this.state; }
+    getState() {
+        // Garantizar demo project en cada getState (guard idempotente)
+        if (this.isInitialized && this.state.projects) {
+            var hasDemo = false;
+            for (var i = 0; i < this.state.projects.length; i++) {
+                if (this.state.projects[i].id === 'proj-colla-demo-v11') { hasDemo = true; break; }
+            }
+            if (!hasDemo) {
+                this.state.projects.unshift(JSON.parse(JSON.stringify(DEMO_PROJECT)));
+                // Persistir de forma async sin bloquear
+                this.persistState().catch(function() {});
+            }
+        }
+        return this.state;
+    }
 
     subscribe(listener) {
         this.listeners.push(listener);
