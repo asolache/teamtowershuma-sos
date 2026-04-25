@@ -177,6 +177,13 @@ class Store {
     }
 
     async dispatch(action) {
+        // Side effects Mind-as-Graph: escribir en KB antes del reducer.
+        // Si KB falla, la acción se aborta y el estado no cambia.
+        if (action.type === 'KB_UPSERT') {
+            await KB.upsert(action.payload.node);
+        } else if (action.type === 'KB_DELETE') {
+            await KB.remove(action.payload.id);
+        }
         this.state = this._reducer(JSON.parse(JSON.stringify(this.state)), action);
         this.state.lastUpdated = Date.now();
         await this.persistState();
@@ -252,6 +259,12 @@ class Store {
             case 'LOG_TELEMETRY':
                 idx = findProject(action.payload.projectId);
                 if (idx > -1) { if (!newState.projects[idx].telemetry) newState.projects[idx].telemetry = []; newState.projects[idx].telemetry.push({ ...action.payload, timestamp: Date.now() }); }
+                break;
+            case 'KB_UPSERT':
+            case 'KB_DELETE':
+                // KB write ya se ejecutó en dispatch(); aquí sólo bumpeamos
+                // la versión para que los subscribers re-rendericen.
+                newState.kbVersion = (newState.kbVersion || 0) + 1;
                 break;
             default: break;
         }
