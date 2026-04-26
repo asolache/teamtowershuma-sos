@@ -50,6 +50,29 @@ Ficheros disponibles. KnowledgeLoader los carga por id CNAE o alias.
 
 ---
 
+## SOCs · Standard Operating Concepts
+
+Conceptos invariantes (qué + por qué) de servicios, rituales y artefactos
+de TeamTowers. Cada SOC es un nodo `type: soc` en KB. Ver `socs/_README.md`
+para el esquema de frontmatter.
+
+| Fichero | Concepto |
+|---------|----------|
+| `socs/fent-pinya.md` | Taller experiencial Fent Pinya — diagnóstico VNA físico de una red con propósito. |
+
+---
+
+## SOPs · Standard Operating Procedures
+
+Procedimientos repetibles (cómo) que materializan los SOCs. Cada SOP es un
+nodo `type: sop` en KB y referencia un `soc_ref`. Ver `sops/_README.md`.
+
+| Fichero | Procedimiento | SOC ref |
+|---------|---------------|---------|
+| `sops/fent-pinya-taller.md` | Taller Fent Pinya base, 180 min, 8-30 personas. | `soc-fent-pinya` |
+
+---
+
 ## Clientes
 
 Modelos VNA guardados por cliente. Formato: `clients/{client_id}/vna-model.md`
@@ -95,23 +118,3 @@ patterns:
   - name: "Nombre del patrón de disfunción"
     description: "Qué significa"
     signal: "Cómo detectarlo en el mapa"
-```
-
-Reglas del schema:
-- `fmv_usd_h: null` siempre en seeds — editable por el usuario en el canvas
-- `castell_level` mapea a UI: `pinya` = Base operativa · `tronc` = Núcleo de valor · `pom_de_dalt` = Cúspide estratégica
-- Todo rol necesita al menos 1 transacción entrante y 1 saliente para health score verde
-- Tangible = contractual (línea sólida verde en canvas) · Intangible = informal (línea punteada dorada)
-
----
-
-## Instrucciones para la IA
-
-Cuando KnowledgeLoader inyecta este índice en el contexto:
-
-1. Si el sector del proyecto coincide con un fichero Tier 1, úsalo como base de roles y transacciones
-2. Si el sector es Tier 2 (no existe fichero), infiere roles desde conocimiento propio siguiendo el schema canónico
-3. `fmv_usd_h` nunca lo rellenes — lo define el usuario
-4. `open_question: null` por defecto — solo preguntar en bifurcaciones estratégicas reales
-5. Mínimo 6 roles por mapa generado, mínimo 2 por nivel castellero
-6. Todo rol generado debe tener al menos 1 transacción entrante y 1 saliente
