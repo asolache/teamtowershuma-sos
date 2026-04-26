@@ -58,6 +58,7 @@ para el esquema de frontmatter.
 
 | Fichero | Concepto |
 |---------|----------|
+| `socs/soc-vna-network.md` | Red de valor (VNA) — concepto operativo raíz de cualquier proyecto SOS. |
 | `socs/fent-pinya.md` | Taller experiencial Fent Pinya — diagnóstico VNA físico de una red con propósito. |
 
 ---
