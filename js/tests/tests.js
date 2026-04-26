@@ -63,9 +63,77 @@ async function testKbMindAsGraph() {
     assert(kbVersionAfter >= kbVersionBefore + 3, 'kbVersion se incrementa en cada acción KB (upsert+upsert+delete)');
 }
 
+// ─── H1.5 · KnowledgeLoader carga SOPs/SOCs e inyecta en buildContext ─────
+async function testKnowledgeLoaderSocsSops() {
+    const { KnowledgeLoader } = await import('../core/KnowledgeLoader.js');
+    KnowledgeLoader.clearCache();
+
+    // listSocs → debe encontrar al menos los 2 SOCs registrados en _index.md
+    const socs = await KnowledgeLoader.listSocs();
+    assert(Array.isArray(socs),                          'listSocs() devuelve array');
+    assert(socs.length >= 2,                             'listSocs() encuentra ≥2 SOCs en _index.md');
+    assert(socs.some(s => s.slug === 'fent-pinya'),      'listSocs() incluye fent-pinya');
+    assert(socs.some(s => s.slug === 'soc-vna-network'), 'listSocs() incluye soc-vna-network');
+
+    // listSops → debe encontrar el SOP de fent-pinya con soc_ref
+    const sopsList = await KnowledgeLoader.listSops();
+    assert(Array.isArray(sopsList),                      'listSops() devuelve array');
+    assert(sopsList.length >= 1,                         'listSops() encuentra ≥1 SOP en _index.md');
+    const sopEntry = sopsList.find(s => s.slug === 'fent-pinya-taller');
+    assert(!!sopEntry,                                   'listSops() incluye fent-pinya-taller');
+    assert(sopEntry.socRef === 'soc-fent-pinya',         'sop fent-pinya-taller referencia soc-fent-pinya');
+
+    // getSocSeed → carga frontmatter y body del fichero
+    const soc = await KnowledgeLoader.getSocSeed('fent-pinya');
+    assert(!!soc,                                        'getSocSeed("fent-pinya") devuelve seed');
+    assert(soc.id === 'soc-fent-pinya',                  'soc.id = soc-fent-pinya (del frontmatter)');
+    assert(typeof soc.purpose === 'string' && soc.purpose.length > 30, 'soc.purpose presente');
+    assert(soc.body.includes('Fent Pinya'),              'soc.body contiene contenido del MD');
+
+    // getSopSeed → carga SOP con soc_ref
+    const sop = await KnowledgeLoader.getSopSeed('fent-pinya-taller');
+    assert(!!sop,                                        'getSopSeed("fent-pinya-taller") devuelve seed');
+    assert(sop.socRef === 'soc-fent-pinya',              'sop.socRef = soc-fent-pinya');
+    assert(sop.durationMinutes === 180,                  'sop.durationMinutes = 180');
+    assert(sop.body.includes('Pinya'),                   'sop.body contiene contenido del MD');
+
+    // buildContext con socs+sops → systemPrompt incluye contenido inyectado
+    const ctx = await KnowledgeLoader.buildContext({
+        includeVna: false,
+        socs: ['fent-pinya'],
+        sops: ['fent-pinya-taller'],
+    });
+    assert(typeof ctx.systemPrompt === 'string',                        'buildContext devuelve systemPrompt');
+    assert(ctx.systemPrompt.includes('SOC: SOC-FENT-PINYA'),            'systemPrompt incluye sección SOC');
+    assert(ctx.systemPrompt.includes('SOP: SOP-FENT-PINYA-TALLER'),     'systemPrompt incluye sección SOP');
+    assert(ctx.sources.includes('socs/fent-pinya.md'),                  'sources incluye SOC source');
+    assert(ctx.sources.includes('sops/fent-pinya-taller.md'),           'sources incluye SOP source');
+
+    // buildContext con projectId → carga nodos KB Mind-as-Graph del proyecto
+    const pid = 'proj-test-h15-' + Date.now();
+    const sopId = 'sop-test-h15-' + Date.now();
+    await store.dispatch({ type: 'KB_UPSERT', payload: { node: {
+        id:        sopId,
+        type:      'sop',
+        projectId: pid,
+        content:   { title: 'Test SOP local del proyecto' },
+    }}});
+    const ctxKb = await KnowledgeLoader.buildContext({
+        includeVna: false,
+        projectId:  pid,
+    });
+    assert(ctxKb.systemPrompt.includes('CONTEXTO PROYECTO'),       'buildContext con projectId inyecta sección Mind-as-Graph');
+    assert(ctxKb.systemPrompt.includes(pid),                       'systemPrompt incluye projectId');
+    assert(ctxKb.sources.includes('kb://project/' + pid),          'sources incluye kb://project/...');
+
+    // limpieza del SOP de prueba
+    await store.dispatch({ type: 'KB_DELETE', payload: { id: sopId } });
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
-    { name: 'H1.1 · KB Mind-as-Graph round-trip', fn: testKbMindAsGraph }
+    { name: 'H1.1 · KB Mind-as-Graph round-trip',                fn: testKbMindAsGraph },
+    { name: 'H1.5 · KnowledgeLoader carga SOPs/SOCs y projectId', fn: testKnowledgeLoaderSocsSops }
 ];
 
 export async function runTests() {

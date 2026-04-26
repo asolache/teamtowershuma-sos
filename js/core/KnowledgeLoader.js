@@ -185,6 +185,9 @@ export class KnowledgeLoader {
             includeVision = false,
             freeText      = '',
             taskContext   = '',
+            socs          = null,   // ['slug', ...] | true | null  — inyectar SOCs públicos
+            sops          = null,   // ['slug', ...] | true | null  — inyectar SOPs públicos
+            projectId     = null,   // proyecto activo → cargar nodos KB Mind-as-Graph
         } = options;
 
         const parts          = [];
@@ -265,6 +268,75 @@ export class KnowledgeLoader {
             if (vision) {
                 parts.push('## ARQUITECTURA COGNITIVA\n' + this._extractBodyOnly(vision));
                 sources.push('vision/mind-architecture.md');
+            }
+        }
+
+        // ── 5b. SOCs públicos (knowledge/socs/*.md) ───────────────────────────
+        if (socs) {
+            const slugs = socs === true
+                ? (await this.listSocs()).map(s => s.slug)
+                : (Array.isArray(socs) ? socs : []);
+            for (const slug of slugs) {
+                const soc = await this.getSocSeed(slug);
+                if (soc) {
+                    parts.push(
+                        '## SOC: ' + (soc.id || slug).toUpperCase() + '\n' +
+                        (soc.purpose ? 'Propósito: ' + soc.purpose + '\n\n' : '') +
+                        soc.body
+                    );
+                    sources.push(soc.path);
+                }
+            }
+        }
+
+        // ── 5c. SOPs públicos (knowledge/sops/*.md) ───────────────────────────
+        if (sops) {
+            const slugs = sops === true
+                ? (await this.listSops()).map(s => s.slug)
+                : (Array.isArray(sops) ? sops : []);
+            for (const slug of slugs) {
+                const sop = await this.getSopSeed(slug);
+                if (sop) {
+                    const head = [
+                        sop.socRef          ? 'SOC ref: ' + sop.socRef : null,
+                        sop.durationMinutes ? 'Duración: ' + sop.durationMinutes + ' min' : null,
+                        sop.audience.length ? 'Audiencia: ' + sop.audience.join(', ') : null,
+                    ].filter(Boolean).join(' · ');
+                    parts.push(
+                        '## SOP: ' + (sop.id || slug).toUpperCase() + '\n' +
+                        (head ? head + '\n\n' : '') +
+                        sop.body
+                    );
+                    sources.push(sop.path);
+                }
+            }
+        }
+
+        // ── 5d. Contexto KB del proyecto activo (Mind-as-Graph) ──────────────
+        // Carga SOPs/SOCs/skill_nodes guardados en KB para este proyecto.
+        // Se inyectan SÓLO sus IDs+títulos para no inundar tokens; el modelo
+        // puede pedirlos por id si los necesita (futuro: tool-use).
+        if (projectId && typeof window !== 'undefined') {
+            try {
+                const kbModule = await import('./kb.js');
+                const KB = kbModule.KB;
+                const nodes = await KB.query({ projectId });
+                const buckets = { soc: [], sop: [], skill_node: [], deliverable: [], work_order: [] };
+                for (const n of nodes) {
+                    if (buckets[n.type]) buckets[n.type].push(n);
+                }
+                const lines = [];
+                if (buckets.soc.length)        lines.push('SOCs propios (' + buckets.soc.length + '): '          + buckets.soc.map(n => n.id).join(', '));
+                if (buckets.sop.length)        lines.push('SOPs propios (' + buckets.sop.length + '): '          + buckets.sop.map(n => n.id).join(', '));
+                if (buckets.skill_node.length) lines.push('Skills personales (' + buckets.skill_node.length + '): ' + buckets.skill_node.map(n => n.id).join(', '));
+                if (buckets.deliverable.length)lines.push('Deliverables (' + buckets.deliverable.length + '): '  + buckets.deliverable.map(n => n.id).join(', '));
+                if (buckets.work_order.length) lines.push('Work orders (' + buckets.work_order.length + '): '    + buckets.work_order.map(n => n.id).join(', '));
+                if (lines.length > 0) {
+                    parts.push('## CONTEXTO PROYECTO (KB Mind-as-Graph · proj=' + projectId + ')\n' + lines.join('\n'));
+                    sources.push('kb://project/' + projectId);
+                }
+            } catch (e) {
+                console.warn('[KnowledgeLoader] KB scope skipped:', e.message);
             }
         }
 
@@ -432,6 +504,95 @@ export class KnowledgeLoader {
             '',
             meta.notes || 'Mapa VNA generado con SOS V11 · TeamTowers.',
         ].join('\n');
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  getSocSeed — carga SOC desde knowledge/socs/{slug}.md
+    //  Devuelve { slug, id, purpose, outcomes, keywords, body, path } | null
+    // ══════════════════════════════════════════════════════════════════════════
+    static async getSocSeed(slug) {
+        if (!slug) return null;
+        const path   = 'socs/' + slug + '.md';
+        const parsed = await this.parseFile(path);
+        if (!parsed) return null;
+        const fm = parsed.frontmatter || {};
+        return {
+            slug,
+            id:       fm.id       || ('soc-' + slug),
+            purpose:  fm.purpose  || '',
+            outcomes: Array.isArray(fm.outcomes) ? fm.outcomes : [],
+            keywords: Array.isArray(fm.keywords) ? fm.keywords : [],
+            body:     parsed.body || '',
+            path,
+        };
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  getSopSeed — carga SOP desde knowledge/sops/{slug}.md
+    //  Devuelve { slug, id, socRef, durationMinutes, audience, materials,
+    //             deliverables, keywords, body, path } | null
+    // ══════════════════════════════════════════════════════════════════════════
+    static async getSopSeed(slug) {
+        if (!slug) return null;
+        const path   = 'sops/' + slug + '.md';
+        const parsed = await this.parseFile(path);
+        if (!parsed) return null;
+        const fm = parsed.frontmatter || {};
+        return {
+            slug,
+            id:               fm.id      || ('sop-' + slug),
+            socRef:           fm.soc_ref || null,
+            durationMinutes:  fm.duration_minutes || null,
+            audience:         Array.isArray(fm.audience)     ? fm.audience     : [],
+            materials:        Array.isArray(fm.materials)    ? fm.materials    : [],
+            deliverables:     Array.isArray(fm.deliverables) ? fm.deliverables : [],
+            keywords:         Array.isArray(fm.keywords)     ? fm.keywords     : [],
+            body:             parsed.body || '',
+            path,
+        };
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  listSocs — lista SOCs públicos extraídos de _index.md
+    // ══════════════════════════════════════════════════════════════════════════
+    static async listSocs() {
+        const index = await this.loadFile('_index.md');
+        if (!index) return [];
+        const section = index.match(/##\s*SOCs[\s\S]*?(?=\n##\s|$)/);
+        if (!section) return [];
+        const list = [];
+        const re = /\|\s*`socs\/([\w-]+)\.md`\s*\|\s*([^|]+?)\s*\|/g;
+        let m;
+        while ((m = re.exec(section[0])) !== null) {
+            list.push({
+                slug:        m[1],
+                file:        'socs/' + m[1] + '.md',
+                description: m[2].trim(),
+            });
+        }
+        return list;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  listSops — lista SOPs públicos extraídos de _index.md (incluye soc_ref)
+    // ══════════════════════════════════════════════════════════════════════════
+    static async listSops() {
+        const index = await this.loadFile('_index.md');
+        if (!index) return [];
+        const section = index.match(/##\s*SOPs[\s\S]*?(?=\n##\s|$)/);
+        if (!section) return [];
+        const list = [];
+        const re = /\|\s*`sops\/([\w-]+)\.md`\s*\|\s*([^|]+?)\s*\|\s*`([^`]+)`/g;
+        let m;
+        while ((m = re.exec(section[0])) !== null) {
+            list.push({
+                slug:        m[1],
+                file:        'sops/' + m[1] + '.md',
+                description: m[2].trim(),
+                socRef:      m[3].trim(),
+            });
+        }
+        return list;
     }
 
     // ══════════════════════════════════════════════════════════════════════════
