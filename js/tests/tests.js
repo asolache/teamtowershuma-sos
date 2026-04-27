@@ -262,13 +262,53 @@ async function testProjectIO() {
     await store.dispatch({ type: 'KB_DELETE', payload: { id: probeId } });
 }
 
+// ─── H2.5 · WorkshopsView · builder de prompt para informe post-taller ──
+async function testWorkshopsReportPromptBuilder() {
+    const Mod = await import('../views/WorkshopsView.js?v=' + Date.now());
+    const view = new Mod.default();
+    const workshop = {
+        id: 'ws-test-report',
+        type: 'workshop',
+        content: {
+            clientName:   'Startup Innovació SL',
+            type:         'fent-pinya',
+            sector:       'startup',
+            audienceSize: 14,
+            date:         Date.now(),
+            notes:        'fundadores recientes, primer offsite',
+            status:       'impartido',
+        }
+    };
+    const notes = '- Pinya fase 2: María tocó el hombro de Javier sin palabras.\n- Músic detectado: Sara (PM marketing).\n- Patrón: rotación excesiva de baixos.\n- 5 personas eligen rol distinto a su puesto.';
+
+    const prompt = view.buildReportPrompt(workshop, notes);
+    assert(typeof prompt === 'string' && prompt.length > 300, 'buildReportPrompt devuelve string sustancioso');
+    assert(prompt.includes('Startup Innovació SL'),         'prompt incluye clientName');
+    assert(prompt.includes('startup'),                      'prompt incluye sector');
+    assert(prompt.includes('14 personas'),                  'prompt incluye audienceSize formateado');
+    assert(prompt.includes('María tocó el hombro'),         'prompt embeda las capturas literales del formador');
+    assert(prompt.includes('Sara (PM marketing)'),          'prompt embeda hallazgo del músic');
+    assert(prompt.includes('soc-fent-pinya'),               'prompt referencia SOC fent-pinya');
+    assert(prompt.includes('sop-fent-pinya-taller'),        'prompt referencia SOP fent-pinya-taller');
+    assert(/Roles\s+VNA\s+detectados/i.test(prompt),        'prompt pide sección Roles VNA detectados');
+    assert(/Acotxadors\s+invisibles/i.test(prompt),         'prompt pide sección Acotxadors invisibles');
+    assert(/Patrones\s+de\s+disfunci/i.test(prompt),        'prompt pide sección Patrones de disfunción');
+    assert(/máximo\s+900\s+palabras/i.test(prompt),         'prompt limita a 900 palabras');
+    assert(/NO\s+inventes/i.test(prompt),                   'prompt prohíbe explícitamente inventar contenido');
+
+    // Sin notas: el prompt debe seguir construyéndose pero advertir explícitamente
+    const empty = view.buildReportPrompt(workshop, '');
+    assert(/sin\s+notas/i.test(empty),                      'prompt vacío señala "sin notas" para que la IA marque [pendiente]');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
     { name: 'H1.3 · Export/Import firmado ECDSA P-256',           fn: testProjectIO },
     { name: 'H1.5 · KnowledgeLoader carga SOPs/SOCs y projectId', fn: testKnowledgeLoaderSocsSops },
     { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud },
-    { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder }
+    { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder },
+    { name: 'H2.5 · WorkshopsView · prompt builder informe IA',   fn: testWorkshopsReportPromptBuilder }
 ];
 
 export async function runTests() {

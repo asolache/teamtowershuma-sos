@@ -212,12 +212,16 @@ export default class WorkshopsView {
         root.querySelectorAll('[data-ws-ai]').forEach(btn => {
             btn.addEventListener('click', () => this._generateProposal(btn.dataset.wsAi));
         });
+        root.querySelectorAll('[data-ws-report]').forEach(btn => {
+            btn.addEventListener('click', () => this._openReportNotesModal(btn.dataset.wsReport));
+        });
     }
 
     _cardHtml(w, s) {
         const c = w.content || {};
         const audSize = c.audienceSize ? `${c.audienceSize} pers.` : '—';
         const isProposal = s.id === 'propuesta';
+        const isAfterDelivery = s.id === 'impartido' || s.id === 'cobrado';
         return `
             <div class="ws-card" style="--accent:${s.color};">
                 <h4>${this._esc(c.clientName || '(sin cliente)')}</h4>
@@ -225,6 +229,7 @@ export default class WorkshopsView {
                 <div class="meta">📅 ${fmtDate(c.date)}</div>
                 ${c.notes ? `<div class="meta" style="color:#aaa;">${this._esc(c.notes)}</div>` : ''}
                 ${c.proposalDeliverableId ? `<div class="meta" style="color:#22c55e;">📄 propuesta generada</div>` : ''}
+                ${c.reportDeliverableId   ? `<div class="meta" style="color:#22c55e;">📋 informe post-taller listo</div>` : ''}
                 <div class="row">
                     <label>Estado</label>
                     <select data-ws-status="${w.id}">
@@ -232,7 +237,8 @@ export default class WorkshopsView {
                     </select>
                 </div>
                 <div class="actions">
-                    ${isProposal ? `<button class="ws-btn ws-btn-primary" data-ws-ai="${w.id}">✨ Propuesta IA</button>` : ''}
+                    ${isProposal       ? `<button class="ws-btn ws-btn-primary" data-ws-ai="${w.id}">✨ Propuesta IA</button>` : ''}
+                    ${isAfterDelivery  ? `<button class="ws-btn ws-btn-primary" data-ws-report="${w.id}">📝 Generar informe</button>` : ''}
                     <button class="ws-btn danger" data-ws-del="${w.id}">Borrar</button>
                 </div>
             </div>
@@ -369,6 +375,7 @@ export default class WorkshopsView {
                     type:      'deliverable',
                     projectId: w.projectId || null,
                     content: {
+                        kind:        'proposal',
                         workshopId:  w.id,
                         title:       'Propuesta · ' + (w.content?.clientName || ''),
                         format:      'markdown',
@@ -382,6 +389,201 @@ export default class WorkshopsView {
                 }}});
                 // también enlazamos en el workshop
                 const updated = { ...w, content: { ...w.content, proposalDeliverableId: delId } };
+                await this._saveWorkshop(updated);
+                close();
+            });
+        }
+    }
+
+    // ─── H2.5 · Informe post-taller ─────────────────────────────────────────
+
+    // Builder del userPrompt para el informe. Público para test.
+    buildReportPrompt(workshop, notes) {
+        const c = workshop.content || {};
+        const aud  = c.audienceSize ? c.audienceSize + ' personas' : 'audiencia no especificada';
+        const date = c.date ? fmtDate(c.date) : 'fecha desconocida';
+        return [
+            'Genera un INFORME POST-TALLER profesional en español para entregar al cliente tras impartir un Fent Pinya.',
+            '',
+            'DATOS DEL TALLER:',
+            '- Cliente: ' + (c.clientName || '(sin cliente)'),
+            '- Sector / contexto: ' + (c.sector || '(no especificado)'),
+            '- Tamaño de audiencia: ' + aud,
+            '- Fecha del taller: ' + date,
+            '- Notas iniciales (encuadre): ' + (c.notes || '(sin notas)'),
+            '',
+            'CAPTURAS DEL FORMADOR DURANTE EL TALLER (input crítico — la IA no debe inventar nada que no esté aquí):',
+            '"""',
+            (notes || '').trim() || '(sin notas — informe imposible de generar con calidad; pídelas al formador)',
+            '"""',
+            '',
+            'REQUISITOS DEL INFORME:',
+            '1. Markdown limpio. Encabezado con cliente, fecha y duración.',
+            '2. Resumen ejecutivo (3-4 líneas) basado en los hallazgos reales del taller.',
+            '3. Sección "Roles VNA detectados" — listado de roles reales emergidos durante la cosecha (fase 6 del SOP), con tipo (pinya/tronc/pom_de_dalt) y rol castellero asociado si encaja.',
+            '4. Sección "Intercambios intangibles críticos" — los flujos no contractuales detectados, con hint de salud cuando proceda.',
+            '5. Sección "Patrones de disfunción" — 1-3 patrones con descripción, señal de detección y recomendación de mitigación.',
+            '6. Sección "Acotxadors invisibles" — roles de soporte emocional que el organigrama no reconoce.',
+            '7. Sección "Compromisos individuales" — síntesis anonimizada de los compromisos personales (rol VNA elegido por cada participante).',
+            '8. Sección "Recomendaciones de seguimiento" — propuesta concreta: consultoría VNA, formación interna, segundo taller, etc.',
+            '9. Tono profesional, riguroso, no condescendiente. NO inventes datos no presentes en las capturas. Si una sección no tiene material, escríbela como "[pendiente — el formador debe añadir capturas adicionales]" en lugar de fabricar.',
+            '10. Máximo 900 palabras.',
+            '',
+            'IMPORTANTE: alinéate con el SOC `soc-fent-pinya` y el SOP `sop-fent-pinya-taller` para conservar la coherencia metodológica.'
+        ].join('\n');
+    }
+
+    _openReportNotesModal(workshopId) {
+        const w = this.workshops.find(x => x.id === workshopId);
+        if (!w) return;
+        const root = document.getElementById('wsModalRoot');
+        if (!root) return;
+        const close = () => { root.innerHTML = ''; };
+        root.innerHTML = `
+            <div class="ws-modal" id="wsReportNotesBg">
+                <div class="ws-modal-inner" style="max-width:700px;">
+                    <h3>📝 Informe post-taller · ${this._esc(w.content?.clientName || '')}</h3>
+                    <p style="color:#aaa;font-size:0.82rem;margin:0.5rem 0 0.8rem 0;">
+                        Pega aquí <strong>las capturas reales</strong> que tomaste durante el taller:
+                        intangibles detectados en la pinya, identificación del músic, acotxadors invisibles,
+                        patrones de disfunción que surgieron, citas de participantes, compromisos individuales.
+                        Cuanto más rico el input, mejor el informe. Sin notas, la IA no debe inventar.
+                    </p>
+                    <textarea id="wsfReportNotes" style="width:100%;min-height:240px;background:#050507;color:#e6e6e6;border:1px solid #2a2a35;border-radius:5px;padding:0.6rem;font-family:monospace;font-size:0.82rem;" placeholder="Ejemplo:
+- Pinya fase 2: María tocó hombro de Javier en la 2ª ronda con vendas → primer intangible visible
+- Músic identificado en la organización: Sara (project mgr de marketing). El equipo lo confirma sin dudar.
+- Acotxador invisible: Pere (técnico de TI) — todos van a él en momentos críticos sin que conste en el organigrama.
+- Patrón detectado: 'silla musical de baixos' — los seniors de operaciones rotan demasiado, foundation inestable.
+- Compromisos: 5 personas eligen rol distinto a su puesto; 3 eligen 'músic'.
+"></textarea>
+                    <div class="actions">
+                        <button class="ws-btn" id="wsfReportCancel">Cancelar</button>
+                        <button class="ws-btn ws-btn-primary" id="wsfReportGo">✨ Generar informe</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('wsfReportCancel').addEventListener('click', close);
+        document.getElementById('wsReportNotesBg').addEventListener('click', e => { if (e.target.id === 'wsReportNotesBg') close(); });
+        document.getElementById('wsfReportGo').addEventListener('click', () => {
+            const notes = document.getElementById('wsfReportNotes').value;
+            if (!notes.trim()) {
+                if (!confirm('Estás generando el informe SIN capturas del taller. La IA no inventará contenido — saldrá un esqueleto con secciones [pendiente]. ¿Continuar?')) return;
+            }
+            this._generateReport(w.id, notes);
+        });
+    }
+
+    async _generateReport(workshopId, notes) {
+        const w = this.workshops.find(x => x.id === workshopId);
+        if (!w) return;
+        this._openReportModal(w, { state: 'loading', notes });
+
+        try {
+            const ctx = await KnowledgeLoader.buildContext({
+                sector:     w.content?.sector || null,
+                freeText:   w.content?.notes  || '',
+                socs:       ['fent-pinya', 'soc-vna-network'],
+                sops:       ['fent-pinya-taller'],
+                projectId:  w.projectId || null,
+                taskContext: 'Generar informe post-taller Fent Pinya para ' + (w.content?.clientName || 'cliente'),
+            });
+
+            const result = await Orchestrator.callLLM({
+                preferredEngine: 'anthropic',
+                systemPrompt:    ctx.systemPrompt,
+                userPrompt:      this.buildReportPrompt(w, notes),
+                responseFormat:  'text',
+                temperature:     0.3,
+            });
+
+            const reportText = (typeof result.content === 'string')
+                ? result.content
+                : (result.content?.raw || JSON.stringify(result.content, null, 2));
+
+            this._openReportModal(w, {
+                state:   'ready',
+                text:    reportText,
+                notes,
+                sources: ctx.sources,
+                tokens:  result.telemetry?.tokens?.total_tokens || 0,
+                latency: result.telemetry?.latencyMs || 0,
+            });
+        } catch (err) {
+            console.error('[H2.5] Error generando informe:', err);
+            this._openReportModal(w, {
+                state: 'error',
+                msg:   err.message + '\n\nVerifica tu API key en /settings.',
+            });
+        }
+    }
+
+    _openReportModal(w, payload) {
+        const root = document.getElementById('wsModalRoot');
+        if (!root) return;
+        const close = () => { root.innerHTML = ''; };
+
+        let body;
+        if (payload.state === 'loading') {
+            body = `
+                <p style="color:#aaa;">Construyendo contexto SOC + SOP + capturas del taller…</p>
+                <p style="color:#666;font-size:0.8rem;">Llamando al LLM. Puede tardar 10-25 segundos (output más largo).</p>`;
+        } else if (payload.state === 'error') {
+            body = `
+                <p style="color:#ff5252;">No se pudo generar el informe:</p>
+                <pre style="background:#050507;padding:0.6rem;border-radius:5px;color:#aaa;white-space:pre-wrap;font-size:0.78rem;">${this._esc(payload.msg)}</pre>`;
+        } else {
+            const meta = `Tokens: ${payload.tokens} · Latencia: ${payload.latency} ms · Fuentes: ${payload.sources.length}`;
+            body = `
+                <p style="color:#888;font-size:0.75rem;">${this._esc(meta)}</p>
+                <textarea id="wsfReportText" style="width:100%;min-height:340px;background:#050507;color:#e6e6e6;border:1px solid #2a2a35;border-radius:5px;padding:0.6rem;font-family:monospace;font-size:0.78rem;">${this._esc(payload.text)}</textarea>`;
+        }
+
+        root.innerHTML = `
+            <div class="ws-modal" id="wsReportBg">
+                <div class="ws-modal-inner" style="max-width:780px;">
+                    <h3>📋 Informe post-taller · ${this._esc(w.content?.clientName || '(sin cliente)')}</h3>
+                    ${body}
+                    <div class="actions">
+                        ${payload.state === 'ready' ? `
+                            <button class="ws-btn" id="wsfReportCopy">📋 Copiar</button>
+                            <button class="ws-btn ws-btn-primary" id="wsfReportSave">💾 Guardar como deliverable</button>` : ''}
+                        <button class="ws-btn" id="wsfReportClose">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('wsfReportClose').addEventListener('click', close);
+        document.getElementById('wsReportBg').addEventListener('click', e => { if (e.target.id === 'wsReportBg') close(); });
+
+        if (payload.state === 'ready') {
+            document.getElementById('wsfReportCopy').addEventListener('click', () => {
+                const ta = document.getElementById('wsfReportText');
+                ta.select();
+                navigator.clipboard.writeText(ta.value).catch(() => document.execCommand('copy'));
+            });
+            document.getElementById('wsfReportSave').addEventListener('click', async () => {
+                const finalText = document.getElementById('wsfReportText').value;
+                const delId = 'del-' + Math.random().toString(36).slice(2, 9) + '-' + Date.now().toString(36);
+                await store.dispatch({ type: 'KB_UPSERT', payload: { node: {
+                    id:        delId,
+                    type:      'deliverable',
+                    projectId: w.projectId || null,
+                    content: {
+                        kind:        'post-workshop-report',
+                        workshopId:  w.id,
+                        title:       'Informe post-taller · ' + (w.content?.clientName || ''),
+                        format:      'markdown',
+                        body:        finalText,
+                        rawNotes:    payload.notes || '',
+                        socRef:      'soc-fent-pinya',
+                        sopRef:      'sop-fent-pinya-taller',
+                        generatedAt: Date.now(),
+                        sources:     payload.sources,
+                    },
+                    keywords: ['post-workshop-report', 'fent-pinya', w.content?.sector || ''],
+                }}});
+                const updated = { ...w, content: { ...w.content, reportDeliverableId: delId } };
                 await this._saveWorkshop(updated);
                 close();
             });
