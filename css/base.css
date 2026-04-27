@@ -31,18 +31,23 @@ body {
 @keyframes bootFade { 0%,80% { opacity:1; } 100% { opacity:0; pointer-events:none; } }
 
 /* ── APP SHELL ──────────────────────────────────────────────── */
+/* BUG-001 fix: #app permite scroll vertical para que el contenido
+   de las vistas (Dashboard, Workshops, etc.) sea accesible cuando
+   excede el viewport. Las vistas que necesiten height fijo sin scroll
+   (ej. ValueMap D3) deben gestionar su propio overflow internamente. */
 #app {
     display: flex;
-    height: 100dvh;
+    flex-direction: column;
+    min-height: 100dvh;
     width: 100vw;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .app-layout {
     display: flex;
-    height: 100dvh;
+    min-height: 100dvh;
     width: 100vw;
-    overflow: hidden;
     background: var(--bg-dark);
     animation: fadeIn var(--dur-slow) var(--ease-out);
 }

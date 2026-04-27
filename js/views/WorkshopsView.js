@@ -24,8 +24,59 @@ const STATUSES = [
     { id: 'cobrado',   label: 'Cobrado',    color: '#16a34a', emoji: '💶' },
 ];
 
-// Por defecto cualquier taller nuevo es Fent Pinya. Editable más adelante.
+// H2.6 · Catálogo de servicios. Cada entrada mapea el tipo a los SOCs/SOPs
+// que el KnowledgeLoader inyectará en buildContext para Propuesta/Informe IA.
+// Si añades un servicio nuevo aquí, asegúrate de que existan en knowledge/.
+const SERVICE_TYPES = [
+    {
+        id: 'fent-pinya',
+        label: '🏰 Fent Pinya · Taller participativo (2 h)',
+        socs: ['teamtowers-brand', 'fent-pinya'],
+        sops: ['fent-pinya-taller'],
+        description: 'Taller experiencial castellero hasta 1.000 pax.',
+    },
+    {
+        id: 'castellers-demo',
+        label: '🌟 Demo castellera · Espectáculo (30-45 min)',
+        socs: ['teamtowers-brand', 'castellers-demo'],
+        sops: ['castellers-demo'],
+        description: 'Exhibición profesional 4-7 pisos, máx 4 castells.',
+    },
+    {
+        id: 'la-colla',
+        label: '🧠 La Colla · Proceso VNA (multi-sesión)',
+        socs: ['teamtowers-brand', 'la-colla', 'soc-vna-network'],
+        sops: ['la-colla'],
+        description: 'Consultoría VNA tipo Pantheon — mapeo de la red del cliente.',
+    },
+    {
+        id: 'merchandising',
+        label: '🎁 Merchandising · Pañuelos y faixas',
+        socs: ['teamtowers-brand', 'teamtowers-merchandising'],
+        sops: ['teamtowers-merchandising'],
+        description: 'Producto físico personalizable, upsell post-evento.',
+    },
+    {
+        id: 'charla-conferencia',
+        label: '🎤 Charla / Conferencia (30-60 min)',
+        socs: ['teamtowers-brand', 'charla-conferencia'],
+        sops: ['charla-conferencia'],
+        description: 'Keynote para congresos, escuelas, comunidades.',
+    },
+    {
+        id: 'proyecto-custom',
+        label: '🛠️ Proyecto custom · A medida',
+        socs: ['teamtowers-brand', 'proyecto-custom', 'fent-pinya', 'la-colla'],
+        sops: ['proyecto-custom', 'fent-pinya-taller', 'la-colla'],
+        description: 'Combinación a medida — la IA recibe contexto de todos los formatos.',
+    },
+];
+
 const DEFAULT_TYPE = 'fent-pinya';
+
+function getServiceType(typeId) {
+    return SERVICE_TYPES.find(t => t.id === typeId) || SERVICE_TYPES[0];
+}
 
 function uid() { return 'ws-' + Math.random().toString(36).slice(2, 9) + '-' + Date.now().toString(36); }
 
@@ -219,13 +270,15 @@ export default class WorkshopsView {
 
     _cardHtml(w, s) {
         const c = w.content || {};
+        const svc = getServiceType(c.type);
         const audSize = c.audienceSize ? `${c.audienceSize} pers.` : '—';
         const isProposal = s.id === 'propuesta';
         const isAfterDelivery = s.id === 'impartido' || s.id === 'cobrado';
         return `
             <div class="ws-card" style="--accent:${s.color};">
                 <h4>${this._esc(c.clientName || '(sin cliente)')}</h4>
-                <div class="meta">${this._esc(c.type || DEFAULT_TYPE)} · ${this._esc(c.sector || '—')} · ${audSize}</div>
+                <div class="meta">${this._esc(svc.label)}</div>
+                <div class="meta">${this._esc(c.sector || '—')} · ${audSize}</div>
                 <div class="meta">📅 ${fmtDate(c.date)}</div>
                 ${c.notes ? `<div class="meta" style="color:#aaa;">${this._esc(c.notes)}</div>` : ''}
                 ${c.proposalDeliverableId ? `<div class="meta" style="color:#22c55e;">📄 propuesta generada</div>` : ''}
@@ -251,15 +304,23 @@ export default class WorkshopsView {
 
     // ─── H2.3 · Generador de propuesta comercial vía LLM ────────────────────
 
-    // Construye el userPrompt para el LLM. Público-instancia para test.
+    // Construye el userPrompt para el LLM según el tipo de servicio.
+    // Público-instancia para test.
     buildProposalPrompt(workshop) {
         const c = workshop.content || {};
+        const svc = getServiceType(c.type);
         const aud = c.audienceSize ? c.audienceSize + ' personas' : 'audiencia no especificada';
         const date = c.date ? fmtDate(c.date) : 'fecha por definir';
+        const socRefs = svc.socs.map(s => '`' + (s.startsWith('soc-') ? s : 'soc-' + s) + '`').join(', ');
+        const sopRefs = svc.sops.map(s => '`sop-' + s + '`').join(', ');
+
         return [
-            'Genera una PROPUESTA COMERCIAL profesional en español para un taller Fent Pinya.',
+            'Genera una PROPUESTA COMERCIAL profesional en español para el siguiente servicio TeamTowers.',
             '',
-            'DATOS DEL TALLER:',
+            'TIPO DE SERVICIO: ' + svc.label,
+            'Descripción base: ' + svc.description,
+            '',
+            'DATOS DEL CLIENTE:',
             '- Cliente: ' + (c.clientName || '(sin cliente)'),
             '- Sector / contexto: ' + (c.sector || '(no especificado)'),
             '- Tamaño de audiencia: ' + aud,
@@ -267,15 +328,16 @@ export default class WorkshopsView {
             '- Notas internas del formador: ' + (c.notes || '(sin notas)'),
             '',
             'REQUISITOS DE LA PROPUESTA:',
-            '1. Markdown limpio. Encabezado con nombre del cliente.',
-            '2. Resumen ejecutivo de 3-4 líneas que conecte el problema típico de su sector con el taller Fent Pinya.',
-            '3. Sección "Qué entrega el taller" con 3-5 outcomes tangibles del SOC fent-pinya.',
-            '4. Sección "Cómo se desarrolla" con la agenda fase a fase del SOP fent-pinya-taller.',
-            '5. Sección "Variante recomendada" basada en la audiencia (ver SOP "Variantes por audiencia").',
-            '6. Sección "Inversión y siguientes pasos" — deja un placeholder [PRECIO] para que el formador rellene.',
-            '7. Tono profesional, cercano, sin jerga vacía. Máximo 600 palabras.',
+            '1. Markdown limpio. Encabezado con nombre del cliente y servicio propuesto.',
+            '2. Resumen ejecutivo de 3-4 líneas que conecte el problema típico de su sector con este servicio.',
+            '3. Sección "Qué entrega el servicio" con 3-5 outcomes tangibles del SOC.',
+            '4. Sección "Cómo se desarrolla" alineada con el SOP correspondiente.',
+            '5. Sección "Variante recomendada" basada en la audiencia y sector cuando aplique.',
+            '6. Sección "Inversión y siguientes pasos" con placeholder [PRECIO] (no inventes precios).',
+            '7. Si el servicio es "Proyecto custom", explica explícitamente la combinación de bloques estándar.',
+            '8. Tono profesional, cercano, sin jerga vacía. Máximo 600 palabras.',
             '',
-            'IMPORTANTE: usa SÓLO el contenido del SOC `soc-fent-pinya` y el SOP `sop-fent-pinya-taller` que recibes en el contexto. NO inventes outcomes ni metodología que no estén ahí.'
+            'IMPORTANTE: usa SÓLO el contenido de los SOCs ' + socRefs + ' y los SOPs ' + sopRefs + ' que recibes en el contexto. NO inventes outcomes ni metodología que no estén ahí. Menciona Patrimonio Inmaterial UNESCO cuando el servicio sea casteller (Fent Pinya o Demo).'
         ].join('\n');
     }
 
@@ -285,14 +347,15 @@ export default class WorkshopsView {
         this._openProposalModal(w, { state: 'loading' });
 
         try {
-            // Construye contexto rico Mind-as-Graph
+            const svc = getServiceType(w.content?.type);
+            // Construye contexto rico Mind-as-Graph según tipo de servicio
             const ctx = await KnowledgeLoader.buildContext({
                 sector:     w.content?.sector || null,
                 freeText:   w.content?.notes  || '',
-                socs:       ['fent-pinya', 'soc-vna-network'],
-                sops:       ['fent-pinya-taller'],
+                socs:       svc.socs,
+                sops:       svc.sops,
                 projectId:  w.projectId || null,
-                taskContext: 'Generar propuesta comercial Fent Pinya para ' + (w.content?.clientName || 'cliente'),
+                taskContext: 'Generar propuesta comercial ' + svc.label + ' para ' + (w.content?.clientName || 'cliente'),
             });
 
             const result = await Orchestrator.callLLM({
@@ -370,6 +433,7 @@ export default class WorkshopsView {
             document.getElementById('wsfSaveDel').addEventListener('click', async () => {
                 const finalText = document.getElementById('wsfProposalText').value;
                 const delId = 'del-' + Math.random().toString(36).slice(2, 9) + '-' + Date.now().toString(36);
+                const svc = getServiceType(w.content?.type);
                 await store.dispatch({ type: 'KB_UPSERT', payload: { node: {
                     id:        delId,
                     type:      'deliverable',
@@ -377,15 +441,16 @@ export default class WorkshopsView {
                     content: {
                         kind:        'proposal',
                         workshopId:  w.id,
-                        title:       'Propuesta · ' + (w.content?.clientName || ''),
+                        serviceType: svc.id,
+                        title:       'Propuesta ' + svc.label + ' · ' + (w.content?.clientName || ''),
                         format:      'markdown',
                         body:        finalText,
-                        socRef:      'soc-fent-pinya',
-                        sopRef:      'sop-fent-pinya-taller',
+                        socRefs:     svc.socs,
+                        sopRefs:     svc.sops,
                         generatedAt: Date.now(),
                         sources:     payload.sources,
                     },
-                    keywords: ['proposal', 'fent-pinya', w.content?.sector || ''],
+                    keywords: ['proposal', svc.id, w.content?.sector || ''],
                 }}});
                 // también enlazamos en el workshop
                 const updated = { ...w, content: { ...w.content, proposalDeliverableId: delId } };
@@ -397,39 +462,86 @@ export default class WorkshopsView {
 
     // ─── H2.5 · Informe post-taller ─────────────────────────────────────────
 
-    // Builder del userPrompt para el informe. Público para test.
+    // Builder del userPrompt para el informe según el tipo de servicio.
+    // Público para test.
     buildReportPrompt(workshop, notes) {
-        const c = workshop.content || {};
+        const c   = workshop.content || {};
+        const svc = getServiceType(c.type);
         const aud  = c.audienceSize ? c.audienceSize + ' personas' : 'audiencia no especificada';
         const date = c.date ? fmtDate(c.date) : 'fecha desconocida';
+        const socRefs = svc.socs.map(s => '`' + (s.startsWith('soc-') ? s : 'soc-' + s) + '`').join(', ');
+        const sopRefs = svc.sops.map(s => '`sop-' + s + '`').join(', ');
+
+        // Secciones canónicas según tipo de servicio
+        const sectionsByType = {
+            'fent-pinya': [
+                '3. Sección "Roles VNA detectados" — roles reales emergidos durante la cosecha del taller, con nivel castellero (pinya/tronc/pom_de_dalt) cuando encaje.',
+                '4. Sección "Intercambios intangibles críticos" — flujos no contractuales detectados, con hint de salud.',
+                '5. Sección "Patrones de disfunción" — 1-3 patrones con descripción, señal y recomendación.',
+                '6. Sección "Acotxadors invisibles" — roles de soporte emocional no reconocidos.',
+                '7. Sección "Compromisos individuales" — síntesis anonimizada de roles VNA elegidos por cada participante.',
+                '8. Sección "Recomendaciones de seguimiento" — consultoría VNA, formación interna, segundo taller, etc.',
+            ],
+            'la-colla': [
+                '3. Sección "Mapa VNA del ámbito" — descripción narrativa de los 8-12 roles identificados, transacciones MUST y EXTRA.',
+                '4. Sección "Pulso de satisfacción" — entregables azules (satisfechos) y amarillos (insatisfechos) con análisis.',
+                '5. Sección "Retos identificados por el equipo" — 3-7 retos críticos co-formulados (no impuestos por consultor).',
+                '6. Sección "Propuestas de mejora priorizadas" — formato Diagnóstico → Solución → Rol emergente (si aplica), con responsable y plazo.',
+                '7. Sección "Roles emergentes detectados" — roles invisibles que sostienen la red sin reconocimiento formal.',
+                '8. Sección "Roles pendientes para próximas sesiones" — entrevistas individuales o grupales sugeridas.',
+            ],
+            'castellers-demo': [
+                '3. Sección "Castells construidos" — listado de los castells ejecutados (hasta 4), con altura y composición.',
+                '4. Sección "Material audiovisual entregado" — fotos, vídeos, momentos viralizables.',
+                '5. Sección "Impacto cultural percibido" — reacciones de la audiencia (si hay testimonios capturados).',
+                '6. Sección "Lecciones operativas" — incidencias menores, ajustes para futuras demos en el mismo cliente.',
+                '7. Sección "Recomendaciones de seguimiento" — taller participativo, demo de mayor altura, merchandising.',
+            ],
+            'merchandising': [
+                '3. Sección "Productos entregados" — pañuelos, faixas, cantidades, personalización.',
+                '4. Sección "Plazos cumplidos" — fechas de cada hito (briefing, mock-up, producción, entrega).',
+                '5. Sección "Calidad de personalización" — observaciones sobre acabados, defectos, conformidad.',
+                '6. Sección "Recomendaciones de seguimiento" — recompra, co-branding ampliado, eventos próximos.',
+            ],
+            'charla-conferencia': [
+                '3. Sección "Mensaje principal entregado" — síntesis del contenido de la keynote.',
+                '4. Sección "Audiencia y reacciones" — perfil del público y feedback recibido.',
+                '5. Sección "Leads cualificados generados" — empresas o asistentes con interés en taller / La Colla / consultoría.',
+                '6. Sección "Recomendaciones de seguimiento" — workshop posterior, tour por escuelas, comunidades.',
+            ],
+            'proyecto-custom': [
+                '3. Secciones específicas según los bloques estándar combinados — alinéate con los SOPs de los bloques que componen este proyecto custom.',
+                '4. Sección "Lecciones del custom" — qué funcionó, qué no, qué replicar.',
+                '5. Sección "Promoción a SOP estándar" — si este custom merece convertirse en formato propio.',
+            ],
+        };
+        const sections = sectionsByType[svc.id] || sectionsByType['fent-pinya'];
+
         return [
-            'Genera un INFORME POST-TALLER profesional en español para entregar al cliente tras impartir un Fent Pinya.',
+            'Genera un INFORME POST-EVENTO profesional en español para entregar al cliente tras ejecutar el siguiente servicio TeamTowers.',
             '',
-            'DATOS DEL TALLER:',
+            'TIPO DE SERVICIO: ' + svc.label,
+            '',
+            'DATOS DEL EVENTO:',
             '- Cliente: ' + (c.clientName || '(sin cliente)'),
             '- Sector / contexto: ' + (c.sector || '(no especificado)'),
             '- Tamaño de audiencia: ' + aud,
-            '- Fecha del taller: ' + date,
+            '- Fecha: ' + date,
             '- Notas iniciales (encuadre): ' + (c.notes || '(sin notas)'),
             '',
-            'CAPTURAS DEL FORMADOR DURANTE EL TALLER (input crítico — la IA no debe inventar nada que no esté aquí):',
+            'CAPTURAS DEL FORMADOR DURANTE EL EVENTO (input crítico — la IA no debe inventar nada que no esté aquí):',
             '"""',
             (notes || '').trim() || '(sin notas — informe imposible de generar con calidad; pídelas al formador)',
             '"""',
             '',
             'REQUISITOS DEL INFORME:',
-            '1. Markdown limpio. Encabezado con cliente, fecha y duración.',
-            '2. Resumen ejecutivo (3-4 líneas) basado en los hallazgos reales del taller.',
-            '3. Sección "Roles VNA detectados" — listado de roles reales emergidos durante la cosecha (fase 6 del SOP), con tipo (pinya/tronc/pom_de_dalt) y rol castellero asociado si encaja.',
-            '4. Sección "Intercambios intangibles críticos" — los flujos no contractuales detectados, con hint de salud cuando proceda.',
-            '5. Sección "Patrones de disfunción" — 1-3 patrones con descripción, señal de detección y recomendación de mitigación.',
-            '6. Sección "Acotxadors invisibles" — roles de soporte emocional que el organigrama no reconoce.',
-            '7. Sección "Compromisos individuales" — síntesis anonimizada de los compromisos personales (rol VNA elegido por cada participante).',
-            '8. Sección "Recomendaciones de seguimiento" — propuesta concreta: consultoría VNA, formación interna, segundo taller, etc.',
+            '1. Markdown limpio. Encabezado con cliente, fecha y servicio.',
+            '2. Resumen ejecutivo (3-4 líneas) basado en los hallazgos reales del evento.',
+            ...sections,
             '9. Tono profesional, riguroso, no condescendiente. NO inventes datos no presentes en las capturas. Si una sección no tiene material, escríbela como "[pendiente — el formador debe añadir capturas adicionales]" en lugar de fabricar.',
             '10. Máximo 900 palabras.',
             '',
-            'IMPORTANTE: alinéate con el SOC `soc-fent-pinya` y el SOP `sop-fent-pinya-taller` para conservar la coherencia metodológica.'
+            'IMPORTANTE: alinéate con los SOCs ' + socRefs + ' y los SOPs ' + sopRefs + ' para conservar la coherencia metodológica. Cita textualmente frases de las capturas cuando sean valiosas.'
         ].join('\n');
     }
 
@@ -480,13 +592,14 @@ export default class WorkshopsView {
         this._openReportModal(w, { state: 'loading', notes });
 
         try {
+            const svc = getServiceType(w.content?.type);
             const ctx = await KnowledgeLoader.buildContext({
                 sector:     w.content?.sector || null,
                 freeText:   w.content?.notes  || '',
-                socs:       ['fent-pinya', 'soc-vna-network'],
-                sops:       ['fent-pinya-taller'],
+                socs:       svc.socs,
+                sops:       svc.sops,
                 projectId:  w.projectId || null,
-                taskContext: 'Generar informe post-taller Fent Pinya para ' + (w.content?.clientName || 'cliente'),
+                taskContext: 'Generar informe post-evento ' + svc.label + ' para ' + (w.content?.clientName || 'cliente'),
             });
 
             const result = await Orchestrator.callLLM({
@@ -565,6 +678,7 @@ export default class WorkshopsView {
             document.getElementById('wsfReportSave').addEventListener('click', async () => {
                 const finalText = document.getElementById('wsfReportText').value;
                 const delId = 'del-' + Math.random().toString(36).slice(2, 9) + '-' + Date.now().toString(36);
+                const svcR = getServiceType(w.content?.type);
                 await store.dispatch({ type: 'KB_UPSERT', payload: { node: {
                     id:        delId,
                     type:      'deliverable',
@@ -572,16 +686,17 @@ export default class WorkshopsView {
                     content: {
                         kind:        'post-workshop-report',
                         workshopId:  w.id,
-                        title:       'Informe post-taller · ' + (w.content?.clientName || ''),
+                        serviceType: svcR.id,
+                        title:       'Informe post-evento ' + svcR.label + ' · ' + (w.content?.clientName || ''),
                         format:      'markdown',
                         body:        finalText,
                         rawNotes:    payload.notes || '',
-                        socRef:      'soc-fent-pinya',
-                        sopRef:      'sop-fent-pinya-taller',
+                        socRefs:     svcR.socs,
+                        sopRefs:     svcR.sops,
                         generatedAt: Date.now(),
                         sources:     payload.sources,
                     },
-                    keywords: ['post-workshop-report', 'fent-pinya', w.content?.sector || ''],
+                    keywords: ['post-workshop-report', svcR.id, w.content?.sector || ''],
                 }}});
                 const updated = { ...w, content: { ...w.content, reportDeliverableId: delId } };
                 await this._saveWorkshop(updated);
@@ -598,14 +713,14 @@ export default class WorkshopsView {
         root.innerHTML = `
             <div class="ws-modal" id="wsModalBg">
                 <div class="ws-modal-inner">
-                    <h3>＋ Nuevo taller</h3>
+                    <h3>＋ Nuevo workshop / servicio</h3>
                     <label>Cliente</label>
                     <input id="wsfClient" type="text" placeholder="Ayuntamiento de X / Startup Y / ...">
-                    <label>Tipo</label>
+                    <label>Tipo de servicio</label>
                     <select id="wsfType">
-                        <option value="fent-pinya" selected>Fent Pinya · Taller base (180 min)</option>
-                        <option value="custom">Custom</option>
+                        ${SERVICE_TYPES.map(t => `<option value="${t.id}" ${t.id===DEFAULT_TYPE?'selected':''}>${t.label}</option>`).join('')}
                     </select>
+                    <p id="wsfTypeHint" style="color:#888;font-size:0.7rem;margin:0.2rem 0 0 0;">${this._esc(SERVICE_TYPES[0].description)}</p>
                     <label>Sector / contexto</label>
                     <input id="wsfSector" type="text" placeholder="consultoría / startup / ayuntamiento / CoP...">
                     <label>Fecha</label>
@@ -624,21 +739,31 @@ export default class WorkshopsView {
         const close = () => { root.innerHTML = ''; };
         document.getElementById('wsfCancel').addEventListener('click', close);
         document.getElementById('wsModalBg').addEventListener('click', e => { if (e.target.id === 'wsModalBg') close(); });
+
+        // Hint dinámico al cambiar el tipo de servicio
+        const typeSel  = document.getElementById('wsfType');
+        const typeHint = document.getElementById('wsfTypeHint');
+        typeSel.addEventListener('change', () => {
+            const cur = getServiceType(typeSel.value);
+            typeHint.textContent = cur.description;
+        });
+
         document.getElementById('wsfSave').addEventListener('click', async () => {
+            const typeId = document.getElementById('wsfType').value;
             const node = {
                 id:        uid(),
                 type:      'workshop',
-                projectId: null,    // se asociará a proyecto cuando exista flujo de cliente
+                projectId: null,
                 content: {
                     clientName:   document.getElementById('wsfClient').value.trim() || '(sin cliente)',
-                    type:         document.getElementById('wsfType').value,
+                    type:         typeId,
                     sector:       document.getElementById('wsfSector').value.trim(),
                     date:         new Date(document.getElementById('wsfDate').value).getTime() || Date.now(),
                     audienceSize: parseInt(document.getElementById('wsfAud').value, 10) || null,
                     notes:        document.getElementById('wsfNotes').value.trim(),
                     status:       'propuesta',
                 },
-                keywords: ['workshop', document.getElementById('wsfType').value],
+                keywords: ['workshop', typeId],
             };
             close();
             await this._saveWorkshop(node);

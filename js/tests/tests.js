@@ -69,25 +69,31 @@ async function testKnowledgeLoaderSocsSops() {
     const { KnowledgeLoader } = await import('../core/KnowledgeLoader.js?v=' + Date.now());
     KnowledgeLoader.clearCache();
 
-    // listSocs → debe encontrar al menos los 5 SOCs registrados en _index.md
+    // listSocs → debe encontrar al menos los 8 SOCs registrados en _index.md
     const socs = await KnowledgeLoader.listSocs();
     assert(Array.isArray(socs),                                       'listSocs() devuelve array');
-    assert(socs.length >= 5,                                          'listSocs() encuentra ≥5 SOCs en _index.md');
-    assert(socs.some(s => s.slug === 'teamtowers-brand'),             'listSocs() incluye teamtowers-brand (SOC raíz marca)');
+    assert(socs.length >= 8,                                          'listSocs() encuentra ≥8 SOCs en _index.md');
+    assert(socs.some(s => s.slug === 'teamtowers-brand'),             'listSocs() incluye teamtowers-brand (raíz marca)');
     assert(socs.some(s => s.slug === 'fent-pinya'),                   'listSocs() incluye fent-pinya');
     assert(socs.some(s => s.slug === 'soc-vna-network'),              'listSocs() incluye soc-vna-network');
     assert(socs.some(s => s.slug === 'castellers-demo'),              'listSocs() incluye castellers-demo');
+    assert(socs.some(s => s.slug === 'la-colla'),                     'listSocs() incluye la-colla (proceso VNA)');
     assert(socs.some(s => s.slug === 'teamtowers-merchandising'),     'listSocs() incluye teamtowers-merchandising');
+    assert(socs.some(s => s.slug === 'proyecto-custom'),              'listSocs() incluye proyecto-custom (stub)');
+    assert(socs.some(s => s.slug === 'charla-conferencia'),           'listSocs() incluye charla-conferencia (stub)');
 
-    // listSops → al menos 3 SOPs (fent-pinya-taller + castellers-demo + merchandising)
+    // listSops → al menos 6 SOPs
     const sopsList = await KnowledgeLoader.listSops();
     assert(Array.isArray(sopsList),                                   'listSops() devuelve array');
-    assert(sopsList.length >= 3,                                      'listSops() encuentra ≥3 SOPs en _index.md');
+    assert(sopsList.length >= 6,                                      'listSops() encuentra ≥6 SOPs en _index.md');
     const sopEntry = sopsList.find(s => s.slug === 'fent-pinya-taller');
     assert(!!sopEntry,                                                'listSops() incluye fent-pinya-taller');
     assert(sopEntry.socRef === 'soc-fent-pinya',                      'sop fent-pinya-taller referencia soc-fent-pinya');
     assert(sopsList.some(s => s.slug === 'castellers-demo'),          'listSops() incluye castellers-demo');
+    assert(sopsList.some(s => s.slug === 'la-colla'),                 'listSops() incluye la-colla');
     assert(sopsList.some(s => s.slug === 'teamtowers-merchandising'), 'listSops() incluye teamtowers-merchandising');
+    assert(sopsList.some(s => s.slug === 'proyecto-custom'),          'listSops() incluye proyecto-custom (stub)');
+    assert(sopsList.some(s => s.slug === 'charla-conferencia'),       'listSops() incluye charla-conferencia (stub)');
 
     // getSocSeed → carga frontmatter y body del fichero
     const soc = await KnowledgeLoader.getSocSeed('fent-pinya');
@@ -306,6 +312,77 @@ async function testWorkshopsReportPromptBuilder() {
     assert(/sin\s+notas/i.test(empty),                      'prompt vacío señala "sin notas" para que la IA marque [pendiente]');
 }
 
+// ─── H2.6 · Selector tipo de servicio · prompts dinámicos por tipo ────────
+async function testWorkshopsServiceTypeSelector() {
+    const Mod = await import('../views/WorkshopsView.js?v=' + Date.now());
+    const view = new Mod.default();
+
+    const baseContent = {
+        clientName:   'Cliente test H2.6',
+        sector:       'corporativo',
+        audienceSize: 30,
+        date:         Date.now(),
+        notes:        'notas',
+        status:       'propuesta',
+    };
+
+    // Fent Pinya (default)
+    const wFent = { id: 'ws-h26-fent', type: 'workshop', content: { ...baseContent, type: 'fent-pinya' } };
+    const pFent = view.buildProposalPrompt(wFent);
+    assert(pFent.includes('Fent Pinya'),               'prompt Fent Pinya menciona Fent Pinya');
+    assert(pFent.includes('soc-fent-pinya'),           'prompt Fent Pinya referencia soc-fent-pinya');
+    assert(pFent.includes('sop-fent-pinya-taller'),    'prompt Fent Pinya referencia sop-fent-pinya-taller');
+    assert(pFent.includes('UNESCO'),                   'prompt Fent Pinya menciona Patrimonio UNESCO');
+
+    // La Colla (proceso VNA)
+    const wColla = { id: 'ws-h26-colla', type: 'workshop', content: { ...baseContent, type: 'la-colla' } };
+    const pColla = view.buildProposalPrompt(wColla);
+    const rColla = view.buildReportPrompt(wColla, '- Saturación en nodo central\n- 7 propuestas de mejora\n- Roles emergentes');
+    assert(pColla.includes('La Colla'),                'prompt La Colla menciona La Colla');
+    assert(pColla.includes('soc-la-colla'),            'prompt La Colla referencia soc-la-colla');
+    assert(pColla.includes('sop-la-colla'),            'prompt La Colla referencia sop-la-colla');
+    assert(rColla.includes('Mapa VNA del ámbito'),     'informe La Colla incluye sección Mapa VNA del ámbito');
+    assert(rColla.includes('Pulso de satisfacción'),   'informe La Colla incluye sección Pulso de satisfacción');
+    assert(rColla.includes('Retos identificados'),     'informe La Colla incluye sección Retos identificados');
+    assert(rColla.includes('Propuestas de mejora'),    'informe La Colla incluye sección Propuestas de mejora');
+
+    // Demo castellera
+    const wDemo = { id: 'ws-h26-demo', type: 'workshop', content: { ...baseContent, type: 'castellers-demo' } };
+    const pDemo = view.buildProposalPrompt(wDemo);
+    const rDemo = view.buildReportPrompt(wDemo, '- 4 castells construidos\n- Vídeo entregado\n- Sin incidencias');
+    assert(pDemo.includes('Demo castellera'),          'prompt Demo menciona Demo castellera');
+    assert(pDemo.includes('soc-castellers-demo'),      'prompt Demo referencia soc-castellers-demo');
+    assert(rDemo.includes('Castells construidos'),     'informe Demo incluye sección Castells construidos');
+
+    // Merchandising
+    const wMerch = { id: 'ws-h26-merch', type: 'workshop', content: { ...baseContent, type: 'merchandising' } };
+    const pMerch = view.buildProposalPrompt(wMerch);
+    assert(pMerch.includes('Merchandising'),           'prompt Merch menciona Merchandising');
+    assert(pMerch.includes('soc-teamtowers-merchandising'), 'prompt Merch referencia soc-teamtowers-merchandising');
+
+    // Charla / Conferencia
+    const wCharla = { id: 'ws-h26-charla', type: 'workshop', content: { ...baseContent, type: 'charla-conferencia' } };
+    const pCharla = view.buildProposalPrompt(wCharla);
+    assert(pCharla.includes('Charla'),                 'prompt Charla menciona Charla');
+    assert(pCharla.includes('soc-charla-conferencia'), 'prompt Charla referencia soc-charla-conferencia');
+
+    // Proyecto custom
+    const wCust = { id: 'ws-h26-cust', type: 'workshop', content: { ...baseContent, type: 'proyecto-custom' } };
+    const pCust = view.buildProposalPrompt(wCust);
+    assert(pCust.includes('Proyecto custom'),          'prompt Custom menciona Proyecto custom');
+    assert(pCust.includes('soc-proyecto-custom'),      'prompt Custom referencia soc-proyecto-custom');
+
+    // Tipo desconocido → cae a Fent Pinya como fallback
+    const wUnknown = { id: 'ws-h26-unk', type: 'workshop', content: { ...baseContent, type: 'tipo-inventado' } };
+    const pUnknown = view.buildProposalPrompt(wUnknown);
+    assert(pUnknown.includes('soc-fent-pinya'),        'tipo desconocido cae al fallback Fent Pinya');
+
+    // Brand SOC siempre presente (heredado en todos los tipos)
+    assert(pFent.includes('soc-teamtowers-brand'),     'prompt Fent Pinya hereda SOC raíz brand');
+    assert(pColla.includes('soc-teamtowers-brand'),    'prompt La Colla hereda SOC raíz brand');
+    assert(pDemo.includes('soc-teamtowers-brand'),     'prompt Demo hereda SOC raíz brand');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -313,7 +390,8 @@ const SUITE = [
     { name: 'H1.5 · KnowledgeLoader carga SOPs/SOCs y projectId', fn: testKnowledgeLoaderSocsSops },
     { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud },
     { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder },
-    { name: 'H2.5 · WorkshopsView · prompt builder informe IA',   fn: testWorkshopsReportPromptBuilder }
+    { name: 'H2.5 · WorkshopsView · prompt builder informe IA',   fn: testWorkshopsReportPromptBuilder },
+    { name: 'H2.6 · Selector tipo servicio · prompts dinámicos',  fn: testWorkshopsServiceTypeSelector }
 ];
 
 export async function runTests() {

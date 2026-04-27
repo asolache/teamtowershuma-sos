@@ -63,7 +63,10 @@ contexto de marca heredable a todas las llamadas LLM.
 | `socs/soc-vna-network.md` | Red de valor (VNA) — concepto operativo raíz de cualquier proyecto SOS. |
 | `socs/fent-pinya.md` | Taller experiencial Fent Pinya — taller participativo 2 h, hasta 1.000 pax, valores castellers. |
 | `socs/castellers-demo.md` | Demos castelleras — espectáculo profesional no participativo, hasta 7 pisos, máx 4 castells por demo. |
+| `socs/la-colla.md` | La Colla · proceso VNA — consultoría tipo Pantheon Work / Verna Allee, multi-sesión, mapeo de la red de valor del cliente. |
 | `socs/teamtowers-merchandising.md` | Merchandising TeamTowers — pañuelos y faixas personalizables, upsell del evento. |
+| `socs/proyecto-custom.md` | (stub) Formato genérico para proyectos a medida combinando SOPs estándar. |
+| `socs/charla-conferencia.md` | (stub) Charlas y conferencias keynote 30-60 min como top-of-funnel comercial. |
 
 ---
 
@@ -76,7 +79,10 @@ nodo `type: sop` en KB y referencia un `soc_ref`. Ver `sops/_README.md`.
 |---------|---------------|---------|
 | `sops/fent-pinya-taller.md` | Taller Fent Pinya base, 2 h core (+30 min reflex opcional), 10-1.000 pax, guion 8 pasos. | `soc-fent-pinya` |
 | `sops/castellers-demo.md` | Demo castellera, 30-45 min, 4-7 pisos, máx 4 castells por demo. | `soc-castellers-demo` |
+| `sops/la-colla.md` | Proceso VNA multi-sesión (3-12 sem), 7 pasos Allee/Pantheon + bola extra, zoom por área/servicio/proceso. | `soc-la-colla` |
 | `sops/teamtowers-merchandising.md` | Pedidos de merchandising castellero personalizable, plazo 3-7 semanas. | `soc-teamtowers-merchandising` |
+| `sops/proyecto-custom.md` | (stub) Formato combinable de bloques de SOPs estándar. | `soc-proyecto-custom` |
+| `sops/charla-conferencia.md` | (stub) Keynote 30-60 min con estructura de 6 bloques. | `soc-charla-conferencia` |
 
 ---
 
