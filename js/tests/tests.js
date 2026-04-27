@@ -131,10 +131,60 @@ async function testKnowledgeLoaderSocsSops() {
     await store.dispatch({ type: 'KB_DELETE', payload: { id: sopId } });
 }
 
+// ─── H2.1 · Workshops · CRUD + cambio de estado ──────────────────
+async function testWorkshopsCrud() {
+    await KB.init();
+    await store.init();
+
+    const id = 'ws-test-' + Date.now();
+    const node = {
+        id,
+        type: 'workshop',
+        projectId: null,
+        content: {
+            clientName:   'Test Client SAU',
+            type:         'fent-pinya',
+            sector:       'consultoría',
+            date:         Date.now(),
+            audienceSize: 18,
+            notes:        'Test taller',
+            status:       'propuesta',
+        },
+        keywords: ['workshop', 'fent-pinya'],
+    };
+
+    // crear
+    await store.dispatch({ type: 'KB_UPSERT', payload: { node } });
+    const list1 = await KB.query({ type: 'workshop' });
+    assert(list1.some(w => w.id === id),                                  'workshop creado y listable por type');
+    const w1 = list1.find(w => w.id === id);
+    assert(w1.content.status === 'propuesta',                             'status inicial = propuesta');
+    assert(w1.content.clientName === 'Test Client SAU',                   'clientName persistido');
+    assert(w1.content.audienceSize === 18,                                'audienceSize persistido');
+
+    // cambio de estado: propuesta → agendado → impartido → cobrado
+    for (const next of ['agendado', 'impartido', 'cobrado']) {
+        const current = (await KB.query({ type: 'workshop' })).find(w => w.id === id);
+        const updated = { ...current, content: { ...current.content, status: next } };
+        await store.dispatch({ type: 'KB_UPSERT', payload: { node: updated } });
+        const fresh = await KB.getNode(id);
+        assert(fresh.content.status === next,                             'status transicionó a ' + next);
+        assert(fresh.createdAt === current.createdAt,                     'createdAt preservado en transición ' + next);
+    }
+
+    // borrado
+    await store.dispatch({ type: 'KB_DELETE', payload: { id } });
+    const gone = await KB.getNode(id);
+    assert(gone === null,                                                 'workshop eliminado');
+    const list2 = await KB.query({ type: 'workshop' });
+    assert(!list2.some(w => w.id === id),                                 'workshop ya no aparece en listado');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
-    { name: 'H1.1 · KB Mind-as-Graph round-trip',                fn: testKbMindAsGraph },
-    { name: 'H1.5 · KnowledgeLoader carga SOPs/SOCs y projectId', fn: testKnowledgeLoaderSocsSops }
+    { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
+    { name: 'H1.5 · KnowledgeLoader carga SOPs/SOCs y projectId', fn: testKnowledgeLoaderSocsSops },
+    { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud }
 ];
 
 export async function runTests() {
