@@ -65,7 +65,8 @@ async function testKbMindAsGraph() {
 
 // ─── H1.5 · KnowledgeLoader carga SOPs/SOCs e inyecta en buildContext ─────
 async function testKnowledgeLoaderSocsSops() {
-    const { KnowledgeLoader } = await import('../core/KnowledgeLoader.js');
+    // cache-bust por si el navegador tiene una versión vieja del módulo
+    const { KnowledgeLoader } = await import('../core/KnowledgeLoader.js?v=' + Date.now());
     KnowledgeLoader.clearCache();
 
     // listSocs → debe encontrar al menos los 2 SOCs registrados en _index.md
