@@ -180,11 +180,43 @@ async function testWorkshopsCrud() {
     assert(!list2.some(w => w.id === id),                                 'workshop ya no aparece en listado');
 }
 
+// ─── H2.3 · WorkshopsView · builder de prompt para propuesta IA ───
+async function testWorkshopsProposalPromptBuilder() {
+    const Mod = await import('../views/WorkshopsView.js?v=' + Date.now());
+    const view = new Mod.default();
+    const workshop = {
+        id: 'ws-test-prompt',
+        type: 'workshop',
+        content: {
+            clientName:   'Ayuntamiento de Vic',
+            type:         'fent-pinya',
+            sector:       'ayuntamiento',
+            audienceSize: 22,
+            date:         Date.now(),
+            notes:        'cooperación inter-departamental',
+            status:       'propuesta',
+        }
+    };
+    const prompt = view.buildProposalPrompt(workshop);
+
+    assert(typeof prompt === 'string' && prompt.length > 200, 'buildProposalPrompt devuelve string sustancioso');
+    assert(prompt.includes('Ayuntamiento de Vic'),            'prompt incluye clientName');
+    assert(prompt.includes('ayuntamiento'),                   'prompt incluye sector');
+    assert(prompt.includes('22 personas'),                    'prompt incluye audienceSize formateado');
+    assert(prompt.includes('cooperación inter-departamental'),'prompt incluye notas internas');
+    assert(prompt.includes('soc-fent-pinya'),                 'prompt referencia SOC fent-pinya');
+    assert(prompt.includes('sop-fent-pinya-taller'),          'prompt referencia SOP fent-pinya-taller');
+    assert(prompt.includes('Markdown'),                       'prompt instruye output Markdown');
+    assert(prompt.includes('[PRECIO]'),                       'prompt incluye placeholder de precio');
+    assert(/máximo\s+600\s+palabras/i.test(prompt),           'prompt limita a 600 palabras');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
     { name: 'H1.5 · KnowledgeLoader carga SOPs/SOCs y projectId', fn: testKnowledgeLoaderSocsSops },
-    { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud }
+    { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud },
+    { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder }
 ];
 
 export async function runTests() {

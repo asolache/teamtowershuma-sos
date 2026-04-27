@@ -7,12 +7,15 @@
 //   - Crear taller (modal)
 //   - Cambiar estado (1 click)
 //   - Borrar
+//   - Generar propuesta comercial vía LLM con contexto SOC+SOP (H2.3)
 //
-// Persistencia: nodos `type: 'workshop'` en KB (Mind-as-Graph).
+// Persistencia: nodos `type: 'workshop'` y `type: 'deliverable'` en KB.
 // =============================================================================
 
-import { store } from '../core/store.js';
-import { KB }    from '../core/kb.js';
+import { store }           from '../core/store.js';
+import { KB }              from '../core/kb.js';
+import { Orchestrator }    from '../core/Orchestrator.js';
+import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 
 const STATUSES = [
     { id: 'propuesta', label: 'Propuesta',  color: '#94a3b8', emoji: '📝' },
@@ -206,17 +209,22 @@ export default class WorkshopsView {
         root.querySelectorAll('[data-ws-del]').forEach(btn => {
             btn.addEventListener('click', () => this._deleteWorkshop(btn.dataset.wsDel));
         });
+        root.querySelectorAll('[data-ws-ai]').forEach(btn => {
+            btn.addEventListener('click', () => this._generateProposal(btn.dataset.wsAi));
+        });
     }
 
     _cardHtml(w, s) {
         const c = w.content || {};
         const audSize = c.audienceSize ? `${c.audienceSize} pers.` : '—';
+        const isProposal = s.id === 'propuesta';
         return `
             <div class="ws-card" style="--accent:${s.color};">
                 <h4>${this._esc(c.clientName || '(sin cliente)')}</h4>
                 <div class="meta">${this._esc(c.type || DEFAULT_TYPE)} · ${this._esc(c.sector || '—')} · ${audSize}</div>
                 <div class="meta">📅 ${fmtDate(c.date)}</div>
                 ${c.notes ? `<div class="meta" style="color:#aaa;">${this._esc(c.notes)}</div>` : ''}
+                ${c.proposalDeliverableId ? `<div class="meta" style="color:#22c55e;">📄 propuesta generada</div>` : ''}
                 <div class="row">
                     <label>Estado</label>
                     <select data-ws-status="${w.id}">
@@ -224,6 +232,7 @@ export default class WorkshopsView {
                     </select>
                 </div>
                 <div class="actions">
+                    ${isProposal ? `<button class="ws-btn ws-btn-primary" data-ws-ai="${w.id}">✨ Propuesta IA</button>` : ''}
                     <button class="ws-btn danger" data-ws-del="${w.id}">Borrar</button>
                 </div>
             </div>
@@ -232,6 +241,151 @@ export default class WorkshopsView {
 
     _esc(str) {
         return String(str).replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+    }
+
+    // ─── H2.3 · Generador de propuesta comercial vía LLM ────────────────────
+
+    // Construye el userPrompt para el LLM. Público-instancia para test.
+    buildProposalPrompt(workshop) {
+        const c = workshop.content || {};
+        const aud = c.audienceSize ? c.audienceSize + ' personas' : 'audiencia no especificada';
+        const date = c.date ? fmtDate(c.date) : 'fecha por definir';
+        return [
+            'Genera una PROPUESTA COMERCIAL profesional en español para un taller Fent Pinya.',
+            '',
+            'DATOS DEL TALLER:',
+            '- Cliente: ' + (c.clientName || '(sin cliente)'),
+            '- Sector / contexto: ' + (c.sector || '(no especificado)'),
+            '- Tamaño de audiencia: ' + aud,
+            '- Fecha propuesta: ' + date,
+            '- Notas internas del formador: ' + (c.notes || '(sin notas)'),
+            '',
+            'REQUISITOS DE LA PROPUESTA:',
+            '1. Markdown limpio. Encabezado con nombre del cliente.',
+            '2. Resumen ejecutivo de 3-4 líneas que conecte el problema típico de su sector con el taller Fent Pinya.',
+            '3. Sección "Qué entrega el taller" con 3-5 outcomes tangibles del SOC fent-pinya.',
+            '4. Sección "Cómo se desarrolla" con la agenda fase a fase del SOP fent-pinya-taller.',
+            '5. Sección "Variante recomendada" basada en la audiencia (ver SOP "Variantes por audiencia").',
+            '6. Sección "Inversión y siguientes pasos" — deja un placeholder [PRECIO] para que el formador rellene.',
+            '7. Tono profesional, cercano, sin jerga vacía. Máximo 600 palabras.',
+            '',
+            'IMPORTANTE: usa SÓLO el contenido del SOC `soc-fent-pinya` y el SOP `sop-fent-pinya-taller` que recibes en el contexto. NO inventes outcomes ni metodología que no estén ahí.'
+        ].join('\n');
+    }
+
+    async _generateProposal(workshopId) {
+        const w = this.workshops.find(x => x.id === workshopId);
+        if (!w) return;
+        this._openProposalModal(w, { state: 'loading' });
+
+        try {
+            // Construye contexto rico Mind-as-Graph
+            const ctx = await KnowledgeLoader.buildContext({
+                sector:     w.content?.sector || null,
+                freeText:   w.content?.notes  || '',
+                socs:       ['fent-pinya', 'soc-vna-network'],
+                sops:       ['fent-pinya-taller'],
+                projectId:  w.projectId || null,
+                taskContext: 'Generar propuesta comercial Fent Pinya para ' + (w.content?.clientName || 'cliente'),
+            });
+
+            const result = await Orchestrator.callLLM({
+                preferredEngine: 'anthropic',
+                systemPrompt:    ctx.systemPrompt,
+                userPrompt:      this.buildProposalPrompt(w),
+                responseFormat:  'text',
+                temperature:     0.4,
+            });
+
+            const proposalText = (typeof result.content === 'string')
+                ? result.content
+                : (result.content?.raw || JSON.stringify(result.content, null, 2));
+
+            this._openProposalModal(w, {
+                state:   'ready',
+                text:    proposalText,
+                sources: ctx.sources,
+                tokens:  result.telemetry?.tokens?.total_tokens || 0,
+                latency: result.telemetry?.latencyMs || 0,
+            });
+        } catch (err) {
+            console.error('[H2.3] Error generando propuesta:', err);
+            this._openProposalModal(w, {
+                state: 'error',
+                msg:   err.message + '\n\nVerifica tu API key en /settings.',
+            });
+        }
+    }
+
+    _openProposalModal(w, payload) {
+        const root = document.getElementById('wsModalRoot');
+        if (!root) return;
+        const close = () => { root.innerHTML = ''; };
+
+        let body;
+        if (payload.state === 'loading') {
+            body = `
+                <p style="color:#aaa;">Construyendo contexto SOC + SOP + datos del taller…</p>
+                <p style="color:#666; font-size:0.8rem;">Llamando al LLM. Puede tardar 5-15 segundos.</p>`;
+        } else if (payload.state === 'error') {
+            body = `
+                <p style="color:#ff5252;">No se pudo generar la propuesta:</p>
+                <pre style="background:#050507;padding:0.6rem;border-radius:5px;color:#aaa;white-space:pre-wrap;font-size:0.78rem;">${this._esc(payload.msg)}</pre>`;
+        } else {
+            const meta = `Tokens: ${payload.tokens} · Latencia: ${payload.latency} ms · Fuentes: ${payload.sources.length}`;
+            body = `
+                <p style="color:#888;font-size:0.75rem;">${this._esc(meta)}</p>
+                <textarea id="wsfProposalText" style="width:100%;min-height:280px;background:#050507;color:#e6e6e6;border:1px solid #2a2a35;border-radius:5px;padding:0.6rem;font-family:monospace;font-size:0.78rem;">${this._esc(payload.text)}</textarea>`;
+        }
+
+        root.innerHTML = `
+            <div class="ws-modal" id="wsProposalBg">
+                <div class="ws-modal-inner" style="max-width:700px;">
+                    <h3>✨ Propuesta IA · ${this._esc(w.content?.clientName || '(sin cliente)')}</h3>
+                    ${body}
+                    <div class="actions">
+                        ${payload.state === 'ready' ? `
+                            <button class="ws-btn" id="wsfCopy">📋 Copiar</button>
+                            <button class="ws-btn ws-btn-primary" id="wsfSaveDel">💾 Guardar como deliverable</button>` : ''}
+                        <button class="ws-btn" id="wsfClose">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('wsfClose').addEventListener('click', close);
+        document.getElementById('wsProposalBg').addEventListener('click', e => { if (e.target.id === 'wsProposalBg') close(); });
+
+        if (payload.state === 'ready') {
+            document.getElementById('wsfCopy').addEventListener('click', () => {
+                const ta = document.getElementById('wsfProposalText');
+                ta.select();
+                navigator.clipboard.writeText(ta.value).catch(() => document.execCommand('copy'));
+            });
+            document.getElementById('wsfSaveDel').addEventListener('click', async () => {
+                const finalText = document.getElementById('wsfProposalText').value;
+                const delId = 'del-' + Math.random().toString(36).slice(2, 9) + '-' + Date.now().toString(36);
+                await store.dispatch({ type: 'KB_UPSERT', payload: { node: {
+                    id:        delId,
+                    type:      'deliverable',
+                    projectId: w.projectId || null,
+                    content: {
+                        workshopId:  w.id,
+                        title:       'Propuesta · ' + (w.content?.clientName || ''),
+                        format:      'markdown',
+                        body:        finalText,
+                        socRef:      'soc-fent-pinya',
+                        sopRef:      'sop-fent-pinya-taller',
+                        generatedAt: Date.now(),
+                        sources:     payload.sources,
+                    },
+                    keywords: ['proposal', 'fent-pinya', w.content?.sector || ''],
+                }}});
+                // también enlazamos en el workshop
+                const updated = { ...w, content: { ...w.content, proposalDeliverableId: delId } };
+                await this._saveWorkshop(updated);
+                close();
+            });
+        }
     }
 
     // ─── modal de creación ──────────────────────────────────────────────────
