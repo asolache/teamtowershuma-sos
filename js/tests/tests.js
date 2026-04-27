@@ -69,20 +69,25 @@ async function testKnowledgeLoaderSocsSops() {
     const { KnowledgeLoader } = await import('../core/KnowledgeLoader.js?v=' + Date.now());
     KnowledgeLoader.clearCache();
 
-    // listSocs → debe encontrar al menos los 2 SOCs registrados en _index.md
+    // listSocs → debe encontrar al menos los 5 SOCs registrados en _index.md
     const socs = await KnowledgeLoader.listSocs();
-    assert(Array.isArray(socs),                          'listSocs() devuelve array');
-    assert(socs.length >= 2,                             'listSocs() encuentra ≥2 SOCs en _index.md');
-    assert(socs.some(s => s.slug === 'fent-pinya'),      'listSocs() incluye fent-pinya');
-    assert(socs.some(s => s.slug === 'soc-vna-network'), 'listSocs() incluye soc-vna-network');
+    assert(Array.isArray(socs),                                       'listSocs() devuelve array');
+    assert(socs.length >= 5,                                          'listSocs() encuentra ≥5 SOCs en _index.md');
+    assert(socs.some(s => s.slug === 'teamtowers-brand'),             'listSocs() incluye teamtowers-brand (SOC raíz marca)');
+    assert(socs.some(s => s.slug === 'fent-pinya'),                   'listSocs() incluye fent-pinya');
+    assert(socs.some(s => s.slug === 'soc-vna-network'),              'listSocs() incluye soc-vna-network');
+    assert(socs.some(s => s.slug === 'castellers-demo'),              'listSocs() incluye castellers-demo');
+    assert(socs.some(s => s.slug === 'teamtowers-merchandising'),     'listSocs() incluye teamtowers-merchandising');
 
-    // listSops → debe encontrar el SOP de fent-pinya con soc_ref
+    // listSops → al menos 3 SOPs (fent-pinya-taller + castellers-demo + merchandising)
     const sopsList = await KnowledgeLoader.listSops();
-    assert(Array.isArray(sopsList),                      'listSops() devuelve array');
-    assert(sopsList.length >= 1,                         'listSops() encuentra ≥1 SOP en _index.md');
+    assert(Array.isArray(sopsList),                                   'listSops() devuelve array');
+    assert(sopsList.length >= 3,                                      'listSops() encuentra ≥3 SOPs en _index.md');
     const sopEntry = sopsList.find(s => s.slug === 'fent-pinya-taller');
-    assert(!!sopEntry,                                   'listSops() incluye fent-pinya-taller');
-    assert(sopEntry.socRef === 'soc-fent-pinya',         'sop fent-pinya-taller referencia soc-fent-pinya');
+    assert(!!sopEntry,                                                'listSops() incluye fent-pinya-taller');
+    assert(sopEntry.socRef === 'soc-fent-pinya',                      'sop fent-pinya-taller referencia soc-fent-pinya');
+    assert(sopsList.some(s => s.slug === 'castellers-demo'),          'listSops() incluye castellers-demo');
+    assert(sopsList.some(s => s.slug === 'teamtowers-merchandising'), 'listSops() incluye teamtowers-merchandising');
 
     // getSocSeed → carga frontmatter y body del fichero
     const soc = await KnowledgeLoader.getSocSeed('fent-pinya');
@@ -91,11 +96,11 @@ async function testKnowledgeLoaderSocsSops() {
     assert(typeof soc.purpose === 'string' && soc.purpose.length > 30, 'soc.purpose presente');
     assert(soc.body.includes('Fent Pinya'),              'soc.body contiene contenido del MD');
 
-    // getSopSeed → carga SOP con soc_ref
+    // getSopSeed → carga SOP con soc_ref. Duración real 2h core (120 min).
     const sop = await KnowledgeLoader.getSopSeed('fent-pinya-taller');
     assert(!!sop,                                        'getSopSeed("fent-pinya-taller") devuelve seed');
     assert(sop.socRef === 'soc-fent-pinya',              'sop.socRef = soc-fent-pinya');
-    assert(sop.durationMinutes === 180,                  'sop.durationMinutes = 180');
+    assert(sop.durationMinutes === 120,                  'sop.durationMinutes = 120 (2 h core, +30 min reflex opcional)');
     assert(sop.body.includes('Pinya'),                   'sop.body contiene contenido del MD');
 
     // buildContext con socs+sops → systemPrompt incluye contenido inyectado

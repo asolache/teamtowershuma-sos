@@ -54,12 +54,16 @@ Ficheros disponibles. KnowledgeLoader los carga por id CNAE o alias.
 
 Conceptos invariantes (qué + por qué) de servicios, rituales y artefactos
 de TeamTowers. Cada SOC es un nodo `type: soc` en KB. Ver `socs/_README.md`
-para el esquema de frontmatter.
+para el esquema de frontmatter. El SOC raíz `soc-teamtowers-brand` aporta
+contexto de marca heredable a todas las llamadas LLM.
 
 | Fichero | Concepto |
 |---------|----------|
+| `socs/teamtowers-brand.md` | TeamTowers · marca raíz — 20+ años, 60k+ participantes, 150+ clientes, 10 valores castellers, portfolio (taller/demo/merch/consultoría). |
 | `socs/soc-vna-network.md` | Red de valor (VNA) — concepto operativo raíz de cualquier proyecto SOS. |
-| `socs/fent-pinya.md` | Taller experiencial Fent Pinya — diagnóstico VNA físico de una red con propósito. |
+| `socs/fent-pinya.md` | Taller experiencial Fent Pinya — taller participativo 2 h, hasta 1.000 pax, valores castellers. |
+| `socs/castellers-demo.md` | Demos castelleras — espectáculo profesional no participativo, hasta 7 pisos, máx 4 castells por demo. |
+| `socs/teamtowers-merchandising.md` | Merchandising TeamTowers — pañuelos y faixas personalizables, upsell del evento. |
 
 ---
 
@@ -70,7 +74,9 @@ nodo `type: sop` en KB y referencia un `soc_ref`. Ver `sops/_README.md`.
 
 | Fichero | Procedimiento | SOC ref |
 |---------|---------------|---------|
-| `sops/fent-pinya-taller.md` | Taller Fent Pinya base, 180 min, 8-30 personas. | `soc-fent-pinya` |
+| `sops/fent-pinya-taller.md` | Taller Fent Pinya base, 2 h core (+30 min reflex opcional), 10-1.000 pax, guion 8 pasos. | `soc-fent-pinya` |
+| `sops/castellers-demo.md` | Demo castellera, 30-45 min, 4-7 pisos, máx 4 castells por demo. | `soc-castellers-demo` |
+| `sops/teamtowers-merchandising.md` | Pedidos de merchandising castellero personalizable, plazo 3-7 semanas. | `soc-teamtowers-merchandising` |
 
 ---
 
