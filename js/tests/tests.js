@@ -211,9 +211,61 @@ async function testWorkshopsProposalPromptBuilder() {
     assert(/máximo\s+600\s+palabras/i.test(prompt),           'prompt limita a 600 palabras');
 }
 
+// ─── H1.3 · Export/Import firmado del grafo (ECDSA P-256) ────────
+async function testProjectIO() {
+    const { exportSnapshot, verifySnapshot, importSnapshot } =
+        await import('../core/projectIO.js?v=' + Date.now());
+    await KB.init();
+    await store.init();
+
+    // sembrar un nodo único para verificar el roundtrip
+    const probeId = 'probe-h13-' + Date.now();
+    await store.dispatch({ type: 'KB_UPSERT', payload: { node: {
+        id:        probeId,
+        type:      'soc',
+        projectId: 'proj-h13-test',
+        content:   { title: 'H1.3 probe', random: Math.random() },
+        keywords:  ['probe', 'h13'],
+    }}});
+
+    // Export
+    const snap = await exportSnapshot();
+    assert(snap.format === 'sos-export',                   'snapshot tiene formato sos-export');
+    assert(typeof snap.signature === 'string',             'snapshot tiene firma');
+    assert(typeof snap.publicJwk === 'object',             'snapshot tiene publicJwk');
+    assert(Array.isArray(snap.kbNodes),                    'snapshot tiene kbNodes array');
+    assert(snap.kbNodes.some(n => n.id === probeId),       'snapshot incluye el nodo probe');
+    assert(!snap.kbNodes.some(n => n.id === 'sos_signing_keypair_v1'), 'snapshot NO contiene par de claves');
+
+    // Verify firma OK
+    assert((await verifySnapshot(snap)) === true,          'verifySnapshot OK con snapshot íntegro');
+
+    // Tampering: alterar un nodo dentro del snapshot debe romper firma
+    const tampered = JSON.parse(JSON.stringify(snap));
+    tampered.kbNodes.find(n => n.id === probeId).content.title = 'tampered!';
+    let tamperRejected = false;
+    try { await verifySnapshot(tampered); }
+    catch (e) { tamperRejected = /Firma inv|alterado/i.test(e.message); }
+    assert(tamperRejected,                                 'verifySnapshot rechaza snapshot alterado');
+
+    // Borrar el nodo probe y reimportar (modo merge) → debe volver
+    await store.dispatch({ type: 'KB_DELETE', payload: { id: probeId } });
+    assert((await KB.getNode(probeId)) === null,           'nodo probe borrado antes del import');
+
+    const result = await importSnapshot(snap, { mode: 'merge' });
+    assert(result.imported >= 1,                           'importSnapshot importa ≥1 nodo');
+    const restored = await KB.getNode(probeId);
+    assert(restored && restored.id === probeId,            'nodo probe restaurado tras importSnapshot merge');
+    assert(restored.content.title === 'H1.3 probe',        'contenido restaurado intacto (no el tampered)');
+
+    // limpieza
+    await store.dispatch({ type: 'KB_DELETE', payload: { id: probeId } });
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
+    { name: 'H1.3 · Export/Import firmado ECDSA P-256',           fn: testProjectIO },
     { name: 'H1.5 · KnowledgeLoader carga SOPs/SOCs y projectId', fn: testKnowledgeLoaderSocsSops },
     { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud },
     { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder }

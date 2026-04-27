@@ -432,6 +432,9 @@ export default class DashboardView {
                 <div class="dash-topbar-right">
                     <a href="/workshops" data-link class="dash-btn">🎯 Workshops</a>
                     <button class="dash-btn dash-btn-kb" id="dashBtnKB">📚 Knowledge Base</button>
+                    <button class="dash-btn" id="dashBtnExport" title="Descargar snapshot firmado (ECDSA P-256)">💾 Export</button>
+                    <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
+                    <input type="file" id="dashImportFile" accept=".json,application/json" style="display:none;">
                     <button class="dash-btn dash-btn-primary" id="dashBtnNew">＋ New Project</button>
                     <a href="/settings" data-link class="dash-btn">⚙ Settings</a>
                     <div id="dashLangSelector"></div>
@@ -758,6 +761,50 @@ export default class DashboardView {
 
         document.getElementById('dashKBClose')?.addEventListener('click', function() {
             document.getElementById('dashMain').classList.remove('kb-open');
+        });
+
+        // H1.3 · Export firmado
+        document.getElementById('dashBtnExport')?.addEventListener('click', async function() {
+            try {
+                const { downloadSnapshotJson } = await import('../core/projectIO.js?v=' + Date.now());
+                const btn = this; btn.disabled = true; btn.textContent = '⏳ Exportando…';
+                const snap = await downloadSnapshotJson();
+                btn.textContent = '✓ Exportado · ' + snap.kbNodes.length + ' nodos';
+                setTimeout(function() { btn.disabled = false; btn.textContent = '💾 Export'; }, 2500);
+            } catch (e) {
+                console.error('[H1.3] Export:', e);
+                alert('Error exportando: ' + e.message);
+                this.disabled = false;
+                this.textContent = '💾 Export';
+            }
+        });
+
+        // H1.3 · Import firmado
+        document.getElementById('dashBtnImport')?.addEventListener('click', function() {
+            document.getElementById('dashImportFile').click();
+        });
+        document.getElementById('dashImportFile')?.addEventListener('change', async function(ev) {
+            const file = ev.target.files && ev.target.files[0];
+            if (!file) return;
+            try {
+                const { readSnapshotFromFile, importSnapshot } = await import('../core/projectIO.js?v=' + Date.now());
+                const snap = await readSnapshotFromFile(file);
+                const mode = confirm(
+                    'Importar snapshot:\n\n' +
+                    '• ' + (snap.kbNodes?.length || 0) + ' nodos\n' +
+                    '• firmado el ' + (snap.exportedAt || '?') + '\n\n' +
+                    'OK = MERGE (añadir/actualizar sobre lo existente)\n' +
+                    'Cancel = REPLACE (borrar todo y restaurar el snapshot)'
+                ) ? 'merge' : 'replace';
+                const result = await importSnapshot(snap, { mode });
+                alert('Importados ' + result.imported + ' nodos en modo ' + result.mode + '.\nRecargando…');
+                location.reload();
+            } catch (e) {
+                console.error('[H1.3] Import:', e);
+                alert('Error importando: ' + e.message);
+            } finally {
+                ev.target.value = '';
+            }
         });
     }
 
