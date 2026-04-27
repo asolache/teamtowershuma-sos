@@ -430,6 +430,7 @@ export default class DashboardView {
                 <span class="dash-topbar-version">SOS V11</span>
                 <a href="https://teamtowershuma.com" target="_blank" class="dash-topbar-web">teamtowershuma.com ↗</a>
                 <div class="dash-topbar-right">
+                    <a href="/workshops" data-link class="dash-btn">🎯 Workshops</a>
                     <button class="dash-btn dash-btn-kb" id="dashBtnKB">📚 Knowledge Base</button>
                     <button class="dash-btn dash-btn-primary" id="dashBtnNew">＋ New Project</button>
                     <a href="/settings" data-link class="dash-btn">⚙ Settings</a>
