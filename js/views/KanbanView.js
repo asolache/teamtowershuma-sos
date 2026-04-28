@@ -19,8 +19,10 @@
 // Al pasar a "Contabilizadas", se dispatcha LEDGER_UPDATE con el coste real.
 // =============================================================================
 
-import { store } from '../core/store.js';
-import { KB }    from '../core/kb.js';
+import { store }           from '../core/store.js';
+import { KB }              from '../core/kb.js';
+import { Orchestrator }    from '../core/Orchestrator.js';
+import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 
 // ─── Configuración ──────────────────────────────────────────────────────────
 const COLUMNS = [
@@ -50,6 +52,37 @@ function fmtEur(n) {
 }
 
 function colMeta(id) { return COLUMNS.find(c => c.id === id) || COLUMNS[0]; }
+
+// ─── Builder del userPrompt para auto-ejecución IA (H7.2) ───────────────────
+// Pública para test. Construye el userPrompt que se enviará al LLM cuando
+// el operador pulse "▶ Ejecutar con IA" en una WO de tipo IA.
+export function buildExecutionPrompt(wo) {
+    const c = wo.content || {};
+    const ass = c.assignee || {};
+    const lines = [
+        'Ejecuta esta Work Order del SOS V11 (Swarm Operative System) y devuelve el entregable correspondiente en español, en Markdown limpio.',
+        '',
+        'WORK ORDER:',
+        '- Título: ' + (c.title || '(sin título)'),
+        '- Descripción: ' + (c.description || '(sin descripción)'),
+        c.sopRef  ? '- SOP de referencia: `' + c.sopRef + '`'   : null,
+        c.stepRef ? '- Paso del SOP: `' + c.stepRef + '`'       : null,
+        c.workshopId ? '- Workshop asociado: ' + c.workshopId    : null,
+        '- Engine asignado: ' + (ass.engine || 'anthropic'),
+        '- Aprobación: ' + (c.approvalRule || 'manual'),
+        '',
+        'REGLAS IRRENUNCIABLES:',
+        '1. Respeta el SOC raíz `soc-teamtowers-brand` y los SOCs específicos que recibes en el contexto.',
+        '2. NO inventes datos. Si falta información, marca `[pendiente — el operador debe añadir contexto]`.',
+        '3. NO incluyas precios; usa `[VER CATÁLOGO]` o `[PRECIO]` como placeholder.',
+        '4. Cita textualmente del SOP cuando aplique (entre comillas).',
+        '5. Output autocontenido y autosuficiente para que un humano pueda revisarlo y aprobarlo en menos de 5 minutos.',
+    ];
+    if (c.approvalRule === 'tdd-auto' && c.tddCheck) {
+        lines.push('6. El output debe estar construido para pasar este test booleano: `' + c.tddCheck + '`. Diseña la estructura del output para que ese check evalúe `true`.');
+    }
+    return lines.filter(Boolean).join('\n');
+}
 
 // ─── Cálculo de coste de una WO ─────────────────────────────────────────────
 // Devuelve { humanCostEur, aiCostEur, savingEur, slices }.
@@ -260,6 +293,168 @@ export default class KanbanView {
             ledgerProjectId,
         };
         await this._save({ ...wo, content: finalContent });
+    }
+
+    // ─── H7.2 · Auto-ejecución de WO por IA ─────────────────────────────────
+    // Construye contexto via KnowledgeLoader (SOCs + SOP + projectId) →
+    // llama Orchestrator.callLLM → captura tokens reales → actualiza WO →
+    // si approvalRule='tdd-auto' y tddCheck pasa, transiciona a ledgered.
+    async _executeAi(woId, extras = {}) {
+        const wo = this.workOrders.find(x => x.id === woId);
+        if (!wo) return;
+        const c = { ...wo.content, ...extras };
+
+        // Resolver SOCs/SOPs a inyectar
+        const socs = Array.isArray(c.socRefs) && c.socRefs.length
+            ? c.socRefs.map(s => s.replace(/^soc-/, ''))
+            : ['teamtowers-brand'];
+        const sops = c.sopRef ? [c.sopRef.replace(/^sop-/, '')] : [];
+
+        this._openExecutionModal(wo, { state: 'loading' });
+        const startedAt = Date.now();
+
+        try {
+            const ctx = await KnowledgeLoader.buildContext({
+                socs,
+                sops,
+                projectId:   c.workshopId ? null : (wo.projectId || null),
+                taskContext: 'Ejecutar Work Order: ' + (c.title || woId),
+            });
+
+            const result = await Orchestrator.callLLM({
+                preferredEngine: c.assignee?.engine || 'anthropic',
+                systemPrompt:    ctx.systemPrompt,
+                userPrompt:      buildExecutionPrompt({ ...wo, content: c }),
+                responseFormat:  'text',
+                temperature:     0.3,
+            });
+
+            const aiOutput = (typeof result.content === 'string')
+                ? result.content
+                : (result.content?.raw || JSON.stringify(result.content, null, 2));
+            const tokens = result.telemetry?.tokens || {};
+            const latencyMs = result.telemetry?.latencyMs || (Date.now() - startedAt);
+
+            // Actualizar WO con tokens y output. status='done' (lista para aprobar).
+            const updated = {
+                ...wo,
+                content: {
+                    ...c,
+                    aiOutput,
+                    tokensIn:  tokens.prompt_tokens     || 0,
+                    tokensOut: tokens.completion_tokens || 0,
+                    actualHours: Math.max(0, latencyMs / 3600000),  // h equiv (anecdótico)
+                    aiLatencyMs: latencyMs,
+                    aiSources: ctx.sources,
+                    status:    'done',
+                },
+            };
+            await this._save(updated);
+
+            // TDD-auto: si pasa el check, transiciona a ledgered automáticamente.
+            if (c.approvalRule === 'tdd-auto' && c.tddCheck) {
+                const passed = this._evalTdd(c.tddCheck, aiOutput);
+                if (passed) {
+                    await this._ledgerize(woId, {});
+                    this._openExecutionModal({ ...updated, content: { ...updated.content, status: 'ledgered' } }, {
+                        state: 'tdd-passed',
+                        text:  aiOutput,
+                        tokens, latencyMs, sources: ctx.sources,
+                    });
+                    return;
+                } else {
+                    // TDD falló: vuelve a backlog para revisión humana.
+                    const failed = { ...updated, content: { ...updated.content, status: 'backlog', tddFailed: true } };
+                    await this._save(failed);
+                    this._openExecutionModal(failed, {
+                        state: 'tdd-failed',
+                        text:  aiOutput,
+                        tokens, latencyMs, sources: ctx.sources,
+                    });
+                    return;
+                }
+            }
+
+            this._openExecutionModal(updated, {
+                state: 'ready',
+                text:  aiOutput,
+                tokens, latencyMs,
+                sources: ctx.sources,
+            });
+        } catch (err) {
+            console.error('[H7.2] Error ejecutando WO con IA:', err);
+            this._openExecutionModal(wo, {
+                state: 'error',
+                msg: err.message + '\n\nVerifica tu API key en /settings y que netlify dev esté corriendo.',
+            });
+        }
+    }
+
+    // Evaluación segura del tddCheck. Por ahora soporta:
+    //   - "contains:texto"   → output incluye literal "texto"
+    //   - "minLen:N"         → output con ≥ N caracteres
+    //   - "h2Count:N"        → output con ≥ N encabezados ## en MD
+    //   - "regex:/.../flags" → match del regex
+    // No usamos eval() para evitar XSS. H7.4 ampliará el sandbox.
+    _evalTdd(check, output) {
+        if (!check || typeof check !== 'string') return false;
+        const trimmed = String(output || '');
+        const m = check.match(/^(\w+):(.+)$/);
+        if (!m) return false;
+        const [, kind, val] = m;
+        try {
+            switch (kind) {
+                case 'contains': return trimmed.includes(val);
+                case 'minLen':   return trimmed.length >= parseInt(val, 10);
+                case 'h2Count':  return (trimmed.match(/^##\s/gm) || []).length >= parseInt(val, 10);
+                case 'regex': {
+                    const r = val.match(/^\/(.+)\/(\w*)$/);
+                    if (!r) return false;
+                    return new RegExp(r[1], r[2]).test(trimmed);
+                }
+                default: return false;
+            }
+        } catch (_) { return false; }
+    }
+
+    _openExecutionModal(wo, payload) {
+        const root = document.getElementById('kbModalRoot');
+        if (!root) return;
+        const close = () => { root.innerHTML = ''; };
+
+        let body;
+        if (payload.state === 'loading') {
+            body = `
+                <p style="color:#aaa;">🤖 Ejecutando con ${this._esc(wo.content?.assignee?.engine || 'anthropic')}…</p>
+                <p style="color:#666;font-size:0.78rem;">Construyendo contexto SOC+SOP, llamando al LLM. 5-25 s típico.</p>`;
+        } else if (payload.state === 'error') {
+            body = `<p style="color:#ff5252;">Error:</p><pre style="background:#050507;padding:0.6rem;border-radius:5px;color:#aaa;white-space:pre-wrap;font-size:0.78rem;">${this._esc(payload.msg)}</pre>`;
+        } else {
+            const meta = `Tokens: ${(payload.tokens?.prompt_tokens || 0)} in / ${(payload.tokens?.completion_tokens || 0)} out · Latencia: ${payload.latencyMs} ms · Fuentes: ${payload.sources?.length || 0}`;
+            const banner = payload.state === 'tdd-passed'
+                ? `<p style="color:#86efac;font-size:0.85rem;">✅ TDD-auto pasó — la WO se contabilizó automáticamente.</p>`
+                : payload.state === 'tdd-failed'
+                ? `<p style="color:#fca5a5;font-size:0.85rem;">⚠ TDD-auto falló — la WO volvió a Backlog para revisión humana.</p>`
+                : `<p style="color:#86efac;font-size:0.85rem;">✅ Ejecución completada — pendiente de aprobación manual.</p>`;
+            body = `
+                ${banner}
+                <p style="color:#888;font-size:0.75rem;">${this._esc(meta)}</p>
+                <textarea readonly style="width:100%;min-height:280px;background:#050507;color:#e6e6e6;border:1px solid #2a2a35;border-radius:5px;padding:0.6rem;font-family:monospace;font-size:0.78rem;">${this._esc(payload.text || '')}</textarea>`;
+        }
+
+        root.innerHTML = `
+            <div class="kb-modal" id="kbExecBg">
+                <div class="kb-modal-inner" style="max-width:780px;">
+                    <h3>🤖 Ejecución IA · ${this._esc(wo.content?.title || '')}</h3>
+                    ${body}
+                    <div class="actions">
+                        <button class="kb-btn" id="kbExecClose">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('kbExecClose').addEventListener('click', close);
+        document.getElementById('kbExecBg').addEventListener('click', e => { if (e.target.id === 'kbExecBg') close(); });
     }
 
     // ─── render ─────────────────────────────────────────────────────────────
@@ -567,9 +762,16 @@ export default class KanbanView {
                         ${status === 'ledgered' && c.ledgeredAt ? `<div style="color:#86efac;margin-top:0.3rem;">✓ Contabilizada el ${new Date(c.ledgeredAt).toLocaleString('es-ES')}</div>` : ''}
                     </div>
 
+                    ${c.aiOutput ? `
+                        <label style="margin-top:0.8rem;">Output IA (editable antes de contabilizar)</label>
+                        <textarea id="kbdAiOutput" style="min-height:160px;font-family:monospace;font-size:0.78rem;">${this._esc(c.aiOutput)}</textarea>
+                    ` : ''}
+                    ${c.tddFailed ? `<p style="color:#fca5a5;font-size:0.78rem;margin-top:0.6rem;">⚠ Última auto-aprobación TDD falló. Revisa el output y promueve manualmente.</p>` : ''}
+
                     <div class="actions">
                         <button class="kb-btn danger" id="kbdDel">Borrar</button>
                         <button class="kb-btn" id="kbdClose">Cerrar</button>
+                        ${isAi && (status === 'backlog' || status === 'doing') ? `<button class="kb-btn" id="kbdExecAi">🤖 Ejecutar con IA</button>` : ''}
                         ${colNext ? `<button class="kb-btn kb-btn-primary" id="kbdNext">${colNext.label}</button>` : ''}
                     </div>
                 </div>
@@ -580,12 +782,31 @@ export default class KanbanView {
         document.getElementById('kbDetailBg').addEventListener('click', e => { if (e.target.id === 'kbDetailBg') close(); });
         document.getElementById('kbdDel').addEventListener('click', async () => { close(); await this._delete(w.id); });
 
+        // H7.2 · Ejecutar con IA
+        const execBtn = document.getElementById('kbdExecAi');
+        if (execBtn) {
+            execBtn.addEventListener('click', async () => {
+                const extras = {
+                    estimatedHours: parseFloat(document.getElementById('kbdEstHrs').value) || c.estimatedHours,
+                    fmvPerHour:     parseFloat(document.getElementById('kbdFmv').value)    || c.fmvPerHour,
+                };
+                const eng = document.getElementById('kbdEngine')?.value;
+                if (eng) extras.assignee = { ...c.assignee, kind: 'ai', engine: eng };
+                close();
+                await this._executeAi(w.id, extras);
+            });
+        }
+
+        // Si hay output IA en el modal, capturarlo en el siguiente save
         if (colNext) {
             document.getElementById('kbdNext').addEventListener('click', async () => {
                 const extras = {
                     estimatedHours: parseFloat(document.getElementById('kbdEstHrs').value) || c.estimatedHours,
                     fmvPerHour:     parseFloat(document.getElementById('kbdFmv').value)    || c.fmvPerHour,
                 };
+                // Capturar el aiOutput editado por el humano antes de aprobar
+                const aiOutEdit = document.getElementById('kbdAiOutput');
+                if (aiOutEdit) extras.aiOutput = aiOutEdit.value;
                 if (status === 'doing' || status === 'done') {
                     const actHrs = document.getElementById('kbdActHrs')?.value;
                     if (actHrs !== '' && actHrs != null) extras.actualHours = parseFloat(actHrs);

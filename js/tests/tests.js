@@ -503,6 +503,62 @@ async function testKanbanWorkOrders() {
     assert((await KB.getNode(woId)) === null,                       'WO borrada de KB');
 }
 
+// ─── H7.2 · KanbanView · prompt builder de auto-ejecución IA + TDD eval ────
+async function testKanbanExecutionPromptAndTdd() {
+    const Mod = await import('../views/KanbanView.js?v=' + Date.now());
+    const { buildExecutionPrompt } = Mod;
+
+    // 1. Builder produce prompt con datos críticos de la WO
+    const wo = {
+        id: 'wo-test-h72',
+        type: 'work_order',
+        content: {
+            title:       'Generar propuesta IKEA Madrid',
+            description: 'Propuesta de servicio de cosecha VNA fase 6',
+            sopRef:      'sop-la-colla',
+            stepRef:     'fase-6-cosecha',
+            workshopId:  'ws-ikea-madrid',
+            assignee:    { kind: 'ai', id: 'anthropic', engine: 'anthropic' },
+            approvalRule: 'manual',
+        },
+    };
+    const p = buildExecutionPrompt(wo);
+    assert(typeof p === 'string' && p.length > 200,           'buildExecutionPrompt devuelve string sustancioso');
+    assert(p.includes('Generar propuesta IKEA Madrid'),       'prompt incluye título de la WO');
+    assert(p.includes('cosecha VNA fase 6'),                  'prompt incluye descripción');
+    assert(p.includes('sop-la-colla'),                        'prompt incluye sopRef');
+    assert(p.includes('fase-6-cosecha'),                      'prompt incluye stepRef');
+    assert(p.includes('ws-ikea-madrid'),                      'prompt incluye workshopId');
+    assert(p.includes('anthropic'),                           'prompt declara engine');
+    assert(p.includes('soc-teamtowers-brand'),                'prompt invoca el SOC raíz brand');
+    assert(p.includes('NO inventes'),                         'prompt prohíbe inventar');
+    assert(p.includes('[VER CATÁLOGO]'),                      'prompt instruye placeholder de precio');
+
+    // 2. Si approvalRule=tdd-auto y hay tddCheck, el prompt lo embeda
+    const woTdd = {
+        ...wo,
+        content: { ...wo.content, approvalRule: 'tdd-auto', tddCheck: 'h2Count:6' },
+    };
+    const pTdd = buildExecutionPrompt(woTdd);
+    assert(pTdd.includes('h2Count:6'),                        'prompt embeda el tddCheck cuando approvalRule=tdd-auto');
+    assert(/test booleano/i.test(pTdd),                       'prompt avisa explícitamente del test booleano');
+
+    // 3. Evaluador TDD (privado, lo testeamos via instancia)
+    const ViewClass = Mod.default;
+    const view = new ViewClass();
+    assert(view._evalTdd('contains:Pinya', 'Esto contiene Pinya y más') === true,    'TDD contains: hit');
+    assert(view._evalTdd('contains:Saturno', 'Esto contiene Pinya y más') === false, 'TDD contains: miss');
+    assert(view._evalTdd('minLen:50', 'corto') === false,                            'TDD minLen: muy corto');
+    assert(view._evalTdd('minLen:5', 'suficiente') === true,                         'TDD minLen: suficiente');
+    assert(view._evalTdd('h2Count:2', '## A\n## B\n## C') === true,                  'TDD h2Count: 3 ≥ 2');
+    assert(view._evalTdd('h2Count:5', '## A\n## B') === false,                       'TDD h2Count: 2 < 5');
+    assert(view._evalTdd('regex:/^# /', '# Título principal') === true,              'TDD regex: anchor inicio');
+    assert(view._evalTdd('regex:/[ñ]/', 'campaña') === true,                         'TDD regex: ñ');
+    assert(view._evalTdd('formato-invalido', 'cualquier cosa') === false,            'TDD inválido devuelve false');
+    assert(view._evalTdd(null, 'output') === false,                                  'TDD null devuelve false');
+    assert(view._evalTdd('', 'output') === false,                                    'TDD vacío devuelve false');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -512,7 +568,8 @@ const SUITE = [
     { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder },
     { name: 'H2.5 · WorkshopsView · prompt builder informe IA',   fn: testWorkshopsReportPromptBuilder },
     { name: 'H2.6 · Selector tipo servicio · prompts dinámicos',  fn: testWorkshopsServiceTypeSelector },
-    { name: 'H7.1 · Kanban Work Orders · CRUD + ledger',          fn: testKanbanWorkOrders }
+    { name: 'H7.1 · Kanban Work Orders · CRUD + ledger',          fn: testKanbanWorkOrders },
+    { name: 'H7.2 · Kanban · prompt builder IA + TDD eval',       fn: testKanbanExecutionPromptAndTdd }
 ];
 
 export async function runTests() {

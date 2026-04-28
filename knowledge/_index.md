@@ -47,6 +47,8 @@ Ficheros disponibles. KnowledgeLoader los carga por id CNAE o alias.
 |---------|-----------|
 | `vision/vna-principles.md` | Principios VNA — Verna Allee 2008. Base teórica de toda operación VNA en SOS. Incluir siempre en llamadas VNA. |
 | `vision/mind-architecture.md` | Arquitectura cognitiva Vedanta aplicada al swarm. Incluir solo cuando se trabaje diseño de agentes. |
+| `vision/sop-to-wo-model.md` | Modelo canónico VNA→SOC→SOP→WO→Ledger. Contrato de coherencia para H7.x (Kanban + auto-ejecución IA). |
+| `vision/communities-of-practice-model.md` | Stub Ola 3: CoPs por rol VNA agrupables por ámbito (sector / dominio / folksonomía). |
 
 ---
 
