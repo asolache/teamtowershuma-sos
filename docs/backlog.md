@@ -102,16 +102,24 @@ todos con `sector_name_en` y bilingüe en roles.
 
 | Nivel | Umbral | Significado |
 |---|---|---|
-| `ready` | ≥10 roles · ≥14 tx · ≥4 patterns · bilingüe completo | Vendible directo como mapa VNA inicial sin retoques |
+| `ready` | ≥10 roles · ≥14 tx · ≥4 patterns · `sector_name_en` | Vendible directo como mapa VNA inicial sin retoques |
 | `solid` | ≥6 roles · ≥10 tx · ≥2 patterns | Cobertura suficiente para construir propuesta tras enriquecer con cliente |
 | `tier 2` | por debajo del mínimo | Inferir desde conocimiento general del LLM o pedir input al cliente |
 
-**Estado actual del catálogo (auditor 2026-04-28):**
+**Bonus opcional (futura categoría `ready+`)**: bilingüe a nivel de cada
+rol — campos `name_en`, `description_en`, `typical_actor_en`. Hoy sólo
+G y L lo tienen. Pendiente para K, N y otros cuando interese llevarlos
+al máximo de calidad bilingüe.
 
-- **`ready`** (criterio fuerte): K (Tech), N (Consulting). Quizás otros que cumplan tras el bug-fix.
-- **`solid`** (mayoría): A, B, C, D, E, G, H, I, J, L, M, O, P, S, UV — listos para uso con enriquecimiento de cliente.
-- **Borderline `solid`**: F (12 tx, 3 patterns), Q (13 tx, 3 patterns), R (12 tx, 3 patterns), T (6 roles).
-- Pendiente para `ready`: completar F, Q, R con +2 tx y +1 pattern cada uno (H1.9).
+**Estado actual del catálogo (verificado 2026-04-28 con criterio H1.8.1):**
+
+- **`ready`** (3 sectores): C (10/17/5), K (10/17/4), N (10/17/5).
+- **`solid`** (la mayoría · ~18 sectores): A, B, D, E, F, G, H, I, J, L, M, O, P, Q, R, S, T, UV.
+- **Pendientes para `ready`**:
+  - F (Construction): +2 tx, +1 pattern
+  - Q (Higher Ed): +1 rol, +1 pattern (tiene 9/14/4)
+  - R (Health): +1 rol, +2 tx (tiene 9/12/4)
+- **Pendiente bilingüe role-level (`ready+`)**: K, N, A-F, H, I, J, M, O, P, Q, R, S, T, UV (sólo G y L lo tienen hoy).
 
 **Mecanismo de adaptación a cliente** (H1.10):
 

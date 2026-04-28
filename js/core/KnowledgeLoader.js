@@ -480,9 +480,15 @@ export class KnowledgeLoader {
     // ══════════════════════════════════════════════════════════════════════════
     //  _computeSectorReadiness — criterio TDD del modelo de gestión del KB
     //  H1.8 · auditoría 2026 · ver docs/backlog.md sección "Knowledge Base"
+    //
+    //  H1.8.1 fix · relajado el criterio: bilingualRoles pasa a ser opcional
+    //  (bonus para una futura categoría 'ready+'). Razón: K, N históricos
+    //  Tier 1 tienen sector_name_en pero NO name_en/description_en por
+    //  rol. El criterio antes los degradaba injustamente a 'solid' pese
+    //  a tener contenido cuantitativo completo (10r/17tx/4-5p).
     // ══════════════════════════════════════════════════════════════════════════
     static _computeSectorReadiness(s) {
-        if (s.roles >= 10 && s.txs >= 14 && s.patterns >= 4 && s.hasEn && s.bilingualRoles) return 'ready';
+        if (s.roles >= 10 && s.txs >= 14 && s.patterns >= 4 && s.hasEn) return 'ready';
         if (s.roles >= 6  && s.txs >= 10 && s.patterns >= 2) return 'solid';
         return 'tier 2';
     }

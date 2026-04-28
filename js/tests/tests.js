@@ -594,9 +594,11 @@ async function testSectorReadiness() {
     assert(solid + ready >= 15,                                          '≥15 sectores cubren al menos el umbral solid (KB con cobertura)');
 
     // El criterio _computeSectorReadiness es determinista y reusable
-    assert(KnowledgeLoader._computeSectorReadiness({ roles: 10, txs: 14, patterns: 4, hasEn: true, bilingualRoles: true }) === 'ready', 'criterio TDD: 10/14/4/EN+bilingüe → ready');
-    assert(KnowledgeLoader._computeSectorReadiness({ roles: 8,  txs: 12, patterns: 3, hasEn: true, bilingualRoles: true }) === 'solid', 'criterio TDD: 8/12/3 → solid');
-    assert(KnowledgeLoader._computeSectorReadiness({ roles: 3,  txs: 5,  patterns: 1, hasEn: false, bilingualRoles: false }) === 'tier 2', 'criterio TDD: muy bajo → tier 2');
+    // H1.8.1: bilingualRoles ya no es bloqueante para 'ready' (sólo hasEn lo es)
+    assert(KnowledgeLoader._computeSectorReadiness({ roles: 10, txs: 14, patterns: 4, hasEn: true }) === 'ready',  'criterio TDD: 10/14/4 + sector_name_en → ready');
+    assert(KnowledgeLoader._computeSectorReadiness({ roles: 10, txs: 14, patterns: 4, hasEn: false }) === 'solid', 'criterio TDD: cuantitativo OK pero sin EN → solid (no ready)');
+    assert(KnowledgeLoader._computeSectorReadiness({ roles: 8,  txs: 12, patterns: 3, hasEn: true })  === 'solid',  'criterio TDD: 8/12/3 → solid');
+    assert(KnowledgeLoader._computeSectorReadiness({ roles: 3,  txs: 5,  patterns: 1, hasEn: false }) === 'tier 2', 'criterio TDD: muy bajo → tier 2');
 }
 
 // ─── H7.3 · Auto-generación de WOs desde SOP con steps[] ─────────────────
