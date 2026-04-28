@@ -35,6 +35,97 @@ deliverables:
 keywords: [fent-pinya, taller, castells, vna, equipo, intangibles, mice, dmc, team-building]
 fmv_eur_h: null  # Tarifas escalonadas por nº participantes — ver catálogo. NO incluir en outputs MD.
 geographic_scope: "Barcelona <2h estándar; resto España/Europa con suplemento de viaje; internacional para grupos premium"
+
+# H7.3 · Pasos canónicos auto-convertibles en Work Orders
+steps:
+  - id: paso-0-pre-entrevista
+    label: "Pre-entrevista off-site"
+    duration_minutes: 30
+    role_kind: human
+    role_profile: dinamizador
+    deliverable_kind: encuadre-firmado
+    approval_rule: manual
+    priority: high
+  - id: paso-1-apertura
+    label: "Apertura · ¡Nos enfajamos!"
+    duration_minutes: 10
+    role_kind: human
+    role_profile: dinamizador
+    deliverable_kind: ritual-apertura
+    approval_rule: manual
+    priority: med
+  - id: paso-2-formate-equipo
+    label: "Fórmate como equipo"
+    duration_minutes: 15
+    role_kind: human
+    role_profile: dinamizador
+    deliverable_kind: distribucion-roles
+    approval_rule: manual
+    priority: med
+  - id: paso-3-formando-pinya
+    label: "Formando la pinya"
+    duration_minutes: 25
+    role_kind: human
+    role_profile: monitor
+    deliverable_kind: pinya-estable
+    approval_rule: manual
+    priority: high
+  - id: paso-4-subir-bajar
+    label: "Aprendiendo a subir y bajar"
+    duration_minutes: 20
+    role_kind: human
+    role_profile: monitor
+    deliverable_kind: tronc-tecnica
+    approval_rule: manual
+    priority: high
+  - id: paso-5-construir-torre
+    label: "Construyendo la torre humana"
+    duration_minutes: 25
+    role_kind: human
+    role_profile: dinamizador
+    deliverable_kind: castell-completado
+    approval_rule: manual
+    priority: high
+  - id: paso-6-coronar
+    label: "Coronando la torre"
+    duration_minutes: 15
+    role_kind: human
+    role_profile: dinamizador
+    deliverable_kind: enxaneta-arriba
+    approval_rule: manual
+    priority: high
+  - id: paso-7-aleta
+    label: "Celebrando · ¡Aleta!"
+    duration_minutes: 5
+    role_kind: human
+    role_profile: dinamizador
+    deliverable_kind: catarsis-colectiva
+    approval_rule: manual
+    priority: med
+  - id: paso-8-foto
+    label: "Foto del equipo"
+    duration_minutes: 5
+    role_kind: human
+    role_profile: dinamizador
+    deliverable_kind: foto-oficial
+    approval_rule: manual
+    priority: med
+  - id: paso-9-cosecha-vna
+    label: "Cosecha VNA (opcional)"
+    duration_minutes: 30
+    role_kind: human
+    role_profile: dinamizador
+    deliverable_kind: borrador-mapa-vna
+    approval_rule: manual
+    priority: high
+  - id: paso-10-informe-post
+    label: "Generación de informe post-taller"
+    duration_minutes: 25
+    role_kind: ai
+    role_profile: agente_anthropic
+    deliverable_kind: post-workshop-report
+    approval_rule: manual
+    priority: med
 ---
 
 # Fent Pinya · Taller base · SOP v2

@@ -53,6 +53,56 @@ function fmtEur(n) {
 
 function colMeta(id) { return COLUMNS.find(c => c.id === id) || COLUMNS[0]; }
 
+// ─── H7.3 · Generador puro de Work Orders desde steps[] de un SOP ──────────
+// Toma un array de steps (cada uno con role_kind, role_profile, label,
+// duration_minutes, approval_rule, priority, deliverable_kind, id) y devuelve
+// un array de WOs listos para insertar. Ver knowledge/vision/sop-to-wo-model.md.
+// Pública para test.
+export function generateWosFromSop(sopSlug, steps, options = {}) {
+    if (!Array.isArray(steps)) return [];
+    const {
+        workshopId   = null,
+        projectId    = null,
+        socRefs      = ['soc-teamtowers-brand'],
+        fmvPerHour   = 50,
+        idPrefix     = '',
+    } = options;
+    const baseId = idPrefix || sopSlug.replace(/[^\w-]/g, '').slice(0, 24);
+    const ts     = Date.now().toString(36);
+    return steps.map((step, i) => {
+        const kind = step.role_kind === 'ai' ? 'ai' : 'human';
+        const stepId = step.id || ('step-' + i);
+        return {
+            id:        'wo-' + baseId + '-' + stepId.slice(0, 24) + '-' + ts + '-' + i,
+            type:      'work_order',
+            projectId,
+            content: {
+                title:           step.label || ('Paso ' + (i + 1)),
+                description:     '',
+                workshopId,
+                sopRef:          'sop-' + sopSlug,
+                stepRef:         stepId,
+                socRefs:         Array.isArray(socRefs) ? socRefs.slice() : ['soc-teamtowers-brand'],
+                assignee: {
+                    kind,
+                    id:     kind === 'ai' ? (step.role_profile || 'agente_anthropic') : (step.role_profile || 'pending'),
+                    engine: kind === 'ai' ? 'anthropic' : null,
+                },
+                approvalRule:    step.approval_rule || 'manual',
+                priority:        step.priority || 'med',
+                estimatedHours:  (Number(step.duration_minutes) || 30) / 60,
+                fmvPerHour,
+                actualHours:     null,
+                tokensIn:        null,
+                tokensOut:       null,
+                deliverableKind: step.deliverable_kind || null,
+                status:          'backlog',
+            },
+            keywords: ['work_order', kind, 'sop-' + sopSlug, stepId],
+        };
+    });
+}
+
 // ─── Builder del userPrompt para auto-ejecución IA (H7.2) ───────────────────
 // Pública para test. Construye el userPrompt que se enviará al LLM cuando
 // el operador pulse "▶ Ejecutar con IA" en una WO de tipo IA.
@@ -193,6 +243,7 @@ export default class KanbanView {
                 <div class="kb-spacer"></div>
                 <a href="/dashboard" data-link class="kb-link">← Dashboard</a>
                 <a href="/workshops" data-link class="kb-link">Workshops</a>
+                <button class="kb-btn" id="kbBtnFromSop">📋 Desde SOP</button>
                 <button class="kb-btn kb-btn-primary" id="kbBtnNew">＋ Nueva WO</button>
             </div>
 
@@ -209,7 +260,8 @@ export default class KanbanView {
     async afterRender() {
         await this._load();
         this._render();
-        document.getElementById('kbBtnNew').addEventListener('click', () => this._openCreateModal());
+        document.getElementById('kbBtnNew').addEventListener('click',     () => this._openCreateModal());
+        document.getElementById('kbBtnFromSop').addEventListener('click', () => this._openFromSopModal());
     }
 
     destroy() {}
@@ -562,6 +614,115 @@ export default class KanbanView {
 
     _esc(str) {
         return String(str ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+    }
+
+    // ─── H7.3 · Modal Generar WOs desde SOP ─────────────────────────────────
+    async _openFromSopModal() {
+        const root = document.getElementById('kbModalRoot');
+        if (!root) return;
+        const close = () => { root.innerHTML = ''; };
+        const sopsList = await KnowledgeLoader.listSops();
+        const wsOptions = this.workshops.map(w =>
+            `<option value="${w.id}">${this._esc((w.content?.clientName || w.id) + ' · ' + (w.content?.type || ''))}</option>`
+        ).join('');
+        const sopOptions = sopsList.map(s =>
+            `<option value="${s.slug}">${this._esc(s.slug)}</option>`
+        ).join('');
+
+        root.innerHTML = `
+            <div class="kb-modal" id="kbFromSopBg">
+                <div class="kb-modal-inner">
+                    <h3>📋 Generar WOs desde SOP</h3>
+                    <p style="color:#aaa;font-size:0.78rem;margin:0;">
+                        Selecciona un SOP estructurado (con <code>steps:</code> en frontmatter)
+                        para descomponerlo en Work Orders en el Backlog. Cada paso del SOP
+                        produce 1 WO con asignee humano|IA según el step y la prioridad
+                        heredada. Trazabilidad completa vía <code>sopRef</code> + <code>stepRef</code>.
+                    </p>
+
+                    <div class="row" style="margin-top:0.8rem;">
+                        <div>
+                            <label>SOP</label>
+                            <select id="kbsfSop">${sopOptions}</select>
+                        </div>
+                        <div>
+                            <label>Workshop asociado (opcional)</label>
+                            <select id="kbsfWs">
+                                <option value="">— ninguno —</option>
+                                ${wsOptions}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div>
+                            <label>FMV humano (€/h)</label>
+                            <input id="kbsfFmv" type="number" step="5" min="0" value="50">
+                        </div>
+                        <div>
+                            <label style="visibility:hidden;">_</label>
+                            <button class="kb-btn" id="kbsfPreview">🔍 Previsualizar</button>
+                        </div>
+                    </div>
+
+                    <div id="kbsfPreviewArea" style="margin-top:0.8rem; max-height:300px; overflow-y:auto;"></div>
+
+                    <div class="actions">
+                        <button class="kb-btn" id="kbsfCancel">Cancelar</button>
+                        <button class="kb-btn kb-btn-primary" id="kbsfCreate" disabled>Crear N WOs en Backlog</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('kbsfCancel').addEventListener('click', close);
+        document.getElementById('kbFromSopBg').addEventListener('click', e => { if (e.target.id === 'kbFromSopBg') close(); });
+
+        let pendingWOs = [];
+        const previewBtn = document.getElementById('kbsfPreview');
+        const createBtn  = document.getElementById('kbsfCreate');
+        const area       = document.getElementById('kbsfPreviewArea');
+
+        previewBtn.addEventListener('click', async () => {
+            const slug = document.getElementById('kbsfSop').value;
+            const wsId = document.getElementById('kbsfWs').value || null;
+            const fmv  = parseFloat(document.getElementById('kbsfFmv').value) || 50;
+            const steps = await KnowledgeLoader.getSopSteps(slug);
+            if (!steps.length) {
+                area.innerHTML = `<p style="color:#fca5a5;font-size:0.8rem;">El SOP <code>${this._esc(slug)}</code> no tiene <code>steps:</code> estructurados en frontmatter. Añádelos al .md y vuelve a previsualizar.</p>`;
+                createBtn.disabled = true;
+                pendingWOs = [];
+                return;
+            }
+            pendingWOs = generateWosFromSop(slug, steps, {
+                workshopId: wsId,
+                fmvPerHour: fmv,
+                socRefs:    ['soc-teamtowers-brand'],
+            });
+            area.innerHTML = `
+                <p style="color:#86efac;font-size:0.8rem;">Se crearán <b>${pendingWOs.length} WOs</b> en Backlog:</p>
+                <ul style="font-size:0.78rem;color:#bbb;padding-left:1.2rem;">
+                    ${pendingWOs.map(w => `
+                        <li style="margin-bottom:0.3rem;">
+                            <span style="color:${w.content.assignee.kind === 'ai' ? '#a5b4fc' : '#86efac'};">${w.content.assignee.kind === 'ai' ? '🤖' : '👤'}</span>
+                            ${this._esc(w.content.title)}
+                            <span style="color:#666;">· ${w.content.estimatedHours.toFixed(2)}h · ${this._esc(w.content.priority)}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+            createBtn.disabled = false;
+        });
+
+        createBtn.addEventListener('click', async () => {
+            if (!pendingWOs.length) return;
+            close();
+            for (const wo of pendingWOs) {
+                await store.dispatch({ type: 'KB_UPSERT', payload: { node: wo } });
+            }
+            await this._load();
+            this._render();
+        });
     }
 
     // ─── modal de creación ──────────────────────────────────────────────────

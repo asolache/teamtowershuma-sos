@@ -595,6 +595,20 @@ export class KnowledgeLoader {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    //  getSopSteps — extrae el array `steps` del frontmatter de un SOP.
+    //  Devuelve [] si el SOP no tiene steps estructurados.
+    //  H7.3 · base para auto-generación de Work Orders desde un SOP.
+    // ══════════════════════════════════════════════════════════════════════════
+    static async getSopSteps(slug) {
+        if (!slug) return [];
+        const path   = 'sops/' + slug + '.md';
+        const parsed = await this.parseFile(path);
+        if (!parsed) return [];
+        const fm = parsed.frontmatter || {};
+        return Array.isArray(fm.steps) ? fm.steps : [];
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     //  listSocs — lista SOCs públicos extraídos de _index.md
     // ══════════════════════════════════════════════════════════════════════════
     static async listSocs() {

@@ -35,6 +35,129 @@ deliverables:
 keywords: [la-colla, vna, value-network-analysis, mapeo, roles, transacciones, MUST, EXTRA, pulso, retos, kaizen, kaikaku, ikea, pantheon]
 fmv_eur_h: null   # Tarifa por sesión + análisis posterior. NO incluir en outputs MD.
 geographic_scope: "Estándar Barcelona/Madrid <2h; resto España/Europa con suplementos; remoto vía Miro disponible"
+
+# H7.3 · Pasos canónicos del proceso multi-sesión
+steps:
+  - id: fase-a1-sponsor
+    label: "Reunión con sponsor (encuadre)"
+    duration_minutes: 90
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: encuadre-firmado
+    approval_rule: manual
+    priority: high
+  - id: fase-a2-diseno
+    label: "Diseño operativo (off-site)"
+    duration_minutes: 180
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: plan-sesiones
+    approval_rule: manual
+    priority: med
+  - id: fase-b1-paso-1-2
+    label: "Sesión 1 · Pasos 1-2 · Participantes y alcance"
+    duration_minutes: 25
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: alcance-firmado
+    approval_rule: manual
+    priority: high
+  - id: fase-b1-paso-3-4
+    label: "Sesión 1 · Pasos 3-4 · Listar 10-15 personas y agrupar en roles"
+    duration_minutes: 60
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: lista-roles
+    approval_rule: manual
+    priority: high
+  - id: fase-b1-paso-5
+    label: "Sesión 1 · Paso 5 · Mapear transacciones y entregables MUST/EXTRA"
+    duration_minutes: 75
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: mapa-vna-v1
+    approval_rule: manual
+    priority: high
+  - id: fase-b1-paso-6
+    label: "Sesión 1 · Paso 6 · Pulso de satisfacción azul/amarillo"
+    duration_minutes: 30
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: pulso-satisfaccion
+    approval_rule: manual
+    priority: high
+  - id: fase-b1-paso-7
+    label: "Sesión 1 · Paso 7 · Secuenciar para validar"
+    duration_minutes: 25
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: validacion-secuencia
+    approval_rule: manual
+    priority: med
+  - id: fase-b1-bola-extra
+    label: "Sesión 1 · Bola extra · Insights y retos"
+    duration_minutes: 45
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: lista-retos
+    approval_rule: manual
+    priority: high
+  - id: fase-b1-digitalizar
+    label: "Inter-sesión · Digitalización del mapa en Miro/SOS"
+    duration_minutes: 90
+    role_kind: ai
+    role_profile: agente_anthropic
+    deliverable_kind: mapa-vna-digital
+    approval_rule: manual
+    priority: med
+  - id: fase-b2-profundizacion
+    label: "Sesión 2 · Profundización en zonas críticas"
+    duration_minutes: 60
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: zonas-criticas
+    approval_rule: manual
+    priority: high
+  - id: fase-b2-retos
+    label: "Sesión 2 · Identificación formal de retos"
+    duration_minutes: 45
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: retos-priorizados
+    approval_rule: manual
+    priority: high
+  - id: fase-b2-propuestas
+    label: "Sesión 2 · Propuestas de mejora con responsables"
+    duration_minutes: 60
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: improvement-proposal
+    approval_rule: manual
+    priority: high
+  - id: fase-b3-entrevistas
+    label: "Sesión 3+ · Entrevistas a roles pendientes"
+    duration_minutes: 60
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: entrevista-rol
+    approval_rule: manual
+    priority: med
+  - id: fase-c1-ejecutiva
+    label: "Sesión ejecutiva con sponsor + dirección"
+    duration_minutes: 90
+    role_kind: human
+    role_profile: facilitador
+    deliverable_kind: presentacion-ejecutiva
+    approval_rule: manual
+    priority: high
+  - id: fase-c2-informe
+    label: "Informe final consolidado"
+    duration_minutes: 120
+    role_kind: ai
+    role_profile: agente_anthropic
+    deliverable_kind: vna-final-report
+    approval_rule: manual
+    priority: high
 ---
 
 # La Colla · SOP v1

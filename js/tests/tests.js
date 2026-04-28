@@ -599,6 +599,72 @@ async function testSectorReadiness() {
     assert(KnowledgeLoader._computeSectorReadiness({ roles: 3,  txs: 5,  patterns: 1, hasEn: false, bilingualRoles: false }) === 'tier 2', 'criterio TDD: muy bajo → tier 2');
 }
 
+// ─── H7.3 · Auto-generación de WOs desde SOP con steps[] ─────────────────
+async function testGenerateWosFromSop() {
+    const KLMod  = await import('../core/KnowledgeLoader.js?v=' + Date.now());
+    const KbMod  = await import('../views/KanbanView.js?v=' + Date.now());
+    const { KnowledgeLoader } = KLMod;
+    const { generateWosFromSop } = KbMod;
+    KnowledgeLoader.clearCache();
+
+    // 1. fent-pinya-taller tiene steps[] tras H7.3
+    const stepsFent = await KnowledgeLoader.getSopSteps('fent-pinya-taller');
+    assert(Array.isArray(stepsFent),                                  'getSopSteps devuelve array para fent-pinya-taller');
+    assert(stepsFent.length >= 10,                                    'fent-pinya-taller tiene ≥10 steps (8 guion + cosecha + informe)');
+    assert(stepsFent.some(s => s.id === 'paso-1-apertura'),           'fent-pinya-taller incluye paso-1-apertura');
+    assert(stepsFent.some(s => s.id === 'paso-7-aleta'),              'fent-pinya-taller incluye paso-7-aleta (catarsis)');
+    const apertura = stepsFent.find(s => s.id === 'paso-1-apertura');
+    assert(apertura.duration_minutes === 10,                          'paso apertura: 10 min');
+    assert(apertura.role_kind === 'human',                            'paso apertura: role_kind=human');
+
+    // 2. la-colla tiene steps multi-sesión
+    const stepsColla = await KnowledgeLoader.getSopSteps('la-colla');
+    assert(Array.isArray(stepsColla) && stepsColla.length >= 12,      'la-colla tiene ≥12 steps (3 fases × pasos)');
+    assert(stepsColla.some(s => s.id === 'fase-b1-paso-5'),           'la-colla incluye paso 5 mapeo MUST/EXTRA');
+    assert(stepsColla.some(s => s.role_kind === 'ai'),                'la-colla tiene al menos 1 step asignado a IA');
+    const informe = stepsColla.find(s => s.id === 'fase-c2-informe');
+    assert(informe && informe.role_kind === 'ai',                     'fase-c2-informe es asignada a IA');
+
+    // 3. SOP sin steps devuelve array vacío (no rompe)
+    const stepsCustom = await KnowledgeLoader.getSopSteps('proyecto-custom');
+    assert(Array.isArray(stepsCustom) && stepsCustom.length === 0,    'proyecto-custom (stub) sin steps devuelve []');
+
+    // 4. generateWosFromSop con un array de steps de prueba
+    const fakeSteps = [
+        { id: 'paso-uno', label: 'Paso uno', duration_minutes: 15, role_kind: 'human', role_profile: 'facilitador', approval_rule: 'manual', priority: 'high', deliverable_kind: 'artefacto-x' },
+        { id: 'paso-dos', label: 'Paso dos · IA', duration_minutes: 30, role_kind: 'ai',  role_profile: 'agente_anthropic', approval_rule: 'tdd-auto', priority: 'med', deliverable_kind: 'informe' },
+    ];
+    const wos = generateWosFromSop('mi-sop-test', fakeSteps, { workshopId: 'ws-x', fmvPerHour: 80, socRefs: ['soc-teamtowers-brand'] });
+    assert(wos.length === 2,                                          'generateWosFromSop produce 1 WO por step');
+
+    // Step 0 (humano)
+    assert(wos[0].type === 'work_order',                              'WO[0] es type=work_order');
+    assert(wos[0].content.title === 'Paso uno',                       'WO[0] title heredado del label');
+    assert(wos[0].content.sopRef === 'sop-mi-sop-test',               'WO[0] sopRef formateado con prefijo sop-');
+    assert(wos[0].content.stepRef === 'paso-uno',                     'WO[0] stepRef heredado del id del step');
+    assert(wos[0].content.assignee.kind === 'human',                  'WO[0] assignee.kind = human');
+    assert(wos[0].content.assignee.id === 'facilitador',              'WO[0] assignee.id = role_profile');
+    assert(wos[0].content.priority === 'high',                        'WO[0] priority heredado');
+    assert(wos[0].content.estimatedHours === 0.25,                    'WO[0] estimatedHours = 15min/60 = 0.25');
+    assert(wos[0].content.fmvPerHour === 80,                          'WO[0] fmvPerHour heredado de options');
+    assert(wos[0].content.workshopId === 'ws-x',                      'WO[0] workshopId pasado');
+    assert(wos[0].content.deliverableKind === 'artefacto-x',          'WO[0] deliverableKind heredado');
+    assert(Array.isArray(wos[0].content.socRefs) && wos[0].content.socRefs[0] === 'soc-teamtowers-brand', 'WO[0] socRefs heredados');
+
+    // Step 1 (IA con tdd-auto)
+    assert(wos[1].content.assignee.kind === 'ai',                     'WO[1] assignee.kind = ai');
+    assert(wos[1].content.assignee.engine === 'anthropic',            'WO[1] engine asignado por defecto');
+    assert(wos[1].content.approvalRule === 'tdd-auto',                'WO[1] approvalRule heredado');
+
+    // 5. IDs únicos para evitar colisiones en bulk insert
+    const ids = wos.map(w => w.id);
+    assert(new Set(ids).size === ids.length,                          'IDs de WO generados son únicos');
+
+    // 6. Caso degenerado: no array
+    const empty = generateWosFromSop('no-existe', null);
+    assert(Array.isArray(empty) && empty.length === 0,                'generateWosFromSop con steps=null devuelve []');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -610,7 +676,8 @@ const SUITE = [
     { name: 'H2.5 · WorkshopsView · prompt builder informe IA',   fn: testWorkshopsReportPromptBuilder },
     { name: 'H2.6 · Selector tipo servicio · prompts dinámicos',  fn: testWorkshopsServiceTypeSelector },
     { name: 'H7.1 · Kanban Work Orders · CRUD + ledger',          fn: testKanbanWorkOrders },
-    { name: 'H7.2 · Kanban · prompt builder IA + TDD eval',       fn: testKanbanExecutionPromptAndTdd }
+    { name: 'H7.2 · Kanban · prompt builder IA + TDD eval',       fn: testKanbanExecutionPromptAndTdd },
+    { name: 'H7.3 · Generar WOs desde SOP steps[]',               fn: testGenerateWosFromSop }
 ];
 
 export async function runTests() {
