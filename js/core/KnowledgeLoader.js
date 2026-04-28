@@ -384,6 +384,16 @@ export class KnowledgeLoader {
 
     // ══════════════════════════════════════════════════════════════════════════
     //  listSectors — sectores disponibles, nombres bilingüe según window.__lang
+    //  + readiness calculado dinámicamente desde el frontmatter de cada .md
+    //
+    //  H1.8 fix · readiness:
+    //    'ready'  · ≥10 roles, ≥14 transactions, ≥4 patterns, bilingüe completo
+    //    'solid'  · ≥6 roles,  ≥10 transactions, ≥2 patterns
+    //    'tier 2' · por debajo del mínimo o fichero ausente
+    //
+    //  Antes (hardcoded en DashboardView): un Set fijo de 5 IDs marcaba "ready"
+    //  independientemente del contenido real → falso negativo en sectores
+    //  bien poblados.
     // ══════════════════════════════════════════════════════════════════════════
     static async listSectors() {
         // Diccionario bilingüe completo — fuente de verdad para nombres en UI
@@ -421,28 +431,60 @@ export class KnowledgeLoader {
         var ALL_IDS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','UV'];
 
         // Intentar leer _index.md para obtener la lista ordenada de IDs disponibles
+        var ids = null;
         var index = await this.loadFile('_index.md');
         if (index) {
             var match = index.match(/##\s*[Ss]ectores([\s\S]*?)(?=##|$)/);
             if (match) {
-                var ids = [];
+                ids = [];
                 var lines = match[1].split('\n');
                 for (var i = 0; i < lines.length; i++) {
                     var m = lines[i].match(/\|\s*`([A-Z]{1,2})`\s*\|\s*`[^`]+`\s*\|\s*`([^`]+)`/);
                     if (m) ids.push(m[1]);
                 }
-                if (ids.length > 0) {
-                    return ids.map(function(id) {
-                        return { id: id, file: 'sectors/' + id + '.md', name: names[id] || id };
-                    });
-                }
+                if (ids.length === 0) ids = null;
             }
         }
+        if (!ids) ids = ALL_IDS.slice();
 
-        // Fallback: todos los sectores conocidos
-        return ALL_IDS.map(function(id) {
-            return { id: id, file: 'sectors/' + id + '.md', name: names[id] || id };
-        });
+        // Para cada ID, parsea el .md y calcula readiness real
+        var result = [];
+        for (var k = 0; k < ids.length; k++) {
+            var id = ids[k];
+            var file = 'sectors/' + id + '.md';
+            var parsed = await this.parseFile(file);
+            var roles = parsed && Array.isArray(parsed.roles) ? parsed.roles.length : 0;
+            var txs   = parsed && Array.isArray(parsed.transactions) ? parsed.transactions.length : 0;
+            var pats  = parsed && Array.isArray(parsed.patterns) ? parsed.patterns.length : 0;
+            var hasEn = !!(parsed && parsed.frontmatter && parsed.frontmatter.sector_name_en);
+            var bilingualRoles = parsed && Array.isArray(parsed.roles) &&
+                parsed.roles.some(function(r) { return r && (r.name_en || r.description_en); });
+            var readiness = this._computeSectorReadiness({
+                roles: roles, txs: txs, patterns: pats,
+                hasEn: hasEn, bilingualRoles: bilingualRoles,
+            });
+            result.push({
+                id: id,
+                file: file,
+                name: names[id] || id,
+                roles: roles,
+                transactions: txs,
+                patterns: pats,
+                hasEn: hasEn,
+                readiness: readiness,
+            });
+        }
+        return result;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  _computeSectorReadiness — criterio TDD del modelo de gestión del KB
+    //  H1.8 · auditoría 2026 · ver docs/backlog.md sección "Knowledge Base"
+    // ══════════════════════════════════════════════════════════════════════════
+    static _computeSectorReadiness(s) {
+        if (s.roles >= 10 && s.txs >= 14 && s.patterns >= 4 && s.hasEn && s.bilingualRoles) return 'ready';
+        if (s.roles >= 6  && s.txs >= 10 && s.patterns >= 2) return 'solid';
+        return 'tier 2';
     }
 
     // ══════════════════════════════════════════════════════════════════════════

@@ -41,11 +41,14 @@
 
 | ID | Historia | Estado |
 |---|---|---|
-| **H7.1** | **Vista `/kanban` Work Orders → Ledger** (cierra el lazo SOP→WO→Ledger) | 🟢 ahora |
-| H3.1 | Ledger viewer (transición automática desde Kanban "Contabilizadas") | 🟡 sigue tras H7.1 |
-| H7.2 | Auto-ejecución de WO por agente IA (Anthropic) con captura tokens reales | 🟡 |
-| H7.3 | Workflow auto-generación de WO desde un SOP estructurado (cada paso → 1 WO) | 🟡 |
-| H7.4 | TDD-auto: campo `tddCheck` con expresión booleana evaluable | 🟡 |
+| H7.1 | Vista `/kanban` Work Orders → Ledger (cierra lazo SOP→WO→Ledger) | ✅ verde |
+| H7.2 | Auto-ejecución de WO por agente IA (Anthropic) con captura tokens reales | ✅ verde |
+| **H1.8** | **Auditoría TDD del Knowledge Base · readiness dinámico por sector** | 🟢 ahora |
+| **H7.3** | **Workflow auto-generación de WO desde un SOP estructurado** | 🟢 siguiente |
+| H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
+| H1.10 | Mecanismo "clonar sector → personalizar cliente" automatizado | 🟡 |
+| H7.4 | TDD-auto: ampliar sandbox de `tddCheck` más allá de los 4 tipos básicos | 🟡 |
+| H3.1 | Ledger viewer dedicado | 🟡 |
 
 ---
 
@@ -85,6 +88,45 @@
 | H2.2 | Ficha detalle de taller con agenda Fent Pinya pre-cargada | UX |
 | H2.4 | Check-list digital durante el taller en sala (mobile-friendly) | UX |
 | BACK-002 | Revisar legacy SOS automatización (`teamtowershuma.com/dev/ia` `/10` `/v9`) | Recuperar patrones del Kanban viejo |
+
+---
+
+### E · Knowledge Base · criterio TDD de excelencia (H1.8 vivo)
+
+**Auditoría 28-abr-2026** — el bug "todos los sectores parecen tier 2" venía
+de un `Set(['N','K','Q','F','R'])` hardcoded en `DashboardView.js:854`. La
+realidad: 22 sectores con 8-10 roles, 12-17 transactions, 3-5 patterns,
+todos con `sector_name_en` y bilingüe en roles.
+
+**Criterio TDD formalizado** (`KnowledgeLoader._computeSectorReadiness`):
+
+| Nivel | Umbral | Significado |
+|---|---|---|
+| `ready` | ≥10 roles · ≥14 tx · ≥4 patterns · bilingüe completo | Vendible directo como mapa VNA inicial sin retoques |
+| `solid` | ≥6 roles · ≥10 tx · ≥2 patterns | Cobertura suficiente para construir propuesta tras enriquecer con cliente |
+| `tier 2` | por debajo del mínimo | Inferir desde conocimiento general del LLM o pedir input al cliente |
+
+**Estado actual del catálogo (auditor 2026-04-28):**
+
+- **`ready`** (criterio fuerte): K (Tech), N (Consulting). Quizás otros que cumplan tras el bug-fix.
+- **`solid`** (mayoría): A, B, C, D, E, G, H, I, J, L, M, O, P, S, UV — listos para uso con enriquecimiento de cliente.
+- **Borderline `solid`**: F (12 tx, 3 patterns), Q (13 tx, 3 patterns), R (12 tx, 3 patterns), T (6 roles).
+- Pendiente para `ready`: completar F, Q, R con +2 tx y +1 pattern cada uno (H1.9).
+
+**Mecanismo de adaptación a cliente** (H1.10):
+
+Hoy `KnowledgeLoader.getClientSeed(clientId)` carga `clients/{id}/vna-model.md`
+manualmente. Falta:
+
+1. Función `cloneSectorForClient(sectorId, clientId, clientDescription)` que
+   instancia la plantilla y la guarda en `clients/{id}/`.
+2. Enriquecimiento por LLM con descripción del cliente (parametriza roles
+   genéricos a roles específicos: "Vendedor" → "Vendedor de servicios B2B
+   IKEA Madrid").
+3. Validación TDD del mapa generado (mismo criterio readiness aplicado al
+   mapa cliente).
+4. Almacenamiento automático en `clients/{id}/vna-model.md` para
+   reutilización (sedes, franquicias, sucesivas iteraciones).
 
 ---
 

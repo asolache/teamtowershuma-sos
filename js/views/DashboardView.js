@@ -850,17 +850,23 @@ export default class DashboardView {
         const body    = document.getElementById('dashKBBody');
         if (!body) return;
 
-        // Tier 1 = los que tenemos fichero. Tier 2 = los que KnowledgeLoader infiere.
-        const tier1Ids = new Set(['N', 'K', 'Q', 'F', 'R']);
+        // H1.8 · readiness calculado dinámicamente por KnowledgeLoader
+        // (≥10 roles, ≥14 tx, ≥4 patterns, bilingüe → 'ready';
+        //  ≥6/≥10/≥2 → 'solid'; resto → 'tier 2')
+        const READINESS_STYLE = {
+            'ready':  'rgba(0,230,118,0.12);color:var(--accent-green)',
+            'solid':  'rgba(99,102,241,0.12);color:var(--accent-indigo)',
+            'tier 2': 'rgba(255,145,0,0.10);color:var(--accent-orange)',
+        };
 
-        let html = '<div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:12px;">Click a sector to preview its roles</div>';
+        let html = '<div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:12px;">Click a sector to preview its roles · readiness calculado por contenido</div>';
         sectors.forEach(function(s) {
-            const isTier1 = tier1Ids.has(s.id);
+            const r = s.readiness || 'tier 2';
+            const meta = (s.roles || 0) + 'r · ' + (s.transactions || 0) + 'tx · ' + (s.patterns || 0) + 'p';
             html += '<div class="dash-kb-sector-item" data-sector="' + s.id + '">' +
-                '<div class="dash-kb-sector-name">' + s.id + ' · ' + s.name + '</div>' +
-                '<span class="dash-kb-sector-badge" style="background:' +
-                    (isTier1 ? 'rgba(0,230,118,0.1);color:var(--accent-green)' : 'rgba(255,145,0,0.1);color:var(--accent-orange)') +
-                ';">' + (isTier1 ? 'ready' : 'tier 2') + '</span>' +
+                '<div class="dash-kb-sector-name">' + s.id + ' · ' + s.name +
+                    ' <span style="color:var(--text-muted);font-size:9px;font-family:var(--font-mono);">(' + meta + ')</span></div>' +
+                '<span class="dash-kb-sector-badge" style="background:' + READINESS_STYLE[r] + ';">' + r + '</span>' +
             '</div>';
         });
         html += '<div id="dashKBDetail" class="dash-kb-detail"></div>';

@@ -559,11 +559,52 @@ async function testKanbanExecutionPromptAndTdd() {
     assert(view._evalTdd('', 'output') === false,                                    'TDD vacío devuelve false');
 }
 
+// ─── H1.8 · Auditoría TDD del Knowledge Base · readiness sectores ─────────
+async function testSectorReadiness() {
+    const { KnowledgeLoader } = await import('../core/KnowledgeLoader.js?v=' + Date.now());
+    KnowledgeLoader.clearCache();
+
+    const sectors = await KnowledgeLoader.listSectors();
+    assert(Array.isArray(sectors),                                       'listSectors devuelve array');
+    assert(sectors.length >= 21,                                         'listSectors devuelve ≥21 sectores (CNAE A-UV)');
+
+    // Cada sector tiene readiness válido y conteos numéricos
+    sectors.forEach(s => {
+        assert(['ready','solid','tier 2'].includes(s.readiness),         's=' + s.id + ' tiene readiness válido (' + s.readiness + ')');
+        assert(typeof s.roles === 'number',                              's=' + s.id + ' tiene roles count numérico');
+        assert(typeof s.transactions === 'number',                       's=' + s.id + ' tiene transactions count numérico');
+        assert(typeof s.patterns === 'number',                           's=' + s.id + ' tiene patterns count numérico');
+    });
+
+    // Criterio de excelencia: K (Tech) y N (Consulting) deben ser ready
+    // (auditor confirmó 10 roles · 16 tx · 5 patterns · bilingüe en ambos)
+    const k = sectors.find(s => s.id === 'K');
+    const n = sectors.find(s => s.id === 'N');
+    assert(!!k && k.readiness === 'ready',                               'K (Tech/Software) calificado ready según criterio TDD');
+    assert(!!n && n.readiness === 'ready',                               'N (Consulting) calificado ready según criterio TDD');
+
+    // F (Construction) tiene 8 roles · 12 tx · 3 patterns → no llega al umbral
+    const f = sectors.find(s => s.id === 'F');
+    assert(!!f && f.readiness !== 'ready',                               'F (Construction) NO llega a ready (12 tx < 14, 3 patterns < 4)');
+
+    // Distribución sana: al menos 1 ready y al menos 5 solid (mayoría del catálogo)
+    const ready = sectors.filter(s => s.readiness === 'ready').length;
+    const solid = sectors.filter(s => s.readiness === 'solid').length;
+    assert(ready >= 1,                                                   'al menos 1 sector ready');
+    assert(solid + ready >= 15,                                          '≥15 sectores cubren al menos el umbral solid (KB con cobertura)');
+
+    // El criterio _computeSectorReadiness es determinista y reusable
+    assert(KnowledgeLoader._computeSectorReadiness({ roles: 10, txs: 14, patterns: 4, hasEn: true, bilingualRoles: true }) === 'ready', 'criterio TDD: 10/14/4/EN+bilingüe → ready');
+    assert(KnowledgeLoader._computeSectorReadiness({ roles: 8,  txs: 12, patterns: 3, hasEn: true, bilingualRoles: true }) === 'solid', 'criterio TDD: 8/12/3 → solid');
+    assert(KnowledgeLoader._computeSectorReadiness({ roles: 3,  txs: 5,  patterns: 1, hasEn: false, bilingualRoles: false }) === 'tier 2', 'criterio TDD: muy bajo → tier 2');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
     { name: 'H1.3 · Export/Import firmado ECDSA P-256',           fn: testProjectIO },
     { name: 'H1.5 · KnowledgeLoader carga SOPs/SOCs y projectId', fn: testKnowledgeLoaderSocsSops },
+    { name: 'H1.8 · KB sector readiness · auditoría TDD',         fn: testSectorReadiness },
     { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud },
     { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder },
     { name: 'H2.5 · WorkshopsView · prompt builder informe IA',   fn: testWorkshopsReportPromptBuilder },
