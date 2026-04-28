@@ -9,6 +9,7 @@ const ROUTES = [
     { path: '/lms',       view: () => import('./views/HomeView.js')     },
     { path: '/map',       view: () => import('./views/ValueMapView.js')  },
     { path: '/workshops', view: () => import('./views/WorkshopsView.js') },
+    { path: '/kanban',    view: () => import('./views/KanbanView.js')   },
     { path: '/focus',     view: () => import('./views/HomeView.js')     },
     { path: '/settings',  view: () => import('./views/SettingsView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },

@@ -383,6 +383,126 @@ async function testWorkshopsServiceTypeSelector() {
     assert(pDemo.includes('soc-teamtowers-brand'),     'prompt Demo hereda SOC raíz brand');
 }
 
+// ─── H7.1 · Kanban Work Orders · CRUD + transiciones + ledger ─────────────
+async function testKanbanWorkOrders() {
+    const Mod = await import('../views/KanbanView.js?v=' + Date.now());
+    const { computeWOCost } = Mod;
+    await KB.init();
+    await store.init();
+
+    // 1. computeWOCost — humano sin actualHours → realCost 0
+    const woHumanEst = {
+        id: 'wo-test-h-est', type: 'work_order',
+        content: { assignee: { kind: 'human', id: '@alvaro' }, estimatedHours: 2, fmvPerHour: 60, actualHours: null }
+    };
+    const cHumanEst = computeWOCost(woHumanEst);
+    assert(cHumanEst.humanCostEstimated === 120,                   'computeWOCost humano: estimado = horas × FMV');
+    assert(cHumanEst.humanCostReal === null,                       'computeWOCost humano sin actualHours: real = null');
+    assert(cHumanEst.savingEur === null,                           'computeWOCost humano: ahorro = null (no es IA)');
+
+    // 2. computeWOCost — IA con tokens (Anthropic Sonnet)
+    const woAi = {
+        id: 'wo-test-ai', type: 'work_order',
+        content: {
+            assignee: { kind: 'ai', id: 'anthropic', engine: 'anthropic' },
+            estimatedHours: 2, fmvPerHour: 60,
+            actualHours: 0,
+            tokensIn:  10000,   // 10K tokens entrada
+            tokensOut: 2000,    // 2K tokens salida
+        }
+    };
+    const cAi = computeWOCost(woAi);
+    // Coste bruto: (10000/1e6)*3 + (2000/1e6)*15 = 0.030 + 0.030 = 0.060 USD/EUR
+    // Con markup 30%: 0.060 * 1.30 = 0.078
+    assert(Math.abs(cAi.aiCostReal - 0.078) < 0.001,               'computeWOCost IA: tokens × precio × markup = 0.078 €');
+    assert(cAi.humanCostEstimated === 120,                         'computeWOCost IA: humano estimado se conserva (120 €)');
+    assert(cAi.savingEur > 119 && cAi.savingEur < 120,             'computeWOCost IA: ahorro ≈ 120 - 0.078 = 119.92 €');
+
+    // 3. CRUD de work_order vía store/KB
+    const woId = 'wo-test-' + Date.now();
+    const node = {
+        id:        woId,
+        type:      'work_order',
+        projectId: null,
+        content: {
+            title:           'Test WO H7.1',
+            description:     'Generar propuesta IKEA',
+            assignee:        { kind: 'human', id: '@alvaro' },
+            approvalRule:    'manual',
+            priority:        'high',
+            estimatedHours:  1.5,
+            fmvPerHour:      80,
+            actualHours:     null,
+            status:          'backlog',
+        },
+        keywords: ['work_order', 'human'],
+    };
+    await store.dispatch({ type: 'KB_UPSERT', payload: { node } });
+    const stored = await KB.getNode(woId);
+    assert(stored?.content?.status === 'backlog',                   'WO creada en estado backlog');
+    assert(stored?.content?.assignee?.kind === 'human',             'WO assignee.kind = human');
+
+    // 4. Transición backlog → doing
+    const w1 = { ...stored, content: { ...stored.content, status: 'doing' } };
+    await store.dispatch({ type: 'KB_UPSERT', payload: { node: w1 } });
+    assert((await KB.getNode(woId)).content.status === 'doing',     'transición backlog→doing OK');
+
+    // 5. Transición doing → done con actualHours
+    const w2 = { ...w1, content: { ...w1.content, status: 'done', actualHours: 2 } };
+    await store.dispatch({ type: 'KB_UPSERT', payload: { node: w2 } });
+    const d2 = await KB.getNode(woId);
+    assert(d2.content.status === 'done',                            'transición doing→done OK');
+    assert(d2.content.actualHours === 2,                            'actualHours capturado en done');
+
+    // 6. Transición done → ledgered: simula _ledgerize calculando coste y dispatch LEDGER_UPDATE
+    const cost = computeWOCost(d2);
+    assert(cost.humanCostReal === 160,                              'humanCostReal = 2 h × 80 €/h = 160 €');
+    const projectId = 'proj-test-h71-' + Date.now();
+    const projectsBefore = store.getState().projects.length;
+    // Crear proyecto destino mínimo si no existe (para que LEDGER_UPDATE encuentre projects[idx])
+    await store.dispatch({ type: 'CREATE_PROJECT', payload: { id: projectId, nombre: 'Test H7.1', sector_id: 'N' } });
+    await store.dispatch({ type: 'LEDGER_UPDATE', payload: {
+        projectId,
+        workOrderId: woId,
+        agentId: '@alvaro',
+        assigneeKind: 'human',
+        realHours: 2,
+        fmv: 80,
+        multiplier: 1,
+        humanCostReal: cost.humanCostReal,
+    }});
+    const finalProj = store.getState().projects.find(p => p.id === projectId);
+    assert(!!finalProj,                                             'proyecto destino existe');
+    assert(Array.isArray(finalProj.ledger) && finalProj.ledger.length >= 1, 'ledger del proyecto recibe entry');
+    const lastEntry = finalProj.ledger[finalProj.ledger.length - 1];
+    assert(lastEntry.workOrderId === woId,                          'ledger entry referencia la WO');
+    assert(lastEntry.slices === 160,                                'slices = realHours × fmv × multiplier = 160');
+
+    // 7. Marcar WO como ledgered
+    const w3 = {
+        ...d2,
+        content: {
+            ...d2.content,
+            status:        'ledgered',
+            ledgeredAt:    Date.now(),
+            humanCostEur:  cost.humanCostReal,
+            ledgerProjectId: projectId,
+        }
+    };
+    await store.dispatch({ type: 'KB_UPSERT', payload: { node: w3 } });
+    const w3Stored = await KB.getNode(woId);
+    assert(w3Stored.content.status === 'ledgered',                  'WO marcada como ledgered');
+    assert(w3Stored.content.ledgerProjectId === projectId,          'WO referencia el proyecto del ledger');
+
+    // 8. KB.query type=work_order encuentra el nodo
+    const allWO = await KB.query({ type: 'work_order' });
+    assert(allWO.some(w => w.id === woId),                          'KB.query({type:work_order}) lista la WO');
+
+    // 9. Limpieza (no destructiva)
+    await store.dispatch({ type: 'KB_DELETE', payload: { id: woId } });
+    assert((await KB.getNode(woId)) === null,                       'WO borrada de KB');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -391,7 +511,8 @@ const SUITE = [
     { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud },
     { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder },
     { name: 'H2.5 · WorkshopsView · prompt builder informe IA',   fn: testWorkshopsReportPromptBuilder },
-    { name: 'H2.6 · Selector tipo servicio · prompts dinámicos',  fn: testWorkshopsServiceTypeSelector }
+    { name: 'H2.6 · Selector tipo servicio · prompts dinámicos',  fn: testWorkshopsServiceTypeSelector },
+    { name: 'H7.1 · Kanban Work Orders · CRUD + ledger',          fn: testKanbanWorkOrders }
 ];
 
 export async function runTests() {

@@ -1,0 +1,112 @@
+# SOS V11 · Backlog vivo
+
+> Tesis raíz de TeamTowers SOS — *Swarm Operative System*:
+> un sistema operativo de configurar y orquestar agentes (humanos + IA)
+> bajo el contrato **SOC + SOP + DTD (Deliverable Test Driven)**, donde cada
+> entregable verificable permite que una IA decida `true/false` y siga
+> automatizando, hasta tender al máximo de automatización al menor coste
+> de tokens posible.
+>
+> Visión operativa: **"Antigravity"** — soberanía total de datos (todo
+> en navegador, local-first), descentralización en lugar de cloud, máxima
+> capacidad de automatización al mínimo coste, valor de los humanos en
+> los intangibles que las IAs no pueden replicar (memoria cuántica
+> contextual, presencia, sentido).
+
+---
+
+## Estado de avance
+
+### Ola 1 · Fent Pinya Ops + Mind-as-Graph (✅ CERRADA en `main` · `6a630d5`)
+
+| ID | Historia | Tests |
+|---|---|---|
+| H1.1 | KB Mind-as-Graph schema (KB_UPSERT/KB_DELETE) | ✅ 11 asserts |
+| H1.3 | Export/Import firmado ECDSA P-256 | ✅ 10 asserts |
+| H1.4 | Estructura `knowledge/socs/` + `knowledge/sops/` | ✅ |
+| H1.5 | KnowledgeLoader carga SOCs/SOPs + projectId | ✅ 24 asserts |
+| H1.6 | Catálogo TeamTowers 2026 (3 SOCs · 3 SOPs) | ✅ |
+| H1.7 | SOC+SOP "La Colla" (proceso VNA) + stubs | ✅ |
+| H2.1 | Vista `/workshops` CRUD + estados | ✅ 8 asserts |
+| H2.3 | Propuesta IA Context-First | ✅ 10 asserts |
+| H2.5 | Informe post-taller IA Context-First | ✅ 12 asserts |
+| H2.6 | Selector tipo de servicio (6 formatos) | ✅ 15 asserts |
+| BUG-001 | Scroll en Dashboard y otras vistas | ✅ |
+
+**90 asserts en 7 suites** · Tag local `v11.1.0-ola1`.
+
+---
+
+### Ola 2 · Antigravity Engine (🟢 EN CURSO)
+
+| ID | Historia | Estado |
+|---|---|---|
+| **H7.1** | **Vista `/kanban` Work Orders → Ledger** (cierra el lazo SOP→WO→Ledger) | 🟢 ahora |
+| H3.1 | Ledger viewer (transición automática desde Kanban "Contabilizadas") | 🟡 sigue tras H7.1 |
+| H7.2 | Auto-ejecución de WO por agente IA (Anthropic) con captura tokens reales | 🟡 |
+| H7.3 | Workflow auto-generación de WO desde un SOP estructurado (cada paso → 1 WO) | 🟡 |
+| H7.4 | TDD-auto: campo `tddCheck` con expresión booleana evaluable | 🟡 |
+
+---
+
+## Backlog priorizado · "Antigravity"
+
+### A · Soberanía y descentralización (foco visión)
+
+| ID | Visión | Notas técnicas |
+|---|---|---|
+| **BACK-003** | **Triple-entry accounting · ledger en blockchain** | Cada `ledger_entry` se ancla con hash en una blockchain (Gnosis preferida por estable + bajo coste, alternativa Polygon). Una entrada de ledger = (debe + haber + firma blockchain). Adapter PersistenceAdapter sobre el ECDSA actual. |
+| **BACK-004** | **Permaweb (Arweave) para skills + APIs reventa** | Cada skill/SOP firmado se sube a Arweave como artefacto inmutable. SOS expone API gateway para consumir esos skills via HTTP con margen sobre el coste IA real. Modelo de negocio: **margen de reventa de APIs propias**. |
+| BACK-005 | Tokenización de activos intra-proyecto (NFT/SBT) | Roles VNA, deliverables firmados, contribuciones de cada participante. Permite distribución de valor automatizada según pactos Slicing Pie en blockchain. |
+| BACK-001 | Testeo offline total · workflow exports periódicos | Confirmar que SOS funciona sin conexión y sin Netlify dev. Recordatorios automáticos de export firmado como backup defensivo. |
+
+### B · Modelos de negocio · Exit y Tokenomics
+
+| ID | Visión | Notas |
+|---|---|---|
+| **BACK-007** | **Definir 3 modelos tokenómicos al crear proyecto** | Al crear un proyecto, el operador elige modelo de exit: `consolidada` (empresa madura, repartos por equity tradicional), `startup` (vesting + Slicing Pie dinámico, **foco actual** porque vas a ayudar a jóvenes), `fundacion` (sin reparto, todo a propósito). Cada modelo configura los multiplicadores del ledger y la lógica de exit. |
+| BACK-008 | Plan de "exit" del proyecto | Hito que dispara cierre: equity sale, IPO, donación a fundación, fork pública, liquidación. Genera artefacto firmado con el reparto final. |
+| BACK-009 | Modelo de reventa de APIs SOS | API gateway con margen propio. Plan free/pro/enterprise. KPIs de uso por skill. |
+
+### C · Coste IA / Antigravity Engine
+
+| ID | Visión | Notas |
+|---|---|---|
+| **BACK-006** | **Tracking coste IA en ledger via Kanban** (ya cubierto parcial en H7.1) | Cada WO ejecutada por IA registra tokens reales y coste calculado vs. el coste humano que se habría requerido (ahorro tangible de la automatización). Output: dashboard "ahorro acumulado" del proyecto. |
+| BACK-010 | Optimizador de tokens (context pruning, chunk prio) | Reusar `skill_antifragile_compressor` ya semilla en KB. Reducir tokens de cada llamada manteniendo calidad de output. |
+| BACK-011 | Fallback automático provider más barato si la calidad lo permite | Anthropic→DeepSeek/Gemini para tareas de clasificación simple. Conservar Anthropic para diseño estratégico. |
+
+### D · UX y robustez
+
+| ID | Visión | Notas |
+|---|---|---|
+| H1.6.1 | Enriquecer `proyecto-custom` y `charla-conferencia` con info real | Esperando input @alvaro |
+| H1.7.1 | Plantilla informe ejecutivo MD descargable post-La Colla | Aprovechar el caso IKEA como referencia |
+| H2.2 | Ficha detalle de taller con agenda Fent Pinya pre-cargada | UX |
+| H2.4 | Check-list digital durante el taller en sala (mobile-friendly) | UX |
+| BACK-002 | Revisar legacy SOS automatización (`teamtowershuma.com/dev/ia` `/10` `/v9`) | Recuperar patrones del Kanban viejo |
+
+---
+
+## Filosofía operativa de SOS
+
+1. **Mind-as-Graph**: un proyecto es **un único grafo de conocimiento**.
+   ValueMap, Kanban, Ledger, página pública son vistas distintas sobre
+   el mismo grafo.
+2. **Context-First sobre Multi-Agent**: la calidad de la IA (Buddhi)
+   depende de la riqueza de la memoria (Chitta). Mejor 1 llamada bien
+   construida con SOC+SOP+estado del proyecto que 20 agentes con
+   contexto vacío.
+3. **DTD (Deliverable Test Driven)**: cada entregable tiene un test
+   booleano. Si IA → `true/false` automatiza; si humano → revisión
+   manual. La aprobación es parte del SOP.
+4. **Humano = intangibles**: los humanos aportan contexto avanzado,
+   memoria cuántica contextual, presencia, sentido. Las IAs hacen
+   lo automatizable. El VNA tangibiliza los intangibles humanos.
+5. **Local-first absoluto**: todo en el navegador. Persistencia local
+   (IndexedDB) firmada (ECDSA). Descentralización opcional via
+   blockchain/permaweb. Cero dependencia de cloud propietario.
+
+---
+
+*Documento vivo · actualizar al cierre de cada Ola.*

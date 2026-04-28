@@ -431,6 +431,7 @@ export default class DashboardView {
                 <a href="https://teamtowershuma.com" target="_blank" class="dash-topbar-web">teamtowershuma.com ↗</a>
                 <div class="dash-topbar-right">
                     <a href="/workshops" data-link class="dash-btn">🎯 Workshops</a>
+                    <a href="/kanban"    data-link class="dash-btn">📋 Kanban</a>
                     <button class="dash-btn dash-btn-kb" id="dashBtnKB">📚 Knowledge Base</button>
                     <button class="dash-btn" id="dashBtnExport" title="Descargar snapshot firmado (ECDSA P-256)">💾 Export</button>
                     <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
