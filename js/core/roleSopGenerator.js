@@ -100,8 +100,134 @@ export function buildRoleSopPrompt({ role, project, sectorBase = null }) {
     ].join('\n');
 }
 
-// ─── Orquestador: construye contexto, llama LLM, valida ────────────────────
+// ─── Orquestador para generación inicial: construye contexto, llama LLM, valida ────
 export async function generateRoleSop({ role, project, sectorBase = null }) {
+    if (!role)    throw new Error('role requerido');
+    if (!project) throw new Error('project requerido');
+
+    const ctx = await KnowledgeLoader.buildContext({
+        sector:      sectorBase || project.sector_id || project.based_on_sector || null,
+        socs:        ['teamtowers-brand', 'soc-vna-network'],
+        sops:        ['la-colla'],     // método VNA como referencia metodológica
+        projectId:   project.id,
+        taskContext: 'Generar SOP del rol "' + (role.name || role.id) + '" para el proyecto cliente "' + (project.nombre || project.id) + '"',
+    });
+
+    const userPrompt = buildRoleSopPrompt({ role, project, sectorBase });
+
+    const { Orchestrator } = await import('./Orchestrator.js?v=' + Date.now());
+    const result = await Orchestrator.callLLM({
+        preferredEngine: 'anthropic',
+        systemPrompt:    ctx.systemPrompt,
+        userPrompt,
+        responseFormat:  'json_object',
+        temperature:     0.3,
+    });
+
+    const generated = result.content;
+    if (!generated || generated.parseError) {
+        const tail = (generated && generated.raw) ? generated.raw.slice(-200) : '(sin raw)';
+        throw new Error('LLM devolvió SOP no parseable. Últimos 200 chars: ' + tail);
+    }
+
+    const stepsCount = Array.isArray(generated.steps) ? generated.steps.length : 0;
+    const validation = {
+        steps:     stepsCount,
+        hasIaStep: Array.isArray(generated.steps) && generated.steps.some(s => s.role_kind === 'ai'),
+        hasName:   typeof generated.name === 'string' && generated.name.length > 3,
+        hasSocRef: !!generated.soc_ref,
+    };
+    const readiness =
+        (validation.steps >= 5 && validation.hasIaStep && validation.hasName && validation.hasSocRef) ? 'ready' :
+        (validation.steps >= 3 && validation.hasName) ? 'solid' : 'tier 2';
+
+    return {
+        sop:        generated,
+        validation,
+        readiness,
+        sources:    ctx.sources,
+        tokens:     result.telemetry?.tokens || {},
+        latencyMs:  result.telemetry?.latencyMs || 0,
+        roleRef:    role.id,
+        projectRef: project.id,
+    };
+}
+
+// ─── H1.10.4 · Builder PURO para regeneración con feedback ─────────────────
+export function buildRegenerateSopPrompt({ previousSop, role, project, feedback, sectorBase = null }) {
+    if (!previousSop) throw new Error('buildRegenerateSopPrompt requires previousSop');
+    if (!feedback || typeof feedback !== 'string' || !feedback.trim()) {
+        throw new Error('buildRegenerateSopPrompt requires non-empty feedback');
+    }
+    const projectName = (project && (project.nombre || project.id)) || '(sin nombre)';
+    const sectorId = sectorBase || (project && (project.sector_id || project.based_on_sector)) || '(sin sector)';
+
+    return [
+        'TAREA: Regenerar el SOP siguiente incorporando el FEEDBACK del operador humano. Conserva lo que funciona, corrige lo señalado, mantén la coherencia metodológica.',
+        '',
+        'CONTEXTO:',
+        'Cliente / proyecto: ' + projectName,
+        'Sector base: ' + sectorId,
+        'Rol VNA: ' + ((role && (role.name || role.id)) || previousSop.role_ref || '(rol no resuelto)'),
+        '',
+        'FEEDBACK DEL OPERADOR (input crítico — debe verse reflejado en la nueva versión):',
+        '"""',
+        feedback.trim(),
+        '"""',
+        '',
+        'VERSIÓN ANTERIOR DEL SOP (reutiliza lo que sigue siendo válido tras el feedback):',
+        JSON.stringify(previousSop, null, 2),
+        '',
+        'INSTRUCCIONES:',
+        '1. Conserva el `id`, `role_ref` y `project_ref` del SOP previo (es la misma identidad, sólo iteras versión).',
+        '2. Incrementa la versión: si el previo era v1, esta es v2 (campo `version`).',
+        '3. Aplica TODAS las modulaciones que el feedback solicita explícitamente.',
+        '4. Si el feedback contradice un step, REEMPLAZA ese step. Si AMPLÍA, AÑADE steps nuevos.',
+        '5. Mantén el invariante: ≥3 steps · al menos 1 IA cuando aplique · summary actualizado · soc_ref intacto.',
+        '6. No inventes precios. Respeta `soc-teamtowers-brand` (10 valores castellers).',
+        '',
+        'OUTPUT: SÓLO JSON válido con el mismo schema que el previo + campo `version` actualizado + campo `regeneration_notes` con un resumen breve (2-3 líneas) de qué cambió y por qué (alineado al feedback).',
+    ].join('\n');
+}
+
+// ─── Orquestador para regenerar con feedback ───────────────────────────────
+export async function regenerateSopWithFeedback({ previousSop, role, project, feedback, sectorBase = null }) {
+    const ctx = await KnowledgeLoader.buildContext({
+        sector:      sectorBase || (project && (project.sector_id || project.based_on_sector)) || null,
+        socs:        ['teamtowers-brand', 'soc-vna-network'],
+        sops:        ['la-colla'],
+        projectId:   project && project.id,
+        taskContext: 'Regenerar SOP "' + (previousSop.name || previousSop.id) + '" con feedback humano',
+    });
+
+    const userPrompt = buildRegenerateSopPrompt({ previousSop, role, project, feedback, sectorBase });
+
+    const { Orchestrator } = await import('./Orchestrator.js?v=' + Date.now());
+    const result = await Orchestrator.callLLM({
+        preferredEngine: 'anthropic',
+        systemPrompt:    ctx.systemPrompt,
+        userPrompt,
+        responseFormat:  'json_object',
+        temperature:     0.4,
+    });
+
+    const generated = result.content;
+    if (!generated || generated.parseError) {
+        const tail = (generated && generated.raw) ? generated.raw.slice(-200) : '(sin raw)';
+        throw new Error('LLM devolvió SOP regenerado no parseable. Últimos 200 chars: ' + tail);
+    }
+
+    return {
+        sop:        generated,
+        sources:    ctx.sources,
+        tokens:     result.telemetry?.tokens || {},
+        latencyMs:  result.telemetry?.latencyMs || 0,
+        roleRef:    (role && role.id) || previousSop.role_ref,
+        projectRef: (project && project.id) || previousSop.project_ref,
+        previousVersion: previousSop.version || 'v1',
+    };
+}
+
     if (!role)    throw new Error('role requerido');
     if (!project) throw new Error('project requerido');
 

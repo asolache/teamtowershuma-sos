@@ -836,6 +836,49 @@ async function testRoleSopGeneratorPromptBuilder() {
     assert(threw,                                                          'sin role/project lanza excepción');
 }
 
+// ─── H1.10.4 · Regenerate SOP with feedback · prompt builder ─────────────
+async function testRegenerateSopBuilder() {
+    const { buildRegenerateSopPrompt } = await import('../core/roleSopGenerator.js?v=' + Date.now());
+
+    const previousSop = {
+        id: 'sop-atencion-cliente-proj-x',
+        name: 'SOP · Atención al Cliente',
+        soc_ref: 'soc-vna-network',
+        role_ref: 'atencion-cliente',
+        project_ref: 'proj-x',
+        version: 'v1',
+        steps: [
+            { id: 'step-1', label: 'Recibir incidencia', role_kind: 'human', priority: 'high' },
+            { id: 'step-2', label: 'Tipificar',          role_kind: 'human', priority: 'med'  },
+        ],
+        summary: 'Atiende incidencias post-venta.',
+    };
+    const role    = { id: 'atencion-cliente', name: 'Atención al Cliente' };
+    const project = { id: 'proj-x', nombre: 'Proyecto X', sector_id: 'K', based_on_sector: 'K' };
+    const feedback = 'Añade un step IA que verifique calidad del output del paso 2 antes de pasar al paso 3.';
+
+    const prompt = buildRegenerateSopPrompt({ previousSop, role, project, feedback });
+    assert(typeof prompt === 'string' && prompt.length > 400,         'buildRegenerateSopPrompt devuelve string sustancioso');
+    assert(prompt.includes(feedback),                                  'prompt embeba el feedback literal');
+    assert(prompt.includes('FEEDBACK DEL OPERADOR'),                   'prompt marca claramente la sección de feedback');
+    assert(prompt.includes('VERSIÓN ANTERIOR DEL SOP'),                'prompt embeba la versión anterior');
+    assert(prompt.includes('"role_ref": "atencion-cliente"'),          'previousSop serializado contiene role_ref original');
+    assert(prompt.includes('Conserva el `id`, `role_ref` y `project_ref`'), 'prompt instruye conservar identidad');
+    assert(prompt.includes('Incrementa la versión'),                   'prompt instruye incrementar version');
+    assert(prompt.includes('regeneration_notes'),                      'prompt pide regeneration_notes en el output');
+    assert(/SÓLO\s+JSON\s+v[aá]lido/i.test(prompt),                    'prompt instruye output JSON puro');
+
+    // Sin previousSop lanza
+    let threwNoPrev = false;
+    try { buildRegenerateSopPrompt({ feedback: 'algo', role, project }); } catch(_) { threwNoPrev = true; }
+    assert(threwNoPrev,                                                'sin previousSop lanza excepción');
+
+    // Sin feedback (o vacío) lanza
+    let threwNoFb = false;
+    try { buildRegenerateSopPrompt({ previousSop, feedback: '   ', role, project }); } catch(_) { threwNoFb = true; }
+    assert(threwNoFb,                                                  'feedback vacío/whitespace lanza excepción');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -844,6 +887,7 @@ const SUITE = [
     { name: 'H1.8 · KB sector readiness · auditoría TDD',         fn: testSectorReadiness },
     { name: 'H1.10.1 · Sector Cloner · prompt builder',           fn: testSectorClonerPromptBuilder },
     { name: 'H1.10.2 · Role SOP Generator · prompt builder',      fn: testRoleSopGeneratorPromptBuilder },
+    { name: 'H1.10.4 · Regenerate SOP with feedback · builder',   fn: testRegenerateSopBuilder },
     { name: 'BUG-002 · extractJsonFromLlmOutput robusto a fences', fn: testExtractJsonFromLlmOutput },
     { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud },
     { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder },

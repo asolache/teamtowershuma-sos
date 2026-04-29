@@ -10,6 +10,7 @@ const ROUTES = [
     { path: '/map',       view: () => import('./views/ValueMapView.js')  },
     { path: '/workshops', view: () => import('./views/WorkshopsView.js') },
     { path: '/kanban',    view: () => import('./views/KanbanView.js')   },
+    { path: '/sops',      view: () => import('./views/SopsView.js')     },
     { path: '/focus',     view: () => import('./views/HomeView.js')     },
     { path: '/settings',  view: () => import('./views/SettingsView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
