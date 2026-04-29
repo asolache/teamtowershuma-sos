@@ -1228,20 +1228,21 @@ export default class ValueMapView {
             const color = id.includes('tangible') && !id.includes('intangible')
                 ? (isSel ? '#a5f3c8' : COLOR_TANGIBLE)
                 : (isSel ? '#f0d080' : COLOR_INTANGIBLE);
-            // BUG-006 fix: triángulo lleno visible + refX al borde del nodo destino
-            // (asume nodo ~22px radio + 6 buffer = 28). orient:'auto' rota el marker
-            // según la dirección de la línea para indicar el sentido del entregable.
+            // BUG-006-fix2 · Cálculo:
+            //   nodos r=36px · stroke-width líneas =1.5px
+            //   markerUnits default 'strokeWidth': refX 26 → 26*1.5 = 39px
+            //   desde el final de la línea hacia atrás = 3px FUERA del nodo destino
+            //   (radio 36 + 3 buffer). Patrón Mike Bostock canónico, fiable cross-browser.
             defs.append('marker')
                 .attr('id', 'arrow-' + id)
-                .attr('viewBox', '0 0 12 12')
-                .attr('refX', 28)
-                .attr('refY', 6)
-                .attr('markerWidth', 9)
-                .attr('markerHeight', 9)
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', 26)
+                .attr('refY', 0)
+                .attr('markerWidth', 8)
+                .attr('markerHeight', 8)
                 .attr('orient', 'auto')
-                .attr('markerUnits', 'userSpaceOnUse')
                 .append('path')
-                .attr('d', 'M0 0 L12 6 L0 12 Z')
+                .attr('d', 'M 0 -5 L 10 0 L 0 5 z')
                 .attr('fill', color)
                 .attr('stroke', 'none');
         });

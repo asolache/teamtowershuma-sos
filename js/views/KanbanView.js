@@ -181,6 +181,10 @@ export default class KanbanView {
         document.title = 'Kanban · SOS V11';
         this.workOrders = [];
         this.workshops  = [];
+        this.projects   = [];
+        // H7.5 · filtro por proyecto. null = "todos".
+        // Se inicializa desde URL ?project=... en afterRender().
+        this.projectFilter = null;
     }
 
     async getHtml() {
@@ -246,6 +250,9 @@ export default class KanbanView {
                 <div class="kb-spacer"></div>
                 <a href="/dashboard" data-link class="kb-link">← Dashboard</a>
                 <a href="/workshops" data-link class="kb-link">Workshops</a>
+                <select id="kbProjectFilter" class="kb-btn" style="background:#1a1a22;border-color:#2a2a35;cursor:pointer;font-family:inherit;">
+                    <option value="">📁 Todos los proyectos</option>
+                </select>
                 <button class="kb-btn" id="kbBtnFromSop">📋 Desde SOP</button>
                 <button class="kb-btn kb-btn-primary" id="kbBtnNew">＋ Nueva WO</button>
             </div>
@@ -261,10 +268,48 @@ export default class KanbanView {
     }
 
     async afterRender() {
+        // H7.5 · leer ?project= de la URL (filtro persistente)
+        try {
+            const url = new URL(window.location.href);
+            this.projectFilter = url.searchParams.get('project') || null;
+        } catch (_) { this.projectFilter = null; }
+
         await this._load();
+        this._populateProjectFilter();
         this._render();
         document.getElementById('kbBtnNew').addEventListener('click',     () => this._openCreateModal());
         document.getElementById('kbBtnFromSop').addEventListener('click', () => this._openFromSopModal());
+
+        // H7.5 · listener del selector de proyecto
+        const sel = document.getElementById('kbProjectFilter');
+        sel.addEventListener('change', () => {
+            this.projectFilter = sel.value || null;
+            // Persistir en URL sin recargar
+            try {
+                const url = new URL(window.location.href);
+                if (this.projectFilter) url.searchParams.set('project', this.projectFilter);
+                else url.searchParams.delete('project');
+                window.history.replaceState(null, '', url.toString());
+            } catch (_) {}
+            this._render();
+        });
+    }
+
+    // H7.5 · llena el <select> con los proyectos del store + opción "Todos"
+    _populateProjectFilter() {
+        const sel = document.getElementById('kbProjectFilter');
+        if (!sel) return;
+        const opts = ['<option value="">📁 Todos los proyectos</option>']
+            .concat(this.projects.map(p =>
+                `<option value="${p.id}" ${p.id === this.projectFilter ? 'selected' : ''}>${this._esc(p.nombre || p.id)}</option>`
+            ));
+        sel.innerHTML = opts.join('');
+    }
+
+    // H7.5 · filtra workOrders por proyecto activo (null = todas)
+    _filteredWOs() {
+        if (!this.projectFilter) return this.workOrders;
+        return this.workOrders.filter(w => (w.projectId || w.content?.projectId) === this.projectFilter);
     }
 
     destroy() {}
@@ -272,8 +317,10 @@ export default class KanbanView {
     // ─── data ──────────────────────────────────────────────────────────────
     async _load() {
         await KB.init();
+        await store.init();
         this.workOrders = await KB.query({ type: 'work_order' });
         this.workshops  = await KB.query({ type: 'workshop' });
+        this.projects   = (store.getState().projects || []).filter(p => !p.isArchived);
         this.workOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     }
 
@@ -523,11 +570,12 @@ export default class KanbanView {
     _renderStats() {
         const root = document.getElementById('kbStats');
         if (!root) return;
+        const filtered = this._filteredWOs();
         const counts = COLUMNS.map(col => ({
             ...col,
-            count: this.workOrders.filter(w => (w.content?.status || 'backlog') === col.id).length,
+            count: filtered.filter(w => (w.content?.status || 'backlog') === col.id).length,
         }));
-        const totals = this.workOrders.reduce((acc, w) => {
+        const totals = filtered.reduce((acc, w) => {
             const c = w.content || {};
             if (c.status === 'ledgered') {
                 acc.spent += (c.assignee?.kind === 'ai' ? (c.aiCostEur || 0) : (c.humanCostEur || 0));
@@ -561,8 +609,9 @@ export default class KanbanView {
     _renderBoard() {
         const root = document.getElementById('kbBoard');
         if (!root) return;
+        const filtered = this._filteredWOs();
         root.innerHTML = COLUMNS.map(col => {
-            const items = this.workOrders.filter(w => (w.content?.status || 'backlog') === col.id);
+            const items = filtered.filter(w => (w.content?.status || 'backlog') === col.id);
             return `
                 <div class="kb-col" style="--accent:${col.color};">
                     <div class="kb-col-h">
@@ -750,6 +799,15 @@ export default class KanbanView {
 
                     <div class="row">
                         <div>
+                            <label>Proyecto (H7.5)</label>
+                            <select id="kbfProject">
+                                <option value="">— sin proyecto —</option>
+                                ${this.projects.map(p =>
+                                    `<option value="${p.id}" ${p.id === this.projectFilter ? 'selected' : ''}>${this._esc(p.nombre || p.id)}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div>
                             <label>Workshop asociado (opcional)</label>
                             <select id="kbfWs">
                                 <option value="">— ninguno —</option>
@@ -820,7 +878,7 @@ export default class KanbanView {
             const node = {
                 id:        uid(),
                 type:      'work_order',
-                projectId: null,
+                projectId: document.getElementById('kbfProject').value || null,
                 content: {
                     title:        document.getElementById('kbfTitle').value.trim() || '(sin título)',
                     description:  document.getElementById('kbfDesc').value.trim(),

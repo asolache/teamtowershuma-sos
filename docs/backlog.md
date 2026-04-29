@@ -61,8 +61,10 @@
 | **BUG-003** | Dynamic import Orchestrator con cache-bust en 3 puntos LLM | ✅ fixed |
 | **BUG-004** | max_tokens 4096→8192 (clonación de sectores grandes truncaba JSON) | ✅ fixed |
 | **BUG-005** | Scroll en `/kanban` (y `/workshops`): patrón shell fija + main scroll | ✅ fixed |
-| **BUG-006** | Flechas ValueMap sin punta visible (refX fuera de viewBox + fill:none) | ✅ fixed (triángulo lleno + refX al borde del nodo) |
+| **BUG-006** | Flechas ValueMap sin punta visible (refX fuera de viewBox + fill:none) | ✅ fixed v2 (patrón Bostock canónico · refX=26 strokeWidth) |
+| **H7.5** | Filtro por proyecto en `/kanban` (selector + URL persistente + WO creada hereda projectId) | ✅ verde |
 | H1.10.2 | Fase 2 · evolución VNA cliente → SOPs específicos por rol | 🟡 |
+| **H_ANIM_001** | **Animar flujo de valor en `/map`** — partículas/pulsos viajan por las aristas en orden secuencial; vista alternativa de lista ordenada (paso a paso) que reproduce la circulación del valor (input @alvaro 2026-04-30) | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
 | H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |
 | H9.x | Skills + CoPs online (matchmaking, validación SOPs por comunidad) | 🟡 |
