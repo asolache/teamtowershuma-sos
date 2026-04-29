@@ -1724,6 +1724,7 @@ export default class ValueMapView {
             <div class="vmap-inspector-actions">
                 <button class="vmap-inspector-btn" id="inspBtnEgo">◎ Vista ego de este rol</button>
                 <button class="vmap-inspector-btn" id="inspBtnAddTx">＋ Añadir transacción</button>
+                ${this._state.projectId ? `<button class="vmap-inspector-btn" id="inspBtnGenSop" style="border-color:rgba(99,102,241,0.4);color:var(--accent-indigo);">📋 Generar SOP del rol con IA</button>` : ''}
                 <button class="vmap-inspector-btn danger" id="inspBtnDelete">✕ Eliminar rol</button>
             </div>`;
 
@@ -1743,7 +1744,141 @@ export default class ValueMapView {
 
         document.getElementById('inspBtnEgo')?.addEventListener('click',    () => this._setEgoMode(role.id));
         document.getElementById('inspBtnAddTx')?.addEventListener('click',  () => this._openTxModal(role.id));
+        document.getElementById('inspBtnGenSop')?.addEventListener('click', () => this._openGenSopModal(role));
         document.getElementById('inspBtnDelete')?.addEventListener('click', () => this._deleteRole(role.id));
+    }
+
+    // ── H1.10.2 · Generar SOP del rol del proyecto cliente con IA ────────────
+    async _openGenSopModal(role) {
+        const project = (store.getState().projects || []).find(p => p.id === this._state.projectId);
+        if (!project) { alert('Proyecto no encontrado'); return; }
+
+        // Sincronizar el rol del state al project antes de generar (puede haber sido editado)
+        const fresh = (project.vna_roles || []).find(r => r.id === role.id) || role;
+
+        this._renderGenSopModal({ state: 'loading', role: fresh });
+
+        try {
+            const { generateRoleSop } = await import('../core/roleSopGenerator.js?v=' + Date.now());
+            const result = await generateRoleSop({
+                role:        fresh,
+                project:     { ...project, vna_roles: this._state.roles, vna_transactions: this._state.transactions },
+                sectorBase:  project.based_on_sector || project.sector_id,
+            });
+            this._renderGenSopModal({ state: 'ready', role: fresh, result });
+        } catch (err) {
+            console.error('[H1.10.2] Error generando SOP:', err);
+            this._renderGenSopModal({ state: 'error', role: fresh, msg: err.message });
+        }
+    }
+
+    _renderGenSopModal(payload) {
+        let root = document.getElementById('vmapGenSopRoot');
+        if (!root) {
+            root = document.createElement('div');
+            root.id = 'vmapGenSopRoot';
+            document.body.appendChild(root);
+        }
+        const close = () => { root.innerHTML = ''; };
+        const role = payload.role || {};
+
+        let body;
+        if (payload.state === 'loading') {
+            body = `<p style="color:#aaa;">🤖 Generando SOP del rol "${this._escHtml(role.name || role.id)}" con IA…</p>
+                    <p style="color:#666;font-size:0.78rem;">Construyendo contexto Mind-as-Graph (SOC + SOP la-colla + transacciones del rol). 10-25s.</p>`;
+        } else if (payload.state === 'error') {
+            body = `<p style="color:#ff5252;">No se pudo generar el SOP:</p>
+                    <pre style="background:#050507;padding:0.6rem;border-radius:5px;color:#aaa;white-space:pre-wrap;font-size:0.78rem;max-height:300px;overflow:auto;">${this._escHtml(payload.msg || '')}</pre>`;
+        } else {
+            const r = payload.result;
+            const sop = r.sop;
+            const v = r.validation;
+            const color = r.readiness === 'ready' ? '#22c55e'
+                        : r.readiness === 'solid' ? '#6366f1' : '#ff9100';
+            body = `
+                <div style="background:#050507;border:1px solid #1a1a22;border-radius:6px;padding:0.8rem;font-size:0.82rem;color:#e6e6e6;">
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
+                        <span style="background:${color};color:#fff;padding:2px 10px;border-radius:10px;font-size:0.75rem;font-weight:700;">${r.readiness.toUpperCase()}</span>
+                        <span style="color:#aaa;font-size:0.75rem;">${v.steps} steps · IA: ${v.hasIaStep ? 'sí' : 'no'} · Tokens ${(r.tokens.prompt_tokens||0)}+${(r.tokens.completion_tokens||0)} · ${r.latencyMs}ms</span>
+                    </div>
+                    <strong style="color:#fff;">${this._escHtml(sop.name || sop.id)}</strong>
+                    <div style="color:#aaa;font-size:0.78rem;margin-top:0.4rem;">${this._escHtml(sop.summary || '')}</div>
+                    <div style="margin-top:0.7rem;">
+                        <strong style="color:#a5b4fc;font-size:0.78rem;">Steps generados:</strong>
+                        <ol style="font-size:0.78rem;color:#bbb;padding-left:1.2rem;margin-top:0.3rem;">
+                            ${(sop.steps || []).map(s => `
+                                <li style="margin-bottom:0.25rem;">
+                                    <span style="color:${s.role_kind==='ai'?'#a5b4fc':'#86efac'};">${s.role_kind==='ai'?'🤖':'👤'}</span>
+                                    ${this._escHtml(s.label || s.id)}
+                                    <span style="color:#666;">· ${s.duration_minutes||'?'}min · ${this._escHtml(s.priority||'med')}</span>
+                                </li>`).join('')}
+                        </ol>
+                    </div>
+                    <details style="margin-top:0.6rem;">
+                        <summary style="cursor:pointer;color:#aaa;font-size:0.78rem;">Ver JSON completo</summary>
+                        <pre style="background:#000;padding:0.5rem;border-radius:4px;color:#bbb;font-size:0.7rem;max-height:280px;overflow:auto;margin-top:0.4rem;">${this._escHtml(JSON.stringify(sop, null, 2))}</pre>
+                    </details>
+                </div>
+            `;
+        }
+
+        root.innerHTML = `
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:flex-start;justify-content:center;z-index:1000;padding:2rem 1rem;overflow-y:auto;" id="vmapGenSopBg">
+                <div style="background:#0e0e14;border:1px solid #2a2a35;border-radius:10px;padding:1.5rem;width:100%;max-width:680px;color:#e6e6e6;font-family:var(--font-base);">
+                    <h3 style="margin:0 0 1rem 0;color:#fff;">📋 SOP del rol · ${this._escHtml(role.name || role.id || '')}</h3>
+                    ${body}
+                    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1.2rem;flex-wrap:wrap;">
+                        <button class="vmap-inspector-btn" id="vmapGenSopClose">Cerrar</button>
+                        ${payload.state === 'ready' ? `<button class="vmap-inspector-btn" style="border-color:rgba(99,102,241,0.4);color:var(--accent-indigo);" id="vmapGenSopSave">💾 Guardar como SOP del proyecto</button>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('vmapGenSopClose').addEventListener('click', close);
+        document.getElementById('vmapGenSopBg').addEventListener('click', e => { if (e.target.id === 'vmapGenSopBg') close(); });
+
+        if (payload.state === 'ready') {
+            document.getElementById('vmapGenSopSave').addEventListener('click', async () => {
+                await this._persistRoleSop(payload.result);
+                close();
+            });
+        }
+    }
+
+    async _persistRoleSop(result) {
+        const sop = result.sop;
+        const sopId = sop.id || ('sop-' + result.roleRef + '-' + result.projectRef);
+        await store.dispatch({
+            type: 'KB_UPSERT',
+            payload: { node: {
+                id:        sopId,
+                type:      'sop',
+                projectId: result.projectRef,
+                content: {
+                    name:            sop.name || sopId,
+                    soc_ref:         sop.soc_ref || 'soc-vna-network',
+                    role_ref:        result.roleRef,
+                    project_ref:     result.projectRef,
+                    duration_minutes:sop.duration_minutes || null,
+                    audience:        sop.audience || [],
+                    deliverables:    sop.deliverables || [],
+                    keywords:        sop.keywords || [],
+                    steps:           sop.steps || [],
+                    summary:         sop.summary || '',
+                    readiness:       result.readiness,
+                    sources:         result.sources,
+                    tokens:          result.tokens,
+                    latencyMs:       result.latencyMs,
+                    generatedAt:     Date.now(),
+                    kind:            'project-role-sop',
+                },
+                keywords: ['sop', 'project-role-sop', result.roleRef, result.projectRef],
+            }}
+        });
+    }
+
+    _escHtml(str) {
+        return String(str ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
     }
 
     // ── Guardar campo inline ──────────────────────────────────────────────────

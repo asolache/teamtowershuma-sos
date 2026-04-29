@@ -782,6 +782,60 @@ async function testExtractJsonFromLlmOutput() {
     assert(threwNoJson,                                               'texto sin JSON lanza excepción');
 }
 
+// ─── H1.10.2 · Role SOP Generator · prompt builder ───────────────────────
+async function testRoleSopGeneratorPromptBuilder() {
+    const { buildRoleSopPrompt } = await import('../core/roleSopGenerator.js?v=' + Date.now());
+
+    const role = {
+        id: 'atencion-cliente',
+        name: 'Atención al Cliente',
+        castell_level: 'tronc',
+        description: 'Resuelve incidencias post-venta de servicios',
+        typical_actor: 'Operador con experiencia en escalado de incidencias',
+        tags: ['cliente', 'incidencias', 'soporte'],
+    };
+    const project = {
+        id:               'proj-ikea-mad-01',
+        nombre:           'IKEA Madrid · Servicios y Devoluciones',
+        sector_id:        'K',
+        based_on_sector:  'K',
+        vna_transactions: [
+            { id: 'tx-1', from: 'cliente', to: 'atencion-cliente', deliverable: 'Pedido (IT)', type: 'tangible', is_must: true },
+            { id: 'tx-2', from: 'atencion-cliente', to: 'cliente',  deliverable: 'Solución',    type: 'tangible', is_must: true },
+            { id: 'tx-3', from: 'atencion-cliente', to: 'coordinacion-servicios', deliverable: 'Resolución Causa Raíz', type: 'intangible', is_must: false },
+        ],
+    };
+
+    const prompt = buildRoleSopPrompt({ role, project });
+    assert(typeof prompt === 'string' && prompt.length > 400,             'buildRoleSopPrompt devuelve string sustancioso');
+    assert(prompt.includes('IKEA Madrid · Servicios y Devoluciones'),     'prompt incluye nombre del proyecto');
+    assert(prompt.includes('atencion-cliente'),                           'prompt incluye id del rol');
+    assert(prompt.includes('Atención al Cliente'),                        'prompt incluye nombre del rol');
+    assert(prompt.includes('Operador con experiencia'),                   'prompt incluye typical_actor');
+    assert(prompt.includes('OUT → cliente'),                              'prompt embeba transacciones SALIENTES con dirección');
+    assert(prompt.includes('IN  ← cliente'),                              'prompt embeba transacciones ENTRANTES con dirección');
+    assert(prompt.includes('Resolución Causa Raíz'),                      'prompt incluye deliverable de transacción intangible');
+    assert(prompt.includes('soc-teamtowers-brand'),                       'prompt referencia SOC raíz brand (irrenunciables)');
+    assert(prompt.includes('NO inventar precios'),                        'prompt prohíbe precios');
+    assert(prompt.includes('AL MENOS UN step'),                           'prompt fuerza al menos 1 step IA cuando aplique');
+    assert(prompt.includes('"role_ref": "atencion-cliente"'),             'schema JSON pide role_ref del rol');
+    assert(prompt.includes('"project_ref": "proj-ikea-mad-01"'),          'schema JSON pide project_ref del proyecto');
+    assert(/SÓLO\s+JSON\s+v[aá]lido/i.test(prompt),                       'prompt instruye output JSON sin texto adicional');
+
+    // Caso degenerado: rol sin transacciones (cliente VNA recién clonado)
+    const orphan = buildRoleSopPrompt({
+        role: { id: 'rol-x', name: 'Rol X' },
+        project: { id: 'proj-y', nombre: 'Proyecto Y', sector_id: 'K' },
+    });
+    assert(typeof orphan === 'string' && orphan.length > 200,             'rol sin transacciones produce prompt válido');
+    assert(orphan.includes('(ninguna definida'),                          'rol sin transacciones marca explícitamente "ninguna definida"');
+
+    // Sin role o project lanza excepción
+    let threw = false;
+    try { buildRoleSopPrompt({}); } catch(_) { threw = true; }
+    assert(threw,                                                          'sin role/project lanza excepción');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -789,6 +843,7 @@ const SUITE = [
     { name: 'H1.5 · KnowledgeLoader carga SOPs/SOCs y projectId', fn: testKnowledgeLoaderSocsSops },
     { name: 'H1.8 · KB sector readiness · auditoría TDD',         fn: testSectorReadiness },
     { name: 'H1.10.1 · Sector Cloner · prompt builder',           fn: testSectorClonerPromptBuilder },
+    { name: 'H1.10.2 · Role SOP Generator · prompt builder',      fn: testRoleSopGeneratorPromptBuilder },
     { name: 'BUG-002 · extractJsonFromLlmOutput robusto a fences', fn: testExtractJsonFromLlmOutput },
     { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud },
     { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder },

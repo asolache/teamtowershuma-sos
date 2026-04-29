@@ -64,7 +64,8 @@
 | **BUG-006** | Flechas ValueMap sin punta visible (refX fuera de viewBox + fill:none) | ✅ fixed v3 (recortar path al borde del nodo en tick + marker refX=10) |
 | **H7.5** | Filtro por proyecto en `/kanban` (selector + URL persistente + WO creada hereda projectId) | ✅ verde |
 | **OPS-001** | ⚠ Purga de caché del navegador BORRA TAMBIÉN IndexedDB → se pierden proyectos. Documentar protocolo: SIEMPRE Export firmado antes de purgar. Futuro: persistir snapshot diario automático. | 🟡 documentar |
-| H1.10.2 | Fase 2 · evolución VNA cliente → SOPs específicos por rol. **Refuerzo @alvaro 2026-04-30**: cuando estás en un proyecto, "📋 Desde SOP" debe ofrecer (a) los SOPs públicos de TeamTowers (catálogo actual) Y (b) los **SOPs propios del proyecto cliente** que representan los productos/servicios que esa red de valor con propósito genera. La fase 2 cubre la generación de esos SOPs cliente desde sus roles VNA (cada rol → 1 SOP que describe su procedimiento). | 🟡 |
+| H1.10.2 | Fase 2 · evolución VNA cliente → SOPs específicos por rol. Botón en inspector ValueMap "📋 Generar SOP del rol con IA" cuando hay projectId. SOP generado por rol con steps[] auto-WO. Persistido como nodo `type:'sop'` con `projectId` y `kind:'project-role-sop'`. | ✅ verde (botón inspector + roleSopGenerator + persistencia) |
+| H1.10.3 | Integrar SOPs propios del proyecto en el modal "📋 Desde SOP" del Kanban (mostrar sección "SOPs del proyecto" cuando hay filtro activo) | 🟡 |
 | **H_ANIM_001** | **Animar flujo de valor en `/map`** — partículas/pulsos viajan por las aristas en orden secuencial; vista alternativa de lista ordenada (paso a paso) que reproduce la circulación del valor (input @alvaro 2026-04-30) | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
 | H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |
