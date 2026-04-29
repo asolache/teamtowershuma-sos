@@ -39,10 +39,13 @@ export function buildRoleSopPrompt({ role, project, sectorBase = null }) {
     const txOut = txs.filter(t => t.from === role.id);
     const txIn  = txs.filter(t => t.to   === role.id);
 
-    const fmtTx = (t, dir) =>
-        '  - ' + dir + ' ' + (dir === 'IN' ? t.from : t.to) +
-        ' · ' + (t.deliverable || '?') +
-        ' [' + (t.type || 'tangible') + (t.is_must ? ' · MUST' : ' · EXTRA') + ']';
+    const fmtTx = (t, dir) => {
+        // Para tx ENTRANTE al rol mostramos el origen (t.from); para SALIENTE el destino (t.to)
+        const counterpart = dir.startsWith('IN') ? t.from : t.to;
+        return '  - ' + dir + ' ' + counterpart +
+            ' · ' + (t.deliverable || '?') +
+            ' [' + (t.type || 'tangible') + (t.is_must ? ' · MUST' : ' · EXTRA') + ']';
+    };
 
     return [
         'TAREA: Generar un SOP (Standard Operating Procedure) específico del proyecto cliente para el rol VNA siguiente. El SOP describe CÓMO se ejecuta este rol en el contexto real del cliente y qué entregables produce. Será auto-convertible en Work Orders ejecutables.',
