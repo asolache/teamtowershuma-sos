@@ -37,20 +37,34 @@
 
 ---
 
-### Ola 2 · Antigravity Engine (🟢 EN CURSO)
+### Ola 2 · Antigravity Engine (✅ CERRADA en `main` · `8cdae10` · tag `v11.2.0-ola2`)
+
+| ID | Historia | Tests |
+|---|---|---|
+| H7.1 | Vista `/kanban` Work Orders → Ledger (cierra lazo SOP→WO→Ledger) | ✅ 16 asserts |
+| H7.2 | Auto-ejecución de WO por agente IA con captura tokens reales | ✅ 20 asserts |
+| H1.8 | Auditoría TDD del Knowledge Base · readiness dinámico por sector | ✅ 10 asserts |
+| H7.3 | Auto-generación de WO desde un SOP con `steps:` estructurado | ✅ 24 asserts |
+| H1.8.1 | Fix criterio readiness · bilingualRoles opcional | ✅ |
+
+**160+ asserts en 11 suites** · Tag local `v11.2.0-ola2`.
+
+---
+
+### Ola 3 · Cliente como ciudadano de primera (🟢 EN CURSO en `claude/value-map-tool-8ovUP`)
 
 | ID | Historia | Estado |
 |---|---|---|
-| H7.1 | Vista `/kanban` Work Orders → Ledger (cierra lazo SOP→WO→Ledger) | ✅ verde |
-| H7.2 | Auto-ejecución de WO por agente IA (Anthropic) con captura tokens reales | ✅ verde |
-| **H1.8** | **Auditoría TDD del Knowledge Base · readiness dinámico por sector** | 🟢 ahora |
-| **H7.3** | **Workflow auto-generación de WO desde un SOP estructurado** | 🟢 siguiente |
+| H1.6.1 | Charla teatralizada v1 (pre-trabajo + arte vivo) + Custom 5 variantes v1 | ✅ verde |
+| H1.10.1 | Clonación sector → cliente con LLM (Dashboard + sectorCloner + tests) | 🟢 funciona en tests, prueba real bloqueada por BUGs |
+| **BUG-002** | extractJsonFromLlmOutput robusto a fences markdown | ✅ fixed (13 asserts regression test) |
+| **BUG-003** | Dynamic import Orchestrator con cache-bust en 3 puntos LLM | ✅ fixed |
+| **BUG-004** | max_tokens 4096→8192 (clonación de sectores grandes truncaba JSON) | 🟢 ahora |
+| H1.10.2 | Fase 2 · evolución VNA cliente → SOPs específicos por rol | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
-| **H1.10** | **Clonar sector → cliente con LLM (3 fases)** — ver `knowledge/vision/h110-sector-evolution-and-mind-graph.md` | 🟢 perfilando |
-| H1.10.1 | Fase 1 · clonación sector→cliente + validación TDD | 🟡 esperando alcance |
-| H1.10.2 | Fase 2 · evolución VNA cliente → SOPs específicos por rol | 🟡 Ola 3 |
-| H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 Ola 3 |
-| H9.x | Skills + CoPs online (matchmaking, validación SOPs por comunidad) | 🟡 Ola 3 |
+| H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |
+| H9.x | Skills + CoPs online (matchmaking, validación SOPs por comunidad) | 🟡 |
+| BACK-007 | Modelo tokenómico al crear proyecto cliente | 🟡 |
 | H7.4 | TDD-auto: ampliar sandbox de `tddCheck` más allá de los 4 tipos básicos | 🟡 |
 | H3.1 | Ledger viewer dedicado | 🟡 |
 

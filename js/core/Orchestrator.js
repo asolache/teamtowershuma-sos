@@ -137,7 +137,7 @@ class OrchestratorCore {
     // ══════════════════════════════════════════════════════════════
     //  callLLM — Motor central multi-proveedor
     // ══════════════════════════════════════════════════════════════
-    async callLLM({ preferredEngine = 'anthropic', systemPrompt, userPrompt, responseFormat = 'json_object', temperature = 0.2, mcpSkills = [] }) {
+    async callLLM({ preferredEngine = 'anthropic', systemPrompt, userPrompt, responseFormat = 'json_object', temperature = 0.2, mcpSkills = [], maxTokens = 8192 }) {
         const providers = await this._getAvailableProviders(preferredEngine);
         let lastError = null;
 
@@ -159,7 +159,7 @@ class OrchestratorCore {
                             apiKey,
                             _anthropicVersion: ANTHROPIC_VERSION,
                             model:       ANTHROPIC_MODEL,
-                            max_tokens:  4096,
+                            max_tokens:  maxTokens,   // BUG-004 · default 8192 evita truncación de JSONs grandes (clonación de sectores con 10 roles + 17 tx + 5 patterns)
                             temperature,
                             system:      systemPrompt + jsonSuffix,
                             messages:    [{ role: 'user', content: userPrompt }]

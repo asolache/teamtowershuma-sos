@@ -128,7 +128,16 @@ export async function cloneSectorForClient({ sectorId, clientName, clientDescrip
 
     const cloned = result.content;
     if (!cloned || cloned.parseError) {
-        throw new Error('LLM devolvió output no parseable: ' + JSON.stringify(cloned).slice(0, 300));
+        const rawSnip = (cloned && cloned.raw) ? cloned.raw : '';
+        const tail    = rawSnip.length > 200 ? rawSnip.slice(-200) : rawSnip;
+        const lastBrace = rawSnip.lastIndexOf('}');
+        const looksTruncated = lastBrace < rawSnip.length - 5; // si el } no está cerca del final, falta cierre
+        throw new Error(
+            'LLM devolvió output no parseable.' +
+            (looksTruncated ? ' Parece TRUNCADO (max_tokens insuficiente).' : ' Formato inesperado.') +
+            '\n\nÚltimos 200 chars del raw:\n' + tail +
+            '\n\nLongitud raw: ' + rawSnip.length + ' chars.'
+        );
     }
 
     // Validación TDD usando el mismo criterio de KnowledgeLoader
