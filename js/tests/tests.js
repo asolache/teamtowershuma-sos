@@ -731,6 +731,57 @@ async function testSectorClonerPromptBuilder() {
     assert(empty.includes('roles:\n  []'),                            'sector vacío produce roles: []');
 }
 
+// ─── BUG-002 · extractJsonFromLlmOutput · robusto contra fences markdown ──
+async function testExtractJsonFromLlmOutput() {
+    const { extractJsonFromLlmOutput } = await import('../core/Orchestrator.js?v=' + Date.now());
+
+    // Caso real del bug: Anthropic devuelve ```json\n{...}\n```
+    const real = '```json\n{\n  "client_id": "ikea-madrid",\n  "roles": [{"id": "x"}]\n}\n```';
+    const r1 = extractJsonFromLlmOutput(real);
+    assert(r1.client_id === 'ikea-madrid',                            'fence ```json extrae JSON real');
+    assert(Array.isArray(r1.roles),                                   'fence ```json preserva estructura anidada');
+
+    // JSON puro sin fences
+    assert(extractJsonFromLlmOutput('{"a": 1}').a === 1,              'JSON puro');
+
+    // Fence ``` sin label de lenguaje
+    assert(extractJsonFromLlmOutput('```\n{"a": 2}\n```').a === 2,    'fence ``` sin label');
+
+    // Fence con texto explicativo antes y después
+    assert(extractJsonFromLlmOutput('Aquí tienes:\n```json\n{"a": 3}\n```\nFin.').a === 3, 'fence con texto explicativo alrededor');
+
+    // Array como root
+    const arr = extractJsonFromLlmOutput('```json\n[1, 2, 3]\n```');
+    assert(Array.isArray(arr) && arr.length === 3,                    'fence con array root');
+
+    // JSON con texto explicativo alrededor SIN fences (LLM rebelde)
+    assert(extractJsonFromLlmOutput('Sure, here is:\n{"a": 4}\nDone.').a === 4, 'JSON sin fences pero con texto');
+
+    // JSON con strings que contienen llaves (no debe confundirse)
+    const tricky = extractJsonFromLlmOutput('```json\n{"msg": "Hola {mundo}", "n": 5}\n```');
+    assert(tricky.msg === 'Hola {mundo}',                             'no se confunde con llaves dentro de strings');
+    assert(tricky.n === 5,                                            'parsea correctamente tras string con llaves');
+
+    // JSON con caracteres escapados
+    const esc = extractJsonFromLlmOutput('```json\n{"path": "C:\\\\Users", "quote": "\\"hola\\""}\n```');
+    assert(esc.path === 'C:\\Users',                                  'escapes en strings se preservan');
+
+    // Caso degenerado: input vacío lanza
+    let threwEmpty = false;
+    try { extractJsonFromLlmOutput(''); } catch(_) { threwEmpty = true; }
+    assert(threwEmpty,                                                'input vacío lanza excepción');
+
+    // Caso degenerado: null lanza
+    let threwNull = false;
+    try { extractJsonFromLlmOutput(null); } catch(_) { threwNull = true; }
+    assert(threwNull,                                                 'input null lanza excepción');
+
+    // Caso degenerado: texto sin JSON lanza
+    let threwNoJson = false;
+    try { extractJsonFromLlmOutput('esto no es json'); } catch(_) { threwNoJson = true; }
+    assert(threwNoJson,                                               'texto sin JSON lanza excepción');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -738,6 +789,7 @@ const SUITE = [
     { name: 'H1.5 · KnowledgeLoader carga SOPs/SOCs y projectId', fn: testKnowledgeLoaderSocsSops },
     { name: 'H1.8 · KB sector readiness · auditoría TDD',         fn: testSectorReadiness },
     { name: 'H1.10.1 · Sector Cloner · prompt builder',           fn: testSectorClonerPromptBuilder },
+    { name: 'BUG-002 · extractJsonFromLlmOutput robusto a fences', fn: testExtractJsonFromLlmOutput },
     { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud },
     { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder },
     { name: 'H2.5 · WorkshopsView · prompt builder informe IA',   fn: testWorkshopsReportPromptBuilder },

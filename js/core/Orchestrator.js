@@ -44,6 +44,57 @@ const KB_KEY_DEEPSEEK  = 'sos_key_deepseek';
 const KB_KEY_GEMINI    = 'sos_key_gemini';
 
 // =============================================================================
+//  Helper exportado · extractJsonFromLlmOutput
+//  Extrae un objeto JSON de la respuesta del LLM aunque venga envuelta en
+//  markdown fences (```json ... ```) o con texto explicativo alrededor.
+//  Lanza si no encuentra JSON válido.
+//  Pública para test (sin gastar tokens).
+// =============================================================================
+export function extractJsonFromLlmOutput(text) {
+    if (!text || typeof text !== 'string') {
+        throw new Error('extractJsonFromLlmOutput: input vacío');
+    }
+    let raw = text.trim();
+
+    // 1. Si hay fence ```json ... ``` o ``` ... ```, extraer su contenido
+    const fenceMatch = raw.match(/```(?:json|JSON)?\s*([\s\S]*?)```/);
+    if (fenceMatch && fenceMatch[1]) {
+        raw = fenceMatch[1].trim();
+    }
+
+    // 2. Si tras el strip aún hay texto antes/después del primer objeto/array,
+    //    extraer desde el primer { o [ hasta su cierre balanceado
+    const firstBrace = raw.search(/[{[]/);
+    if (firstBrace > 0) {
+        raw = raw.slice(firstBrace);
+    }
+    // Trim trailing non-JSON content (texto explicativo después del cierre)
+    if (raw.startsWith('{') || raw.startsWith('[')) {
+        const open  = raw[0];
+        const close = open === '{' ? '}' : ']';
+        let depth = 0, end = -1, inStr = false, esc = false;
+        for (let i = 0; i < raw.length; i++) {
+            const ch = raw[i];
+            if (inStr) {
+                if (esc) { esc = false; continue; }
+                if (ch === '\\') { esc = true; continue; }
+                if (ch === '"') inStr = false;
+                continue;
+            }
+            if (ch === '"') { inStr = true; continue; }
+            if (ch === open)  depth++;
+            else if (ch === close) {
+                depth--;
+                if (depth === 0) { end = i; break; }
+            }
+        }
+        if (end > 0) raw = raw.slice(0, end + 1);
+    }
+
+    return JSON.parse(raw);
+}
+
+// =============================================================================
 class OrchestratorCore {
 
     constructor() {
@@ -201,7 +252,7 @@ class OrchestratorCore {
                     let parsedContent = textResponse;
                     if (responseFormat === 'json_object') {
                         try {
-                            parsedContent = JSON.parse(textResponse.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim());
+                            parsedContent = extractJsonFromLlmOutput(textResponse);
                         } catch (_) {
                             parsedContent = { raw: textResponse, parseError: true };
                         }
