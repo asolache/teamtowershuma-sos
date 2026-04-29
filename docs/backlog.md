@@ -46,7 +46,11 @@
 | **H1.8** | **Auditoría TDD del Knowledge Base · readiness dinámico por sector** | 🟢 ahora |
 | **H7.3** | **Workflow auto-generación de WO desde un SOP estructurado** | 🟢 siguiente |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
-| H1.10 | Mecanismo "clonar sector → personalizar cliente" automatizado | 🟡 |
+| **H1.10** | **Clonar sector → cliente con LLM (3 fases)** — ver `knowledge/vision/h110-sector-evolution-and-mind-graph.md` | 🟢 perfilando |
+| H1.10.1 | Fase 1 · clonación sector→cliente + validación TDD | 🟡 esperando alcance |
+| H1.10.2 | Fase 2 · evolución VNA cliente → SOPs específicos por rol | 🟡 Ola 3 |
+| H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 Ola 3 |
+| H9.x | Skills + CoPs online (matchmaking, validación SOPs por comunidad) | 🟡 Ola 3 |
 | H7.4 | TDD-auto: ampliar sandbox de `tddCheck` más allá de los 4 tipos básicos | 🟡 |
 | H3.1 | Ledger viewer dedicado | 🟡 |
 
