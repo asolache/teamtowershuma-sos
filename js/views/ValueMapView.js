@@ -1228,20 +1228,22 @@ export default class ValueMapView {
             const color = id.includes('tangible') && !id.includes('intangible')
                 ? (isSel ? '#a5f3c8' : COLOR_TANGIBLE)
                 : (isSel ? '#f0d080' : COLOR_INTANGIBLE);
+            // BUG-006 fix: triángulo lleno visible + refX al borde del nodo destino
+            // (asume nodo ~22px radio + 6 buffer = 28). orient:'auto' rota el marker
+            // según la dirección de la línea para indicar el sentido del entregable.
             defs.append('marker')
                 .attr('id', 'arrow-' + id)
-                .attr('viewBox', '0 0 10 10')
-                .attr('refX', 18)
-                .attr('refY', 5)
-                .attr('markerWidth', 6)
-                .attr('markerHeight', 6)
-                .attr('orient', 'auto-start-reverse')
+                .attr('viewBox', '0 0 12 12')
+                .attr('refX', 28)
+                .attr('refY', 6)
+                .attr('markerWidth', 9)
+                .attr('markerHeight', 9)
+                .attr('orient', 'auto')
+                .attr('markerUnits', 'userSpaceOnUse')
                 .append('path')
-                .attr('d', 'M2 1L8 5L2 9')
-                .attr('fill', 'none')
-                .attr('stroke', color)
-                .attr('stroke-width', 1.5)
-                .attr('stroke-linecap', 'round');
+                .attr('d', 'M0 0 L12 6 L0 12 Z')
+                .attr('fill', color)
+                .attr('stroke', 'none');
         });
 
         this._rebuildGraph(zoomGroup);

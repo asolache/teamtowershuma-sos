@@ -56,10 +56,12 @@
 | ID | Historia | Estado |
 |---|---|---|
 | H1.6.1 | Charla teatralizada v1 (pre-trabajo + arte vivo) + Custom 5 variantes v1 | ✅ verde |
-| H1.10.1 | Clonación sector → cliente con LLM (Dashboard + sectorCloner + tests) | 🟢 funciona en tests, prueba real bloqueada por BUGs |
+| H1.10.1 | Clonación sector → cliente con LLM (Dashboard + sectorCloner + tests) | ✅ verde end-to-end con LLM real (cliente IKEA Madrid generado correctamente) |
 | **BUG-002** | extractJsonFromLlmOutput robusto a fences markdown | ✅ fixed (13 asserts regression test) |
 | **BUG-003** | Dynamic import Orchestrator con cache-bust en 3 puntos LLM | ✅ fixed |
-| **BUG-004** | max_tokens 4096→8192 (clonación de sectores grandes truncaba JSON) | 🟢 ahora |
+| **BUG-004** | max_tokens 4096→8192 (clonación de sectores grandes truncaba JSON) | ✅ fixed |
+| **BUG-005** | Scroll en `/kanban` (y `/workshops`): patrón shell fija + main scroll | ✅ fixed |
+| **BUG-006** | Flechas ValueMap sin punta visible (refX fuera de viewBox + fill:none) | ✅ fixed (triángulo lleno + refX al borde del nodo) |
 | H1.10.2 | Fase 2 · evolución VNA cliente → SOPs específicos por rol | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
 | H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |

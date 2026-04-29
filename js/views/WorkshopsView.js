@@ -102,8 +102,8 @@ export default class WorkshopsView {
     async getHtml() {
         return `
         <style>
-            .ws-shell      { min-height:100dvh; background:var(--bg-0,#050507); color:#e6e6e6; font-family:var(--font-sans,sans-serif); }
-            .ws-topbar     { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; }
+            .ws-shell      { height:100dvh; background:var(--bg-0,#050507); color:#e6e6e6; font-family:var(--font-sans,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .ws-topbar     { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; }
             .ws-logo       { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
             .ws-logo span  { color:#6366f1; }
             .ws-title      { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.8rem; }
@@ -114,7 +114,7 @@ export default class WorkshopsView {
             .ws-btn-primary:hover { background:#4f46e5; }
             .ws-link       { color:#6366f1; text-decoration:none; }
 
-            .ws-main       { padding:1.5rem; max-width:1200px; margin:0 auto; }
+            .ws-main       { padding:1.5rem; max-width:1200px; margin:0 auto; flex:1; overflow-y:auto; overflow-x:hidden; width:100%; }
             .ws-stats      { display:flex; gap:1rem; margin-bottom:2rem; flex-wrap:wrap; }
             .ws-stat       { background:#0e0e14; border:1px solid #1a1a22; border-radius:8px; padding:0.85rem 1.1rem; min-width:130px; }
             .ws-stat-num   { font-size:1.6rem; font-weight:700; color:#fff; line-height:1; }
