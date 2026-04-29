@@ -1228,18 +1228,18 @@ export default class ValueMapView {
             const color = id.includes('tangible') && !id.includes('intangible')
                 ? (isSel ? '#a5f3c8' : COLOR_TANGIBLE)
                 : (isSel ? '#f0d080' : COLOR_INTANGIBLE);
-            // BUG-006-fix2 · Cálculo:
-            //   nodos r=36px · stroke-width líneas =1.5px
-            //   markerUnits default 'strokeWidth': refX 26 → 26*1.5 = 39px
-            //   desde el final de la línea hacia atrás = 3px FUERA del nodo destino
-            //   (radio 36 + 3 buffer). Patrón Mike Bostock canónico, fiable cross-browser.
+            // BUG-006-fix3 · Patrón canónico D3:
+            //   El path se recorta en el tick para terminar en el BORDE del nodo
+            //   destino (no en el centro). Entonces el marker se coloca con su
+            //   PUNTA justo al final del path recortado → visible al borde del nodo.
+            //   refX=10 alinea la punta del path 'M 0 -5 L 10 0 L 0 5' al final.
             defs.append('marker')
                 .attr('id', 'arrow-' + id)
                 .attr('viewBox', '0 -5 10 10')
-                .attr('refX', 26)
+                .attr('refX', 10)
                 .attr('refY', 0)
-                .attr('markerWidth', 8)
-                .attr('markerHeight', 8)
+                .attr('markerWidth', 10)
+                .attr('markerHeight', 10)
                 .attr('orient', 'auto')
                 .append('path')
                 .attr('d', 'M 0 -5 L 10 0 L 0 5 z')
@@ -1445,6 +1445,10 @@ export default class ValueMapView {
         });
 
         // ── Tick ──────────────────────────────────────────────────────────────
+        // BUG-006-fix3 · radio del nodo (debe coincidir con r del circle en línea ~1376)
+        const NODE_R = 36;
+        const ARROW_BUFFER = 3;   // separación visual entre punta de flecha y borde del nodo
+
         sim.on('tick', () => {
             // Actualizar posición de aristas
             linkSel.each((d) => {
@@ -1452,14 +1456,25 @@ export default class ValueMapView {
                 const tx = d.target.x, ty = d.target.y;
                 const bidir = d.data._bidir;
 
+                // Recortar el path para que termine en el borde del nodo destino
+                // (radio + buffer). Así la flecha del marker queda visible y apuntando
+                // al receptor del entregable.
+                const dx_full = tx - sx, dy_full = ty - sy;
+                const dist    = Math.sqrt(dx_full * dx_full + dy_full * dy_full);
+                let tx2 = tx, ty2 = ty;
+                if (dist > NODE_R + ARROW_BUFFER) {
+                    const k = (NODE_R + ARROW_BUFFER) / dist;
+                    tx2 = tx - dx_full * k;
+                    ty2 = ty - dy_full * k;
+                }
+
                 let pathD;
                 if (bidir) {
-                    // Arista curva para bidireccionales
-                    const dx    = tx - sx, dy = ty - sy;
-                    const dr    = Math.sqrt(dx * dx + dy * dy) * 0.6;
-                    pathD = 'M' + sx + ',' + sy + ' A' + dr + ',' + dr + ' 0 0,1 ' + tx + ',' + ty;
+                    // Arista curva para bidireccionales (recortada al borde destino)
+                    const dr = Math.sqrt(dx_full * dx_full + dy_full * dy_full) * 0.6;
+                    pathD = 'M' + sx + ',' + sy + ' A' + dr + ',' + dr + ' 0 0,1 ' + tx2 + ',' + ty2;
                 } else {
-                    pathD = 'M' + sx + ',' + sy + ' L' + tx + ',' + ty;
+                    pathD = 'M' + sx + ',' + sy + ' L' + tx2 + ',' + ty2;
                 }
                 d3.select('[data-id="' + d.id + '"] .link-path').attr('d', pathD);
 
