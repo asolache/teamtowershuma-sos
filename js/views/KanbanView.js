@@ -21,8 +21,11 @@
 
 import { store }           from '../core/store.js';
 import { KB }              from '../core/kb.js';
-import { Orchestrator }    from '../core/Orchestrator.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
+
+// Orchestrator se importa dinámicamente con cache-bust en _executeAi
+// (ver BUG-002/003) para que fixes del parser se apliquen sin requerir
+// purga de caché del navegador.
 
 // ─── Configuración ──────────────────────────────────────────────────────────
 const COLUMNS = [
@@ -373,6 +376,8 @@ export default class KanbanView {
                 taskContext: 'Ejecutar Work Order: ' + (c.title || woId),
             });
 
+            // Cache-bust dinámico para Orchestrator (ver BUG-002/003)
+            const { Orchestrator } = await import('../core/Orchestrator.js?v=' + Date.now());
             const result = await Orchestrator.callLLM({
                 preferredEngine: c.assignee?.engine || 'anthropic',
                 systemPrompt:    ctx.systemPrompt,

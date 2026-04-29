@@ -11,8 +11,12 @@
 //   WOs (H7.3) → auto-ejecución IA (H7.2) → Ledger.
 // =============================================================================
 
-import { Orchestrator }    from './Orchestrator.js';
 import { KnowledgeLoader } from './KnowledgeLoader.js';
+
+// El Orchestrator se importa dinámicamente con cache-bust al ejecutar la
+// clonación. Esto garantiza que cualquier fix del parser de respuestas
+// LLM (ej. extractJsonFromLlmOutput · BUG-002) se aplique sin necesidad
+// de purgar caché del navegador en cada iteración.
 
 // ─── Builder puro del userPrompt (testeable sin LLM) ───────────────────────
 export function buildClonePrompt({ sectorId, sectorSeed, clientName, clientDescription }) {
@@ -109,6 +113,10 @@ export async function cloneSectorForClient({ sectorId, clientName, clientDescrip
     });
 
     const userPrompt = buildClonePrompt({ sectorId, sectorSeed, clientName, clientDescription });
+
+    // Import dinámico con cache-bust para garantizar que cualquier fix
+    // del Orchestrator (ej. parser BUG-002) se aplique inmediatamente.
+    const { Orchestrator } = await import('./Orchestrator.js?v=' + Date.now());
 
     const result = await Orchestrator.callLLM({
         preferredEngine: 'anthropic',

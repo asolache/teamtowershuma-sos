@@ -14,8 +14,11 @@
 
 import { store }           from '../core/store.js';
 import { KB }              from '../core/kb.js';
-import { Orchestrator }    from '../core/Orchestrator.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
+
+// Orchestrator se importa dinámicamente con cache-bust en los puntos que
+// llaman al LLM para que fixes del parser de respuestas (BUG-002) se
+// apliquen sin requerir purga manual de caché del navegador.
 
 const STATUSES = [
     { id: 'propuesta', label: 'Propuesta',  color: '#94a3b8', emoji: '📝' },
@@ -358,6 +361,8 @@ export default class WorkshopsView {
                 taskContext: 'Generar propuesta comercial ' + svc.label + ' para ' + (w.content?.clientName || 'cliente'),
             });
 
+            // Cache-bust dinámico para Orchestrator (ver BUG-002/003)
+            const { Orchestrator } = await import('../core/Orchestrator.js?v=' + Date.now());
             const result = await Orchestrator.callLLM({
                 preferredEngine: 'anthropic',
                 systemPrompt:    ctx.systemPrompt,
@@ -602,6 +607,8 @@ export default class WorkshopsView {
                 taskContext: 'Generar informe post-evento ' + svc.label + ' para ' + (w.content?.clientName || 'cliente'),
             });
 
+            // Cache-bust dinámico para Orchestrator (ver BUG-002/003)
+            const { Orchestrator } = await import('../core/Orchestrator.js?v=' + Date.now());
             const result = await Orchestrator.callLLM({
                 preferredEngine: 'anthropic',
                 systemPrompt:    ctx.systemPrompt,
