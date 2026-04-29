@@ -433,6 +433,7 @@ export default class DashboardView {
                     <a href="/workshops" data-link class="dash-btn">🎯 Workshops</a>
                     <a href="/kanban"    data-link class="dash-btn">📋 Kanban</a>
                     <button class="dash-btn dash-btn-kb" id="dashBtnKB">📚 Knowledge Base</button>
+                    <button class="dash-btn" id="dashBtnClone" title="Clonar sector → cliente con IA (H1.10)">🧬 Clonar sector</button>
                     <button class="dash-btn" id="dashBtnExport" title="Descargar snapshot firmado (ECDSA P-256)">💾 Export</button>
                     <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
                     <input type="file" id="dashImportFile" accept=".json,application/json" style="display:none;">
@@ -486,6 +487,9 @@ export default class DashboardView {
 
             </div>
         </div>
+
+        <!-- H1.10.1 · Modal Clonar sector (lo monta dinámicamente _openCloneModal) -->
+        <div id="dashCloneRoot"></div>
 
         <!-- MODAL NUEVO PROYECTO -->
         <div class="dash-modal-bg" id="dashModalNew">
@@ -807,6 +811,219 @@ export default class DashboardView {
                 ev.target.value = '';
             }
         });
+
+        // H1.10.1 · Clonar sector → cliente con IA
+        const dashView = this;
+        document.getElementById('dashBtnClone')?.addEventListener('click', () => dashView._openCloneModal());
+    }
+
+    // ── H1.10.1 · Modal Clonar sector → cliente con IA ────────────────────────
+    async _openCloneModal() {
+        const root = document.getElementById('dashCloneRoot');
+        if (!root) return;
+        const close = () => { root.innerHTML = ''; };
+        const sectors = await KnowledgeLoader.listSectors();
+        const sectorOptions = sectors.map(s =>
+            `<option value="${s.id}">${s.id} · ${s.name} · ${s.readiness}</option>`
+        ).join('');
+
+        root.innerHTML = `
+            <div class="dash-clone-bg" id="dashCloneBg" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:flex-start;justify-content:center;z-index:1000;padding:2rem 1rem;overflow-y:auto;">
+                <div style="background:#0e0e14;border:1px solid #2a2a35;border-radius:10px;padding:1.5rem;width:100%;max-width:620px;color:#e6e6e6;font-family:var(--font-base);">
+                    <h3 style="margin:0 0 0.5rem 0;color:#fff;">🧬 Clonar sector → cliente</h3>
+                    <p style="color:#aaa;font-size:0.78rem;margin:0 0 1rem 0;">
+                        Construye un mapa VNA personalizado para tu cliente partiendo de uno
+                        de los 22 sectores CNAE. La IA conserva los IDs base (trazabilidad)
+                        y personaliza nombre, descripción y actor típico al contexto real.
+                        Puede añadir 1-3 roles emergentes con prefijo <code>client-</code>.
+                    </p>
+
+                    <div id="dashCloneStep1">
+                        <label style="display:block;color:#aaa;font-size:0.78rem;margin-top:0.7rem;margin-bottom:0.25rem;">Nombre del cliente / proyecto</label>
+                        <input id="dashCloneName" type="text" placeholder="Ej. IKEA Madrid · Servicios"
+                            style="width:100%;box-sizing:border-box;background:#050507;color:#e6e6e6;border:1px solid #2a2a35;border-radius:5px;padding:0.5rem;font-size:0.85rem;">
+
+                        <label style="display:block;color:#aaa;font-size:0.78rem;margin-top:0.7rem;margin-bottom:0.25rem;">Sector base</label>
+                        <select id="dashCloneSector"
+                            style="width:100%;box-sizing:border-box;background:#050507;color:#e6e6e6;border:1px solid #2a2a35;border-radius:5px;padding:0.5rem;font-size:0.85rem;">
+                            ${sectorOptions}
+                        </select>
+
+                        <label style="display:block;color:#aaa;font-size:0.78rem;margin-top:0.7rem;margin-bottom:0.25rem;">Descripción libre del cliente</label>
+                        <textarea id="dashCloneDesc" placeholder="Cliente, tamaño, geografía, objetivo, dolores conocidos, sponsor, restricciones..."
+                            style="width:100%;box-sizing:border-box;min-height:120px;background:#050507;color:#e6e6e6;border:1px solid #2a2a35;border-radius:5px;padding:0.5rem;font-size:0.85rem;font-family:inherit;"></textarea>
+
+                        <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1.2rem;">
+                            <button class="dash-btn" id="dashCloneCancel">Cancelar</button>
+                            <button class="dash-btn dash-btn-primary" id="dashCloneGo">🤖 Clonar con IA</button>
+                        </div>
+                    </div>
+
+                    <div id="dashCloneStep2"></div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('dashCloneCancel').addEventListener('click', close);
+        document.getElementById('dashCloneBg').addEventListener('click', e => { if (e.target.id === 'dashCloneBg') close(); });
+
+        document.getElementById('dashCloneGo').addEventListener('click', async () => {
+            const clientName        = document.getElementById('dashCloneName').value.trim();
+            const sectorId          = document.getElementById('dashCloneSector').value;
+            const clientDescription = document.getElementById('dashCloneDesc').value.trim();
+            if (!clientName || !clientDescription) {
+                alert('Nombre y descripción del cliente son obligatorios.');
+                return;
+            }
+            await this._executeClone({ sectorId, clientName, clientDescription });
+        });
+    }
+
+    async _executeClone({ sectorId, clientName, clientDescription }) {
+        const step2 = document.getElementById('dashCloneStep2');
+        const step1 = document.getElementById('dashCloneStep1');
+        if (step1) step1.style.display = 'none';
+        if (step2) step2.innerHTML = `
+            <p style="color:#aaa;">🤖 Construyendo contexto SOC + sector + descripción cliente…</p>
+            <p style="color:#666;font-size:0.78rem;">Llamando al LLM. 10-30 segundos según el sector base.</p>`;
+
+        try {
+            const { cloneSectorForClient } = await import('../core/sectorCloner.js?v=' + Date.now());
+            const result = await cloneSectorForClient({ sectorId, clientName, clientDescription });
+            this._renderClonePreview(result);
+        } catch (err) {
+            console.error('[H1.10.1] Error clonando:', err);
+            if (step2) step2.innerHTML = `
+                <p style="color:#ff5252;">No se pudo clonar:</p>
+                <pre style="background:#050507;padding:0.6rem;border-radius:5px;color:#aaa;white-space:pre-wrap;font-size:0.78rem;max-height:300px;overflow:auto;">${this._escapeHtml(err.message)}\n\nVerifica tu API key Anthropic en /settings y que netlify dev esté corriendo.</pre>
+                <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;">
+                    <button class="dash-btn" id="dashCloneRetryCancel">Cerrar</button>
+                </div>
+            `;
+            document.getElementById('dashCloneRetryCancel')?.addEventListener('click', () => {
+                document.getElementById('dashCloneRoot').innerHTML = '';
+            });
+        }
+    }
+
+    _renderClonePreview(result) {
+        const step2 = document.getElementById('dashCloneStep2');
+        if (!step2) return;
+        const c = result.cloned;
+        const v = result.validation;
+        const readinessColor = result.readiness === 'ready' ? '#22c55e'
+                              : result.readiness === 'solid' ? '#6366f1'
+                              : '#ff9100';
+
+        step2.innerHTML = `
+            <div style="background:#050507;border:1px solid #1a1a22;border-radius:6px;padding:0.8rem;font-size:0.82rem;color:#e6e6e6;">
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.7rem;">
+                    <span style="background:${readinessColor};color:#fff;padding:2px 10px;border-radius:10px;font-size:0.75rem;font-weight:700;">${result.readiness.toUpperCase()}</span>
+                    <span style="color:#aaa;font-size:0.75rem;">${v.roles}r · ${v.txs}tx · ${v.patterns}p · sector base ${result.sectorBase}</span>
+                </div>
+                <div style="color:#aaa;font-size:0.75rem;margin-bottom:0.5rem;">
+                    Tokens: ${(result.tokens.prompt_tokens || 0)} in / ${(result.tokens.completion_tokens || 0)} out · Latencia: ${result.latencyMs} ms
+                </div>
+                <div style="margin-top:0.5rem;">
+                    <strong style="color:#fff;">${this._escapeHtml(c.project_name || c.client_id || 'Sin nombre')}</strong>
+                </div>
+                ${c.emergent_notes ? `
+                    <div style="margin-top:0.6rem;padding:0.5rem;background:rgba(212,168,83,0.08);border-left:2px solid #d4a853;border-radius:3px;color:#facc15;font-size:0.78rem;">
+                        <strong>Emergentes:</strong> ${this._escapeHtml(c.emergent_notes)}
+                    </div>
+                ` : ''}
+                <details style="margin-top:0.7rem;">
+                    <summary style="cursor:pointer;color:#aaa;font-size:0.78rem;">Ver mapa completo (JSON)</summary>
+                    <pre style="background:#000;padding:0.5rem;border-radius:4px;color:#bbb;font-size:0.7rem;max-height:280px;overflow:auto;margin-top:0.5rem;">${this._escapeHtml(JSON.stringify(c, null, 2))}</pre>
+                </details>
+            </div>
+
+            ${result.readiness === 'tier 2' ? `
+                <p style="color:#fca5a5;font-size:0.78rem;margin-top:0.6rem;">
+                    ⚠ El mapa generado no llega al umbral 'solid'. Puedes guardarlo como
+                    <code>draft</code> y enriquecerlo manualmente, o cancelar y reintentar
+                    con una descripción más rica del cliente.
+                </p>
+            ` : ''}
+
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;">
+                <button class="dash-btn" id="dashCloneClose2">Cancelar</button>
+                <button class="dash-btn dash-btn-primary" id="dashCloneCreate">Crear proyecto cliente</button>
+            </div>
+        `;
+
+        document.getElementById('dashCloneClose2').addEventListener('click', () => {
+            document.getElementById('dashCloneRoot').innerHTML = '';
+        });
+        document.getElementById('dashCloneCreate').addEventListener('click', async () => {
+            await this._persistClonedProject(result);
+            document.getElementById('dashCloneRoot').innerHTML = '';
+        });
+    }
+
+    async _persistClonedProject(result) {
+        const c = result.cloned;
+        const safeId = (c.client_id || c.project_name || 'cliente')
+            .toString().toLowerCase()
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32);
+        const projectId = 'proj-' + safeId + '-' + Date.now().toString(36).slice(-5);
+        const status    = result.readiness === 'tier 2' ? 'draft' : 'active';
+
+        // 1. Crear proyecto
+        await store.dispatch({
+            type: 'CREATE_PROJECT',
+            payload: {
+                id:               projectId,
+                nombre:           c.project_name || c.client_id || 'Cliente clonado',
+                sector_id:        c.sector_id || result.sectorBase,
+                based_on_sector:  c.based_on_sector || result.sectorBase,
+                vna_roles:        Array.isArray(c.roles)        ? c.roles        : [],
+                vna_transactions: Array.isArray(c.transactions) ? c.transactions : [],
+                patterns:         Array.isArray(c.patterns)     ? c.patterns     : [],
+                readinessAtClone: result.readiness,
+                cloneStatus:      status,
+                createdAt:        Date.now(),
+                updatedAt:        Date.now(),
+            }
+        });
+
+        // 2. Persistir nodo client_vna_model en KB Mind-as-Graph
+        await store.dispatch({
+            type: 'KB_UPSERT',
+            payload: { node: {
+                id:        'client-vna-' + safeId + '-' + Date.now().toString(36),
+                type:      'client_vna_model',
+                projectId,
+                content: {
+                    sectorBase:    c.based_on_sector || result.sectorBase,
+                    clientId:      c.client_id || safeId,
+                    clientName:    c.project_name || c.client_id,
+                    roles:         c.roles || [],
+                    transactions:  c.transactions || [],
+                    patterns:      c.patterns || [],
+                    emergentNotes: c.emergent_notes || '',
+                    version:       c.version || 'v1.0',
+                    readiness:     result.readiness,
+                    sources:       result.sources,
+                    tokens:        result.tokens,
+                    latencyMs:     result.latencyMs,
+                    generatedAt:   Date.now(),
+                },
+                keywords: ['client_vna_model', c.based_on_sector || result.sectorBase, safeId],
+            }}
+        });
+
+        // 3. Navegar al ValueMap del nuevo proyecto
+        if (typeof window.navigateTo === 'function') {
+            window.navigateTo('/map?project=' + projectId);
+        } else {
+            location.reload();
+        }
+    }
+
+    _escapeHtml(str) {
+        return String(str ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
     }
 
     // ── Modal nuevo proyecto ──────────────────────────────────────────────────

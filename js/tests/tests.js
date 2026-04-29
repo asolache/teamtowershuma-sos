@@ -678,12 +678,66 @@ async function testGenerateWosFromSop() {
     assert(Array.isArray(empty) && empty.length === 0,                'generateWosFromSop con steps=null devuelve []');
 }
 
+// ─── H1.10.1 · Sector Cloner · prompt builder ─────────────────────────────
+async function testSectorClonerPromptBuilder() {
+    const { buildClonePrompt } = await import('../core/sectorCloner.js?v=' + Date.now());
+
+    const sectorSeed = {
+        sectorId:   'K',
+        sectorName: 'Tech / Software / IA',
+        roles: [
+            { id: 'descubridor-oportunidad', name: 'Descubridor de oportunidad', castell_level: 'pom_de_dalt', description: 'Identifica problemas con potencial de mercado.', typical_actor: 'founder, PM, head of product' },
+            { id: 'product-owner', name: 'Product Owner', castell_level: 'tronc', description: 'Prioriza el roadmap.', typical_actor: 'PO senior' },
+        ],
+        transactions: [
+            { id: 'tx-1', from: 'descubridor-oportunidad', to: 'product-owner', deliverable: 'Hipótesis validada', type: 'tangible', is_must: true, health_hint: 'Sin esto el roadmap es vacío' },
+        ],
+        patterns: [
+            { name: 'Discovery infinito', description: 'Equipo no llega a entregar.', signal: '>3 meses sin release.' },
+        ],
+    };
+
+    const prompt = buildClonePrompt({
+        sectorId:           'K',
+        sectorSeed,
+        clientName:         'Startup XYZ Madrid',
+        clientDescription:  'SaaS B2B de gestión de incidencias para retailers, equipo 12 personas, sponsor CTO',
+    });
+
+    assert(typeof prompt === 'string' && prompt.length > 400,        'buildClonePrompt devuelve string sustancioso');
+    assert(prompt.includes('Startup XYZ Madrid'),                    'prompt incluye clientName');
+    assert(prompt.includes('SaaS B2B de gestión de incidencias'),    'prompt incluye descripción del cliente');
+    assert(prompt.includes('"K"'),                                   'prompt incluye sectorId');
+    assert(prompt.includes('descubridor-oportunidad'),               'prompt embebe los roles del sector base');
+    assert(prompt.includes('Hipótesis validada'),                    'prompt embebe transacciones del sector base');
+    assert(prompt.includes('Discovery infinito'),                    'prompt embebe patterns del sector base');
+    assert(prompt.includes('CONSERVA los IDs'),                      'prompt instruye conservar IDs base (trazabilidad)');
+    assert(prompt.includes('client-'),                               'prompt instruye prefijo client- para emergentes');
+    assert(prompt.includes('NO inventes'),                           'prompt prohíbe inventar sin contexto');
+    assert(prompt.includes('NO incluyas precios'),                   'prompt prohíbe precios');
+    assert(prompt.includes('soc-teamtowers-brand'),                  'prompt referencia SOC raíz brand');
+    assert(prompt.includes('"based_on_sector"'),                     'prompt define schema con based_on_sector');
+    assert(prompt.includes('emergent_notes'),                        'prompt pide emergent_notes en el output');
+    assert(/SÓLO\s+JSON/i.test(prompt),                              'prompt instruye output JSON sin texto adicional');
+
+    // Caso degenerado: sector seed vacío sigue produciendo prompt válido
+    const empty = buildClonePrompt({
+        sectorId: 'K',
+        sectorSeed: { roles: [], transactions: [], patterns: [] },
+        clientName: 'X',
+        clientDescription: 'Y',
+    });
+    assert(typeof empty === 'string' && empty.length > 200,          'buildClonePrompt con seed vacío sigue funcionando');
+    assert(empty.includes('roles:\n  []'),                            'sector vacío produce roles: []');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
     { name: 'H1.3 · Export/Import firmado ECDSA P-256',           fn: testProjectIO },
     { name: 'H1.5 · KnowledgeLoader carga SOPs/SOCs y projectId', fn: testKnowledgeLoaderSocsSops },
     { name: 'H1.8 · KB sector readiness · auditoría TDD',         fn: testSectorReadiness },
+    { name: 'H1.10.1 · Sector Cloner · prompt builder',           fn: testSectorClonerPromptBuilder },
     { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud },
     { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder },
     { name: 'H2.5 · WorkshopsView · prompt builder informe IA',   fn: testWorkshopsReportPromptBuilder },
