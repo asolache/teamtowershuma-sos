@@ -79,8 +79,8 @@ async function testKnowledgeLoaderSocsSops() {
     assert(socs.some(s => s.slug === 'castellers-demo'),              'listSocs() incluye castellers-demo');
     assert(socs.some(s => s.slug === 'la-colla'),                     'listSocs() incluye la-colla (proceso VNA)');
     assert(socs.some(s => s.slug === 'teamtowers-merchandising'),     'listSocs() incluye teamtowers-merchandising');
-    assert(socs.some(s => s.slug === 'proyecto-custom'),              'listSocs() incluye proyecto-custom (stub)');
-    assert(socs.some(s => s.slug === 'charla-conferencia'),           'listSocs() incluye charla-conferencia (stub)');
+    assert(socs.some(s => s.slug === 'proyecto-custom'),              'listSocs() incluye proyecto-custom (5 variantes)');
+    assert(socs.some(s => s.slug === 'charla-conferencia'),           'listSocs() incluye charla-conferencia (teatralizada)');
 
     // listSops → al menos 6 SOPs
     const sopsList = await KnowledgeLoader.listSops();
@@ -92,8 +92,8 @@ async function testKnowledgeLoaderSocsSops() {
     assert(sopsList.some(s => s.slug === 'castellers-demo'),          'listSops() incluye castellers-demo');
     assert(sopsList.some(s => s.slug === 'la-colla'),                 'listSops() incluye la-colla');
     assert(sopsList.some(s => s.slug === 'teamtowers-merchandising'), 'listSops() incluye teamtowers-merchandising');
-    assert(sopsList.some(s => s.slug === 'proyecto-custom'),          'listSops() incluye proyecto-custom (stub)');
-    assert(sopsList.some(s => s.slug === 'charla-conferencia'),       'listSops() incluye charla-conferencia (stub)');
+    assert(sopsList.some(s => s.slug === 'proyecto-custom'),          'listSops() incluye proyecto-custom (5 variantes)');
+    assert(sopsList.some(s => s.slug === 'charla-conferencia'),       'listSops() incluye charla-conferencia (3 fases · arte vivo)');
 
     // getSocSeed → carga frontmatter y body del fichero
     const soc = await KnowledgeLoader.getSocSeed('fent-pinya');
@@ -627,9 +627,20 @@ async function testGenerateWosFromSop() {
     const informe = stepsColla.find(s => s.id === 'fase-c2-informe');
     assert(informe && informe.role_kind === 'ai',                     'fase-c2-informe es asignada a IA');
 
-    // 3. SOP sin steps devuelve array vacío (no rompe)
+    // 3. SOP que existe pero NO tiene steps[] devuelve array vacío (no rompe)
+    //    castellers-demo y teamtowers-merchandising siguen siendo narrativos sin steps[]
+    const stepsDemo = await KnowledgeLoader.getSopSteps('castellers-demo');
+    assert(Array.isArray(stepsDemo) && stepsDemo.length === 0,        'castellers-demo (narrativo, sin steps[]) devuelve []');
+
+    // 3b. SOP con steps tras enriquecimiento H1.6.1
     const stepsCustom = await KnowledgeLoader.getSopSteps('proyecto-custom');
-    assert(Array.isArray(stepsCustom) && stepsCustom.length === 0,    'proyecto-custom (stub) sin steps devuelve []');
+    assert(Array.isArray(stepsCustom) && stepsCustom.length >= 7,     'proyecto-custom v1 tiene ≥7 steps tras H1.6.1');
+    const stepsCharla = await KnowledgeLoader.getSopSteps('charla-conferencia');
+    assert(Array.isArray(stepsCharla) && stepsCharla.length >= 9,     'charla-conferencia v1 tiene ≥9 steps tras H1.6.1');
+
+    // 3c. SOP inexistente devuelve []
+    const stepsNada = await KnowledgeLoader.getSopSteps('inexistente-xyz');
+    assert(Array.isArray(stepsNada) && stepsNada.length === 0,        'getSopSteps de slug inexistente devuelve []');
 
     // 4. generateWosFromSop con un array de steps de prueba
     const fakeSteps = [

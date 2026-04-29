@@ -67,8 +67,8 @@ contexto de marca heredable a todas las llamadas LLM.
 | `socs/castellers-demo.md` | Demos castelleras — espectáculo profesional no participativo, hasta 7 pisos, máx 4 castells por demo. |
 | `socs/la-colla.md` | La Colla · proceso VNA — consultoría tipo Pantheon Work / Verna Allee, multi-sesión, mapeo de la red de valor del cliente. |
 | `socs/teamtowers-merchandising.md` | Merchandising TeamTowers — pañuelos y faixas personalizables, upsell del evento. |
-| `socs/proyecto-custom.md` | (stub) Formato genérico para proyectos a medida combinando SOPs estándar. |
-| `socs/charla-conferencia.md` | (stub) Charlas y conferencias keynote 30-60 min como top-of-funnel comercial. |
+| `socs/proyecto-custom.md` | Proyectos a medida — 5 variantes (escuela, gymkana, demo participativa, combinación, presupuesto ajustado). |
+| `socs/charla-conferencia.md` | Charla teatralizada 30-60 min con pre-trabajo consultivo + arte vivo opcional (clown, beatboxer, actor, músico). |
 
 ---
 
@@ -83,8 +83,8 @@ nodo `type: sop` en KB y referencia un `soc_ref`. Ver `sops/_README.md`.
 | `sops/castellers-demo.md` | Demo castellera, 30-45 min, 4-7 pisos, máx 4 castells por demo. | `soc-castellers-demo` |
 | `sops/la-colla.md` | Proceso VNA multi-sesión (3-12 sem), 7 pasos Allee/Pantheon + bola extra, zoom por área/servicio/proceso. | `soc-la-colla` |
 | `sops/teamtowers-merchandising.md` | Pedidos de merchandising castellero personalizable, plazo 3-7 semanas. | `soc-teamtowers-merchandising` |
-| `sops/proyecto-custom.md` | (stub) Formato combinable de bloques de SOPs estándar. | `soc-proyecto-custom` |
-| `sops/charla-conferencia.md` | (stub) Keynote 30-60 min con estructura de 6 bloques. | `soc-charla-conferencia` |
+| `sops/proyecto-custom.md` | 5 variantes de custom (escuela, gymkana, demo-participativa, combinación, económico) + ciclo de promoción a SOP estándar. | `soc-proyecto-custom` |
+| `sops/charla-conferencia.md` | Charla teatralizada · 3 fases (A pre-trabajo / B speech / C follow-up) · arte vivo opcional. | `soc-charla-conferencia` |
 
 ---
 
