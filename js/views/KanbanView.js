@@ -1108,6 +1108,7 @@ export default class KanbanView {
                     <div class="actions">
                         <button class="kb-btn danger" id="kbdDel">Borrar</button>
                         <button class="kb-btn" id="kbdClose">Cerrar</button>
+                        ${!isAi ? `<button class="kb-btn" id="kbdAssistAi" style="border-color:rgba(99,102,241,0.4);color:var(--accent-indigo);">🤖 ${c.aiAssistDraft ? 'Ver / Regenerar asistencia IA' : 'Pedir asistencia IA con contexto'}</button>` : ''}
                         ${isAi && (status === 'backlog' || status === 'doing') ? `<button class="kb-btn" id="kbdExecAi">🤖 Ejecutar con IA</button>` : ''}
                         ${colNext ? `<button class="kb-btn kb-btn-primary" id="kbdNext">${colNext.label}</button>` : ''}
                     </div>
@@ -1118,6 +1119,12 @@ export default class KanbanView {
         document.getElementById('kbdClose').addEventListener('click', close);
         document.getElementById('kbDetailBg').addEventListener('click', e => { if (e.target.id === 'kbDetailBg') close(); });
         document.getElementById('kbdDel').addEventListener('click', async () => { close(); await this._delete(w.id); });
+
+        // H7.6 · Asistencia IA con contexto a WO humana
+        const assistBtn = document.getElementById('kbdAssistAi');
+        if (assistBtn) {
+            assistBtn.addEventListener('click', () => { close(); this._openWoAssistModal(w); });
+        }
 
         // H7.2 · Ejecutar con IA
         const execBtn = document.getElementById('kbdExecAi');
@@ -1164,5 +1171,146 @@ export default class KanbanView {
                 }
             });
         }
+    }
+
+    // ─── H7.6 · Modal "Asistencia IA con contexto" para WOs humanas ─────────
+    // Muestra: textarea con el draft previo (si existe), textarea con datos
+    // brutos del humano, botón Generar, indicador 🧠 IA pensando, output MD
+    // editable, botones Guardar / Copiar / Descargar.
+    _openWoAssistModal(wo) {
+        const root = document.getElementById('kbModalRoot');
+        if (!root) return;
+        const close = () => { root.innerHTML = ''; };
+        const c = wo.content || {};
+        const existingDraft = c.aiAssistDraft || '';
+        const existingMeta  = c.aiAssistMeta  || null;
+        const metaLine = existingMeta
+            ? `${existingMeta.provider}/${existingMeta.model} · ${existingMeta.tokensIn || 0}+${existingMeta.tokensOut || 0} tokens · ${existingMeta.latencyMs || 0}ms · ${new Date(existingMeta.ts || Date.now()).toLocaleString('es-ES')}`
+            : '';
+
+        root.innerHTML = `
+            <div class="kb-modal" id="kbAssistBg">
+                <div class="kb-modal-inner" style="max-width:880px;">
+                    <h3>🤖 Asistencia IA con contexto · ${this._esc(c.title || wo.id)}</h3>
+                    <p style="background:rgba(99,102,241,0.1);border-left:2px solid #6366f1;padding:0.5rem;border-radius:3px;margin:0.5rem 0;color:#a5b4fc;font-size:0.78rem;">
+                        La IA recibe SOC raíz + SOP de referencia + estado del proyecto + rol VNA + los datos
+                        brutos que pegues abajo, y devuelve un informe MD con estructura SOS estándar
+                        (8 secciones: Contexto · Síntesis · Diagnóstico · Plan · DTD · Intangibles ·
+                        Mind-as-Graph · Tokens). Lo aprueba/edita el humano antes de guardar.
+                    </p>
+
+                    <label>Datos brutos aportados por el humano</label>
+                    <textarea id="kbaInput" style="min-height:140px;font-family:var(--font-base);font-size:0.85rem;" placeholder="Pega aquí cualquier dato relevante: emails, notas, transcripciones, decisiones, contexto temporal, fotos descritas, datos del cliente. Cuanto más concreto, mejor el informe."></textarea>
+
+                    <div class="actions" style="margin-top:0.6rem;">
+                        <button class="kb-btn" id="kbaGenerate" style="border-color:rgba(99,102,241,0.4);color:var(--accent-indigo);">🧠 Generar informe IA con contexto</button>
+                        <span id="kbaThinking" style="display:none;color:#a5b4fc;font-size:0.85rem;">🧠 IA pensando<span id="kbaDots">.</span></span>
+                    </div>
+
+                    <label style="margin-top:0.8rem;">Informe IA${metaLine ? ' · <span style="color:#888;font-size:0.7rem;font-weight:normal;">previo: ' + this._esc(metaLine) + '</span>' : ''}</label>
+                    <textarea id="kbaOutput" style="min-height:280px;font-family:monospace;font-size:0.78rem;" placeholder="Aquí aparecerá el informe MD generado. Editable antes de guardar.">${this._esc(existingDraft)}</textarea>
+
+                    <div class="actions">
+                        <button class="kb-btn" id="kbaCancel">Cerrar</button>
+                        <button class="kb-btn" id="kbaCopy">📋 Copiar</button>
+                        <button class="kb-btn" id="kbaDownload">⬇ Descargar .md</button>
+                        <button class="kb-btn kb-btn-primary" id="kbaSave">💾 Guardar como aiAssistDraft</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('kbaCancel').addEventListener('click', close);
+        document.getElementById('kbAssistBg').addEventListener('click', e => { if (e.target.id === 'kbAssistBg') close(); });
+
+        // Animación dots "IA pensando"
+        let dotsInterval = null;
+        const startThinking = () => {
+            const t = document.getElementById('kbaThinking');
+            const d = document.getElementById('kbaDots');
+            t.style.display = 'inline';
+            let n = 1;
+            dotsInterval = setInterval(() => { n = (n % 3) + 1; d.textContent = '.'.repeat(n); }, 400);
+        };
+        const stopThinking = () => {
+            const t = document.getElementById('kbaThinking');
+            t.style.display = 'none';
+            if (dotsInterval) clearInterval(dotsInterval);
+        };
+
+        // Generar informe
+        document.getElementById('kbaGenerate').addEventListener('click', async () => {
+            const input = document.getElementById('kbaInput').value.trim();
+            if (!input) {
+                alert('Pega primero los datos brutos del humano antes de generar el informe.');
+                return;
+            }
+            const btn = document.getElementById('kbaGenerate');
+            const out = document.getElementById('kbaOutput');
+            btn.disabled = true;
+            startThinking();
+            try {
+                const { generateWoAssistReport } = await import('../core/woAssistant.js?v=' + Date.now());
+                const result = await generateWoAssistReport({ wo, humanInput: input });
+                out.value = result.markdown;
+                // Cachear meta en data attrs para guardarlo al pulsar Guardar
+                out.dataset.provider  = result.provider;
+                out.dataset.model     = result.model;
+                out.dataset.tokensIn  = result.tokens?.prompt_tokens || 0;
+                out.dataset.tokensOut = result.tokens?.completion_tokens || 0;
+                out.dataset.latencyMs = result.latencyMs;
+                console.log('[H7.6] Informe IA generado · ' + result.provider + '/' + result.model + ' · ' + (result.tokens?.total_tokens || 0) + ' tokens');
+            } catch (err) {
+                console.error('[H7.6] Error generando informe IA:', err);
+                alert('Error al generar informe IA: ' + err.message);
+            } finally {
+                stopThinking();
+                btn.disabled = false;
+            }
+        });
+
+        // Copiar al portapapeles
+        document.getElementById('kbaCopy').addEventListener('click', async () => {
+            const md = document.getElementById('kbaOutput').value;
+            try { await navigator.clipboard.writeText(md); alert('Informe copiado al portapapeles.'); }
+            catch (_) { alert('No se pudo copiar (permiso denegado).'); }
+        });
+
+        // Descargar .md
+        document.getElementById('kbaDownload').addEventListener('click', () => {
+            const md = document.getElementById('kbaOutput').value;
+            const safeId = (wo.id || 'wo').replace(/[^\w-]/g, '');
+            const blob = new Blob([md], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'wo-assist-' + safeId + '.md';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Guardar como aiAssistDraft del WO
+        document.getElementById('kbaSave').addEventListener('click', async () => {
+            const out = document.getElementById('kbaOutput');
+            const md = out.value.trim();
+            if (!md) { alert('No hay informe para guardar.'); return; }
+            const meta = {
+                provider:  out.dataset.provider  || (existingMeta?.provider  || 'unknown'),
+                model:     out.dataset.model     || (existingMeta?.model     || 'unknown'),
+                tokensIn:  parseInt(out.dataset.tokensIn  || (existingMeta?.tokensIn  || 0), 10),
+                tokensOut: parseInt(out.dataset.tokensOut || (existingMeta?.tokensOut || 0), 10),
+                latencyMs: parseInt(out.dataset.latencyMs || (existingMeta?.latencyMs || 0), 10),
+                ts:        Date.now(),
+            };
+            const updated = {
+                ...wo,
+                content: { ...c, aiAssistDraft: md, aiAssistMeta: meta },
+            };
+            await store.dispatch({ type: 'KB_UPSERT', payload: { node: updated } });
+            await this._load();
+            this._render();
+            close();
+            console.log('[H7.6] aiAssistDraft guardado · ' + md.length + ' chars · ' + meta.provider + '/' + meta.model);
+        });
     }
 }
