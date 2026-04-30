@@ -25,6 +25,7 @@ const BASE_PRICING = {
     openai:    { input: 2.50,  output: 10.00 },
     deepseek:  { input: 0.14,  output: 0.28  },
     gemini:    { input: 0.075, output: 0.30  },
+    minimax:   { input: 0.20,  output: 1.10  }, // BACK-008 · MiniMax-Text-01 (200k ctx) · platform.minimax.io
     custom:    { input: 0.0,   output: 0.0   }
 };
 
@@ -42,6 +43,13 @@ const KB_KEY_ANTHROPIC = 'sos_key_anthropic';
 const KB_KEY_OPENAI    = 'sos_key_openai';
 const KB_KEY_DEEPSEEK  = 'sos_key_deepseek';
 const KB_KEY_GEMINI    = 'sos_key_gemini';
+const KB_KEY_MINIMAX   = 'sos_key_minimax';
+
+// ─── MINIMAX CONFIG ──────────────────────────────────────────────
+// platform.minimax.io · API internacional (https://api.minimax.io/v1).
+// Endpoint: /text/chatcompletion_v2 · body OpenAI-compatible.
+const MINIMAX_API_URL = 'https://api.minimax.io/v1/text/chatcompletion_v2';
+const MINIMAX_MODEL   = 'MiniMax-Text-01';
 
 // =============================================================================
 //  Helper exportado · extractJsonFromLlmOutput
@@ -113,7 +121,7 @@ class OrchestratorCore {
         await this._ensureKB();
         const globalEngine     = (await KB.getNode(KB_KEY_PROVIDER))?.value || 'anthropic';
         const actualPreference = overrideEngine || globalEngine;
-        const chain = [...new Set([actualPreference, globalEngine, 'anthropic', 'openai', 'deepseek', 'gemini', 'custom'])];
+        const chain = [...new Set([actualPreference, globalEngine, 'anthropic', 'openai', 'deepseek', 'gemini', 'minimax', 'custom'])];
         const available = [];
 
         for (const provider of chain) {
@@ -131,7 +139,7 @@ class OrchestratorCore {
     }
 
     _kbKeyForProvider(provider) {
-        return { anthropic: KB_KEY_ANTHROPIC, openai: KB_KEY_OPENAI, deepseek: KB_KEY_DEEPSEEK, gemini: KB_KEY_GEMINI }[provider] || `sos_key_${provider}`;
+        return { anthropic: KB_KEY_ANTHROPIC, openai: KB_KEY_OPENAI, deepseek: KB_KEY_DEEPSEEK, gemini: KB_KEY_GEMINI, minimax: KB_KEY_MINIMAX }[provider] || `sos_key_${provider}`;
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -237,6 +245,34 @@ class OrchestratorCore {
                         textResponse = d.candidates[0].content.parts[0].text;
                     }
 
+                    // ── MINIMAX ──────────────────────────────────────────────
+                    else if (provider === 'minimax') {
+                        const body = {
+                            model: MINIMAX_MODEL,
+                            temperature,
+                            max_tokens: 8192,
+                            messages: [
+                                { role: 'system', content: systemPrompt },
+                                { role: 'user',   content: userPrompt + (responseFormat === 'json_object' ? '\n\nResponde ÚNICAMENTE con JSON válido.' : '') }
+                            ]
+                        };
+                        const r = await fetch(MINIMAX_API_URL, {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                            body:    JSON.stringify(body)
+                        });
+                        if (!r.ok) throw new Error(`[MiniMax HTTP ${r.status}] ${await r.text()}`);
+                        const d = await r.json();
+                        textResponse = d.choices?.[0]?.message?.content || '';
+                        if (d.usage) {
+                            tokenUsage = {
+                                prompt_tokens:     d.usage.prompt_tokens     || d.usage.input_tokens  || 0,
+                                completion_tokens: d.usage.completion_tokens || d.usage.output_tokens || 0,
+                                total_tokens:      d.usage.total_tokens      || ((d.usage.prompt_tokens || 0) + (d.usage.completion_tokens || 0))
+                            };
+                        }
+                    }
+
                     // ── CUSTOM / OLLAMA ──────────────────────────────────────
                     else if (provider === 'custom') {
                         const r = await fetch('http://localhost:11434/api/chat', {
@@ -267,7 +303,10 @@ class OrchestratorCore {
                         detail: { provider, totalTokens: tokenUsage.total_tokens, costUSD: parseFloat(costUSD.toFixed(6)), latencyMs, timestamp: Date.now() }
                     }));
 
-                    return { content: parsedContent, telemetry: { provider, model: provider === 'anthropic' ? ANTHROPIC_MODEL : provider, tokens: tokenUsage, latencyMs } };
+                    const modelLabel = provider === 'anthropic' ? ANTHROPIC_MODEL
+                                     : provider === 'minimax'   ? MINIMAX_MODEL
+                                     : provider;
+                    return { content: parsedContent, telemetry: { provider, model: modelLabel, tokens: tokenUsage, latencyMs } };
 
                 } catch (err) {
                     lastError = err;

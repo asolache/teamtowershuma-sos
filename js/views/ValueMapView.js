@@ -61,6 +61,7 @@ export default class ValueMapView {
             dragging:     false,
             d3Sim:        null,
             egoRoleId:    null,
+            sopByRole:    new Map(),// H1.10.7 · roleId → sopNode (proyecto cliente)
         };
         this._svg   = null;
         this._width  = 0;
@@ -1042,6 +1043,8 @@ export default class ValueMapView {
             if (proj) {
                 document.getElementById('vmapProjectName').textContent = proj.nombre || proj.name || this._state.projectId;
             }
+            // H1.10.7 · cargar mapa roleId→SOP del proyecto para badges en inspector
+            await this._refreshSopByRole();
         }
 
         // Cargar D3 dinámicamente desde CDN permitido
@@ -1725,7 +1728,7 @@ export default class ValueMapView {
             <div class="vmap-inspector-actions">
                 <button class="vmap-inspector-btn" id="inspBtnEgo">◎ Vista ego de este rol</button>
                 <button class="vmap-inspector-btn" id="inspBtnAddTx">＋ Añadir transacción</button>
-                ${this._state.projectId ? `<button class="vmap-inspector-btn" id="inspBtnGenSop" style="border-color:rgba(99,102,241,0.4);color:var(--accent-indigo);">📋 Generar SOP del rol con IA</button>` : ''}
+                ${this._renderSopActions(role)}
                 <button class="vmap-inspector-btn danger" id="inspBtnDelete">✕ Eliminar rol</button>
             </div>`;
 
@@ -1746,7 +1749,57 @@ export default class ValueMapView {
         document.getElementById('inspBtnEgo')?.addEventListener('click',    () => this._setEgoMode(role.id));
         document.getElementById('inspBtnAddTx')?.addEventListener('click',  () => this._openTxModal(role.id));
         document.getElementById('inspBtnGenSop')?.addEventListener('click', () => this._openGenSopModal(role));
+        document.getElementById('inspBtnRegenSop')?.addEventListener('click', () => this._openGenSopModal(role));
+        document.getElementById('inspBtnViewSop')?.addEventListener('click', () => {
+            const sop = this._state.sopByRole.get(role.id);
+            if (!sop) return;
+            const url = `/sops?project=${encodeURIComponent(this._state.projectId)}&focus=${encodeURIComponent(sop.id)}`;
+            if (window.navigateTo) window.navigateTo(url);
+            else window.location.href = url;
+        });
         document.getElementById('inspBtnDelete')?.addEventListener('click', () => this._deleteRole(role.id));
+    }
+
+    // ── H1.10.7 · Render del bloque de acciones SOP del inspector ──────────
+    // Si no hay proyecto activo: nada (los SOPs son por proyecto cliente).
+    // Si el rol ya tiene SOP en KB: badge verde + botones Ver / Regenerar.
+    // Si no: botón único "Generar SOP del rol con IA".
+    _renderSopActions(role) {
+        if (!this._state.projectId) return '';
+        const existing = this._state.sopByRole.get(role.id);
+        if (!existing) {
+            return `<button class="vmap-inspector-btn" id="inspBtnGenSop" style="border-color:rgba(99,102,241,0.4);color:var(--accent-indigo);">📋 Generar SOP del rol con IA</button>`;
+        }
+        const stepsCount = Array.isArray(existing.content?.steps) ? existing.content.steps.length : 0;
+        return `
+            <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:6px 10px;font-size:0.75rem;color:#86efac;display:flex;align-items:center;gap:6px;">
+                <span>✅</span>
+                <span><strong>SOP generado</strong> · ${stepsCount} steps</span>
+            </div>
+            <button class="vmap-inspector-btn" id="inspBtnViewSop" style="border-color:rgba(34,197,94,0.4);color:#86efac;">📂 Ver SOP del rol</button>
+            <button class="vmap-inspector-btn" id="inspBtnRegenSop" style="border-color:rgba(99,102,241,0.4);color:var(--accent-indigo);">🔁 Regenerar SOP con IA</button>
+        `;
+    }
+
+    // ── H1.10.7 · Refrescar mapa roleId → SOP del proyecto activo ──────────
+    async _refreshSopByRole() {
+        if (!this._state.projectId) {
+            this._state.sopByRole = new Map();
+            return;
+        }
+        try {
+            await KB.init();
+            const sops = await KB.query({ type: 'sop', projectId: this._state.projectId });
+            const map  = new Map();
+            for (const s of (sops || [])) {
+                const ref = s.content?.role_ref;
+                if (ref) map.set(ref, s);
+            }
+            this._state.sopByRole = map;
+        } catch (err) {
+            console.warn('[H1.10.7] Error cargando SOPs del proyecto:', err);
+            this._state.sopByRole = new Map();
+        }
     }
 
     // ── H1.10.2 · Generar SOP del rol del proyecto cliente con IA ────────────
@@ -1876,6 +1929,10 @@ export default class ValueMapView {
                 keywords: ['sop', 'project-role-sop', result.roleRef, result.projectRef],
             }}
         });
+        // H1.10.7 · refrescar mapa y re-pintar inspector si el rol sigue seleccionado
+        await this._refreshSopByRole();
+        const role = this._state.roles.find(r => r.id === result.roleRef);
+        if (role && this._state.selectedId === role.id) this._renderRoleInspector(role);
     }
 
     _escHtml(str) {

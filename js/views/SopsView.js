@@ -119,6 +119,11 @@ export default class SopsView {
         await this._load();
         this._render();
         document.getElementById('svBtnBulkGen')?.addEventListener('click', () => this._openBulkModal());
+
+        // H1.10.7 · si la URL trae ?focus=sop-id (entrada desde el inspector
+        // del Map · botón "📂 Ver SOP"), abrir el detalle de ese SOP.
+        const focus = new URLSearchParams(window.location.search).get('focus');
+        if (focus && this.sops.some(s => s.id === focus)) this._openDetail(focus);
     }
 
     destroy() { this._cancelBulk = true; }
