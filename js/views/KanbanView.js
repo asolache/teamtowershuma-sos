@@ -675,55 +675,108 @@ export default class KanbanView {
         const root = document.getElementById('kbModalRoot');
         if (!root) return;
         const close = () => { root.innerHTML = ''; };
-        const sopsList = await KnowledgeLoader.listSops();
+
+        // H1.10.3 · Fuente adaptativa según filtro de proyecto
+        // - Si hay filtro proyecto activo → SOPs DEL PROYECTO (KB.query type='sop' projectId=...).
+        //   Tienen sentido aquí porque son los productos/servicios reales del cliente.
+        // - Sin filtro o "Todos los proyectos" → SOPs públicos de TeamTowers
+        //   (los servicios que TT ofrece, gestión interna).
+        const projectActive = !!this.projectFilter;
+        const projectName = projectActive
+            ? ((this.projects.find(p => p.id === this.projectFilter) || {}).nombre || this.projectFilter)
+            : null;
+
+        let sopOptions = [];
+        let modeLabel  = '';
+        let modeHint   = '';
+        let emptyHtml  = '';
+
+        if (projectActive) {
+            modeLabel = '📁 SOPs del proyecto · ' + projectName;
+            modeHint  = 'Estos son los SOPs propios del cliente — sus productos/servicios reales. Las WOs generadas heredan el projectId automáticamente.';
+            const sopNodes = await KB.query({ type: 'sop', projectId: this.projectFilter });
+            sopOptions = sopNodes.map(n => ({
+                kind:       'project',
+                value:      n.id,
+                label:      (n.content?.name || n.id) + ' · rol ' + (n.content?.role_ref || '?'),
+                steps:      Array.isArray(n.content?.steps) ? n.content.steps : [],
+                slugForRef: 'project-' + (n.content?.role_ref || n.id),
+            }));
+            if (!sopOptions.length) {
+                emptyHtml = `
+                    <p style="color:#fca5a5;font-size:0.85rem;margin:1rem 0 0.5rem 0;">
+                        Este proyecto aún no tiene SOPs propios.
+                    </p>
+                    <p style="color:#aaa;font-size:0.78rem;">
+                        Genera los SOPs del cliente antes de crear WOs:
+                        <a href="/sops?project=${this.projectFilter}" data-link class="kb-link">📋 SOPs del proyecto</a>
+                        (botón "🤖 Generar todos los SOPs" para hacerlo en bulk).
+                    </p>
+                `;
+            }
+        } else {
+            modeLabel = '🏛 SOPs públicos · TeamTowers';
+            modeHint  = 'Estos son los SOPs canónicos de TeamTowers (los servicios que ofrecemos). Selecciona un proyecto en el filtro de arriba para ver los SOPs propios de ese cliente.';
+            const list = await KnowledgeLoader.listSops();
+            sopOptions = list.map(s => ({
+                kind:       'public',
+                value:      s.slug,
+                label:      s.slug,
+                slugForRef: s.slug,
+            }));
+            if (!sopOptions.length) {
+                emptyHtml = `<p style="color:#fca5a5;font-size:0.85rem;">No hay SOPs públicos en _index.md.</p>`;
+            }
+        }
+
         const wsOptions = this.workshops.map(w =>
             `<option value="${w.id}">${this._esc((w.content?.clientName || w.id) + ' · ' + (w.content?.type || ''))}</option>`
         ).join('');
-        const sopOptions = sopsList.map(s =>
-            `<option value="${s.slug}">${this._esc(s.slug)}</option>`
+        const sopSelectHtml = sopOptions.map(o =>
+            `<option value="${this._esc(o.value)}">${this._esc(o.label)}</option>`
         ).join('');
 
         root.innerHTML = `
             <div class="kb-modal" id="kbFromSopBg">
                 <div class="kb-modal-inner">
                     <h3>📋 Generar WOs desde SOP</h3>
-                    <p style="color:#aaa;font-size:0.78rem;margin:0;">
-                        Selecciona un SOP estructurado (con <code>steps:</code> en frontmatter)
-                        para descomponerlo en Work Orders en el Backlog. Cada paso del SOP
-                        produce 1 WO con asignee humano|IA según el step y la prioridad
-                        heredada. Trazabilidad completa vía <code>sopRef</code> + <code>stepRef</code>.
+                    <p style="background:rgba(99,102,241,0.1);border-left:2px solid #6366f1;padding:0.5rem;border-radius:3px;margin:0.5rem 0;color:#a5b4fc;font-size:0.78rem;">
+                        <strong>${this._esc(modeLabel)}</strong><br>
+                        <span style="color:#aaa;">${modeHint}</span>
                     </p>
 
-                    <div class="row" style="margin-top:0.8rem;">
-                        <div>
-                            <label>SOP</label>
-                            <select id="kbsfSop">${sopOptions}</select>
+                    ${emptyHtml || `
+                        <div class="row" style="margin-top:0.8rem;">
+                            <div>
+                                <label>SOP</label>
+                                <select id="kbsfSop">${sopSelectHtml}</select>
+                            </div>
+                            <div>
+                                <label>Workshop asociado (opcional)</label>
+                                <select id="kbsfWs">
+                                    <option value="">— ninguno —</option>
+                                    ${wsOptions}
+                                </select>
+                            </div>
                         </div>
-                        <div>
-                            <label>Workshop asociado (opcional)</label>
-                            <select id="kbsfWs">
-                                <option value="">— ninguno —</option>
-                                ${wsOptions}
-                            </select>
-                        </div>
-                    </div>
 
-                    <div class="row">
-                        <div>
-                            <label>FMV humano (€/h)</label>
-                            <input id="kbsfFmv" type="number" step="5" min="0" value="50">
+                        <div class="row">
+                            <div>
+                                <label>FMV humano (€/h)</label>
+                                <input id="kbsfFmv" type="number" step="5" min="0" value="50">
+                            </div>
+                            <div>
+                                <label style="visibility:hidden;">_</label>
+                                <button class="kb-btn" id="kbsfPreview">🔍 Previsualizar</button>
+                            </div>
                         </div>
-                        <div>
-                            <label style="visibility:hidden;">_</label>
-                            <button class="kb-btn" id="kbsfPreview">🔍 Previsualizar</button>
-                        </div>
-                    </div>
 
-                    <div id="kbsfPreviewArea" style="margin-top:0.8rem; max-height:300px; overflow-y:auto;"></div>
+                        <div id="kbsfPreviewArea" style="margin-top:0.8rem; max-height:300px; overflow-y:auto;"></div>
+                    `}
 
                     <div class="actions">
                         <button class="kb-btn" id="kbsfCancel">Cancelar</button>
-                        <button class="kb-btn kb-btn-primary" id="kbsfCreate" disabled>Crear N WOs en Backlog</button>
+                        ${emptyHtml ? '' : '<button class="kb-btn kb-btn-primary" id="kbsfCreate" disabled>Crear N WOs en Backlog</button>'}
                     </div>
                 </div>
             </div>
@@ -732,29 +785,42 @@ export default class KanbanView {
         document.getElementById('kbsfCancel').addEventListener('click', close);
         document.getElementById('kbFromSopBg').addEventListener('click', e => { if (e.target.id === 'kbFromSopBg') close(); });
 
+        if (emptyHtml) return;
+
         let pendingWOs = [];
         const previewBtn = document.getElementById('kbsfPreview');
         const createBtn  = document.getElementById('kbsfCreate');
         const area       = document.getElementById('kbsfPreviewArea');
 
         previewBtn.addEventListener('click', async () => {
-            const slug = document.getElementById('kbsfSop').value;
-            const wsId = document.getElementById('kbsfWs').value || null;
-            const fmv  = parseFloat(document.getElementById('kbsfFmv').value) || 50;
-            const steps = await KnowledgeLoader.getSopSteps(slug);
+            const value = document.getElementById('kbsfSop').value;
+            const wsId  = document.getElementById('kbsfWs').value || null;
+            const fmv   = parseFloat(document.getElementById('kbsfFmv').value) || 50;
+            const selected = sopOptions.find(o => o.value === value);
+            if (!selected) return;
+
+            // Resolver steps según fuente
+            let steps;
+            if (selected.kind === 'project') {
+                steps = selected.steps || [];
+            } else {
+                steps = await KnowledgeLoader.getSopSteps(selected.value);
+            }
             if (!steps.length) {
-                area.innerHTML = `<p style="color:#fca5a5;font-size:0.8rem;">El SOP <code>${this._esc(slug)}</code> no tiene <code>steps:</code> estructurados en frontmatter. Añádelos al .md y vuelve a previsualizar.</p>`;
+                area.innerHTML = `<p style="color:#fca5a5;font-size:0.8rem;">El SOP seleccionado no tiene <code>steps:</code>. Añádelos al .md o regenera el SOP del proyecto.</p>`;
                 createBtn.disabled = true;
                 pendingWOs = [];
                 return;
             }
-            pendingWOs = generateWosFromSop(slug, steps, {
+
+            pendingWOs = generateWosFromSop(selected.slugForRef, steps, {
                 workshopId: wsId,
+                projectId:  projectActive ? this.projectFilter : null,
                 fmvPerHour: fmv,
                 socRefs:    ['soc-teamtowers-brand'],
             });
             area.innerHTML = `
-                <p style="color:#86efac;font-size:0.8rem;">Se crearán <b>${pendingWOs.length} WOs</b> en Backlog:</p>
+                <p style="color:#86efac;font-size:0.8rem;">Se crearán <b>${pendingWOs.length} WOs</b> en Backlog${projectActive ? ' (con projectId=' + this._esc(this.projectFilter) + ')' : ''}:</p>
                 <ul style="font-size:0.78rem;color:#bbb;padding-left:1.2rem;">
                     ${pendingWOs.map(w => `
                         <li style="margin-bottom:0.3rem;">
