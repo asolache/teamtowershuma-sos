@@ -1159,6 +1159,108 @@ async function testLinkifyService() {
     assert(r11.includes('href="/n/wo-1"'),                               'multiline también linkifica refs');
 }
 
+// ─── UX-002 · semanticTagger · taxonomía + folksonomía pura ─────
+async function testSemanticTagger() {
+    const mod = await import('../core/semanticTagger.js?v=' + Date.now());
+    const {
+        KNOWN_TAXONOMY_PREFIXES,
+        validateTaxonomyTag,
+        buildTag,
+        taxonomicTagsForProject,
+        taxonomicTagsForRole,
+        taxonomicTagsForTransaction,
+        taxonomicTagsForSop,
+        taxonomicTagsForStep,
+        taxonomicTagsForWo,
+        mergeTags,
+    } = mod;
+
+    // KNOWN_TAXONOMY_PREFIXES contiene los 12+ prefijos canónicos
+    assert(Array.isArray(KNOWN_TAXONOMY_PREFIXES) && KNOWN_TAXONOMY_PREFIXES.length >= 12, 'catálogo de prefijos ≥ 12');
+    ['sector','cnae','kind','role','castell','deliverable','priority','step-kind','approval','status','scope','soc-ref','sop-ref'].forEach(p => {
+        assert(KNOWN_TAXONOMY_PREFIXES.includes(p),                   'catálogo incluye prefijo ' + p);
+    });
+
+    // validateTaxonomyTag reconoce los conocidos
+    const v1 = validateTaxonomyTag('sector:K');
+    assert(v1.taxonomy === true && v1.knownPrefix === true && v1.prefix === 'sector' && v1.value === 'k', 'sector:K reconocido como taxonómico');
+    const v2 = validateTaxonomyTag('proj:foo');
+    assert(v2.taxonomy === false && v2.knownPrefix === false,         '"proj:" (no listado) NO es taxonómico');
+    const v3 = validateTaxonomyTag('urgente');
+    assert(v3.taxonomy === false && v3.value === 'urgente',           'tag sin `:` es folksonómico');
+    const v4 = validateTaxonomyTag('  Kind:Project  ');
+    assert(v4.taxonomy === true && v4.prefix === 'kind' && v4.value === 'project', 'normaliza prefijo y valor');
+    const v5 = validateTaxonomyTag('');
+    assert(v5.ok === false,                                            'tag vacío NO es válido');
+
+    // buildTag normaliza
+    assert(buildTag('Sector', 'K') === 'sector:k',                    'buildTag normaliza prefijo y valor');
+    assert(buildTag('', 'k') === null,                                'buildTag rechaza prefijo vacío');
+    assert(buildTag('sector', '') === null,                           'buildTag rechaza valor vacío');
+
+    // taxonomicTagsForProject
+    const proj = { id: 'proj-ikea-mad', sector_id: 'K', cnae: '4321', nombre: 'IKEA Madrid' };
+    const tagsP = taxonomicTagsForProject(proj);
+    assert(tagsP.includes('kind:project'),                            'project tag · kind:project');
+    assert(tagsP.includes('sector:k'),                                'project tag · sector:k');
+    assert(tagsP.includes('cnae:4321'),                               'project tag · cnae:4321');
+    assert(tagsP.includes('scope:client'),                            'project tag · scope:client por defecto');
+    assert(tagsP.includes('project:proj-ikea-mad'),                   'project tag · project:{id}');
+    assert(new Set(tagsP).size === tagsP.length,                      'project tags únicos');
+
+    // taxonomicTagsForRole
+    const role = { id: 'atencion-cliente', castell_level: 'tronc', name: 'Atención' };
+    const tagsR = taxonomicTagsForRole(role, proj);
+    assert(tagsR.includes('kind:role'),                               'role tag · kind:role');
+    assert(tagsR.includes('role:atencion-cliente'),                   'role tag · role:{id}');
+    assert(tagsR.includes('castell:tronc'),                           'role tag · castell:tronc');
+    assert(tagsR.includes('sector:k'),                                'role tag hereda sector del proyecto');
+    assert(tagsR.includes('project:proj-ikea-mad'),                   'role tag hereda project:{id}');
+
+    // taxonomicTagsForTransaction
+    const tx = { id: 'tx-1', from: 'a', to: 'b', deliverable: 'X', type: 'tangible', is_must: true };
+    const tagsT = taxonomicTagsForTransaction(tx, proj);
+    assert(tagsT.includes('kind:transaction'),                        'tx tag · kind:transaction');
+    assert(tagsT.includes('tx-type:tangible'),                        'tx tag · tx-type:tangible');
+    assert(tagsT.includes('is-must:yes'),                             'tx tag · is-must:yes');
+
+    // taxonomicTagsForSop
+    const sop = { id: 'sop-x', name: 'SOP X', role_ref: 'atencion-cliente', soc_ref: 'soc-vna-network' };
+    const tagsS = taxonomicTagsForSop(sop, proj, role);
+    assert(tagsS.includes('kind:project-role-sop'),                   'sop tag · kind:project-role-sop');
+    assert(tagsS.includes('role:atencion-cliente'),                   'sop tag · role:{ref}');
+    assert(tagsS.includes('soc-ref:soc-vna-network'),                 'sop tag · soc-ref:{slug}');
+    assert(tagsS.includes('castell:tronc'),                           'sop tag hereda castell del rol');
+
+    // taxonomicTagsForStep
+    const step = { id: 's1', role_kind: 'ai', priority: 'high', approval_rule: 'tdd-auto', deliverable_kind: 'propuesta' };
+    const tagsStep = taxonomicTagsForStep(step);
+    assert(tagsStep.includes('step-kind:ai'),                         'step tag · step-kind:ai');
+    assert(tagsStep.includes('priority:high'),                        'step tag · priority:high');
+    assert(tagsStep.includes('approval:tdd-auto'),                    'step tag · approval:tdd-auto');
+    assert(tagsStep.includes('deliverable:propuesta'),                'step tag · deliverable:{kind}');
+
+    // taxonomicTagsForWo
+    const wo = { id: 'wo-1', projectId: 'proj-ikea-mad', content: { sopRef: 'sop-x', priority: 'med', approvalRule: 'manual', status: 'backlog', assignee: { kind: 'human' } } };
+    const tagsW = taxonomicTagsForWo(wo, null, step);
+    assert(tagsW.includes('kind:work-order'),                         'wo tag · kind:work-order');
+    assert(tagsW.includes('status:backlog'),                          'wo tag · status:backlog');
+    assert(tagsW.includes('sop-ref:sop-x'),                           'wo tag · sop-ref:{ref}');
+    assert(tagsW.includes('role-kind:human'),                         'wo tag · role-kind:human (assignee)');
+    assert(tagsW.includes('project:proj-ikea-mad'),                   'wo tag hereda project del wo');
+
+    // mergeTags · taxonomy primero · folksonomy después · únicos · sin perder
+    const merged = mergeTags(['kind:role','sector:k'], ['urgente','b2b','sector:k']);
+    assert(merged[0] === 'kind:role',                                 'mergeTags pone taxonómicos primero');
+    assert(merged.includes('urgente') && merged.includes('b2b'),      'mergeTags conserva folksonómicos');
+    assert(new Set(merged).size === merged.length,                    'mergeTags deduplica');
+
+    // Edge cases · null/undefined
+    assert(taxonomicTagsForProject(null).length === 0,                'null project → []');
+    assert(taxonomicTagsForRole(null).length === 0,                   'null role → []');
+    assert(mergeTags(null, null).length === 0,                        'null inputs → []');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -1179,7 +1281,8 @@ const SUITE = [
     { name: 'H7.3 · Generar WOs desde SOP steps[]',               fn: testGenerateWosFromSop },
     { name: 'H7.6 · WO Assistant · context + prompt builder',     fn: testWoAssistantContext },
     { name: 'UX-001 · tagsService · folksonomía pura',            fn: testTagsService },
-    { name: 'UX-001 sprint B · linkifyService · hipertexto puro', fn: testLinkifyService }
+    { name: 'UX-001 sprint B · linkifyService · hipertexto puro', fn: testLinkifyService },
+    { name: 'UX-002 · semanticTagger · taxonomía + folksonomía',  fn: testSemanticTagger }
 ];
 
 export async function runTests() {

@@ -147,19 +147,29 @@ export async function persistTagRemove(nodeId, rawTag) {
 
 // ─── Helper UX · render del editor inline de tags para una vista ───────────
 // Devuelve string HTML con chips de tags + input "+ tag".
-// El consumidor debe enganchar handlers (click chip → remove · enter input → add).
+// El consumidor debe enganchar handlers:
+//   - click sobre `.sos-tag-chip[data-taxonomy="false"]` → remove
+//   - chip taxonómico (data-taxonomy="true") es informativo, no clicable
+//   - Enter en input → add
+// UX-002: chips con `:` se renderizan con estilo taxonómico (azul claro,
+// sin × visible) y no son eliminables · son contrato del sistema.
 export function renderTagsEditor({ tags = [], inputId = 'tagsInput', chipClass = 'sos-tag-chip' } = {}) {
     const safeTags = (Array.isArray(tags) ? tags : []).map(normalizeTag).filter(Boolean);
-    const chips = safeTags.map(t => `
-        <span class="${chipClass}" data-tag="${t}" style="display:inline-flex;align-items:center;gap:4px;background:rgba(99,102,241,0.15);color:#a5b4fc;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-family:monospace;cursor:pointer;border:1px solid rgba(99,102,241,0.3);"
-            title="Click para eliminar">
+    const chips = safeTags.map(t => {
+        const isTaxonomy = t.includes(':');
+        if (isTaxonomy) {
+            return `<span class="${chipClass}" data-tag="${t}" data-taxonomy="true" title="Tag taxonómico · no editable" style="display:inline-flex;align-items:center;background:rgba(56,189,248,0.12);color:#7dd3fc;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-family:monospace;border:1px solid rgba(56,189,248,0.3);cursor:default;">
+                ${t}
+            </span>`;
+        }
+        return `<span class="${chipClass}" data-tag="${t}" data-taxonomy="false" title="Click para eliminar" style="display:inline-flex;align-items:center;gap:4px;background:rgba(99,102,241,0.15);color:#a5b4fc;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-family:monospace;cursor:pointer;border:1px solid rgba(99,102,241,0.3);">
             #${t} <span style="opacity:0.6;font-size:0.65rem;">×</span>
-        </span>
-    `).join(' ');
+        </span>`;
+    }).join(' ');
     return `
         <div class="sos-tags-editor" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
             ${chips}
-            <input id="${inputId}" type="text" placeholder="+ tag (Enter)" style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border,#2a2a35);color:#e6e6e6;padding:3px 8px;border-radius:10px;font-size:0.72rem;font-family:monospace;outline:none;width:120px;">
+            <input id="${inputId}" type="text" placeholder="+ tag folksonómico (Enter)" style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border,#2a2a35);color:#e6e6e6;padding:3px 8px;border-radius:10px;font-size:0.72rem;font-family:monospace;outline:none;width:160px;">
         </div>
     `;
 }
