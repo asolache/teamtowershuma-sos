@@ -14,10 +14,11 @@ export default class SettingsView {
         const keyOai   = await Orchestrator.getApiKey('openai')    || '';
         const keyDs    = await Orchestrator.getApiKey('deepseek')  || '';
         const keyGem   = await Orchestrator.getApiKey('gemini')    || '';
+        const keyMm    = await Orchestrator.getApiKey('minimax')   || '';
 
-        const pColors  = { anthropic:'var(--accent-purple)', openai:'var(--accent-green)', deepseek:'var(--accent-blue)', gemini:'#fbbc04', custom:'var(--text-muted)' };
-        const pLabels  = { anthropic:'Anthropic · claude-sonnet-4-20250514', openai:'OpenAI · GPT-4o', deepseek:'DeepSeek · V3', gemini:'Gemini · 2.0 Flash', custom:'Local / Ollama' };
-        const pHints   = { anthropic:'primary · via Netlify proxy', openai:'direct API', deepseek:'direct API · code optimized', gemini:'direct API · fast multimodal', custom:'localhost:11434' };
+        const pColors  = { anthropic:'var(--accent-purple)', openai:'var(--accent-green)', deepseek:'var(--accent-blue)', gemini:'#fbbc04', minimax:'#ff6b9d', custom:'var(--text-muted)' };
+        const pLabels  = { anthropic:'Anthropic · claude-sonnet-4-20250514', openai:'OpenAI · GPT-4o', deepseek:'DeepSeek · V3', gemini:'Gemini · 2.0 Flash', minimax:'MiniMax · Text-01', custom:'Local / Ollama' };
+        const pHints   = { anthropic:'primary · via Netlify proxy', openai:'direct API', deepseek:'direct API · code optimized', gemini:'direct API · fast multimodal', minimax:'direct API · 200K ctx · low cost', custom:'localhost:11434' };
         const pColor   = pColors[provider]  || pColors.anthropic;
         const pLabel   = pLabels[provider]  || pLabels.anthropic;
         const pHint    = pHints[provider]   || '';
@@ -71,6 +72,7 @@ export default class SettingsView {
                         <option value="openai"    ${provider==='openai'   ?'selected':''}>◆ OpenAI (GPT-4o)</option>
                         <option value="deepseek"  ${provider==='deepseek' ?'selected':''}>◈ DeepSeek (V3)</option>
                         <option value="gemini"    ${provider==='gemini'   ?'selected':''}>◉ Google Gemini 2.0 Flash</option>
+                        <option value="minimax"   ${provider==='minimax'  ?'selected':''}>◐ MiniMax Text-01 (200K · low cost)</option>
                         <option value="custom"    ${provider==='custom'   ?'selected':''}>◎ Local / Ollama</option>
                     </select>
                 </div>
@@ -97,6 +99,12 @@ export default class SettingsView {
                 <div class="sv-key-row">
                     <input type="password" id="svKeyGem" class="sv-input" value="${keyGem}" placeholder="AIza...">
                     <span class="sv-key-status" style="${keyBadge(keyGem)}">${keyText(keyGem)}</span>
+                </div>
+
+                <label class="sv-label">MiniMax API Key <span style="color:#ff6b9d;font-size:9px;">(platform.minimax.io · 200K ctx)</span></label>
+                <div class="sv-key-row">
+                    <input type="password" id="svKeyMm" class="sv-input" value="${keyMm}" placeholder="eyJhbGc...">
+                    <span class="sv-key-status" style="${keyBadge(keyMm)}">${keyText(keyMm)}</span>
                 </div>
 
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -137,6 +145,7 @@ export default class SettingsView {
             const keyOai   = document.getElementById('svKeyOai').value.trim();
             const keyDs    = document.getElementById('svKeyDs').value.trim();
             const keyGem   = document.getElementById('svKeyGem').value.trim();
+            const keyMm    = document.getElementById('svKeyMm').value.trim();
             btn.disabled   = true;
             btn.textContent = '⏳ Saving…';
             await Orchestrator.setDefaultProvider(provider);
@@ -144,6 +153,7 @@ export default class SettingsView {
             if (keyOai) await Orchestrator.saveApiKey('openai',    keyOai);
             if (keyDs)  await Orchestrator.saveApiKey('deepseek',  keyDs);
             if (keyGem) await Orchestrator.saveApiKey('gemini',    keyGem);
+            if (keyMm)  await Orchestrator.saveApiKey('minimax',   keyMm);
             btn.textContent = '✅ Saved';
             btn.disabled    = false;
             document.getElementById('svStatus').style.display = 'block';
