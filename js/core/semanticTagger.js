@@ -189,9 +189,16 @@ export function taxonomicTagsForWo(wo, sopRef = null, step = null) {
 // ─── Combinador · merge taxonomy + folksonomy preservando ambos ─────────────
 // Al persistir un nodo: combina los tags taxonómicos (que el sistema controla,
 // vienen siempre primero) con los folksonómicos (libres del usuario o LLM).
-// Garantiza unicidad y no descarta los folksonómicos previamente añadidos.
+// Garantiza unicidad y preserva el orden taxonomy-first.
+//
+// IMPORTANTE: NO usar normalizeTag aquí porque eliminaría el `:` de los
+// taxonómicos (los inputs ya vienen canonicalizados de buildTag para
+// taxonómicos, y los folksonómicos se normalizan en su flujo previo).
+// Sólo hacemos trim + filtro de vacíos + dedupe.
 export function mergeTags(taxonomic, folksonomic) {
-    const tax  = (taxonomic  || []).map(t => normalizeTag(t)).filter(Boolean);
-    const folk = (folksonomic || []).map(t => normalizeTag(t)).filter(Boolean);
-    return unique([...tax, ...folk]);
+    const norm = arr => (arr || [])
+        .filter(t => typeof t === 'string')
+        .map(t => t.trim())
+        .filter(Boolean);
+    return unique([...norm(taxonomic), ...norm(folksonomic)]);
 }
