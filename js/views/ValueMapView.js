@@ -1907,12 +1907,13 @@ export default class ValueMapView {
         // UX-002 · auto-tagging taxonómico + folksonómico
         // - taxonómicos: derivados del schema (kind/role/soc-ref/project/sector/castell)
         // - folksonómicos: el LLM puede haber devuelto sop.folksonomy[] (UX-002 fase 2)
-        const project = (store.getState().projects || []).find(p => p.id === result.projectRef);
-        const role    = this._state.roles.find(r => r.id === result.roleRef) || { id: result.roleRef };
+        const project   = (store.getState().projects || []).find(p => p.id === result.projectRef);
+        const roleReal  = this._state.roles.find(r => r.id === result.roleRef) || null;
+        const roleForTags = roleReal || { id: result.roleRef };
         const taxonomic = taxonomicTagsForSop(
             { id: sopId, role_ref: result.roleRef, soc_ref: sop.soc_ref || 'soc-vna-network' },
             project,
-            role
+            roleForTags
         );
         const folksonomic = Array.isArray(sop.folksonomy) ? sop.folksonomy : [];
         const tags = mergeTags(taxonomic, folksonomic);
@@ -1947,8 +1948,7 @@ export default class ValueMapView {
         });
         // H1.10.7 · refrescar mapa y re-pintar inspector si el rol sigue seleccionado
         await this._refreshSopByRole();
-        const role = this._state.roles.find(r => r.id === result.roleRef);
-        if (role && this._state.selectedId === role.id) this._renderRoleInspector(role);
+        if (roleReal && this._state.selectedId === roleReal.id) this._renderRoleInspector(roleReal);
     }
 
     _escHtml(str) {
