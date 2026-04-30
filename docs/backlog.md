@@ -77,6 +77,7 @@
 | **MKT-001** | **`/workshops` → Mercado SOS de productos y servicios** — convertir la vista actual en un mercado con: (1) buscador AJAX por **CNAE** + filtros por sector/tipo, (2) productos/servicios asociables a cualquier proyecto cliente como **outputs finales** de su red de valor (intercambio con stakeholders de la red macro tipo SOS Matriu Launch), (3) **carga de saldo** prepago para uso de APIs IA y operaciones blockchain (ancla pactos, FICE rounds), (4) cuadro comparativo de **ahorro vs alternativas convencionales** (notaría · contabilidad · project management · consultoría). Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟡 |
 | **UX-001** | **Hipertexto folksonómico universal · todo nodo es enlazable** — UX donde TODA entidad del Mind-as-Graph es un nodo navegable + enlazable a otros vía hipertexto folksonómico (tags libres del usuario que crean aristas tipo `related_to` con weight según frecuencia). Cada nodo `type='project'` con propósito empresarial/cooperativo/startup expone su propio dashboard de herramientas: Pacto de socios · Documento de constitución · Plan tokenómico · Contabilidad de valor · Pools de liquidez para exit · acceso a su Mapa de valor · Kanban · Ledger con cláusula de exit · Landing pública · Mercado de productos. Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟢 sprint A verde · resto 🟡 |
 | **UX-001 sprint A** | **Direccionabilidad universal + folksonomía base** — Ruta `/n/{nodeId}` (NodeView resuelve por `node.type`: project/sop/work_order/workshop redirigen a vistas especializadas; tipos genéricos muestran fallback con metadatos + JSON dump). Ruta `/tags` con cloud (tamaño según frecuencia) + lista filtrable de nodos por tag, sincronizada con query param `?tag=`. Módulo puro `js/core/tagsService.js` con `normalizeTag`/`aggregateTags`/`nodesWithTag`/`relatedEdgesByTag`/`addTagToNode`/`removeTagFromNode` + helpers async `persistTagAdd`/`persistTagRemove` (sincronizan `content.tags` ↔ `keywords` para que `KB.query({keyword})` funcione). Editor inline reusable `renderTagsEditor()`. Tests · 28 asserts puros. | ✅ verde |
+| **UX-002** | **Auto-tagging semántico al crear mapa, SOCs, SOPs y WOs** — capa **taxonómica** (tags estructurados con prefijo de alto valor semántico: `sector:K`, `cnae:4321`, `role:atencion-cliente`, `castell:tronc`, `deliverable:propuesta`, `kind:project-role-sop`, `step-kind:ai`, `priority:high`, etc.) + capa **folksonómica** (tags libres derivados del título/descripción por IA durante la generación · vocabulario humano: `urgencia`, `cliente-corporativo`, `colaborativo`, `repetitivo`, `creativo`, etc). Ambas se persisten en `content.tags[]` y se sincronizan a `node.keywords[]`. Punto de inserción: `sectorCloner` (taxonómicos en proyecto+roles+transactions), `roleSopGenerator` (taxonómicos+folksonómicos en SOP+steps), `generateWosFromSop` (taxonómicos en cada WO + folksonómicos opcionales). Objetivo: alimentar el matchmaking de Matriu (conectar personas por sector·rol·skill·deliverable·proyecto), reforzar el buscador del Mercado SOS (MKT-001) y dar weight real a las aristas virtuales `related_to` del Mind-as-Graph. Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟡 |
 | **H_ANIM_001** | **Visualizar flujo de valor con orden secuencial · multi-modelo** — animación + vistas alternativas (BPMN, swimlanes, Sankey, service blueprint, secuencia lineal) + ordenación manual o IA del flujo. Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
 | H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |
@@ -352,6 +353,90 @@ asociadas (una de salida, una de entrada) → ledger ↔ EAS attestation.
 - En MAT-001 se publican los productos a Arweave como manifests inmutables.
 - Los pagos en cripto pasan por el Safe del proyecto.
 - Los stakeholders se autentican por SBT identidad.
+
+---
+
+## UX-002 · Auto-tagging semántico (taxonómico + folksonómico) en la creación
+
+> Tesis @alvaro 2026-04-30: para que el Mind-as-Graph sea **realmente
+> conectable** (Matriu necesita matchmaking de personas por sector / rol
+> / skill / entregable), los nodos deben llegar al KB con **dos capas de
+> tags** ya pegadas en el momento de creación. La folksonomía libre
+> (UX-001) sigue siendo válida, pero por sí sola no basta: el operador
+> no añade a mano las claves taxonómicas que un buscador necesita.
+
+### Las dos capas
+
+| Capa | Origen | Forma | Ejemplo | Para qué |
+|---|---|---|---|---|
+| **Taxonómica** | Campos canónicos del nodo (no IA) | `prefijo:valor` con prefijos cerrados | `sector:K · cnae:4321 · role:atencion-cliente · castell:tronc · deliverable:propuesta · kind:project-role-sop · step-kind:ai · priority:high · soc-ref:soc-fent-pinya` | Filtros precisos (Mercado SOS · matchmaking) · weights altos en aristas · sin ambigüedad |
+| **Folksonómica** | LLM durante la generación + usuario | Tags libres normalizados (UX-001) | `urgencia · cliente-corporativo · colaborativo · creativo · repetitivo · b2b · madrid · 2026q2` | Discoverability humana · cloud `/tags` · sentido común |
+
+Ambas viven en el mismo `content.tags[]` (un único array de strings); el prefijo `:` es la única diferencia visible. Se sincronizan a `node.keywords[]` para que `KB.query({keyword:'sector:K'})` funcione directamente.
+
+### Puntos de inserción · qué tag genera cada generador
+
+| Generador | Taxonómicos (siempre) | Folksonómicos (LLM opcional) |
+|---|---|---|
+| **`sectorCloner`** (clona sector → proyecto cliente) | `sector:{id} · cnae:{code} · kind:project · scope:client · client:{slug}` en el proyecto. En cada rol: `role:{id} · castell:{level}`. En cada transaction: `tx-type:{tangible\|intangible} · is-must:{yes\|no}` | El propio LLM ya genera nombres y descripciones. Tras generación, una **segunda llamada barata** (DeepSeek/Gemini) extrae 3-5 folksonómicos por rol del cliente. |
+| **`roleSopGenerator`** | `kind:project-role-sop · role:{role-id} · project:{project-id} · soc-ref:{slug}`. En cada step: `step-kind:{ai\|human} · priority:{low\|med\|high} · approval:{manual\|tdd-auto}` | El LLM, en la misma llamada, devuelve un campo `folksonomy: string[]` con 3-7 tags libres del SOP completo. |
+| **`generateWosFromSop`** | `kind:work-order · sop-ref:{slug} · role-kind:{ai\|human} · priority:{level} · status:{backlog} · approval:{rule}` | Heredados del SOP padre (sin nueva llamada IA · son baratos y consistentes). |
+| **Inspector ValueMap** (manual) | (no aplica · entrada manual del operador) | El usuario pone los que quiera (UX-001). |
+
+### Catálogo de prefijos taxonómicos canónicos (vocabulario controlado)
+
+| Prefijo | Dominio de valor | Notas |
+|---|---|---|
+| `sector:` | A-Z (los 22 sectores ABC del KB de TT) | Heredado del catálogo TeamTowers 2026 |
+| `cnae:` | 4 dígitos (CNAE 2009 europeo) | Bridge con MKT-001 buscador CNAE |
+| `kind:` | `project · sop · work-order · workshop · ledger-entry · market-item · stakeholder · cop · pact · soc-seed · sop-seed · project-role-sop` | Cierra el set para distinguir subtipos dentro del mismo `node.type` |
+| `role:` | `{role-id}` del proyecto/sector | Para matchmaking |
+| `castell:` | `tronc · dosos · pinya · acotxador · enxaneta` | Niveles VNA |
+| `deliverable:` | `propuesta · informe · diagnostico · plan · auditoria · landing · pacto · constitucion · ledger-snapshot · video · workshop-recap` | Vocabulario común de outputs |
+| `priority:` | `low · med · high · urgent` | |
+| `step-kind:` / `role-kind:` | `human · ai` | |
+| `approval:` | `manual · tdd-auto` | |
+| `status:` | `backlog · doing · done · ledgered · cancelled` | |
+| `scope:` | `public · client · internal · cop` | Visibilidad |
+| `soc-ref:` / `sop-ref:` | slug del SOC/SOP referenciado | |
+
+Cualquier prefijo NO listado se trata como folksonómico (sin warning).
+
+### Implementación técnica (orden recomendado)
+
+1. **Helper puro** `js/core/semanticTagger.js` con funciones:
+   - `taxonomicTagsForProject(project, sector)` → `[]`
+   - `taxonomicTagsForRole(role, project)` → `[]`
+   - `taxonomicTagsForSop(sop, project, role)` → `[]`
+   - `taxonomicTagsForWo(wo, sop, step)` → `[]`
+   - `validateTaxonomyTag(tag)` → `{ ok: bool, prefix, value, knownPrefix: bool }`
+   - Tests puros (sin IA · sin KB).
+2. **Integración en generadores** existentes:
+   - `sectorCloner.persistClonedSector` añade tags taxonómicos al `KB_UPSERT` del proyecto y de cada rol.
+   - `roleSopGenerator.generateRoleSop` extiende el JSON output schema con `folksonomy: string[]` y tras parsear los mete en `content.tags`.
+   - `generateWosFromSop` (en KanbanView) añade tags taxonómicos heredados del SOP.
+3. **UI**: en el editor inline de `tagsService` (UX-001), distinguir visualmente los chips taxonómicos (color azul claro · NO eliminables · son contrato del sistema) de los folksonómicos (color índigo · eliminables).
+4. **Cloud `/tags`** (UX-001): añadir filtros "Sólo taxonómicos · Sólo folksonómicos · Todos" en topbar.
+5. **Matchmaking** (preview de Matriu): página `/match?tag=role:atencion-cliente&tag=sector:K` que devuelve nodos cruzados — mostrar 3 listas: Personas (placeholder hasta MAT-001) · Proyectos · SOPs.
+
+### Conexión con Matriu (MAT-001)
+
+- Las personas tendrán tags taxonómicos derivados de sus hats: `hat:tw · hat:tuc` y de sus skills validados por la CoP.
+- El matchmaking de Matriu consulta el grafo de tags taxonómicos para sugerir colaboraciones (ej. "Buscamos un `role:diseñador-grafico` para `project:matriu-launch` `sector:R`").
+- En la `Llançadora` (Mercado SOS), los productos se descubren por `cnae:` + `deliverable:`.
+
+### Coste IA estimado (folksonómicos)
+
+- **`roleSopGenerator`** ya hace la llamada · añadir el campo `folksonomy[]` al schema **es coste cero adicional** (sólo 30-50 tokens más en output).
+- **`sectorCloner`** ya hace la llamada principal · ídem cero adicional para folksonómicos del proyecto.
+- **Folksonómicos por rol** del cliente: una segunda llamada **opcional** con DeepSeek/Gemini (BACK-011 fallback más barato) · ~0,001€ por rol. Configurable on/off.
+
+### Tests propuestos
+
+- `taxonomicTagsForProject` produce el set correcto para un proyecto IKEA Madrid sector K (validar prefijos, no duplicados).
+- `taxonomicTagsForSop` incluye `kind:project-role-sop` + `role:` + `soc-ref:`.
+- `validateTaxonomyTag` reconoce los 12 prefijos del catálogo y marca como folksonómico cualquier no-listado.
+- Integration smoke: tras `generateRoleSop` simulado con LLM stub, el SOP devuelto trae `content.tags` con al menos 4 taxonómicos + N folksonómicos.
 
 ---
 
