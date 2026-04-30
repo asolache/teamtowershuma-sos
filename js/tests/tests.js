@@ -1091,6 +1091,74 @@ async function testTagsService() {
     assert(typeof html === 'string' && html.includes('#a') && html.includes('#b-c'), 'renderTagsEditor produce chips para los tags');
 }
 
+// ─── UX-001 sprint B · linkifyService · hipertexto puro ─────────
+async function testLinkifyService() {
+    const { linkifyNodeRefs, linkifyMultiline } = await import('../core/linkifyService.js?v=' + Date.now());
+
+    // Caso vacío
+    assert(linkifyNodeRefs('') === '',                                   'string vacío → vacío');
+    assert(linkifyNodeRefs(null) === '',                                 'null → vacío');
+
+    // Texto sin refs
+    assert(linkifyNodeRefs('Hola mundo') === 'Hola mundo',               'texto sin refs queda igual');
+    assert(linkifyNodeRefs('5 < 10') === '5 &lt; 10',                    'escapa HTML del texto literal');
+    assert(linkifyNodeRefs('a&b') === 'a&amp;b',                         'escapa & en literal');
+
+    // [[id]] simple
+    const r1 = linkifyNodeRefs('Ver [[wo-abc-123]]');
+    assert(r1.includes('href="/n/wo-abc-123"'),                          '[[id]] genera href /n/{id}');
+    assert(r1.includes('data-link'),                                     '[[id]] añade data-link para SPA');
+    assert(r1.includes('>wo-abc-123<'),                                  '[[id]] muestra el id como texto por defecto');
+
+    // [[id|alias]]
+    const r2 = linkifyNodeRefs('Esta WO [[wo-abc-123|propuesta IKEA]] está en marcha');
+    assert(r2.includes('>propuesta IKEA<'),                              '[[id|alias]] muestra el alias como texto');
+    assert(r2.includes('href="/n/wo-abc-123"'),                          '[[id|alias]] usa el id en href');
+
+    // #tag inline (con espacio o inicio)
+    const r3 = linkifyNodeRefs('Es un proyecto #b2b y #madrid.');
+    assert(r3.includes('href="/tags?tag=b2b"'),                          '#tag genera link a /tags?tag=');
+    assert(r3.includes('href="/tags?tag=madrid"'),                       '#tag funciona con varios en la frase');
+    assert(r3.includes('class="sos-tagref"'),                            '#tag tiene class sos-tagref');
+
+    // #tag en inicio de string
+    const r4 = linkifyNodeRefs('#urgente: ver detalle');
+    assert(r4.startsWith('<a'),                                          '#tag al inicio se reconoce');
+
+    // No confundir hashtag dentro de palabra (ej. C#)
+    const r5 = linkifyNodeRefs('lenguaje C#sharp no es tag');
+    assert(!r5.includes('href="/tags'),                                  '#tag pegado a letra anterior NO es tag');
+
+    // Múltiples refs mezcladas
+    const r6 = linkifyNodeRefs('[[proj-ikea-mad|IKEA Madrid]] tiene WO [[wo-1]] urgente #b2b');
+    const matches = (r6.match(/href="\/n\//g) || []).length + (r6.match(/href="\/tags/g) || []).length;
+    assert(matches === 3,                                                'mezcla de [[id]], [[id|alias]] y #tag genera 3 links');
+
+    // ID inválido → no convierte (preserva literal)
+    const r7 = linkifyNodeRefs('Cosas raras [[id con espacios]] aquí');
+    assert(!r7.includes('href="/n/'),                                    'ID con espacios NO se convierte');
+    assert(r7.includes('[[id con espacios]]'),                           'literal preservado escapado');
+
+    // Tag inválido (mayúsculas) NO se convierte
+    const r8 = linkifyNodeRefs('Un #TagMal no debería linkificar');
+    assert(!r8.includes('href="/tags'),                                  'tag con mayúsculas no es válido');
+
+    // XSS · no debe permitir HTML inyectado
+    const r9 = linkifyNodeRefs('texto <script>alert(1)</script>');
+    assert(!r9.includes('<script>'),                                     'escapa <script> embebido');
+    assert(r9.includes('&lt;script&gt;'),                                'lo escapa correctamente');
+
+    // Alias con HTML especial se escapa
+    const r10 = linkifyNodeRefs('[[id-1|<b>negrita</b>]]');
+    assert(!r10.includes('<b>negrita</b>'),                              'alias con HTML se escapa (no se permite tag bruto)');
+    assert(r10.includes('&lt;b&gt;negrita&lt;/b&gt;'),                   'alias escapado en el anchor');
+
+    // linkifyMultiline · saltos de línea
+    const r11 = linkifyMultiline('Línea 1\nLínea 2 con [[wo-1]]');
+    assert(r11.includes('<br>'),                                         'multiline convierte \\n en <br>');
+    assert(r11.includes('href="/n/wo-1"'),                               'multiline también linkifica refs');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -1110,7 +1178,8 @@ const SUITE = [
     { name: 'H7.2 · Kanban · prompt builder IA + TDD eval',       fn: testKanbanExecutionPromptAndTdd },
     { name: 'H7.3 · Generar WOs desde SOP steps[]',               fn: testGenerateWosFromSop },
     { name: 'H7.6 · WO Assistant · context + prompt builder',     fn: testWoAssistantContext },
-    { name: 'UX-001 · tagsService · folksonomía pura',            fn: testTagsService }
+    { name: 'UX-001 · tagsService · folksonomía pura',            fn: testTagsService },
+    { name: 'UX-001 sprint B · linkifyService · hipertexto puro', fn: testLinkifyService }
 ];
 
 export async function runTests() {
