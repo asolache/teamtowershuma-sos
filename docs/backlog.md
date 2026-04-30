@@ -357,6 +357,78 @@ asociadas (una de salida, una de entrada) → ledger ↔ EAS attestation.
 
 ---
 
+## REL-001 · Release roadmap · pre-alfa → alfa → beta → v1
+
+> Tesis @alvaro 2026-04-30: estamos en **pre-alfa** (cliente cero · @alvaro
+> iterando consigo mismo · sin facturación). Cuando el sistema tenga
+> consistencia operativa entramos en **alfa** y queremos poder **facturar
+> como testeo** a los primeros clientes piloto · cobro real con disclaimer
+> de "alfa · sin SLA · acuerdo de feedback". Sirve para 4 cosas:
+>
+> 1. Validar willingness-to-pay (la métrica de verdad de un producto).
+> 2. Generar primeras `LedgerEntry` reales con triple-entry verificable.
+> 3. Probar la pasarela de pagos antes de escalar.
+> 4. Calibrar el cuadro comparativo de ahorro (MKT-001) con datos reales.
+
+### Fases
+
+| Fase | Estado | Quién | Facturación | Disclaimer |
+|---|---|---|---|---|
+| **pre-alfa** | 🟢 actual | @alvaro + IAs | ❌ | "no facturar · iteración rápida" |
+| **alfa privada** | 🟡 próxima | 3-5 clientes piloto invitados | ✅ como testeo | "alfa · sin SLA · feedback obligatorio" |
+| **beta pública** | 🟡 | Cualquiera con código de invitación | ✅ con SLA reducido | "beta · feedback bienvenido · refund-friendly" |
+| **v1** | 🟡 | Abierto + Mercado SOS público | ✅ completo | T&C estándar |
+
+### BILL-001 · Facturación de alfa privada (sub-historia)
+
+Necesario para entrar en alfa privada:
+
+1. **Pasarela de pagos · 2 caminos**:
+   - **Stripe Checkout** (€/USD · tarjeta · Apple/Google Pay · SEPA) ·
+     setup en 1h con clave test/live · webhook a `/api/stripe-webhook`.
+   - **Cripto · USDC en Gnosis** (preview de MAT-001) · QR + dirección
+     de Safe del proyecto · confirmación on-chain via viem.
+2. **Modelo de facturación** · 3 productos iniciales para alfa:
+   - Recarga saldo APIs IA (tramos €10/€25/€50/€100)
+   - Servicio "Mapa de valor IKEA-style" (precio fijo €495)
+   - Servicio "Cosecha VNA + propuesta IA Context-First" (precio fijo €750)
+3. **Generación de factura firmada** (PDF + JSON canónico ECDSA) · usa
+   la firma del proyecto (H1.3 export firmado) · attestation EAS triple-
+   entry cuando MAT-001 esté en marcha.
+4. **Conexión a wallet prepago** (MKT-001 fase C) · cada cobro Stripe se
+   convierte automáticamente en créditos del proyecto cliente · saldo
+   visible en topbar.
+5. **Disclaimer alfa visible** en checkout y email post-pago · "Versión
+   alfa · sin SLA · feedback obligatorio en 7 días para mantener acceso".
+6. **Modo "test billing"** en `/settings` · flag local para alternar
+   entre modo Stripe-test y modo Stripe-live sin redeploy.
+7. **Panel admin de facturas** (vista `/admin/billing`) · lista de
+   transacciones con estado · descarga PDF · re-firma · refund.
+8. **Métricas alfa** · dashboard con MRR, conversión free→pago, ahorro
+   acumulado del cliente, NPS de feedback.
+
+### Criterios de salida pre-alfa → alfa privada
+
+Antes de aceptar el primer pago real, validar:
+
+- [ ] Tests · ALL GREEN sostenido durante ≥ 2 semanas en main.
+- [ ] Export/Import firmado E2E con un proyecto piloto real (sin pérdida).
+- [ ] Cuadro comparativo de ahorro (MKT-001) con al menos 3 servicios reales.
+- [ ] Wallet prepago + decremento automático en cada `Orchestrator.callLLM` · saldo visible.
+- [ ] Pasarela Stripe configurada en test · 5 transacciones simuladas exitosas.
+- [ ] Plantilla de factura firmada validada por asesor fiscal (1 hora de revisión).
+- [ ] Pacto base de "alfa privada" redactado (cláusula de feedback obligatorio · refund 30 días).
+- [ ] H7.6 (asistencia IA con contexto) · usado en al menos 5 WOs reales para validar plantilla SOS.
+
+### Conexión con otras historias del backlog
+
+- **MKT-001 sprint C** (wallet prepago) es prerequisito directo de BILL-001.
+- **MAT-001 fase 4** (Pact.sol + EAS attestations) refuerza la facturación con triple-entry on-chain.
+- **H1.3** (export firmado ECDSA) ya cubre la firma de facturas a corto plazo.
+- **OPS-001** (auto-export) garantiza que ningún cobro se pierde por purga de caché.
+
+---
+
 ## UX-002 · Auto-tagging semántico (taxonómico + folksonómico) en la creación
 
 > Tesis @alvaro 2026-04-30: para que el Mind-as-Graph sea **realmente
