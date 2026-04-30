@@ -72,7 +72,8 @@
 | H1.10.6 | Modal "+Nueva WO" · campo "SOP de referencia" pasa de input texto a `<select>` con SOPs del proyecto activo (preselección automática vía `projectFilter`). Sin proyecto activo → input texto libre con hint. Input @alvaro 2026-04-30. | ✅ verde |
 | **BACK-008** | **Añadir MiniMax como proveedor IA** (platform.minimax.io). Entrada en `BASE_PRICING` (0.20/1.10 USD per 1M) + branch en `callLLM` (endpoint `https://api.minimax.io/v1/text/chatcompletion_v2`, modelo `MiniMax-Text-01`) + selector + key input en `/settings` + add a la chain de fallback. Pendiente: probar con clave real y validar respuesta JSON. | ✅ implementado · pendiente test E2E |
 | **H1.10.7** | **Inspector ValueMap muestra estado del SOP por rol** — cuando un rol del mapa ya tiene SOP generado (`KB.query type='sop' projectId=… role_ref=role.id`), el inspector muestra badge "✅ SOP generado · N steps" + botones "📂 Ver SOP" (abre `/sops?project=…&focus=sopId` con el detalle directo) + "🔁 Regenerar SOP con IA". Sin SOP → "📋 Generar SOP del rol con IA". `_state.sopByRole` cachea `Map(roleId → sopNode)`, refrescado en `afterRender` y tras `_persistRoleSop` (re-pinta inspector sin recargar). Input @alvaro 2026-04-30. | ✅ verde |
-| **H7.6** | **Asistencia IA con contexto exacto a una WO humana** — botón "🤖 Pedir asistencia IA" en cada WO `assignee.kind='human'`. Modal donde el humano pega/adjunta los datos brutos del trabajo. La IA recibe via `KnowledgeLoader.assembleContext({ projectId, sopId })`: SOC(s) + SOP referenciado + estado del proyecto + rol del assignee + datos pegados. System prompt: "estándar de comunicaciones interno SOS" — output como informe MD con arquitectura semántica explícita (ver bloque dedicado abajo). El informe se guarda como `content.aiAssistDraft` del WO + se puede descargar/copiar. Input @alvaro 2026-04-30. | 🟡 |
+| **H7.6** | **Asistencia IA con contexto exacto a una WO humana** — botón "🤖 Pedir asistencia IA" en cada WO `assignee.kind='human'`. Modal donde el humano pega/adjunta los datos brutos del trabajo. La IA recibe via `assembleWoContext`: SOC(s) + SOP referenciado + estado del proyecto + rol del assignee + datos pegados. System prompt: "estándar de comunicaciones interno SOS" — output como informe MD con arquitectura semántica explícita de 8 secciones (ver bloque dedicado abajo). Persiste en `content.aiAssistDraft` + `content.aiAssistMeta`. Acciones: Copiar · Descargar .md · Regenerar. Input @alvaro 2026-04-30. | ✅ verde (fase A core+tests · fase B UI+persistencia) |
+| **H1.10.8** | **Dropdown de engines IA en "+Nueva WO" cuando assignee=IA** — el campo "Assignee · ID / engine" hoy es input texto libre. Cuando `assignee.kind='ai'` mostrar `<select>` con las APIs disponibles en KB (KB.getNode keys configuradas en `/settings`) + "anthropic / openai / deepseek / gemini / minimax / custom". Preselección por defecto = `Orchestrator.getDefaultProvider()`. Para humanos: pendiente (necesita capa de "miembros" del proyecto, lo trataremos en MAT-001 con la matriz incubadora y la app móvil). Input @alvaro 2026-04-30. | 🟡 |
 | **H_ANIM_001** | **Visualizar flujo de valor con orden secuencial · multi-modelo** — animación + vistas alternativas (BPMN, swimlanes, Sankey, service blueprint, secuencia lineal) + ordenación manual o IA del flujo. Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
 | H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |
@@ -248,6 +249,116 @@ Persistencia: añadir a cada `transaction` (arista) los campos:
   de Lean, Sankey si viene de finanzas).
 
 Una sola fuente de verdad (Mind-as-Graph) → N vistas. Sin duplicar datos.
+
+---
+
+## MAT-001 · Matriu Incoopadora (proyecto paralelo · app móvil + on-chain)
+
+> Documento técnico de handoff aportado por @alvaro 2026-04-30. Es un
+> producto **paralelo** (no sustituye SOS V11), que hereda el kernel de
+> esta rama y lo amplía con identidad on-chain, multi-proyecto, gobernanza
+> y triple comptabilidad verificable. La app móvil de Matriu será el
+> entorno donde resolveremos la capa "humanos como miembros del proyecto"
+> que hoy SOS V11 deja en input texto libre (ver H1.10.8).
+
+### Visión
+
+Matriu es **6 cosas a la vez**:
+
+1. **Formación** · cohort intensiva 10 semanas
+2. **Comunidad de Práctica (CoP)** · espacios vivos de conocimiento
+3. **Junior empresa** · prototipamos contigo
+4. **Incubadora** · método SOS + IA integrada
+5. **Aceleradora** · capital cooperativo via FICE
+6. **Llançadora** · landing + modelo de negocio operativo
+
+La app es el OS de esta experiencia. Hereda el kernel de
+`asolache/teamtowershuma-sos@claude/value-map-tool-8ovUP` y lo amplía con
+identidad ERC-721 SBT, hats ERC-1155 (TW/TUC/TI/TF), governance ECO
+ERC-20Votes, attestations EAS triple-entry, pactos firmados EIP-712,
+FICE rounds quadratic voting.
+
+### Arquitectura objetivo
+
+```
+UI · React + Vite + TypeScript (paleta Earth · Instrument Serif · Inter Tight)
+  ├─ LOCAL-FIRST · IndexedDB + Dexie + Automerge CRDT (WebRTC peer sync)
+  ├─ PERMAWEB    · Arweave via Turbo SDK (manifests · pactos · ledger snapshots · CoP docs)
+  └─ BLOCKCHAIN  · Gnosis Chain · Safe wallets · ERC-721 SBT · ERC-1155 hats
+                   · ERC-20Votes ECO · EAS attestations · Pact.sol · FICE.sol
+```
+
+Patrón sync: **event sourcing** con outbox local que propaga a:
+- WebRTC peer broadcast (colaboradores activos)
+- Arweave checkpoint (cada N events o intervalo)
+- On-chain commit (sólo eventos con requisito legal: pacto, voto, validación de hat)
+
+### Stack técnico
+
+```
+Front:    React 18 + Vite + TypeScript + Vanilla CSS tokens (heredados de SOS)
+Estado:   Zustand + Automerge para docs colaborativos
+Local DB: Dexie.js
+Crypto:   viem + ethers + noble-secp256k1
+Permaweb: @ardrive/turbo-sdk
+On-chain: viem + wagmi + RainbowKit + WalletConnect + Safe SDK
+Build:    Vite + PWA plugin (off-line shell)
+i18n:     i18next (ca · es · en)
+Tests:    Vitest + Playwright
+CI:       GitHub Actions → Netlify
+```
+
+### Roadmap (16 semanas · 1 cohort y media)
+
+| Fase | Semanas | Entregable |
+|---|---|---|
+| **0** Fundaciones | 2 | Migrar repo a TS+React+Vite preservando Dashboard/ValueMap/Kanban/Workshops · Dexie schema · Automerge repo · PWA shell · i18n |
+| **1** Identidad/hats | 2 | WalletConnect login · Mint SBT identidad · Profile con 4 hats · validación social TW |
+| **2** Multi-proyecto + CoP | 2 | Pantallas Home/Cohort/Proyectos/Detall/Comunitats · CRDT sharing |
+| **3** Mapa Valor + Kanban | 2 | Pantallas 15-16 · IA detecta gaps · Knowledge artifacts → Arweave |
+| **4** Pactos + Triple comptabilidad | 3 | Pantalla 09 con EIP-712 · Pact.sol en Gnosis · Pantalla 17 Ledger con EAS · Merkle snapshot 24h |
+| **5** Wallet/FICE/lanzamiento | 3 | Pantallas 10/11 · ECO ERC-20Votes · Snapshot space · Pantalla 08 generador landing |
+| **6** Polish + pilot | 2 | Import/export Arweave bundle · passkey signin · Cohort 0 piloto 3 proyectos |
+
+### Modelo de datos (entidades vs storage)
+
+| Entidad | Storage primario | Replicación |
+|---|---|---|
+| User | IndexedDB | Arweave manifest público |
+| Hat (TW/TUC/TI/TF) | Gnosis ERC-1155 | mirror IndexedDB |
+| Project | IndexedDB + CRDT | Arweave manifest + Safe |
+| ValueMap | CRDT (Automerge) | snapshot Arweave |
+| KanbanCard | CRDT | local-only hasta sealing |
+| Pact | IndexedDB → Arweave → Gnosis | los tres |
+| LedgerEntry | IndexedDB → Arweave | EAS attestation por entry |
+| CoP | CRDT shared doc | Arweave + ar.io gateway |
+| FICEProposal | Gnosis Snapshot | mirror IndexedDB |
+
+### Decisiones de persistencia
+
+- **IndexedDB** · todo. App 100% off-line es invariante.
+- **Arweave** · pactos, snapshots ledger, manifests proyecto, CoP docs. Nunca datos sensibles sin xifrar (Lit Protocol o ECIES).
+- **Blockchain** · mints identidad/hats, hash arrels pactos/ledger, votos FICE, custodia ECO. **Nunca** datos brutos on-chain — siempre hash + Arweave pointer.
+
+### Conexión con SOS V11 (kernel actual)
+
+- El kernel `claude/value-map-tool-8ovUP` (esta rama) es el **punto de partida** del Fase 0.
+- Todo lo que estamos construyendo aquí (Mind-as-Graph KB, Antigravity Engine, KnowledgeLoader, Orchestrator multi-provider, woAssistant, roleSopGenerator, sectorCloner) **se reusa** en TS.
+- La estructura `knowledge/socs/` + `knowledge/sops/` se mantiene y se firma por Arweave.
+- Cada `LedgerEntry` actual genera attestations EAS triple-entry (econ + social + ambiental).
+- La capa `assignee.kind='human'` (hoy texto libre) pasa a tener identidad SBT real, con hats que validan permisos por proyecto.
+
+### Inputs que hay que preparar antes de Fase 0
+
+- [ ] Decisión deploy: Netlify edge functions ↔ Cloudflare Workers ↔ Vercel
+- [ ] Wallet del proyecto Matriu en Gnosis (Safe multisig)
+- [ ] Compra de crédits Turbo (Arweave) inicial
+- [ ] Diseño visual completo (`Matriu App.html` + `Matriu Incoopadora.html`)
+- [ ] Smart contracts review (`Pact.sol`, `FICE.sol`) por auditor
+
+### Estado actual
+
+🟡 **No iniciado.** Backlog reservado · arrancar tras cierre de Olas 6-7 de SOS V11 (Antigravity completo + UI movile-friendly + persistencia consolidada).
 
 ---
 
