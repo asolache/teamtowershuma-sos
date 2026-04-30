@@ -15,6 +15,7 @@ import { store }        from '../core/store.js';
 import { KB }           from '../core/kb.js';
 import { navigateTo }   from '../router.js';
 import { renderTagsEditor, persistTagAdd, persistTagRemove } from '../core/tagsService.js';
+import { linkifyMultiline } from '../core/linkifyService.js';
 
 // Mapping tipo → URL especializada (si existe).
 function specializedUrlFor(node) {
@@ -124,7 +125,7 @@ export default class NodeView {
                 ${c.description || c.summary ? `
                     <div class="nv-card">
                         <div class="nv-label">Descripción</div>
-                        <div style="font-size:0.88rem;line-height:1.5;color:#ddd;">${this._esc(c.description || c.summary)}</div>
+                        <div style="font-size:0.88rem;line-height:1.5;color:#ddd;">${linkifyMultiline(c.description || c.summary)}</div>
                     </div>
                 ` : ''}
 

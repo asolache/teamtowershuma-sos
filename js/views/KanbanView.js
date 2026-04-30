@@ -22,6 +22,7 @@
 import { store }           from '../core/store.js';
 import { KB }              from '../core/kb.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
+import { linkifyMultiline } from '../core/linkifyService.js';
 
 // Orchestrator se importa dinámicamente con cache-bust en _executeAi
 // (ver BUG-002/003) para que fixes del parser se apliquen sin requerir
@@ -1073,7 +1074,7 @@ export default class KanbanView {
                         · aprobación ${this._esc(c.approvalRule || 'manual')}
                     </p>
 
-                    ${c.description ? `<p style="color:#bbb;font-size:0.85rem;margin-top:0.7rem;">${this._esc(c.description)}</p>` : ''}
+                    ${c.description ? `<p style="color:#bbb;font-size:0.85rem;margin-top:0.7rem;">${linkifyMultiline(c.description)}</p>` : ''}
 
                     <div class="row" style="margin-top:0.5rem;">
                         <div>
