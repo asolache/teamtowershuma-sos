@@ -934,6 +934,90 @@ async function testBulkGenSopOrchestration() {
     assert(typeof mod.generateAllRoleSopsForProject === 'function',         'generateAllRoleSopsForProject exportada');
 }
 
+// ─── H7.6 · WO Assistant · contexto + prompt builder ─────────────
+async function testWoAssistantContext() {
+    const { assembleWoContext, buildWoAssistPrompt } = await import('../core/woAssistant.js?v=' + Date.now());
+
+    const wo = {
+        id: 'wo-test-001',
+        type: 'work_order',
+        projectId: 'proj-ikea-mad',
+        content: {
+            title:          'Diagnóstico devolución pedido #4521',
+            description:    'Cliente reporta que el sofá no encaja en la sala. Evaluar opciones.',
+            status:         'doing',
+            priority:       'high',
+            estimatedHours: 1.5,
+            fmvPerHour:     50,
+            sopRef:         'sop-atencion-cliente-proj-ikea-mad',
+            socRefs:        ['soc-teamtowers-brand'],
+            assignee:       { kind: 'human', id: '@maria' },
+            projectId:      'proj-ikea-mad',
+        },
+    };
+    const project = { id: 'proj-ikea-mad', nombre: 'IKEA Madrid Servicios', sector_id: 'K', based_on_sector: 'K', vna_roles: [{ id: 'atencion-cliente', name: 'Atención Cliente', castell_level: 'tronc' }] };
+    const sopNode = { id: 'sop-atencion-cliente-proj-ikea-mad', type: 'sop', projectId: 'proj-ikea-mad', content: { name: 'SOP Atención Cliente IKEA', role_ref: 'atencion-cliente', steps: [{ id: 'step-1', label: 'Recibir incidencia', role_kind: 'human', duration_minutes: 5 }, { id: 'step-2', label: 'Generar borrador respuesta', role_kind: 'ai', duration_minutes: 3 }] } };
+    const socNotes = ['SOC teamtowers-brand: 10 valores casteller, NO inventar precios.'];
+    const role = project.vna_roles[0];
+
+    // assembleWoContext
+    const ctx = assembleWoContext({ wo, project, sopNode, socNotes, role });
+    assert(ctx.woId === 'wo-test-001',                              'ctx.woId correcto');
+    assert(ctx.woTitle.includes('Diagnóstico'),                     'ctx.woTitle preservado');
+    assert(ctx.projectId === 'proj-ikea-mad',                       'ctx.projectId tomado de wo');
+    assert(ctx.projectName === 'IKEA Madrid Servicios',             'ctx.projectName del project');
+    assert(ctx.sopRef === 'sop-atencion-cliente-proj-ikea-mad',     'ctx.sopRef del wo.content');
+    assert(ctx.sopName === 'SOP Atención Cliente IKEA',             'ctx.sopName del sopNode');
+    assert(ctx.sopHasSteps === true,                                'ctx.sopHasSteps true cuando steps.length>0');
+    assert(ctx.sopSteps.length === 2,                               'ctx.sopSteps preserva los 2 steps');
+    assert(ctx.socRefs.includes('soc-teamtowers-brand'),            'ctx.socRefs lista los socRefs del wo');
+    assert(ctx.socNotes.length === 1,                               'ctx.socNotes preserva las 1 notas pasadas');
+    assert(ctx.role && ctx.role.id === 'atencion-cliente',          'ctx.role preservado');
+    assert(ctx.assigneeKind === 'human' && ctx.assigneeId === '@maria', 'assignee humano correcto');
+
+    // assembleWoContext sin sopNode → sopHasSteps=false, sopName=null
+    const ctxNoSop = assembleWoContext({ wo: { id: 'wo-2', content: { title: 'WO suelta' } } });
+    assert(ctxNoSop.sopHasSteps === false,                          'sopHasSteps false sin sopNode');
+    assert(ctxNoSop.sopName === null,                               'sopName null sin sopNode');
+    assert(ctxNoSop.projectId === null,                             'projectId null sin proyecto');
+
+    // buildWoAssistPrompt
+    const humanInput = 'El cliente envió foto del sofá en la entrada de la casa. No cabe por la puerta. Modelo KIVIK 3 plazas. Pedido 4521 de hace 8 días.';
+    const prompt = buildWoAssistPrompt(ctx, humanInput);
+    assert(typeof prompt === 'string' && prompt.length > 600,                    'buildWoAssistPrompt devuelve string sustancioso');
+    assert(prompt.includes('wo-test-001'),                                       'prompt incluye woId');
+    assert(prompt.includes('Diagnóstico devolución'),                            'prompt incluye título de la WO');
+    assert(prompt.includes('proj-ikea-mad'),                                     'prompt incluye projectId');
+    assert(prompt.includes('IKEA Madrid Servicios'),                             'prompt incluye nombre del proyecto');
+    assert(prompt.includes('sop-atencion-cliente-proj-ikea-mad'),                'prompt incluye sopRef');
+    assert(prompt.includes('Recibir incidencia'),                                'prompt embeba label de step humano del SOP');
+    assert(prompt.includes('Generar borrador respuesta'),                        'prompt embeba label de step IA del SOP');
+    assert(prompt.includes('soc-teamtowers-brand'),                              'prompt referencia SOC raíz');
+    assert(prompt.includes('SOC teamtowers-brand: 10 valores casteller'),        'prompt embeba notas de SOC');
+    assert(prompt.includes('atencion-cliente'),                                  'prompt embeba id del rol VNA');
+    assert(prompt.includes('HUMAN_INPUT_START') && prompt.includes('HUMAN_INPUT_END'), 'prompt encapsula humanInput entre marcadores');
+    assert(prompt.includes('KIVIK 3 plazas'),                                    'prompt preserva contenido del input humano');
+    assert(prompt.includes('## 0 · Contexto inyectado (Chitta)'),                'prompt instruye sección 0 (contexto)');
+    assert(prompt.includes('## 1 · Síntesis'),                                   'prompt instruye sección 1 (síntesis)');
+    assert(prompt.includes('## 2 · Diagnóstico estructurado'),                   'prompt instruye sección 2 (diagnóstico)');
+    assert(prompt.includes('## 4 · DTD · test de aprobación'),                   'prompt instruye sección 4 (DTD obligatoria)');
+    assert(prompt.includes('## 5 · Intangibles humanos requeridos'),             'prompt instruye sección 5 (intangibles)');
+    assert(prompt.includes('## 6 · Mind-as-Graph'),                              'prompt instruye sección 6 (KB upserts propuestos)');
+    assert(prompt.includes('NO inventes datos'),                                 'prompt prohíbe alucinar');
+    assert(prompt.includes('HECHOS'),                                            'prompt fuerza distinción hechos/inferencias/lagunas');
+
+    // buildWoAssistPrompt rechaza humanInput vacío
+    let threw = false;
+    try { buildWoAssistPrompt(ctx, ''); } catch (_) { threw = true; }
+    assert(threw === true,                                                       'buildWoAssistPrompt lanza si humanInput vacío');
+
+    // Verificar que el orquestador está exportado
+    const mod = await import('../core/woAssistant.js?v=' + Date.now());
+    assert(typeof mod.generateWoAssistReport === 'function',                     'generateWoAssistReport exportada');
+    assert(typeof mod.assembleWoContext === 'function',                          'assembleWoContext exportada');
+    assert(typeof mod.buildWoAssistPrompt === 'function',                        'buildWoAssistPrompt exportada');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -951,7 +1035,8 @@ const SUITE = [
     { name: 'H2.6 · Selector tipo servicio · prompts dinámicos',  fn: testWorkshopsServiceTypeSelector },
     { name: 'H7.1 · Kanban Work Orders · CRUD + ledger',          fn: testKanbanWorkOrders },
     { name: 'H7.2 · Kanban · prompt builder IA + TDD eval',       fn: testKanbanExecutionPromptAndTdd },
-    { name: 'H7.3 · Generar WOs desde SOP steps[]',               fn: testGenerateWosFromSop }
+    { name: 'H7.3 · Generar WOs desde SOP steps[]',               fn: testGenerateWosFromSop },
+    { name: 'H7.6 · WO Assistant · context + prompt builder',     fn: testWoAssistantContext }
 ];
 
 export async function runTests() {
