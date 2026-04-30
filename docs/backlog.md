@@ -71,6 +71,8 @@
 | **BUG-007** | Botón "Crear N WOs en Backlog" del modal "📋 Desde SOP" no hace nada al pulsar. Fix defensivo: alert si `pendingWOs` vacío + try/catch + console.log para diagnóstico. Input @alvaro 2026-04-30. | ✅ fixed |
 | H1.10.6 | Modal "+Nueva WO" · campo "SOP de referencia" pasa de input texto a `<select>` con SOPs del proyecto activo (preselección automática vía `projectFilter`). Sin proyecto activo → input texto libre con hint. Input @alvaro 2026-04-30. | ✅ verde |
 | **BACK-008** | **Añadir MiniMax como proveedor IA** (platform.minimax.io). Entrada en `BASE_PRICING` (0.20/1.10 USD per 1M) + branch en `callLLM` (endpoint `https://api.minimax.io/v1/text/chatcompletion_v2`, modelo `MiniMax-Text-01`) + selector + key input en `/settings` + add a la chain de fallback. Pendiente: probar con clave real y validar respuesta JSON. | ✅ implementado · pendiente test E2E |
+| **H1.10.7** | **Inspector ValueMap muestra estado del SOP por rol** — cuando un rol del mapa ya tiene SOP generado (`KB.query type='sop' projectId=… role_ref=role.id`), el inspector muestra "✅ SOP generado · 📂 Ver / 🔁 Regenerar" en vez de sólo "📋 Generar SOP del rol con IA". "Ver" abre `/sops?project=…&focus=role-id`. Estado del SOP se cachea en `_state.sopByRole` (Map) y se refresca tras generar/regenerar. Input @alvaro 2026-04-30. | 🟡 |
+| **H7.6** | **Asistencia IA con contexto exacto a una WO humana** — botón "🤖 Pedir asistencia IA" en cada WO `assignee.kind='human'`. Modal donde el humano pega/adjunta los datos brutos del trabajo. La IA recibe via `KnowledgeLoader.assembleContext({ projectId, sopId })`: SOC(s) + SOP referenciado + estado del proyecto + rol del assignee + datos pegados. System prompt: "estándar de comunicaciones interno SOS" — output como informe MD con arquitectura semántica explícita (ver bloque dedicado abajo). El informe se guarda como `content.aiAssistDraft` del WO + se puede descargar/copiar. Input @alvaro 2026-04-30. | 🟡 |
 | **H_ANIM_001** | **Visualizar flujo de valor con orden secuencial · multi-modelo** — animación + vistas alternativas (BPMN, swimlanes, Sankey, service blueprint, secuencia lineal) + ordenación manual o IA del flujo. Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
 | H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |
@@ -246,6 +248,93 @@ Persistencia: añadir a cada `transaction` (arista) los campos:
   de Lean, Sankey si viene de finanzas).
 
 Una sola fuente de verdad (Mind-as-Graph) → N vistas. Sin duplicar datos.
+
+---
+
+## H7.6 · Estándar de comunicaciones SOS para informes IA con contexto
+
+> Cuando una WO humana invoca "🤖 Pedir asistencia IA", la IA debe responder
+> con un informe que cumpla los principios de SOS: Mind-as-Graph,
+> Context-First, DTD, intangibles humanos. Arquitectura semántica explícita.
+
+### Plantilla del informe (output esperado)
+
+```md
+# {wo.content.title}
+> WO `{wo.id}` · proyecto `{projectId}` · SOP `{sopRef}` · rol `{role}`
+> Generado por IA · {provider}/{model} · {timestamp}
+
+## 0 · Contexto inyectado (Chitta)
+- SOC(s): {socRefs}
+- SOP de referencia: {sopRef} · steps relevantes: {step.id list}
+- Datos aportados por humano: {n} bloques · {totalChars} chars
+
+## 1 · Síntesis (Buddhi · 3 frases máx)
+{Qué pide la WO · qué entrega · qué bloqueo principal resuelve}
+
+## 2 · Diagnóstico estructurado
+- Hechos verificables: …
+- Inferencias (con grado de confianza): …
+- Lagunas de información (preguntas para el humano): …
+
+## 3 · Propuesta operativa
+{Plan accionable. 1 sección por step del SOP o por entregable.}
+
+## 4 · DTD · test de aprobación
+- Criterio booleano 1: …
+- Criterio booleano 2: …
+- (mínimo 3, máximo 7. Se evalúan en `/kanban` al pasar a "Finalizadas".)
+
+## 5 · Intangibles humanos requeridos
+{Qué NO puede aportar la IA: presencia, juicio, decisión política,
+relación con el cliente. Lista explícita para que el humano sepa
+qué tiene que añadir él/ella.}
+
+## 6 · Mind-as-Graph · nodos a crear/actualizar
+{Lista de propuestas de KB_UPSERT — el humano valida y dispatcha
+manualmente. Formato: `- type='X' id='Y' content={…}`.}
+
+## 7 · Tokens y coste
+- Input: N tokens · Output: M tokens · Coste: € X
+- Comparado con coste humano FMV: {ahorro %}
+```
+
+### Principios SOS que la plantilla materializa
+
+| Principio | Cómo aparece en la plantilla |
+|---|---|
+| **Mind-as-Graph** | Sección 6 propone nodos KB explícitos, nada queda en texto suelto. |
+| **Context-First** | Sección 0 audita el contexto inyectado para que el humano vea qué sabía la IA. |
+| **DTD** | Sección 4 obliga a tests booleanos · sin esto no se aprueba la WO. |
+| **Intangibles humanos** | Sección 5 explicita qué decide el humano · evita dependencia ciega. |
+| **Antigravity** | Sección 7 mide ahorro vs FMV humano · dato real al ledger. |
+
+### Implementación técnica (orden recomendado)
+
+1. **Helper** `KnowledgeLoader.assembleWoContext(woId)` que devuelve
+   `{ socs, sop, projectState, role, dtdHints }` listo para system prompt.
+2. **Prompt builder** `buildWoAssistPrompt(woContext, humanInput)` →
+   string con la plantilla anterior como instrucción de output.
+3. **Modal en KanbanView** abierto por botón "🤖 Asistencia IA" sólo en
+   WOs `assignee.kind === 'human'`. Textarea grande + botón "Generar
+   informe IA" + área de output editable + botón "Guardar como
+   `content.aiAssistDraft`" + botón "Copiar / Descargar MD".
+4. **Persistencia**: el draft se guarda en el propio WO (`content.aiAssistDraft`,
+   `content.aiAssistMeta = {provider, model, tokens, costUSD, ts}`).
+   Reutilizable, regenerable, exportable en el snapshot firmado.
+5. **Tests**: builder puro testeable (igual patrón que `roleSopGenerator`),
+   sin gastar tokens.
+
+### Por qué este estándar es "alto" técnicamente
+
+- **Trazabilidad**: cada informe lleva su contexto explícito (sección 0)
+  → reproducible, auditable, no es magia opaca.
+- **Composabilidad**: las propuestas de KB_UPSERT (sección 6) se pueden
+  feedear a otros agentes IA sin reparseo manual.
+- **DTD nativo**: la sección 4 conecta directamente con la lógica de
+  aprobación del Kanban (manual o tdd-auto).
+- **Bilingüe-ready**: la plantilla puede traducirse a EN para clientes
+  internacionales sin rehacer arquitectura.
 
 ---
 
