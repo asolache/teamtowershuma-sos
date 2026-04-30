@@ -776,7 +776,7 @@ export default class KanbanView {
 
                     <div class="actions">
                         <button class="kb-btn" id="kbsfCancel">Cancelar</button>
-                        ${emptyHtml ? '' : '<button class="kb-btn kb-btn-primary" id="kbsfCreate" disabled>Crear N WOs en Backlog</button>'}
+                        ${emptyHtml ? '' : '<button class="kb-btn kb-btn-primary" id="kbsfCreate">Crear N WOs en Backlog</button>'}
                     </div>
                 </div>
             </div>
@@ -793,45 +793,56 @@ export default class KanbanView {
         const area       = document.getElementById('kbsfPreviewArea');
 
         previewBtn.addEventListener('click', async () => {
-            const value = document.getElementById('kbsfSop').value;
-            const wsId  = document.getElementById('kbsfWs').value || null;
-            const fmv   = parseFloat(document.getElementById('kbsfFmv').value) || 50;
-            const selected = sopOptions.find(o => o.value === value);
-            if (!selected) return;
+            try {
+                const value = document.getElementById('kbsfSop').value;
+                const wsId  = document.getElementById('kbsfWs').value || null;
+                const fmv   = parseFloat(document.getElementById('kbsfFmv').value) || 50;
+                console.log('[H1.10.3] Preview · sopValue=', value);
+                const selected = sopOptions.find(o => o.value === value);
+                if (!selected) {
+                    area.innerHTML = `<p style="color:#fca5a5;font-size:0.8rem;">Selecciona un SOP del desplegable.</p>`;
+                    pendingWOs = [];
+                    return;
+                }
 
-            // Resolver steps según fuente
-            let steps;
-            if (selected.kind === 'project') {
-                steps = selected.steps || [];
-            } else {
-                steps = await KnowledgeLoader.getSopSteps(selected.value);
-            }
-            if (!steps.length) {
-                area.innerHTML = `<p style="color:#fca5a5;font-size:0.8rem;">El SOP seleccionado no tiene <code>steps:</code>. Añádelos al .md o regenera el SOP del proyecto.</p>`;
-                createBtn.disabled = true;
+                // Resolver steps según fuente
+                let steps;
+                if (selected.kind === 'project') {
+                    steps = selected.steps || [];
+                } else {
+                    steps = await KnowledgeLoader.getSopSteps(selected.value);
+                }
+                console.log('[H1.10.3] Preview · steps:', steps.length);
+                if (!steps.length) {
+                    area.innerHTML = `<p style="color:#fca5a5;font-size:0.8rem;">El SOP seleccionado no tiene <code>steps:</code>. Añádelos al .md o regenera el SOP del proyecto.</p>`;
+                    pendingWOs = [];
+                    return;
+                }
+
+                pendingWOs = generateWosFromSop(selected.slugForRef, steps, {
+                    workshopId: wsId,
+                    projectId:  projectActive ? this.projectFilter : null,
+                    fmvPerHour: fmv,
+                    socRefs:    ['soc-teamtowers-brand'],
+                });
+                console.log('[H1.10.3] Preview · pendingWOs generadas:', pendingWOs.length);
+                area.innerHTML = `
+                    <p style="color:#86efac;font-size:0.8rem;">Se crearán <b>${pendingWOs.length} WOs</b> en Backlog${projectActive ? ' (con projectId=' + this._esc(this.projectFilter) + ')' : ''}:</p>
+                    <ul style="font-size:0.78rem;color:#bbb;padding-left:1.2rem;">
+                        ${pendingWOs.map(w => `
+                            <li style="margin-bottom:0.3rem;">
+                                <span style="color:${w.content.assignee.kind === 'ai' ? '#a5b4fc' : '#86efac'};">${w.content.assignee.kind === 'ai' ? '🤖' : '👤'}</span>
+                                ${this._esc(w.content.title)}
+                                <span style="color:#666;">· ${w.content.estimatedHours.toFixed(2)}h · ${this._esc(w.content.priority)}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+            } catch (err) {
+                console.error('[H1.10.3] Preview error:', err);
+                area.innerHTML = `<p style="color:#fca5a5;font-size:0.8rem;">Error en preview: ${this._esc(err.message)}</p>`;
                 pendingWOs = [];
-                return;
             }
-
-            pendingWOs = generateWosFromSop(selected.slugForRef, steps, {
-                workshopId: wsId,
-                projectId:  projectActive ? this.projectFilter : null,
-                fmvPerHour: fmv,
-                socRefs:    ['soc-teamtowers-brand'],
-            });
-            area.innerHTML = `
-                <p style="color:#86efac;font-size:0.8rem;">Se crearán <b>${pendingWOs.length} WOs</b> en Backlog${projectActive ? ' (con projectId=' + this._esc(this.projectFilter) + ')' : ''}:</p>
-                <ul style="font-size:0.78rem;color:#bbb;padding-left:1.2rem;">
-                    ${pendingWOs.map(w => `
-                        <li style="margin-bottom:0.3rem;">
-                            <span style="color:${w.content.assignee.kind === 'ai' ? '#a5b4fc' : '#86efac'};">${w.content.assignee.kind === 'ai' ? '🤖' : '👤'}</span>
-                            ${this._esc(w.content.title)}
-                            <span style="color:#666;">· ${w.content.estimatedHours.toFixed(2)}h · ${this._esc(w.content.priority)}</span>
-                        </li>
-                    `).join('')}
-                </ul>
-            `;
-            createBtn.disabled = false;
         });
 
         createBtn.addEventListener('click', async () => {
