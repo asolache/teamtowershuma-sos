@@ -13,12 +13,19 @@ const ROUTES = [
     { path: '/sops',      view: () => import('./views/SopsView.js')     },
     { path: '/focus',     view: () => import('./views/HomeView.js')     },
     { path: '/settings',  view: () => import('./views/SettingsView.js') },
+    // UX-001 · folksonomía universal
+    { path: '/tags',      view: () => import('./views/TagsView.js')     },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
+// UX-001 · prefijo dinámico /n/{nodeId} resuelto por NodeView
+const NODE_PATH_PREFIX = '/n/';
+
 async function router() {
     const path  = window.location.pathname.replace(/\/$/, '') || '/';
-    const match = ROUTES.find(r => r.path === path) || ROUTES.find(r => r.path === null);
+    const match = path.startsWith(NODE_PATH_PREFIX)
+        ? { path, view: () => import('./views/NodeView.js') }
+        : (ROUTES.find(r => r.path === path) || ROUTES.find(r => r.path === null));
 
     try {
         await store.init();
