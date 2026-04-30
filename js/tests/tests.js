@@ -1018,6 +1018,79 @@ async function testWoAssistantContext() {
     assert(typeof mod.buildWoAssistPrompt === 'function',                        'buildWoAssistPrompt exportada');
 }
 
+// ─── UX-001 · tagsService · folksonomía pura ────────────────────
+async function testTagsService() {
+    const mod = await import('../core/tagsService.js?v=' + Date.now());
+    const { normalizeTag, aggregateTags, nodesWithTag, relatedEdgesByTag, addTagToNode, removeTagFromNode } = mod;
+
+    // normalizeTag
+    assert(normalizeTag('Mi Tag · Genial!') === 'mi-tag-genial',  'normaliza puntuación, espacios y caso');
+    assert(normalizeTag('Año Nuevo') === 'ano-nuevo',             'normaliza diacríticos (ñ→n, ó→o)');
+    assert(normalizeTag('  multiple   spaces  ') === 'multiple-spaces', 'colapsa espacios');
+    assert(normalizeTag('---trim---') === 'trim',                 'trimea guiones de bordes');
+    assert(normalizeTag('') === '',                               'string vacío → vacío');
+    assert(normalizeTag(123) === '',                              'no-string → vacío');
+
+    // Setup nodos para los siguientes tests
+    const nodes = [
+        { id: 'n1', type: 'project', content: { tags: ['ikea', 'b2b', 'madrid'], title: 'Proyecto IKEA' } },
+        { id: 'n2', type: 'sop',     content: { tags: ['ikea', 'b2b'],            name:  'SOP atención IKEA' } },
+        { id: 'n3', type: 'work_order', content: { tags: ['urgente'],             title: 'WO urgente' } },
+        { id: 'n4', type: 'role',    content: { /* sin tags */                    name:  'Rol sin tags' } },
+        { id: 'n5', type: 'project', content: { tags: ['Madrid', 'sostenible'],   title: 'Otro proyecto Madrid' } }, // mayúscula → debe normalizar
+    ];
+
+    // aggregateTags
+    const agg = aggregateTags(nodes);
+    assert(Array.isArray(agg) && agg.length === 5,                'aggregateTags devuelve 5 tags únicos');
+    const ikea = agg.find(a => a.tag === 'ikea');
+    assert(ikea && ikea.count === 2,                              'tag ikea aparece 2 veces');
+    assert(ikea.nodeIds.includes('n1') && ikea.nodeIds.includes('n2'), 'ikea referencia n1 y n2');
+    const madrid = agg.find(a => a.tag === 'madrid');
+    assert(madrid && madrid.count === 2,                          'Madrid normalizado se cuenta como madrid (2 ocurrencias)');
+    assert(agg[0].count >= agg[1].count,                          'aggregateTags ordena por count desc');
+
+    // nodesWithTag
+    const ikeaNodes = nodesWithTag(nodes, 'IKEA');  // probar mayúsculas
+    assert(ikeaNodes.length === 2 && ikeaNodes.every(n => ['n1','n2'].includes(n.id)), 'nodesWithTag filtra normalizando');
+    assert(nodesWithTag(nodes, 'inexistente').length === 0,       'tag inexistente devuelve []');
+
+    // relatedEdgesByTag · n1+n2 comparten 2 tags (ikea, b2b) → weight 2
+    const edges = relatedEdgesByTag(nodes);
+    const e12 = edges.find(e => (e.a === 'n1' && e.b === 'n2') || (e.a === 'n2' && e.b === 'n1'));
+    assert(e12 && e12.weight === 2,                               'arista n1↔n2 con weight 2 (ikea + b2b)');
+    assert(e12.sharedTags.includes('ikea') && e12.sharedTags.includes('b2b'), 'arista lista los 2 tags compartidos');
+    const e15 = edges.find(e => (e.a === 'n1' && e.b === 'n5') || (e.a === 'n5' && e.b === 'n1'));
+    assert(e15 && e15.weight === 1 && e15.sharedTags[0] === 'madrid', 'arista n1↔n5 con weight 1 (madrid normalizado)');
+    assert(!edges.some(e => e.a === 'n4' || e.b === 'n4'),        'n4 sin tags no aparece en aristas');
+
+    // addTagToNode · pureness
+    const original = { id: 'n1', type: 'project', content: { tags: ['ikea'], title: 'X' }, keywords: ['existing'] };
+    const added = addTagToNode(original, 'Nueva CATEGORIA!');
+    assert(added !== original,                                    'addTagToNode no muta · devuelve nuevo objeto');
+    assert(added.content.tags.length === 2,                       'añade el tag normalizado');
+    assert(added.content.tags[1] === 'nueva-categoria',           'tag normalizado correctamente');
+    assert(added.keywords.includes('nueva-categoria') && added.keywords.includes('existing'), 'sincroniza con keywords sin perder previos');
+    assert(original.content.tags.length === 1,                    'original NO mutado');
+    const dup = addTagToNode(added, 'IKEA');
+    assert(dup === added,                                         'añadir tag duplicado devuelve el mismo objeto');
+
+    // removeTagFromNode · pureness
+    const removed = removeTagFromNode(added, 'nueva-categoria');
+    assert(removed.content.tags.length === 1 && removed.content.tags[0] === 'ikea', 'removeTagFromNode quita el tag');
+    assert(!removed.keywords.includes('nueva-categoria'),         'removeTagFromNode sincroniza keywords');
+    const noop = removeTagFromNode(added, 'inexistente');
+    assert(noop === added,                                        'remover tag inexistente devuelve mismo objeto');
+
+    // Exports
+    assert(typeof mod.persistTagAdd === 'function',               'persistTagAdd exportada');
+    assert(typeof mod.persistTagRemove === 'function',            'persistTagRemove exportada');
+    assert(typeof mod.loadAllNodesForTags === 'function',         'loadAllNodesForTags exportada');
+    assert(typeof mod.renderTagsEditor === 'function',            'renderTagsEditor exportada');
+    const html = mod.renderTagsEditor({ tags: ['a', 'b-c'] });
+    assert(typeof html === 'string' && html.includes('#a') && html.includes('#b-c'), 'renderTagsEditor produce chips para los tags');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -1036,7 +1109,8 @@ const SUITE = [
     { name: 'H7.1 · Kanban Work Orders · CRUD + ledger',          fn: testKanbanWorkOrders },
     { name: 'H7.2 · Kanban · prompt builder IA + TDD eval',       fn: testKanbanExecutionPromptAndTdd },
     { name: 'H7.3 · Generar WOs desde SOP steps[]',               fn: testGenerateWosFromSop },
-    { name: 'H7.6 · WO Assistant · context + prompt builder',     fn: testWoAssistantContext }
+    { name: 'H7.6 · WO Assistant · context + prompt builder',     fn: testWoAssistantContext },
+    { name: 'UX-001 · tagsService · folksonomía pura',            fn: testTagsService }
 ];
 
 export async function runTests() {
