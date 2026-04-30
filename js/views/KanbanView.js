@@ -835,24 +835,61 @@ export default class KanbanView {
         });
 
         createBtn.addEventListener('click', async () => {
-            if (!pendingWOs.length) return;
-            close();
-            for (const wo of pendingWOs) {
-                await store.dispatch({ type: 'KB_UPSERT', payload: { node: wo } });
+            console.log('[H1.10.3] Create WOs click · pendingWOs:', pendingWOs.length);
+            if (!pendingWOs.length) {
+                alert('Pulsa primero "🔍 Previsualizar" para generar las WOs antes de crearlas.');
+                return;
             }
-            await this._load();
-            this._render();
+            try {
+                close();
+                for (const wo of pendingWOs) {
+                    await store.dispatch({ type: 'KB_UPSERT', payload: { node: wo } });
+                }
+                await this._load();
+                this._render();
+                console.log('[H1.10.3] WOs creadas OK:', pendingWOs.length);
+            } catch (err) {
+                console.error('[H1.10.3] Error creando WOs:', err);
+                alert('Error creando WOs: ' + err.message);
+            }
         });
     }
 
     // ─── modal de creación ──────────────────────────────────────────────────
-    _openCreateModal() {
+    async _openCreateModal() {
         const root = document.getElementById('kbModalRoot');
         if (!root) return;
         const close = () => { root.innerHTML = ''; };
         const wsOptions = this.workshops.map(w =>
             `<option value="${w.id}">${this._esc((w.content?.clientName || w.id) + ' · ' + (w.content?.type || ''))}</option>`
         ).join('');
+
+        // H1.10.6 · SOP de referencia → dropdown de SOPs del proyecto activo.
+        // Si hay projectFilter → carga SOPs del proyecto y renderiza <select>.
+        // Si no hay proyecto → conserva <input type="text"> libre.
+        let sopFieldHtml;
+        if (this.projectFilter) {
+            const projSops = await KB.query({ type: 'sop', projectId: this.projectFilter });
+            const sopOpts = projSops.map(s => {
+                const slug = 'project-' + (s.content?.role_ref || s.id);
+                const label = (s.content?.name || s.id) + ' · rol ' + (s.content?.role_ref || '?');
+                return `<option value="${this._esc(slug)}">${this._esc(label)}</option>`;
+            }).join('');
+            sopFieldHtml = `
+                <label>SOP de referencia (opcional)</label>
+                <select id="kbfSop">
+                    <option value="">— ninguno —</option>
+                    ${sopOpts}
+                </select>
+                ${projSops.length === 0 ? '<small style="color:#fca5a5;">Este proyecto aún no tiene SOPs propios. <a href="/sops?project=' + this._esc(this.projectFilter) + '" data-link class="kb-link">Generar SOPs</a></small>' : ''}
+            `;
+        } else {
+            sopFieldHtml = `
+                <label>SOP de referencia (opcional)</label>
+                <input id="kbfSop" type="text" placeholder="sop-fent-pinya-taller">
+                <small style="color:#888;">Sin proyecto activo. Selecciona un proyecto en el filtro para elegir SOP del dropdown.</small>
+            `;
+        }
 
         root.innerHTML = `
             <div class="kb-modal" id="kbCreateBg">
@@ -881,8 +918,7 @@ export default class KanbanView {
                             </select>
                         </div>
                         <div>
-                            <label>SOP de referencia (opcional)</label>
-                            <input id="kbfSop" type="text" placeholder="sop-fent-pinya-taller">
+                            ${sopFieldHtml}
                         </div>
                     </div>
 

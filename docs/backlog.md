@@ -68,8 +68,10 @@
 | H1.10.3 | Modal "📋 Desde SOP" del Kanban adaptativo · si filtro proyecto activo → SOPs propios del proyecto (KB.query) · sin filtro → SOPs públicos TT. Empty state con CTA a `/sops?project=...` cuando no hay SOPs del proyecto. WOs generadas heredan projectId. Input @alvaro 2026-04-30: "estos deberían salir cuando no hay proyecto seleccionado o estamos en todos los proyectos". | ✅ verde |
 | H1.10.4 | Vista `/sops?project={id}` con lista, edición inline (nombre, summary, steps con label/role_kind/duration/priority) y regeneración con feedback. Acceso desde topbar del ValueMap cuando hay projectId. | ✅ verde |
 | H1.10.5 | Generación bulk secuencial de SOPs para todos los roles del proyecto + indicador "🧠 IA pensando" con dots animados + mensaje rotativo de fase + barra de progreso + skip de existentes + cancelación cooperativa. Input @alvaro 2026-04-30. | ✅ verde |
+| **BUG-007** | Botón "Crear N WOs en Backlog" del modal "📋 Desde SOP" no hace nada al pulsar. Fix defensivo: alert si `pendingWOs` vacío + try/catch + console.log para diagnóstico. Input @alvaro 2026-04-30. | ✅ fixed |
+| H1.10.6 | Modal "+Nueva WO" · campo "SOP de referencia" pasa de input texto a `<select>` con SOPs del proyecto activo (preselección automática vía `projectFilter`). Sin proyecto activo → input texto libre con hint. Input @alvaro 2026-04-30. | ✅ verde |
 | **BACK-008** | **Añadir MiniMax como proveedor IA** (https://platform.minimax.io). Añadir entrada en `BASE_PRICING` del Orchestrator + branch en `callLLM` con su API + selector en `/settings`. Posible fallback más barato según BACK-011 (cascada de providers). | 🟡 |
-| **H_ANIM_001** | **Animar flujo de valor en `/map`** — partículas/pulsos viajan por las aristas en orden secuencial; vista alternativa de lista ordenada (paso a paso) que reproduce la circulación del valor (input @alvaro 2026-04-30) | 🟡 |
+| **H_ANIM_001** | **Visualizar flujo de valor con orden secuencial · multi-modelo** — animación + vistas alternativas (BPMN, swimlanes, Sankey, service blueprint, secuencia lineal) + ordenación manual o IA del flujo. Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
 | H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |
 | H9.x | Skills + CoPs online (matchmaking, validación SOPs por comunidad) | 🟡 |
@@ -183,6 +185,67 @@ manualmente. Falta:
 5. **Local-first absoluto**: todo en el navegador. Persistencia local
    (IndexedDB) firmada (ECDSA). Descentralización opcional via
    blockchain/permaweb. Cero dependencia de cloud propietario.
+
+---
+
+## H_ANIM_001 · Visualizar flujo de valor con orden secuencial (input @alvaro 2026-04-30)
+
+> El grafo VNA actual (D3 force-directed) muestra **quién se relaciona con quién**
+> pero no **en qué orden circula el valor**. Para que un cliente entienda
+> el ciclo completo necesita ver la **secuencia temporal** del flujo, no
+> sólo la topología. Objetivo: vistas múltiples sobre el mismo grafo
+> (Mind-as-Graph) con UX brutal y universal.
+
+### Modelos de visualización empresarial considerados
+
+| Modelo | Cuándo brilla | Encaje en SOS |
+|---|---|---|
+| **Force-directed actual** | Ver topología, clusters, centralidad | Vista por defecto. Sigue siendo home. |
+| **Animación de partículas/pulsos sobre aristas** | Mostrar dirección + ritmo del flujo de valor | Capa **encima** del force-directed: pulsos viajan por las aristas en orden secuencial; modo "play / pause / step". Coste: bajo (solo CSS animation o D3 transition). |
+| **Secuencia lineal (paso a paso)** | Onboarding cliente · explicar el ciclo end-to-end | Lista numerada vertical: 1. Cliente solicita → 2. Comercial captura → 3. Operario produce → 4. Logística entrega → 5. Cliente paga. Cada paso = nodo + arista resaltada. **Esencial para narrar a un CEO no técnico.** |
+| **Swimlanes (carriles por rol)** | Ver responsabilidades cruzadas · handoffs entre roles | Eje X = tiempo, eje Y = rol. Cada paso es una caja en su carril, con flechas entre carriles. Estándar en consultoría operacional. |
+| **BPMN 2.0** | Lenguaje universal corporativo · auditable | Más formal: gateways, eventos, sub-procesos. Subset mínimo (start/task/end + sequence flow). Útil cuando el cliente ya usa Bizagi/Camunda. |
+| **Sankey diagram** | Cuantificar volumen del flujo (€, horas, tokens, deliverables/mes) | Anchura de aristas = volumen. Muy potente para "este rol acumula 60% del valor producido". Encaja con el ledger (cantidades reales). |
+| **Service blueprint** | Distinguir "frontstage" (visible al cliente) vs "backstage" (interno) + "line of visibility" | Capas horizontales: Customer actions / Frontstage / Backstage / Support processes. Muy aplicable en VNA cuando hay roles invisibles que sostienen el valor (BACK-006 "intangibles humanos"). |
+| **Customer journey map** | Foco emocional en el cliente final | Eje X = etapas del cliente, eje Y = touchpoints + emociones. Complemento del service blueprint. |
+| **Gantt** | Plazos y dependencias temporales reales | Útil cuando el flujo tiene durations[] (ya tenemos `step.duration_minutes`). Genera planning ejecutable. |
+| **Kanban (ya lo tenemos)** | Ejecución, no diseño del flujo | Ya cubierto en `/kanban`. |
+
+### Ordenación del flujo · manual vs IA
+
+El grafo VNA actual no tiene **`sequence_order` por arista**. Para activar
+las vistas secuenciales hay que añadir orden a las transactions. Dos modos:
+
+1. **Manual (UX brutal)** — drag-and-drop vertical en una vista "📜 Ordenar
+   flujo": el operador arrastra los pasos al orden correcto, asigna
+   "fase" (descubrimiento / propuesta / producción / entrega / cobro / cierre)
+   y guarda. Las aristas heredan `sequence_order` y `phase`.
+2. **IA (auto)** — botón "🤖 Inferir orden con IA" usa el SOC del sector + los
+   roles cliente + las descripciones de roles para proponer un orden
+   secuencial razonable. El operador valida/edita.
+
+Persistencia: añadir a cada `transaction` (arista) los campos:
+- `sequence_order: number` (1, 2, 3, … en el ciclo principal)
+- `phase: string` (etiqueta de fase para agrupar swimlanes/timeline)
+- `volume?: number` (para Sankey · opcional · bind al ledger cuando exista)
+
+### Roadmap propuesto · 3 sprints incrementales
+
+| Sprint | Entregable | Coste | Dependencias |
+|---|---|---|---|
+| **A** · Orden + animación | Schema `sequence_order`/`phase` en transactions + drag-to-order modal + animación pulsos sobre aristas en `/map` | Bajo (D3 + IndexedDB upgrade) | Ninguna |
+| **B** · Vistas alternativas | Toggle en topbar `/map`: Force / Lineal / Swimlanes / Sankey | Medio (3 layouts D3) | Sprint A (necesita orden) |
+| **C** · BPMN + Service blueprint | Vista BPMN 2.0 subset + service blueprint con line of visibility | Alto (símbolos BPMN + capas) | Sprint B |
+
+### Criterio de "brutal y universal"
+
+- **Brutal** = un cliente CEO sin formación técnica entiende el flujo en
+  <30 segundos viendo la vista lineal animada.
+- **Universal** = el operador puede mostrar el mismo grafo en el formato
+  que el cliente ya conoce (BPMN si viene de Bizagi, swimlanes si viene
+  de Lean, Sankey si viene de finanzas).
+
+Una sola fuente de verdad (Mind-as-Graph) → N vistas. Sin duplicar datos.
 
 ---
 
