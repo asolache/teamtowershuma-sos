@@ -74,6 +74,8 @@
 | **H1.10.7** | **Inspector ValueMap muestra estado del SOP por rol** — cuando un rol del mapa ya tiene SOP generado (`KB.query type='sop' projectId=… role_ref=role.id`), el inspector muestra badge "✅ SOP generado · N steps" + botones "📂 Ver SOP" (abre `/sops?project=…&focus=sopId` con el detalle directo) + "🔁 Regenerar SOP con IA". Sin SOP → "📋 Generar SOP del rol con IA". `_state.sopByRole` cachea `Map(roleId → sopNode)`, refrescado en `afterRender` y tras `_persistRoleSop` (re-pinta inspector sin recargar). Input @alvaro 2026-04-30. | ✅ verde |
 | **H7.6** | **Asistencia IA con contexto exacto a una WO humana** — botón "🤖 Pedir asistencia IA" en cada WO `assignee.kind='human'`. Modal donde el humano pega/adjunta los datos brutos del trabajo. La IA recibe via `assembleWoContext`: SOC(s) + SOP referenciado + estado del proyecto + rol del assignee + datos pegados. System prompt: "estándar de comunicaciones interno SOS" — output como informe MD con arquitectura semántica explícita de 8 secciones (ver bloque dedicado abajo). Persiste en `content.aiAssistDraft` + `content.aiAssistMeta`. Acciones: Copiar · Descargar .md · Regenerar. Input @alvaro 2026-04-30. | ✅ verde (fase A core+tests · fase B UI+persistencia) |
 | **H1.10.8** | **Dropdown de engines IA en "+Nueva WO" cuando assignee=IA** — el campo "Assignee · ID / engine" alterna dinámicamente: `kind='human'` → input texto libre (placeholder `@alvaro`); `kind='ai'` → `<select>` con `anthropic / openai / deepseek / gemini / minimax / custom`, preselección = `Orchestrator.getDefaultProvider()` con sufijo "(por defecto)". Para humanos: pendiente capa "miembros del proyecto" (delegada a MAT-001 con la matriz incubadora y la app móvil). Input @alvaro 2026-04-30. | ✅ verde |
+| **MKT-001** | **`/workshops` → Mercado SOS de productos y servicios** — convertir la vista actual en un mercado con: (1) buscador AJAX por **CNAE** + filtros por sector/tipo, (2) productos/servicios asociables a cualquier proyecto cliente como **outputs finales** de su red de valor (intercambio con stakeholders de la red macro tipo SOS Matriu Launch), (3) **carga de saldo** prepago para uso de APIs IA y operaciones blockchain (ancla pactos, FICE rounds), (4) cuadro comparativo de **ahorro vs alternativas convencionales** (notaría · contabilidad · project management · consultoría). Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟡 |
+| **UX-001** | **Hipertexto folksonómico universal · todo nodo es enlazable** — UX donde TODA entidad del Mind-as-Graph es un nodo navegable + enlazable a otros vía hipertexto folksonómico (tags libres del usuario que crean aristas tipo `related_to` con weight según frecuencia). Cada nodo `type='project'` con propósito empresarial/cooperativo/startup expone su propio dashboard de herramientas: Pacto de socios · Documento de constitución · Plan tokenómico · Contabilidad de valor · Pools de liquidez para exit · acceso a su Mapa de valor · Kanban · Ledger con cláusula de exit · Landing pública · Mercado de productos. Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟡 |
 | **H_ANIM_001** | **Visualizar flujo de valor con orden secuencial · multi-modelo** — animación + vistas alternativas (BPMN, swimlanes, Sankey, service blueprint, secuencia lineal) + ordenación manual o IA del flujo. Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
 | H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |
@@ -249,6 +251,180 @@ Persistencia: añadir a cada `transaction` (arista) los campos:
   de Lean, Sankey si viene de finanzas).
 
 Una sola fuente de verdad (Mind-as-Graph) → N vistas. Sin duplicar datos.
+
+---
+
+## MKT-001 · `/workshops` → Mercado SOS de productos y servicios
+
+> Tesis @alvaro 2026-04-30: el entregable final de cada red de valor con
+> propósito **es un producto o un servicio** que se intercambia con otros
+> stakeholders de la red macro (tipo SOS Matriu Launch). Por tanto la
+> vista `/workshops` actual debe evolucionar de "agenda de talleres" a
+> **Mercado SOS** — el lugar donde:
+>
+> 1. Cada proyecto cliente publica los productos/servicios que su red
+>    de valor genera (outputs del VNA).
+> 2. Cualquier proyecto puede consumir productos/servicios de otros
+>    proyectos del ecosistema (red macro).
+> 3. Se carga saldo prepago para usar APIs IA y operaciones blockchain.
+> 4. Se cuantifica el ahorro vs vías convencionales (notaría · contable ·
+>    project manager · consultor).
+
+### 1 · Catálogo · productos/servicios por sector CNAE
+
+- **Backend**: nodo `type='market_item'` en KB con `content = { sku, title,
+  description, sectorCNAE, tags[], priceEur, priceUSD, priceTokens,
+  fmvHumanEquivalent, providerProjectId, deliverables[], stockMode,
+  visibility, revenueShare }`.
+- **UI**: grid masonry con buscador AJAX (debounce 250ms) sobre
+  `title + tags + sectorCNAE`. Filtros: sector CNAE (selector multi),
+  tipo (producto · servicio · skill · workshop · template), rango precio,
+  scope (mi proyecto · público · red macro).
+- **Asociación a proyecto**: cada item tiene un toggle "📌 Asociar a
+  proyecto X" que crea una relación `KB_UPSERT type='market_link' from=
+  projectId to=marketItemId role=consumer|producer`.
+- **CNAE seed**: catálogo CNAE 2009 europeo (4 dígitos) precargado en
+  `knowledge/taxonomy/cnae.json`. Buscador asistido (autocomplete).
+- **Migración** desde `/workshops` actual: los workshops se convierten en
+  un sub-tipo de `market_item` con `kind='workshop'`. Se preserva la
+  agenda existente sin pérdida de datos.
+
+### 2 · Saldo prepago para APIs IA + blockchain
+
+- **Wallet local** del proyecto: nodo `type='wallet' projectId=…` con
+  `content = { balanceEur, balanceCredits, ledger[], topUpHistory[] }`.
+- **Top-up flows**:
+  - Stripe / SumUp checkout (€) → conversión a créditos internos.
+  - Crypto (USDC en Gnosis) → conversión vía Safe del proyecto (MAT-001).
+- **Consumo automático**: cada llamada `Orchestrator.callLLM` decrementa
+  saldo por el `costUSD` real (ya tenemos telemetría · sólo falta
+  enganche). Cada operación blockchain (anchor pacto, attestation EAS)
+  decrementa por el gas estimado.
+- **Alertas**: badge en topbar cuando `balanceEur < threshold`. Email
+  opcional. Bloqueo suave: si saldo=0 → callLLM lanza error con CTA
+  "Recargar saldo".
+
+### 3 · Cuadro comparativo de ahorro
+
+Sobre cada producto/servicio que se ofrece desde una red de valor SOS,
+calcular y mostrar el **delta vs vía convencional**:
+
+| Concepto | Vía convencional (€) | SOS (€) | Ahorro |
+|---|---|---|---|
+| **Notaría** (pacto socios, constitución) | 800-2.500€ por escritura | 0€ (Pact.sol + EIP-712 + Arweave snapshot) + gas Gnosis (~0,02€) | ~99% |
+| **Contabilidad** (mensual, asesor) | 80-300€/mes | LedgerEntry firmado + EAS attestation triple-entry · auto-generado por WO ledgered | ~95% |
+| **Project Management** (PM externo) | 40-90€/h × N horas | WOs auto-orquestadas por SOP→Kanban→Ledger · coste real = horas humanas + IA tokens | 60-80% |
+| **Consultoría estratégica** | 200-600€/h | 1 sesión Charla teatralizada + La Colla + IA con contexto · coste = 1 propuesta + 1 informe | 70-90% |
+
+Cálculo **por proyecto**: se muestra como widget en su dashboard ("Ahorro
+acumulado · X €"). Los precios convencionales son rangos editables en
+`/settings → Mercado · ranges` para que cada operador los ajuste a su
+mercado local.
+
+### 4 · Stakeholders de la red macro
+
+Cada proyecto tiene una lista de stakeholders externos
+(`type='stakeholder'`) que pueden ser:
+- **Otros proyectos SOS** (red macro · matchmaking automático por
+  complementariedad de productos/servicios).
+- **Proyectos no-SOS** (clientes finales convencionales).
+- **Comunidades de práctica (CoPs)** que validan la calidad de los
+  outputs (BACK-004 sk).
+
+El Mercado SOS es la **plaza** donde estos stakeholders se cruzan. Cada
+intercambio que se cierra dispara un nodo `type='trade'` con las dos WOs
+asociadas (una de salida, una de entrada) → ledger ↔ EAS attestation.
+
+### 5 · Roadmap propuesto · 4 sprints
+
+| Sprint | Entregable | Coste |
+|---|---|---|
+| **A** Catálogo + buscador AJAX | `market_item` schema + grid + filtros + CNAE seed | Medio |
+| **B** Asociación a proyecto + Mercado por proyecto | `market_link` schema + dashboard del proyecto | Medio |
+| **C** Wallet prepago + consumo automático | `wallet` schema + integración Stripe + decrement en callLLM | Alto (integración pago real) |
+| **D** Cuadro de ahorro + ranges editables | widget comparativo + `/settings` ranges | Bajo |
+
+### Conexión con MAT-001 (Matriu)
+
+- El Mercado SOS es el embrión del **Llançadora** de Matriu (vector 6 de
+  los 6 propósitos · landing + modelo de negocio operativo).
+- En MAT-001 se publican los productos a Arweave como manifests inmutables.
+- Los pagos en cripto pasan por el Safe del proyecto.
+- Los stakeholders se autentican por SBT identidad.
+
+---
+
+## UX-001 · Hipertexto folksonómico universal · todo nodo es enlazable
+
+> Tesis @alvaro 2026-04-30: el Mind-as-Graph debe ser **navegable
+> universalmente** — cualquier entidad del KB (proyecto, rol, SOP, WO,
+> skill, ledger entry, market item, stakeholder, CoP, pacto, …) es un
+> nodo con dirección estable, que puede enlazarse a cualquier otro nodo
+> mediante **tags folksonómicos libres** que el usuario asigna a mano.
+> Esos tags generan aristas implícitas tipo `related_to` con weight =
+> frecuencia · convirtiendo el grafo en una memoria colectiva viva.
+
+### 1 · Direccionabilidad universal
+
+- Toda entidad del KB tiene una URL canónica `/n/{nodeId}` (ruta nueva).
+- El router resuelve por `node.type` → vista correspondiente:
+  `project → /map?project=…`, `sop → /sops?focus=…`, `wo → /kanban?wo=…`,
+  `market_item → /workshops?focus=…`, etc.
+- Cualquier campo de texto en la app soporta sintaxis `[[node-id]]` o
+  `@nodeId` que se renderiza como link al nodo destino.
+
+### 2 · Folksonomy · tags libres como aristas implícitas
+
+- Cada nodo expone un `content.tags: string[]` editable inline.
+- Cuando dos nodos comparten un tag → arista virtual `related_to` con
+  `weight = N` donde N = nº de tags compartidos.
+- El operador puede promover una folksonomía a **taxonomía**: convertir
+  un tag en una `relation` explícita (`type='kb_relation' source target
+  predicate`) que aparece como arista visible en el Mind-Graph.
+- Cloud de tags global (vista `/tags`) con frecuencia + saltos a nodos.
+
+### 3 · Dashboard por proyecto · herramientas de gobernanza y exit
+
+Cada nodo `type='project'` con propósito empresarial/cooperativo/startup/
+fundación expone un **panel de control completo**, organizado en 6
+herramientas + 5 vistas operativas:
+
+#### Herramientas de constitución y gobernanza
+
+| Herramienta | Qué genera | Persistencia |
+|---|---|---|
+| **📜 Pacto de socios** | Documento JSON canónico con cláusulas (objeto · participación · vesting · exit · resolución conflictos) firmado EIP-712 por todos los nodos | KB → Arweave hash → Gnosis Pact.sol (MAT-001) |
+| **📋 Documento de constitución** | Acta fundacional (forma jurídica · capital · órganos de gobierno · domicilio) generado por IA desde plantillas por jurisdicción | KB + export PDF firmado |
+| **🪙 Plan tokenómico** | Modelo de tokens del proyecto (utility · governance · revenue) · supply · curva emisión · vesting · whitelist · liquidity. BACK-007 ya pendiente | KB + (futuro) deploy ERC-20 en Gnosis |
+| **📊 Contabilidad de valor** | Triple-entry ledger (econ + social + ambiental) con attestations EAS · ya parcialmente cubierto por H7.1 | LedgerEntry + EAS attestation |
+| **💧 Pools de liquidez para exit** | Mecanismo de salida de socios sin disolver el proyecto: AMM cooperativo (Curve fork) o subasta interna · respeta el `exit_clause` del pacto | Smart contract Gnosis (MAT-001) |
+| **🚀 Llançadora pública** | Landing del proyecto con sus productos/servicios del Mercado · subdominio `<slug>.matriu.coop` o similar | Arweave estático + Netlify |
+
+#### Vistas operativas (ya existentes · linkadas desde el dashboard)
+
+- 🗺 **Mapa de valor** (ValueMap) → `/map?project=…`
+- 📋 **Kanban** (WOs ejecutables) → `/kanban?project=…`
+- 📒 **Ledger** con cláusula de exit visible → `/ledger?project=…` (H3.1 pendiente)
+- 🌐 **Landing pública** del proyecto → `/p/{slug}` (público, indexable)
+- 🛒 **Mercado** del proyecto (productos publicados + asociaciones) → `/market?project=…`
+
+### 4 · Implementación · sprints
+
+| Sprint | Entregable | Coste |
+|---|---|---|
+| **A** Direccionabilidad + tags inline | Ruta `/n/{id}` + tags editor en cada vista + cloud `/tags` | Medio |
+| **B** Hipertexto `[[…]]` + link rendering | Parser de campos texto + linkificación automática | Medio |
+| **C** Dashboard de proyecto + 6 herramientas (sin blockchain) | Plantillas pacto + constitución + plan tokenómico + ledger view + landing generator | Alto |
+| **D** Pools de liquidez + Pact.sol + integración Gnosis | Smart contracts + on-chain anchor | Alto · delegado a MAT-001 |
+
+### Principio rector
+
+**Todo es nodo · todo es enlazable · todo es exportable.**
+La folksonomía emerge de los usuarios; la taxonomía la consolida el
+operador cuando una folksonomía se vuelve suficientemente densa.
+El proyecto es una **carpeta viva** que tiene su propia
+constitución, contabilidad, mercado y vía de exit · todo accesible
+desde un dashboard único.
 
 ---
 
