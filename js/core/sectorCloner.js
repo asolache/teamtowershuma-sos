@@ -87,11 +87,12 @@ export function buildClonePrompt({ sectorId, sectorSeed, clientName, clientDescr
         '  "project_name": "Nombre legible del proyecto cliente",',
         '  "sector_id": "' + sectorId + '",',
         '  "based_on_sector": "' + sectorId + '",',
-        '  "roles": [{ "id", "name", "description", "castell_level", "typical_actor", "tags": [] }],',
+        '  "roles": [{ "id", "name", "description", "castell_level", "typical_actor", "tags": ["3-5 tags humanos en kebab-case lowercase sin acentos sin `:` que describan el rol en este cliente"] }],',
         '  "transactions": [{ "id", "from", "to", "deliverable", "type", "is_must", "frequency", "health_hint" }],',
         '  "patterns": [{ "name", "description", "signal" }],',
         '  "emergent_notes": "Texto explicando los nodos emergentes añadidos y por qué",',
-        '  "version": "v1.0"',
+        '  "version": "v1.0",',
+        '  "folksonomy": ["3-7 tags humanos a nivel de PROYECTO completo en kebab-case lowercase, sin acentos, sin `:`. Vocabulario natural que describe la naturaleza del cliente: ej. b2b, retail, alta-rotacion, multilingue, urbano, rural, sostenible, familiar. NO uses prefijos sector:/role:/kind: que son taxonómicos del sistema."]',
         '}',
     ].join('\n');
 }

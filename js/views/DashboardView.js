@@ -1001,7 +1001,13 @@ export default class DashboardView {
         };
         const tagsProject = taxonomicTagsForProject(projectShape);
         const tagsRoles = (c.roles || []).flatMap(r => taxonomicTagsForRole(r, projectShape));
-        const tagsAll = mergeTags([buildTag('kind', 'client-vna-model'), ...tagsProject, ...tagsRoles], []);
+        // UX-002 fase 2 · folksonómicos del LLM: por proyecto + tags libres por rol
+        const folksonomyProject = Array.isArray(c.folksonomy) ? c.folksonomy : [];
+        const folksonomyRoles   = (c.roles || []).flatMap(r => Array.isArray(r.tags) ? r.tags : []);
+        const tagsAll = mergeTags(
+            [buildTag('kind', 'client-vna-model'), ...tagsProject, ...tagsRoles],
+            [...folksonomyProject, ...folksonomyRoles]
+        );
 
         await store.dispatch({
             type: 'KB_UPSERT',
