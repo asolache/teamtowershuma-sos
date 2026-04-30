@@ -875,6 +875,13 @@ export default class KanbanView {
             `<option value="${w.id}">${this._esc((w.content?.clientName || w.id) + ' · ' + (w.content?.type || ''))}</option>`
         ).join('');
 
+        // H1.10.8 · cargar default provider para preselección del dropdown engine
+        let defaultEngine = DEFAULT_ENGINE;
+        try {
+            const { Orchestrator } = await import('../core/Orchestrator.js?v=' + Date.now());
+            defaultEngine = await Orchestrator.getDefaultProvider() || DEFAULT_ENGINE;
+        } catch (_) { /* fallback DEFAULT_ENGINE */ }
+
         // H1.10.6 · SOP de referencia → dropdown de SOPs del proyecto activo.
         // Si hay projectFilter → carga SOPs del proyecto y renderiza <select>.
         // Si no hay proyecto → conserva <input type="text"> libre.
@@ -943,7 +950,9 @@ export default class KanbanView {
                         </div>
                         <div>
                             <label>Assignee · ID / engine</label>
-                            <input id="kbfAssId" type="text" placeholder="@alvaro / anthropic / openai">
+                            <div id="kbfAssIdWrap">
+                                <input id="kbfAssId" type="text" placeholder="@alvaro · ej. asignar humano">
+                            </div>
                         </div>
                     </div>
 
@@ -985,6 +994,23 @@ export default class KanbanView {
         `;
         document.getElementById('kbfCancel').addEventListener('click', close);
         document.getElementById('kbCreateBg').addEventListener('click', e => { if (e.target.id === 'kbCreateBg') close(); });
+
+        // H1.10.8 · alternar input/select del campo assignee según el tipo
+        const ENGINE_OPTIONS = ['anthropic', 'openai', 'deepseek', 'gemini', 'minimax', 'custom'];
+        const renderAssigneeField = (kind) => {
+            const wrap = document.getElementById('kbfAssIdWrap');
+            if (!wrap) return;
+            if (kind === 'ai') {
+                const opts = ENGINE_OPTIONS.map(e =>
+                    `<option value="${e}" ${e === defaultEngine ? 'selected' : ''}>${e}${e === defaultEngine ? ' (por defecto)' : ''}</option>`
+                ).join('');
+                wrap.innerHTML = `<select id="kbfAssId">${opts}</select>`;
+            } else {
+                wrap.innerHTML = `<input id="kbfAssId" type="text" placeholder="@alvaro · ej. asignar humano">`;
+            }
+        };
+        document.getElementById('kbfAssKind').addEventListener('change', e => renderAssigneeField(e.target.value));
+
         document.getElementById('kbfSave').addEventListener('click', async () => {
             const kind = document.getElementById('kbfAssKind').value;
             const idVal = document.getElementById('kbfAssId').value.trim();
