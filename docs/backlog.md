@@ -78,7 +78,8 @@
 | **UX-001** | **Hipertexto folksonómico universal · todo nodo es enlazable** — UX donde TODA entidad del Mind-as-Graph es un nodo navegable + enlazable a otros vía hipertexto folksonómico (tags libres del usuario que crean aristas tipo `related_to` con weight según frecuencia). Cada nodo `type='project'` con propósito empresarial/cooperativo/startup expone su propio dashboard de herramientas: Pacto de socios · Documento de constitución · Plan tokenómico · Contabilidad de valor · Pools de liquidez para exit · acceso a su Mapa de valor · Kanban · Ledger con cláusula de exit · Landing pública · Mercado de productos. Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟢 sprint A+B verde · resto 🟡 |
 | **UX-001 sprint A** | **Direccionabilidad universal + folksonomía base** — Ruta `/n/{nodeId}` (NodeView resuelve por `node.type`: project/sop/work_order/workshop redirigen a vistas especializadas; tipos genéricos muestran fallback con metadatos + JSON dump). Ruta `/tags` con cloud (tamaño según frecuencia) + lista filtrable de nodos por tag, sincronizada con query param `?tag=`. Módulo puro `js/core/tagsService.js` con `normalizeTag`/`aggregateTags`/`nodesWithTag`/`relatedEdgesByTag`/`addTagToNode`/`removeTagFromNode` + helpers async `persistTagAdd`/`persistTagRemove` (sincronizan `content.tags` ↔ `keywords` para que `KB.query({keyword})` funcione). Editor inline reusable `renderTagsEditor()`. Tests · 28 asserts puros. | ✅ verde |
 | **UX-001 sprint B** | **Hipertexto `[[node-id]]` + linkificación automática** — módulo puro `js/core/linkifyService.js` con `linkifyNodeRefs(text)` y `linkifyMultiline(text)`. Sintaxis: `[[nodeId]]` → link a `/n/{id}`, `[[nodeId\|alias]]` → link con texto custom, `#tag` → link a `/tags?tag={tag}`. Escapado HTML defensivo (XSS-safe). Validación estricta de IDs (`[A-Za-z0-9_.-]+`) y tags (kebab-case). Integrado en NodeView (descripción/summary del fallback genérico) y KanbanView (descripción de la WO en el modal de detalle). Tests · 27 asserts puros (vacío, escape, 1 ref, alias, múltiples mezclados, ID inválido, tag inválido, XSS, multiline). | ✅ verde |
-| **UX-002** | **Auto-tagging semántico al crear mapa, SOPs y WOs** — `js/core/semanticTagger.js` con catálogo cerrado de 17 prefijos taxonómicos (`sector·cnae·kind·role·castell·deliverable·priority·step-kind·role-kind·approval·status·scope·soc-ref·sop-ref·project·hat·skill`) + funciones puras `taxonomicTagsFor{Project,Role,Transaction,Sop,Step,Wo}` + `validateTaxonomyTag` + `mergeTags`. Integrado en: (1) `generateWosFromSop` y modal "+Nueva WO" del Kanban (cada WO nace con `kind:work-order · status:backlog · sop-ref:... · role-kind:... · priority:... · approval:... · project:...`), (2) `_persistRoleSop` de ValueMapView (cada SOP nace con `kind:project-role-sop · role:... · soc-ref:... · project:... · sector:... · castell:...` + folksonómicos opcionales del LLM), (3) `client_vna_model` de DashboardView (proyecto + roles agregados → 1 nodo busca-todo del KB). UI: chips taxonómicos con `:` se renderizan en azul claro, **no eliminables** (contrato del sistema · diferenciados de folksonómicos en índigo). Tests · 30 asserts puros (catálogo, validateTaxonomyTag con `:`, generadores por entidad, mergeTags, edge cases null). Pendiente fase 2: extracción IA de folksonómicos (campo `folksonomy[]` en JSON output del LLM). | ✅ verde fase 1 · 🟡 fase 2 IA |
+| **UX-002** | **Auto-tagging semántico al crear mapa, SOPs y WOs** — `js/core/semanticTagger.js` con catálogo cerrado de 17 prefijos taxonómicos + integrado en `generateWosFromSop`, modal "+Nueva WO", `_persistRoleSop`, `client_vna_model`. Fase 2: el LLM devuelve `folksonomy[]` en `roleSopGenerator` (sopRol), `regenerateSopWithFeedback` (regen) y `sectorCloner` (proyecto + tags por rol). Mergeo automático con `mergeTags(taxonomy, folksonomy)` antes de persistir. Tests · prompt builders verifican presencia de `folksonomy` y prohibición explícita de prefijos `:` para folksonómicos. UI: chips azul claro inmutables (taxonomy) vs índigo eliminables (folksonomy). | ✅ verde fase 1+2 |
+| **KM-001** | **Knowledge Management · folders inteligentes + optimización de tokens** — visión a medio plazo @alvaro 2026-04-30: que la AI experience del operador sea legendaria · cuando abre un proyecto, el sistema le sirve sólo el contexto relevante (no el KB entero). Dos vectores entrelazados: (1) **Carpetas inteligentes**: queries persistentes sobre el KB (combinación de tags taxonómicos + folksonómicos + node.type + projectId + recencia) que actúan como vistas vivas tipo Smart Mailbox · ej. `Carpeta "Mis WOs urgentes"` = `kind:work-order + status:doing + priority:high + assignee:@alvaro`. Cada operador tiene su set, exportable. (2) **Optimización de tokens**: pipeline de pre-procesado del contexto que inyecta sólo los nodos con weight ≥ threshold según relevancia al task (similarity sobre tags + grafo + recencia) · BACK-010 ya esboza esto · KM-001 lo formaliza con criterio TDD ("la respuesta del LLM con contexto pruned debe pasar el mismo DTD que con contexto entero"). Conexión directa con la calidad de matchmaking de MAT-001 y la rentabilidad real de BILL-001. Ver bloque dedicado abajo. | 🟡 |
 | **H_ANIM_001** | **Visualizar flujo de valor con orden secuencial · multi-modelo** — animación + vistas alternativas (BPMN, swimlanes, Sankey, service blueprint, secuencia lineal) + ordenación manual o IA del flujo. Ver sección dedicada abajo. Input @alvaro 2026-04-30. | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
 | H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |
@@ -354,6 +355,124 @@ asociadas (una de salida, una de entrada) → ledger ↔ EAS attestation.
 - En MAT-001 se publican los productos a Arweave como manifests inmutables.
 - Los pagos en cripto pasan por el Safe del proyecto.
 - Los stakeholders se autentican por SBT identidad.
+
+---
+
+## KM-001 · Knowledge Management · folders inteligentes + optimización de tokens
+
+> Visión @alvaro 2026-04-30: la AI experience tiene que ser **legendaria**
+> · cuando abro un proyecto, el sistema sabe qué necesito ver/preguntar
+> sin que se lo diga · cuando llamo al LLM, el contexto inyectado es el
+> mínimo viable de máxima señal (sin pagar tokens por SOPs irrelevantes
+> o nodos viejos). Esto convierte SOS en un OS de conocimiento, no en
+> una colección de vistas.
+
+### Vector 1 · Carpetas inteligentes (Smart Folders)
+
+Vista nueva `/folders` (o sub-tab del dashboard) con la lista de
+carpetas del operador. Cada carpeta es una **query persistente** sobre
+el KB que se evalúa al abrir, mostrando sus nodos como una vista viva.
+
+**Schema** · nodo `type='smart_folder'`:
+
+```json
+{
+  "id": "folder-mis-wo-urgentes",
+  "type": "smart_folder",
+  "content": {
+    "name": "Mis WOs urgentes",
+    "icon": "🚨",
+    "owner": "@alvaro",
+    "query": {
+      "type": ["work_order"],
+      "tagsAll":  ["status:doing", "priority:high"],
+      "tagsAny":  ["role-kind:human", "role-kind:ai"],
+      "projectId": null,
+      "recentDays": 30,
+      "sortBy": "updatedAt",
+      "sortDir": "desc"
+    },
+    "view": "list",          // list · grid · timeline · graph
+    "preview": ["title", "tags:role-kind", "tags:priority", "updatedAt"]
+  }
+}
+```
+
+**Ejemplos de carpetas predefinidas** que el sistema crea automáticamente
+al instalar:
+
+- 🚨 `kind:work-order + priority:high + status:!=ledgered` · backlog crítico
+- 🤖 `kind:work-order + role-kind:ai + status:doing` · en marcha por IA
+- 📋 `kind:project-role-sop + readiness:ready` · SOPs de cliente listos
+- 🌍 `scope:public + kind:project-role-sop` · catálogo TT vendible
+- 🔥 `kind:trade + last7d` · intercambios recientes en el Mercado SOS
+
+El operador crea las suyas desde un wizard sobre `/tags` · puede
+exportar/importar el set como JSON firmado.
+
+### Vector 2 · Optimización de tokens (Context Pruning)
+
+Hoy `KnowledgeLoader.buildContext` inyecta SOC + SOP completos al
+system prompt. KM-001 introduce un **pipeline de relevancia** entre
+los nodos candidatos y la task:
+
+```
+1. Candidatos: nodos del KB filtrados por projectId + tipos relevantes.
+2. Score por nodo:
+   score(node, task) =
+       w_tag * tag_overlap(node.tags, task.derivedTags)         // 0..1
+     + w_freq * inverseRecency(node.updatedAt)                  // 0..1
+     + w_graph * pageRank(node, KB-as-graph, related_to)        // 0..1
+     + w_priority * (taxonomic priority:high boost)             // 0/1
+3. Threshold dinámico: tomar nodos hasta llenar el budget de tokens
+   asignado (default 60% de max_tokens · ajustable).
+4. Compresión: por cada nodo, si su body > N tokens, resumir con
+   skill_antifragile_compressor (BACK-010).
+5. TDD-gate: la llamada con contexto pruned se valida contra
+   un golden output con contexto entero. Si la similitud cae por
+   debajo del 92%, el sistema sube el threshold automáticamente.
+```
+
+Telemetría · cada llamada `Orchestrator.callLLM` registra:
+- `tokensIfFullContext` vs `tokensActual`
+- `qualityDrift` vs golden (cuando aplique)
+- `costSavedUSD`
+
+Dashboard `/efficiency` con curva de ahorro acumulado.
+
+### Vector 3 · Knowledge Management UX
+
+- **Search-as-you-type** en topbar global (Cmd+K) · busca por título,
+  tags taxonómicos y folksonómicos, contenido (con índice ligero in-memory).
+- **Recommendation feed** en el dashboard del proyecto · "🧠 Sugerencias"
+  con nodos relevantes que el operador no ha tocado en 7+ días.
+- **Auto-folders por sector** · al clonar un sector, se crea una
+  smart_folder por proyecto con su query base.
+- **Ínclude/exclude semántico** en el Mind-Graph (H8.1 cuando llegue) ·
+  mostrar sólo los nodos de una carpeta para reducir ruido visual.
+
+### Roadmap propuesto · 4 sprints
+
+| Sprint | Entregable | Coste |
+|---|---|---|
+| **A** Schema smart_folder + ejecutor de queries | nodo `type='smart_folder'` + función `executeFolderQuery(folder, KB)` pura testeable + 5 carpetas predefinidas | Medio |
+| **B** Vista `/folders` + wizard de creación | UI list + wizard con autocompletado de tags conocidos + import/export JSON firmado | Medio |
+| **C** Context pruning (BACK-010 evolved) | scorer + threshold dinámico + telemetría + TDD gate · empezamos por SOPs porque es donde más tokens consumimos | Alto |
+| **D** Search-as-you-type Cmd+K + recommendations feed | índice in-memory + ranking + UI overlay | Medio |
+
+### Conexión con otras historias
+
+- **UX-001** (folksonomía) y **UX-002** (taxonomía) son la materia prima
+  del scorer · sin tags ricos, KM-001 no tiene señal.
+- **BACK-010** (optimizador tokens) ya estaba en backlog · KM-001 lo
+  absorbe y le da forma TDD.
+- **BACK-011** (cascada de providers) se complementa: KM-001 reduce
+  tokens por llamada, BACK-011 abarata el modelo cuando la task lo
+  permita.
+- **MAT-001** (matchmaking) consume las smart_folders compartidas para
+  sugerir colaboraciones cross-proyecto.
+- **BILL-001** se beneficia: el ahorro de tokens es ROI directo del SOS
+  para el cliente · argumento de venta cuantificable.
 
 ---
 

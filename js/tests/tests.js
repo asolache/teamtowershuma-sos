@@ -719,6 +719,9 @@ async function testSectorClonerPromptBuilder() {
     assert(prompt.includes('"based_on_sector"'),                     'prompt define schema con based_on_sector');
     assert(prompt.includes('emergent_notes'),                        'prompt pide emergent_notes en el output');
     assert(/SÓLO\s+JSON/i.test(prompt),                              'prompt instruye output JSON sin texto adicional');
+    // UX-002 fase 2 · cloner pide folksonomy a nivel proyecto Y a nivel rol
+    assert(prompt.includes('"folksonomy"'),                          'UX-002 · cloner schema incluye folksonomy de proyecto');
+    assert(/"tags":.*kebab-case/i.test(prompt),                      'UX-002 · cloner schema explicita tags por rol en kebab-case');
 
     // Caso degenerado: sector seed vacío sigue produciendo prompt válido
     const empty = buildClonePrompt({
@@ -821,6 +824,10 @@ async function testRoleSopGeneratorPromptBuilder() {
     assert(prompt.includes('"role_ref": "atencion-cliente"'),             'schema JSON pide role_ref del rol');
     assert(prompt.includes('"project_ref": "proj-ikea-mad-01"'),          'schema JSON pide project_ref del proyecto');
     assert(/SÓLO\s+JSON\s+v[aá]lido/i.test(prompt),                       'prompt instruye output JSON sin texto adicional');
+    // UX-002 fase 2 · prompt pide folksonomy del LLM
+    assert(prompt.includes('"folksonomy"'),                               'UX-002 · schema JSON incluye campo folksonomy');
+    assert(/folksonomy.*kebab-case/i.test(prompt),                        'UX-002 · folksonomy especifica kebab-case');
+    assert(/sin .{0,3}:/i.test(prompt) && /NO uses prefijos/i.test(prompt), 'UX-002 · folksonomy prohíbe explícitamente prefijos `:`');
 
     // Caso degenerado: rol sin transacciones (cliente VNA recién clonado)
     const orphan = buildRoleSopPrompt({
@@ -867,6 +874,8 @@ async function testRegenerateSopBuilder() {
     assert(prompt.includes('Incrementa la versión'),                   'prompt instruye incrementar version');
     assert(prompt.includes('regeneration_notes'),                      'prompt pide regeneration_notes en el output');
     assert(/SÓLO\s+JSON\s+v[aá]lido/i.test(prompt),                    'prompt instruye output JSON puro');
+    // UX-002 fase 2 · regenerate también pide folksonomy
+    assert(/folksonomy/i.test(prompt),                                 'UX-002 · regenerate prompt incluye folksonomy');
 
     // Sin previousSop lanza
     let threwNoPrev = false;

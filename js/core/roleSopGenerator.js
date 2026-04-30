@@ -95,7 +95,8 @@ export function buildRoleSopPrompt({ role, project, sectorBase = null }) {
         '  "deliverables": ["entregables principales del rol"],',
         '  "keywords": [...],',
         '  "steps": [{ "id", "label", "duration_minutes", "role_kind", "role_profile", "deliverable_kind", "approval_rule", "priority" }],',
-        '  "summary": "Texto breve (3-4 líneas) explicando para qué sirve este SOP en el proyecto del cliente."',
+        '  "summary": "Texto breve (3-4 líneas) explicando para qué sirve este SOP en el proyecto del cliente.",',
+        '  "folksonomy": ["3-7 tags humanos en kebab-case lowercase, sin acentos, sin `:`. Vocabulario natural que un colega usaría para clasificarlo: ej. urgente, repetitivo, creativo, b2b, proceso-fisico, soporte-cliente. NO uses prefijos como sector:/role:/kind: que son taxonómicos del sistema."]',
         '}',
     ].join('\n');
 }
@@ -247,7 +248,7 @@ export function buildRegenerateSopPrompt({ previousSop, role, project, feedback,
         '5. Mantén el invariante: ≥3 steps · al menos 1 IA cuando aplique · summary actualizado · soc_ref intacto.',
         '6. No inventes precios. Respeta `soc-teamtowers-brand` (10 valores castellers).',
         '',
-        'OUTPUT: SÓLO JSON válido con el mismo schema que el previo + campo `version` actualizado + campo `regeneration_notes` con un resumen breve (2-3 líneas) de qué cambió y por qué (alineado al feedback).',
+        'OUTPUT: SÓLO JSON válido con el mismo schema que el previo + campo `version` actualizado + campo `regeneration_notes` con un resumen breve (2-3 líneas) de qué cambió y por qué (alineado al feedback) + campo `folksonomy` (array 3-7 tags humanos en kebab-case lowercase, sin acentos, sin `:`, vocabulario natural, NO uses prefijos sector:/role:/kind: que son taxonómicos del sistema).',
     ].join('\n');
 }
 
