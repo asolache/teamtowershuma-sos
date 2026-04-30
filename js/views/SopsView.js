@@ -74,6 +74,22 @@ export default class SopsView {
             .sv-step  { background:#050507; border:1px solid #1a1a22; border-radius:5px; padding:0.6rem; margin-top:0.5rem; }
             .sv-step-row { display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:0.4rem; margin-top:0.3rem; }
             .sv-modal .actions { display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1.2rem; flex-wrap:wrap; }
+
+            /* H1.10.5 · Indicador "IA pensando" reutilizable */
+            .sv-thinking { display:inline-flex; align-items:center; gap:0.5rem; color:#a5b4fc; font-size:0.85rem; }
+            .sv-thinking .dots { display:inline-flex; gap:3px; }
+            .sv-thinking .dots span { width:6px; height:6px; border-radius:50%; background:#a5b4fc; animation:sv-pulse 1.2s infinite ease-in-out; }
+            .sv-thinking .dots span:nth-child(2) { animation-delay:0.2s; }
+            .sv-thinking .dots span:nth-child(3) { animation-delay:0.4s; }
+            @keyframes sv-pulse { 0%,80%,100%{opacity:0.3;transform:scale(0.8);} 40%{opacity:1;transform:scale(1.1);} }
+
+            /* H1.10.5 · Bulk progress UI */
+            .sv-bulk-row    { display:flex; align-items:center; gap:0.6rem; padding:0.4rem 0.5rem; border-bottom:1px solid #1a1a22; font-size:0.78rem; }
+            .sv-bulk-row .role { flex:1; color:#e6e6e6; }
+            .sv-bulk-row .stat { color:#666; font-size:0.72rem; }
+            .sv-bulk-icon   { font-size:1rem; width:1.2rem; text-align:center; }
+            .sv-progressbar { background:#1a1a22; border-radius:4px; overflow:hidden; height:6px; margin:0.5rem 0; }
+            .sv-progressbar > span { display:block; height:100%; background:linear-gradient(90deg,#6366f1,#22c55e); transition:width 0.3s ease; }
         </style>
 
         <div class="sv-shell">
@@ -84,6 +100,7 @@ export default class SopsView {
                 <a href="/dashboard" data-link class="sv-link">← Dashboard</a>
                 ${this.projectId ? `<a href="/map?project=${this.projectId}" data-link class="sv-link">Mapa</a>` : ''}
                 ${this.projectId ? `<a href="/kanban?project=${this.projectId}" data-link class="sv-link">Kanban</a>` : ''}
+                ${this.projectId ? `<button class="sv-btn sv-btn-primary" id="svBtnBulkGen" title="Genera SOPs faltantes para todos los roles del proyecto">🤖 Generar todos los SOPs</button>` : ''}
             </div>
             <div class="sv-main" id="svMain"></div>
             <div id="svModalRoot"></div>
@@ -101,9 +118,177 @@ export default class SopsView {
         }
         await this._load();
         this._render();
+        document.getElementById('svBtnBulkGen')?.addEventListener('click', () => this._openBulkModal());
     }
 
-    destroy() {}
+    destroy() { this._cancelBulk = true; }
+
+    // ─── H1.10.5 · Bulk gen modal ───────────────────────────────────────────
+    _openBulkModal() {
+        if (!this.project || !Array.isArray(this.project.vna_roles) || this.project.vna_roles.length === 0) {
+            alert('El proyecto no tiene roles VNA. Abre el mapa y añade roles primero.');
+            return;
+        }
+        const root = document.getElementById('svModalRoot');
+        const close = () => { this._cancelBulk = true; root.innerHTML = ''; };
+
+        const existingByRole = new Set(this.sops.map(s => s.content?.role_ref).filter(Boolean));
+        const roles = this.project.vna_roles;
+        const missing = roles.filter(r => !existingByRole.has(r.id)).length;
+        const skipping = roles.length - missing;
+
+        const rolesHtml = roles.map(r => {
+            const existing = existingByRole.has(r.id);
+            return `
+                <div class="sv-bulk-row" data-bulk-role="${this._esc(r.id)}">
+                    <span class="sv-bulk-icon" data-bulk-icon="${this._esc(r.id)}">${existing ? '⏭' : '⏸'}</span>
+                    <span class="role">${this._esc(r.name || r.id)}</span>
+                    <span class="stat" data-bulk-stat="${this._esc(r.id)}">${existing ? 'ya tiene SOP · skip' : 'pendiente'}</span>
+                </div>
+            `;
+        }).join('');
+
+        root.innerHTML = `
+            <div class="sv-modal" id="svBulkBg">
+                <div class="sv-modal-inner" style="max-width:680px;">
+                    <h3>🤖 Generar SOPs para todos los roles</h3>
+                    <p style="color:#aaa;font-size:0.78rem;">Proyecto: <strong>${this._esc(this.project.nombre || this.project.id)}</strong> · ${roles.length} roles · ${skipping} ya con SOP · <strong>${missing} faltantes</strong></p>
+
+                    <div style="margin-top:0.7rem;">
+                        <div class="sv-thinking" id="svBulkStatus" style="display:none;">
+                            <span>🧠 La IA está pensando</span>
+                            <span class="dots"><span></span><span></span><span></span></span>
+                            <span id="svBulkPhase" style="color:#aaa;font-size:0.78rem;"></span>
+                        </div>
+                    </div>
+
+                    <div class="sv-progressbar"><span id="svBulkProgress" style="width:0%;"></span></div>
+                    <div id="svBulkSummary" style="color:#aaa;font-size:0.75rem;margin-bottom:0.7rem;">Listo para empezar.</div>
+
+                    <div style="max-height:280px;overflow-y:auto;border:1px solid #1a1a22;border-radius:6px;padding:0.3rem 0.5rem;">
+                        ${rolesHtml}
+                    </div>
+
+                    <p style="color:#666;font-size:0.72rem;margin-top:0.5rem;">Por defecto se saltan los roles que ya tienen SOP. Cada llamada al LLM tarda 8-25s. Total estimado: ~${Math.max(missing * 12, 5)}s.</p>
+
+                    <div class="actions">
+                        <button class="sv-btn" id="svBulkClose">Cerrar</button>
+                        <button class="sv-btn sv-btn-warn" id="svBulkCancel" style="display:none;">⏹ Cancelar</button>
+                        <button class="sv-btn sv-btn-primary" id="svBulkGo" ${missing === 0 ? 'disabled' : ''}>${missing === 0 ? 'No hay nada que generar' : '▶ Empezar (' + missing + ')'}</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('svBulkClose').addEventListener('click', close);
+        document.getElementById('svBulkBg').addEventListener('click', e => { if (e.target.id === 'svBulkBg') close(); });
+        document.getElementById('svBulkCancel').addEventListener('click', () => {
+            this._cancelBulk = true;
+            document.getElementById('svBulkSummary').textContent = '⏹ Cancelando tras el SOP en curso…';
+        });
+        document.getElementById('svBulkGo').addEventListener('click', () => this._executeBulkGen());
+    }
+
+    async _executeBulkGen() {
+        this._cancelBulk = false;
+        const goBtn  = document.getElementById('svBulkGo');
+        const cancel = document.getElementById('svBulkCancel');
+        const status = document.getElementById('svBulkStatus');
+        const phase  = document.getElementById('svBulkPhase');
+        const bar    = document.getElementById('svBulkProgress');
+        const summary= document.getElementById('svBulkSummary');
+        if (goBtn)   goBtn.style.display   = 'none';
+        if (cancel)  cancel.style.display  = 'inline-block';
+        if (status)  status.style.display  = 'inline-flex';
+
+        const phases = ['construyendo contexto', 'llamando al LLM', 'validando JSON', 'persistiendo'];
+        let phaseIdx = 0;
+        const phaseTimer = setInterval(() => {
+            phaseIdx = (phaseIdx + 1) % phases.length;
+            if (phase) phase.textContent = '· ' + phases[phaseIdx];
+        }, 1800);
+
+        try {
+            const { generateAllRoleSopsForProject } = await import('../core/roleSopGenerator.js?v=' + Date.now());
+            let doneCount = 0, errorCount = 0, skipCount = 0;
+
+            const result = await generateAllRoleSopsForProject({
+                project:      this.project,
+                existingSops: this.sops,
+                isCancelled:  () => this._cancelBulk,
+                onProgress: (e) => {
+                    const icon = document.querySelector(`[data-bulk-icon="${this._cssEsc(e.role.id)}"]`);
+                    const stat = document.querySelector(`[data-bulk-stat="${this._cssEsc(e.role.id)}"]`);
+                    if (e.status === 'running') {
+                        if (icon) icon.textContent = '⏳';
+                        if (stat) stat.textContent = '🧠 generando…';
+                        if (phase) phase.textContent = '· rol "' + (e.role.name || e.role.id) + '"';
+                    } else if (e.status === 'done') {
+                        doneCount++;
+                        if (icon) icon.textContent = '✅';
+                        if (stat) stat.textContent = (e.result?.readiness || 'solid') + ' · ' + (e.result?.latencyMs || 0) + 'ms';
+                    } else if (e.status === 'error') {
+                        errorCount++;
+                        if (icon) icon.textContent = '❌';
+                        if (stat) {
+                            stat.textContent = (e.error?.message || 'error').slice(0, 60);
+                            stat.style.color = '#fca5a5';
+                        }
+                    } else if (e.status === 'skipped') {
+                        skipCount++;
+                        if (icon) icon.textContent = '⏭';
+                        if (stat) stat.textContent = 'skip · ya existía';
+                    }
+                    const pct = Math.round(((e.index + 1) / e.total) * 100);
+                    if (bar) bar.style.width = pct + '%';
+                    if (summary) summary.textContent = `${doneCount} OK · ${errorCount} errores · ${skipCount} omitidos · ${e.index + 1}/${e.total}`;
+                },
+            });
+
+            // Persistir todos los SOPs generados como nodos KB
+            for (const r of result.generated) {
+                const sopId = r.sop.id || ('sop-' + r.roleRef + '-' + r.projectRef);
+                await store.dispatch({ type: 'KB_UPSERT', payload: { node: {
+                    id:        sopId,
+                    type:      'sop',
+                    projectId: r.projectRef,
+                    content: {
+                        ...r.sop,
+                        role_ref:    r.roleRef,
+                        project_ref: r.projectRef,
+                        readiness:   r.readiness,
+                        sources:     r.sources,
+                        tokens:      r.tokens,
+                        latencyMs:   r.latencyMs,
+                        generatedAt: Date.now(),
+                        kind:        'project-role-sop',
+                    },
+                    keywords: ['sop', 'project-role-sop', r.roleRef, r.projectRef],
+                }}});
+            }
+
+            if (status) status.style.display = 'none';
+            if (summary) {
+                summary.innerHTML = result.cancelled
+                    ? `⏹ Cancelado · ${result.generated.length} OK · ${result.errors.length} errores`
+                    : `✅ Terminado · ${result.generated.length} SOPs generados · ${result.errors.length} errores · ${skipCount} omitidos`;
+            }
+            await this._load();
+            this._render();
+        } catch (err) {
+            console.error('[H1.10.5] Bulk error:', err);
+            if (summary) summary.innerHTML = `<span style="color:#fca5a5;">Error fatal: ${this._esc(err.message)}</span>`;
+        } finally {
+            clearInterval(phaseTimer);
+            if (cancel) cancel.style.display = 'none';
+            if (goBtn) {
+                goBtn.style.display = 'inline-block';
+                goBtn.disabled = true;
+                goBtn.textContent = 'Cerrar para refrescar';
+            }
+        }
+    }
+
+    _cssEsc(str) { return String(str || '').replace(/"/g, '\\"'); }
 
     async _load() {
         await KB.init();

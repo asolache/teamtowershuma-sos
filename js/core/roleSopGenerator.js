@@ -153,7 +153,68 @@ export async function generateRoleSop({ role, project, sectorBase = null }) {
     };
 }
 
-// ─── H1.10.4 · Builder PURO para regeneración con feedback ─────────────────
+// ─── H1.10.5 · Generación bulk secuencial ──────────────────────────────────
+// Itera roles del proyecto, llama generateRoleSop por cada uno y notifica
+// progreso vía callbacks. Maneja cancelación cooperativa con un AbortFlag.
+//
+//   onProgress(state)  → invocado tras cada paso con
+//                        { role, status: 'pending'|'running'|'done'|'error'|'skipped',
+//                          result?, error?, index, total }
+//   isCancelled()      → función opcional que devuelve true para abortar
+//   skipExisting       → si true (default), saltar roles que ya tienen SOP en KB
+//
+// Devuelve { generated: [...], errors: [...], cancelled: bool }.
+export async function generateAllRoleSopsForProject({
+    project,
+    existingSops = [],
+    onProgress = () => {},
+    isCancelled = () => false,
+    skipExisting = true,
+}) {
+    if (!project || !Array.isArray(project.vna_roles)) {
+        throw new Error('project con vna_roles[] requerido');
+    }
+    const roles = project.vna_roles.filter(r => r && r.id);
+    const total = roles.length;
+    const generated = [];
+    const errors    = [];
+    let cancelled   = false;
+
+    const existingByRole = new Set(
+        (existingSops || [])
+            .map(s => (s.content && s.content.role_ref) || null)
+            .filter(Boolean)
+    );
+
+    for (let i = 0; i < roles.length; i++) {
+        if (isCancelled()) { cancelled = true; break; }
+        const role = roles[i];
+        const baseEvt = { role, index: i, total };
+
+        if (skipExisting && existingByRole.has(role.id)) {
+            onProgress({ ...baseEvt, status: 'skipped' });
+            continue;
+        }
+
+        onProgress({ ...baseEvt, status: 'running' });
+        try {
+            const result = await generateRoleSop({
+                role,
+                project,
+                sectorBase: project.based_on_sector || project.sector_id,
+            });
+            generated.push(result);
+            onProgress({ ...baseEvt, status: 'done', result });
+        } catch (err) {
+            const e = { roleId: role.id, message: err.message };
+            errors.push(e);
+            onProgress({ ...baseEvt, status: 'error', error: e });
+        }
+    }
+
+    return { generated, errors, cancelled, total };
+}
+
 export function buildRegenerateSopPrompt({ previousSop, role, project, feedback, sectorBase = null }) {
     if (!previousSop) throw new Error('buildRegenerateSopPrompt requires previousSop');
     if (!feedback || typeof feedback !== 'string' || !feedback.trim()) {

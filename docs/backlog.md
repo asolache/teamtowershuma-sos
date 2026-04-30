@@ -67,6 +67,7 @@
 | H1.10.2 | Fase 2 · evolución VNA cliente → SOPs específicos por rol. Botón en inspector ValueMap "📋 Generar SOP del rol con IA" cuando hay projectId. SOP generado por rol con steps[] auto-WO. Persistido como nodo `type:'sop'` con `projectId` y `kind:'project-role-sop'`. | ✅ verde (botón inspector + roleSopGenerator + persistencia) |
 | H1.10.3 | Integrar SOPs propios del proyecto en el modal "📋 Desde SOP" del Kanban (mostrar sección "SOPs del proyecto" cuando hay filtro activo) | 🟡 |
 | H1.10.4 | Vista `/sops?project={id}` con lista, edición inline (nombre, summary, steps con label/role_kind/duration/priority) y regeneración con feedback. Acceso desde topbar del ValueMap cuando hay projectId. | ✅ verde |
+| H1.10.5 | Generación bulk secuencial de SOPs para todos los roles del proyecto + indicador "🧠 IA pensando" con dots animados + mensaje rotativo de fase + barra de progreso + skip de existentes + cancelación cooperativa. Input @alvaro 2026-04-30. | ✅ verde |
 | **BACK-008** | **Añadir MiniMax como proveedor IA** (https://platform.minimax.io). Añadir entrada en `BASE_PRICING` del Orchestrator + branch en `callLLM` con su API + selector en `/settings`. Posible fallback más barato según BACK-011 (cascada de providers). | 🟡 |
 | **H_ANIM_001** | **Animar flujo de valor en `/map`** — partículas/pulsos viajan por las aristas en orden secuencial; vista alternativa de lista ordenada (paso a paso) que reproduce la circulación del valor (input @alvaro 2026-04-30) | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |

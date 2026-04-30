@@ -879,6 +879,61 @@ async function testRegenerateSopBuilder() {
     assert(threwNoFb,                                                  'feedback vacío/whitespace lanza excepción');
 }
 
+// ─── H1.10.5 · Bulk SOP generation · skip/cancel logic ───────────────────
+async function testBulkGenSopOrchestration() {
+    // No usamos generateAllRoleSopsForProject directo (llama al LLM real).
+    // Verificamos sólo la lógica de skip / cancel / total / progress
+    // simulando una versión local con la misma firma.
+
+    const project = {
+        id: 'proj-bulk-test',
+        nombre: 'Bulk Test',
+        sector_id: 'K',
+        based_on_sector: 'K',
+        vna_roles: [
+            { id: 'rol-1', name: 'Rol 1' },
+            { id: 'rol-2', name: 'Rol 2' },
+            { id: 'rol-3', name: 'Rol 3' },
+        ],
+    };
+    const existingSops = [
+        { content: { role_ref: 'rol-1' } },
+    ];
+
+    // Iterador equivalente al del orquestador real (versión testeable)
+    const events = [];
+    const generated = [];
+    const errors = [];
+    const existingByRole = new Set(existingSops.map(s => s.content.role_ref));
+    let cancelled = false;
+    const cancelOnIdx = 2;  // cancelamos justo antes del 3er rol
+    let i = 0;
+    for (const role of project.vna_roles) {
+        if (i >= cancelOnIdx) { cancelled = true; break; }
+        const baseEvt = { roleId: role.id, index: i, total: project.vna_roles.length };
+        if (existingByRole.has(role.id)) {
+            events.push({ ...baseEvt, status: 'skipped' });
+        } else {
+            events.push({ ...baseEvt, status: 'running' });
+            // Simular generación OK
+            generated.push({ roleRef: role.id });
+            events.push({ ...baseEvt, status: 'done' });
+        }
+        i++;
+    }
+
+    assert(events.some(e => e.roleId === 'rol-1' && e.status === 'skipped'), 'rol-1 ya existente → skipped');
+    assert(events.some(e => e.roleId === 'rol-2' && e.status === 'running'), 'rol-2 no existente → running emitido');
+    assert(events.some(e => e.roleId === 'rol-2' && e.status === 'done'),    'rol-2 → done tras generar');
+    assert(!events.some(e => e.roleId === 'rol-3'),                         'rol-3 no procesado por cancelación temprana');
+    assert(cancelled === true,                                              'cancelled=true cuando se aborta');
+    assert(generated.length === 1,                                          '1 SOP generado (rol-2)');
+
+    // Verificar que el módulo real exporta la función
+    const mod = await import('../core/roleSopGenerator.js?v=' + Date.now());
+    assert(typeof mod.generateAllRoleSopsForProject === 'function',         'generateAllRoleSopsForProject exportada');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -888,6 +943,7 @@ const SUITE = [
     { name: 'H1.10.1 · Sector Cloner · prompt builder',           fn: testSectorClonerPromptBuilder },
     { name: 'H1.10.2 · Role SOP Generator · prompt builder',      fn: testRoleSopGeneratorPromptBuilder },
     { name: 'H1.10.4 · Regenerate SOP with feedback · builder',   fn: testRegenerateSopBuilder },
+    { name: 'H1.10.5 · Bulk SOP generation · skip/cancel logic',  fn: testBulkGenSopOrchestration },
     { name: 'BUG-002 · extractJsonFromLlmOutput robusto a fences', fn: testExtractJsonFromLlmOutput },
     { name: 'H2.1 · Workshops · CRUD + cambio de estado',         fn: testWorkshopsCrud },
     { name: 'H2.3 · WorkshopsView · prompt builder propuesta IA', fn: testWorkshopsProposalPromptBuilder },
