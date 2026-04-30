@@ -16,6 +16,7 @@ import { KB }              from '../core/kb.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { Orchestrator }     from '../core/Orchestrator.js';
 import { t, langSelectorHtml, getLang } from '../i18n.js';
+import { taxonomicTagsForSop, mergeTags } from '../core/semanticTagger.js';
 
 // ─── Constantes visuales ─────────────────────────────────────────────────────
 const COLOR_TANGIBLE   = '#00e676';   // accent-green
@@ -1902,6 +1903,20 @@ export default class ValueMapView {
     async _persistRoleSop(result) {
         const sop = result.sop;
         const sopId = sop.id || ('sop-' + result.roleRef + '-' + result.projectRef);
+
+        // UX-002 · auto-tagging taxonómico + folksonómico
+        // - taxonómicos: derivados del schema (kind/role/soc-ref/project/sector/castell)
+        // - folksonómicos: el LLM puede haber devuelto sop.folksonomy[] (UX-002 fase 2)
+        const project = (store.getState().projects || []).find(p => p.id === result.projectRef);
+        const role    = this._state.roles.find(r => r.id === result.roleRef) || { id: result.roleRef };
+        const taxonomic = taxonomicTagsForSop(
+            { id: sopId, role_ref: result.roleRef, soc_ref: sop.soc_ref || 'soc-vna-network' },
+            project,
+            role
+        );
+        const folksonomic = Array.isArray(sop.folksonomy) ? sop.folksonomy : [];
+        const tags = mergeTags(taxonomic, folksonomic);
+
         await store.dispatch({
             type: 'KB_UPSERT',
             payload: { node: {
@@ -1925,8 +1940,9 @@ export default class ValueMapView {
                     latencyMs:       result.latencyMs,
                     generatedAt:     Date.now(),
                     kind:            'project-role-sop',
+                    tags,
                 },
-                keywords: ['sop', 'project-role-sop', result.roleRef, result.projectRef],
+                keywords: Array.from(new Set(['sop', 'project-role-sop', result.roleRef, result.projectRef, ...tags])),
             }}
         });
         // H1.10.7 · refrescar mapa y re-pintar inspector si el rol sigue seleccionado

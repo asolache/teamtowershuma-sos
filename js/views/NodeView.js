@@ -147,8 +147,8 @@ export default class NodeView {
             this._bindTagsEditor();  // re-bind tras innerHTML reset
         };
 
-        // Click en chip → eliminar
-        root.querySelectorAll('.sos-tag-chip').forEach(chip => {
+        // Click en chip folksonómico → eliminar (los taxonómicos son inmutables · UX-002)
+        root.querySelectorAll('.sos-tag-chip[data-taxonomy="false"]').forEach(chip => {
             chip.addEventListener('click', async () => {
                 try { await persistTagRemove(this.nodeId, chip.dataset.tag); await refresh(); }
                 catch (err) { console.error('[UX-001] Error removiendo tag:', err); }
