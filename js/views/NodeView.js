@@ -23,7 +23,7 @@ function specializedUrlFor(node) {
     const id  = node.id;
     const pid = node.projectId || node.content?.projectId;
     switch (node.type) {
-        case 'project':     return pid || id ? `/map?project=${encodeURIComponent(id)}` : null;
+        case 'project':     return id ? `/project/${encodeURIComponent(id)}` : null;
         case 'sop':         return pid ? `/sops?project=${encodeURIComponent(pid)}&focus=${encodeURIComponent(id)}` : null;
         case 'work_order':  return pid ? `/kanban?project=${encodeURIComponent(pid)}` : `/kanban`;
         case 'workshop':    return `/workshops`;

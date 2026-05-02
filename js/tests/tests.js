@@ -1381,6 +1381,60 @@ async function testMarketService() {
     assert(typeof mkt.DEFAULT_CONVENTIONAL_RANGES.notaria === 'object',                   'DEFAULT_CONVENTIONAL_RANGES exportado');
 }
 
+// ─── UX-001 sprint C · projectHubService puro ───────────────────
+async function testProjectHub() {
+    const mod = await import('../core/projectHubService.js?v=' + Date.now());
+    const { aggregateProjectStats, PROJECT_TOOLS, PROJECT_VIEWS, projectViewUrls } = mod;
+
+    const projectId = 'proj-ikea-mad';
+    const nodes = [
+        { id: 'sop-1', type: 'sop', projectId,         content: { name: 'SOP A', steps: [{}, {}] } },
+        { id: 'sop-2', type: 'sop', projectId,         content: { name: 'SOP B' } },
+        { id: 'sop-x', type: 'sop', projectId: 'otro', content: { name: 'NO debe contar' } },
+        { id: 'wo-1',  type: 'work_order', projectId,  content: { status: 'backlog',  assignee: { kind: 'ai'    } } },
+        { id: 'wo-2',  type: 'work_order', projectId,  content: { status: 'doing',    assignee: { kind: 'human' } } },
+        { id: 'wo-3',  type: 'work_order', projectId,  content: { status: 'ledgered', assignee: { kind: 'ai'    } } },
+        { id: 'wo-x',  type: 'work_order', projectId: 'otro', content: { status: 'doing' } },
+        { id: 'mkt-1', type: 'market_item', content: { kind: 'service', providerProjectId: projectId } },
+        { id: 'mkt-2', type: 'market_item', content: { kind: 'service', providerProjectId: 'otro'   } },
+        { id: 'led-1', type: 'ledger_entry', projectId, content: { savingEur: 250.5 } },
+        { id: 'led-2', type: 'ledger_entry', projectId, content: { savingEur: 100   } },
+    ];
+
+    // aggregateProjectStats
+    const s = aggregateProjectStats({ projectId, nodes });
+    assert(s.sops === 2,                                              'aggregate · 2 sops del proyecto (filtra otro)');
+    assert(s.sopsList.every(n => n.projectId === projectId),          'aggregate · sopsList sólo del proyecto');
+    assert(s.workOrders.total === 3,                                  'aggregate · 3 WOs del proyecto');
+    assert(s.workOrders.backlog === 1 && s.workOrders.doing === 1 && s.workOrders.ledgered === 1, 'aggregate · counts por status');
+    assert(s.workOrders.list.length === 3,                            'aggregate · workOrders.list sólo del proyecto');
+    assert(s.woRolesAi === 2 && s.woRolesHuman === 1,                 'aggregate · split AI vs human');
+    assert(s.marketItems.count === 1,                                 'aggregate · 1 oferta del proyecto');
+    assert(s.ledgerEntries.count === 2,                               'aggregate · 2 ledger entries');
+    assert(s.savingEur === 350.5,                                     'aggregate · suma savingEur del ledger');
+
+    // empty case
+    const empty = aggregateProjectStats({ projectId: null, nodes: [] });
+    assert(empty.sops === 0 && empty.workOrders.total === 0,          'aggregate · projectId nulo → stats vacías');
+    assert(empty.savingEur === 0,                                     'aggregate · empty savingEur 0');
+
+    // PROJECT_TOOLS y PROJECT_VIEWS son catálogos cerrados Object.freeze
+    assert(Array.isArray(PROJECT_TOOLS) && PROJECT_TOOLS.length === 6, 'PROJECT_TOOLS tiene 6 herramientas');
+    assert(PROJECT_TOOLS.some(t => t.id === 'pact')        ,           'PROJECT_TOOLS incluye pact');
+    assert(PROJECT_TOOLS.some(t => t.id === 'tokenomics'),             'PROJECT_TOOLS incluye tokenomics');
+    assert(PROJECT_TOOLS.some(t => t.id === 'launchpad'),              'PROJECT_TOOLS incluye launchpad');
+    assert(Array.isArray(PROJECT_VIEWS) && PROJECT_VIEWS.length === 5, 'PROJECT_VIEWS tiene 5 vistas operativas');
+    assert(Object.isFrozen(PROJECT_TOOLS),                              'PROJECT_TOOLS está congelado');
+    assert(Object.isFrozen(PROJECT_VIEWS),                              'PROJECT_VIEWS está congelado');
+
+    // projectViewUrls compone bien
+    const urls = projectViewUrls(projectId);
+    assert(urls.length === 5,                                         'projectViewUrls devuelve 5');
+    assert(urls.find(u => u.id === 'map').url === '/map?project=' + encodeURIComponent(projectId),       'map url correcta');
+    assert(urls.find(u => u.id === 'tags').url === '/tags?tag=project:' + encodeURIComponent(projectId), 'tags url compone tag=project:{id}');
+    assert(projectViewUrls(null).length === 0,                        'projectViewUrls null → []');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -1403,7 +1457,8 @@ const SUITE = [
     { name: 'UX-001 · tagsService · folksonomía pura',            fn: testTagsService },
     { name: 'UX-001 sprint B · linkifyService · hipertexto puro', fn: testLinkifyService },
     { name: 'UX-002 · semanticTagger · taxonomía + folksonomía',  fn: testSemanticTagger },
-    { name: 'MKT-001 sprint A · marketService + cnaeSeed puros',  fn: testMarketService }
+    { name: 'MKT-001 sprint A · marketService + cnaeSeed puros',  fn: testMarketService },
+    { name: 'UX-001 sprint C · projectHubService puro',           fn: testProjectHub }
 ];
 
 export async function runTests() {
