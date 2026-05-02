@@ -22,6 +22,8 @@
 import { store }           from '../core/store.js';
 import { KB }              from '../core/kb.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
+import { linkifyMultiline } from '../core/linkifyService.js';
+import { taxonomicTagsForWo, mergeTags } from '../core/semanticTagger.js';
 
 // Orchestrator se importa dinámicamente con cache-bust en _executeAi
 // (ver BUG-002/003) para que fixes del parser se apliquen sin requerir
@@ -75,7 +77,8 @@ export function generateWosFromSop(sopSlug, steps, options = {}) {
     return steps.map((step, i) => {
         const kind = step.role_kind === 'ai' ? 'ai' : 'human';
         const stepId = step.id || ('step-' + i);
-        return {
+        const sopRef = 'sop-' + sopSlug;
+        const node = {
             id:        'wo-' + baseId + '-' + stepId.slice(0, 24) + '-' + ts + '-' + i,
             type:      'work_order',
             projectId,
@@ -83,7 +86,7 @@ export function generateWosFromSop(sopSlug, steps, options = {}) {
                 title:           step.label || ('Paso ' + (i + 1)),
                 description:     '',
                 workshopId,
-                sopRef:          'sop-' + sopSlug,
+                sopRef,
                 stepRef:         stepId,
                 socRefs:         Array.isArray(socRefs) ? socRefs.slice() : ['soc-teamtowers-brand'],
                 assignee: {
@@ -100,9 +103,15 @@ export function generateWosFromSop(sopSlug, steps, options = {}) {
                 tokensOut:       null,
                 deliverableKind: step.deliverable_kind || null,
                 status:          'backlog',
+                tags:            [],
             },
-            keywords: ['work_order', kind, 'sop-' + sopSlug, stepId],
+            keywords: ['work_order', kind, sopRef, stepId],
         };
+        // UX-002 · auto-tagging taxonómico al generar
+        const tax = taxonomicTagsForWo(node, sopRef, step);
+        node.content.tags = mergeTags(tax, []);
+        node.keywords     = Array.from(new Set([...(node.keywords || []), ...node.content.tags]));
+        return node;
     });
 }
 
@@ -1039,6 +1048,9 @@ export default class KanbanView {
                 },
                 keywords: ['work_order', kind, document.getElementById('kbfSop').value.trim() || ''],
             };
+            // UX-002 · auto-tagging taxonómico
+            node.content.tags = taxonomicTagsForWo(node);
+            node.keywords     = Array.from(new Set([...(node.keywords || []), ...node.content.tags]));
             close();
             await this._save(node);
         });
@@ -1073,7 +1085,7 @@ export default class KanbanView {
                         · aprobación ${this._esc(c.approvalRule || 'manual')}
                     </p>
 
-                    ${c.description ? `<p style="color:#bbb;font-size:0.85rem;margin-top:0.7rem;">${this._esc(c.description)}</p>` : ''}
+                    ${c.description ? `<p style="color:#bbb;font-size:0.85rem;margin-top:0.7rem;">${linkifyMultiline(c.description)}</p>` : ''}
 
                     <div class="row" style="margin-top:0.5rem;">
                         <div>

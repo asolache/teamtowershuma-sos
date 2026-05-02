@@ -12,6 +12,7 @@ import { store }           from '../core/store.js';
 import { KB }              from '../core/kb.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { t, langSelectorHtml } from '../i18n.js';
+import { taxonomicTagsForProject, taxonomicTagsForRole, mergeTags, buildTag } from '../core/semanticTagger.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function uid() { return 'proj-' + Math.random().toString(36).slice(2, 9); }
@@ -989,6 +990,25 @@ export default class DashboardView {
         });
 
         // 2. Persistir nodo client_vna_model en KB Mind-as-Graph
+        // UX-002 · auto-tagging taxonómico del proyecto + agregado de tags
+        // por cada rol VNA del cliente clonado, para que `KB.query({keyword:
+        // 'role:atencion-cliente'})` devuelva el client_vna_model que lo contiene.
+        const projectShape = {
+            id:               projectId,
+            sector_id:        c.sector_id || result.sectorBase,
+            based_on_sector:  c.based_on_sector || result.sectorBase,
+            cnae:             c.cnae || null,
+        };
+        const tagsProject = taxonomicTagsForProject(projectShape);
+        const tagsRoles = (c.roles || []).flatMap(r => taxonomicTagsForRole(r, projectShape));
+        // UX-002 fase 2 · folksonómicos del LLM: por proyecto + tags libres por rol
+        const folksonomyProject = Array.isArray(c.folksonomy) ? c.folksonomy : [];
+        const folksonomyRoles   = (c.roles || []).flatMap(r => Array.isArray(r.tags) ? r.tags : []);
+        const tagsAll = mergeTags(
+            [buildTag('kind', 'client-vna-model'), ...tagsProject, ...tagsRoles],
+            [...folksonomyProject, ...folksonomyRoles]
+        );
+
         await store.dispatch({
             type: 'KB_UPSERT',
             payload: { node: {
@@ -1009,8 +1029,9 @@ export default class DashboardView {
                     tokens:        result.tokens,
                     latencyMs:     result.latencyMs,
                     generatedAt:   Date.now(),
+                    tags:          tagsAll,
                 },
-                keywords: ['client_vna_model', c.based_on_sector || result.sectorBase, safeId],
+                keywords: Array.from(new Set(['client_vna_model', c.based_on_sector || result.sectorBase, safeId, ...tagsAll])),
             }}
         });
 

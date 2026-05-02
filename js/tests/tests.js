@@ -719,6 +719,9 @@ async function testSectorClonerPromptBuilder() {
     assert(prompt.includes('"based_on_sector"'),                     'prompt define schema con based_on_sector');
     assert(prompt.includes('emergent_notes'),                        'prompt pide emergent_notes en el output');
     assert(/SÓLO\s+JSON/i.test(prompt),                              'prompt instruye output JSON sin texto adicional');
+    // UX-002 fase 2 · cloner pide folksonomy a nivel proyecto Y a nivel rol
+    assert(prompt.includes('"folksonomy"'),                          'UX-002 · cloner schema incluye folksonomy de proyecto');
+    assert(/"tags":.*kebab-case/i.test(prompt),                      'UX-002 · cloner schema explicita tags por rol en kebab-case');
 
     // Caso degenerado: sector seed vacío sigue produciendo prompt válido
     const empty = buildClonePrompt({
@@ -821,6 +824,10 @@ async function testRoleSopGeneratorPromptBuilder() {
     assert(prompt.includes('"role_ref": "atencion-cliente"'),             'schema JSON pide role_ref del rol');
     assert(prompt.includes('"project_ref": "proj-ikea-mad-01"'),          'schema JSON pide project_ref del proyecto');
     assert(/SÓLO\s+JSON\s+v[aá]lido/i.test(prompt),                       'prompt instruye output JSON sin texto adicional');
+    // UX-002 fase 2 · prompt pide folksonomy del LLM
+    assert(prompt.includes('"folksonomy"'),                               'UX-002 · schema JSON incluye campo folksonomy');
+    assert(/folksonomy.*kebab-case/i.test(prompt),                        'UX-002 · folksonomy especifica kebab-case');
+    assert(/sin .{0,3}:/i.test(prompt) && /NO uses prefijos/i.test(prompt), 'UX-002 · folksonomy prohíbe explícitamente prefijos `:`');
 
     // Caso degenerado: rol sin transacciones (cliente VNA recién clonado)
     const orphan = buildRoleSopPrompt({
@@ -867,6 +874,8 @@ async function testRegenerateSopBuilder() {
     assert(prompt.includes('Incrementa la versión'),                   'prompt instruye incrementar version');
     assert(prompt.includes('regeneration_notes'),                      'prompt pide regeneration_notes en el output');
     assert(/SÓLO\s+JSON\s+v[aá]lido/i.test(prompt),                    'prompt instruye output JSON puro');
+    // UX-002 fase 2 · regenerate también pide folksonomy
+    assert(/folksonomy/i.test(prompt),                                 'UX-002 · regenerate prompt incluye folksonomy');
 
     // Sin previousSop lanza
     let threwNoPrev = false;
@@ -1018,6 +1027,414 @@ async function testWoAssistantContext() {
     assert(typeof mod.buildWoAssistPrompt === 'function',                        'buildWoAssistPrompt exportada');
 }
 
+// ─── UX-001 · tagsService · folksonomía pura ────────────────────
+async function testTagsService() {
+    const mod = await import('../core/tagsService.js?v=' + Date.now());
+    const { normalizeTag, aggregateTags, nodesWithTag, relatedEdgesByTag, addTagToNode, removeTagFromNode } = mod;
+
+    // normalizeTag
+    assert(normalizeTag('Mi Tag · Genial!') === 'mi-tag-genial',  'normaliza puntuación, espacios y caso');
+    assert(normalizeTag('Año Nuevo') === 'ano-nuevo',             'normaliza diacríticos (ñ→n, ó→o)');
+    assert(normalizeTag('  multiple   spaces  ') === 'multiple-spaces', 'colapsa espacios');
+    assert(normalizeTag('---trim---') === 'trim',                 'trimea guiones de bordes');
+    assert(normalizeTag('') === '',                               'string vacío → vacío');
+    assert(normalizeTag(123) === '',                              'no-string → vacío');
+
+    // Setup nodos para los siguientes tests
+    const nodes = [
+        { id: 'n1', type: 'project', content: { tags: ['ikea', 'b2b', 'madrid'], title: 'Proyecto IKEA' } },
+        { id: 'n2', type: 'sop',     content: { tags: ['ikea', 'b2b'],            name:  'SOP atención IKEA' } },
+        { id: 'n3', type: 'work_order', content: { tags: ['urgente'],             title: 'WO urgente' } },
+        { id: 'n4', type: 'role',    content: { /* sin tags */                    name:  'Rol sin tags' } },
+        { id: 'n5', type: 'project', content: { tags: ['Madrid', 'sostenible'],   title: 'Otro proyecto Madrid' } }, // mayúscula → debe normalizar
+    ];
+
+    // aggregateTags
+    const agg = aggregateTags(nodes);
+    assert(Array.isArray(agg) && agg.length === 5,                'aggregateTags devuelve 5 tags únicos');
+    const ikea = agg.find(a => a.tag === 'ikea');
+    assert(ikea && ikea.count === 2,                              'tag ikea aparece 2 veces');
+    assert(ikea.nodeIds.includes('n1') && ikea.nodeIds.includes('n2'), 'ikea referencia n1 y n2');
+    const madrid = agg.find(a => a.tag === 'madrid');
+    assert(madrid && madrid.count === 2,                          'Madrid normalizado se cuenta como madrid (2 ocurrencias)');
+    assert(agg[0].count >= agg[1].count,                          'aggregateTags ordena por count desc');
+
+    // nodesWithTag
+    const ikeaNodes = nodesWithTag(nodes, 'IKEA');  // probar mayúsculas
+    assert(ikeaNodes.length === 2 && ikeaNodes.every(n => ['n1','n2'].includes(n.id)), 'nodesWithTag filtra normalizando');
+    assert(nodesWithTag(nodes, 'inexistente').length === 0,       'tag inexistente devuelve []');
+
+    // relatedEdgesByTag · n1+n2 comparten 2 tags (ikea, b2b) → weight 2
+    const edges = relatedEdgesByTag(nodes);
+    const e12 = edges.find(e => (e.a === 'n1' && e.b === 'n2') || (e.a === 'n2' && e.b === 'n1'));
+    assert(e12 && e12.weight === 2,                               'arista n1↔n2 con weight 2 (ikea + b2b)');
+    assert(e12.sharedTags.includes('ikea') && e12.sharedTags.includes('b2b'), 'arista lista los 2 tags compartidos');
+    const e15 = edges.find(e => (e.a === 'n1' && e.b === 'n5') || (e.a === 'n5' && e.b === 'n1'));
+    assert(e15 && e15.weight === 1 && e15.sharedTags[0] === 'madrid', 'arista n1↔n5 con weight 1 (madrid normalizado)');
+    assert(!edges.some(e => e.a === 'n4' || e.b === 'n4'),        'n4 sin tags no aparece en aristas');
+
+    // addTagToNode · pureness
+    const original = { id: 'n1', type: 'project', content: { tags: ['ikea'], title: 'X' }, keywords: ['existing'] };
+    const added = addTagToNode(original, 'Nueva CATEGORIA!');
+    assert(added !== original,                                    'addTagToNode no muta · devuelve nuevo objeto');
+    assert(added.content.tags.length === 2,                       'añade el tag normalizado');
+    assert(added.content.tags[1] === 'nueva-categoria',           'tag normalizado correctamente');
+    assert(added.keywords.includes('nueva-categoria') && added.keywords.includes('existing'), 'sincroniza con keywords sin perder previos');
+    assert(original.content.tags.length === 1,                    'original NO mutado');
+    const dup = addTagToNode(added, 'IKEA');
+    assert(dup === added,                                         'añadir tag duplicado devuelve el mismo objeto');
+
+    // removeTagFromNode · pureness
+    const removed = removeTagFromNode(added, 'nueva-categoria');
+    assert(removed.content.tags.length === 1 && removed.content.tags[0] === 'ikea', 'removeTagFromNode quita el tag');
+    assert(!removed.keywords.includes('nueva-categoria'),         'removeTagFromNode sincroniza keywords');
+    const noop = removeTagFromNode(added, 'inexistente');
+    assert(noop === added,                                        'remover tag inexistente devuelve mismo objeto');
+
+    // Exports
+    assert(typeof mod.persistTagAdd === 'function',               'persistTagAdd exportada');
+    assert(typeof mod.persistTagRemove === 'function',            'persistTagRemove exportada');
+    assert(typeof mod.loadAllNodesForTags === 'function',         'loadAllNodesForTags exportada');
+    assert(typeof mod.renderTagsEditor === 'function',            'renderTagsEditor exportada');
+    const html = mod.renderTagsEditor({ tags: ['a', 'b-c'] });
+    assert(typeof html === 'string' && html.includes('#a') && html.includes('#b-c'), 'renderTagsEditor produce chips para los tags');
+}
+
+// ─── UX-001 sprint B · linkifyService · hipertexto puro ─────────
+async function testLinkifyService() {
+    const { linkifyNodeRefs, linkifyMultiline } = await import('../core/linkifyService.js?v=' + Date.now());
+
+    // Caso vacío
+    assert(linkifyNodeRefs('') === '',                                   'string vacío → vacío');
+    assert(linkifyNodeRefs(null) === '',                                 'null → vacío');
+
+    // Texto sin refs
+    assert(linkifyNodeRefs('Hola mundo') === 'Hola mundo',               'texto sin refs queda igual');
+    assert(linkifyNodeRefs('5 < 10') === '5 &lt; 10',                    'escapa HTML del texto literal');
+    assert(linkifyNodeRefs('a&b') === 'a&amp;b',                         'escapa & en literal');
+
+    // [[id]] simple
+    const r1 = linkifyNodeRefs('Ver [[wo-abc-123]]');
+    assert(r1.includes('href="/n/wo-abc-123"'),                          '[[id]] genera href /n/{id}');
+    assert(r1.includes('data-link'),                                     '[[id]] añade data-link para SPA');
+    assert(r1.includes('>wo-abc-123<'),                                  '[[id]] muestra el id como texto por defecto');
+
+    // [[id|alias]]
+    const r2 = linkifyNodeRefs('Esta WO [[wo-abc-123|propuesta IKEA]] está en marcha');
+    assert(r2.includes('>propuesta IKEA<'),                              '[[id|alias]] muestra el alias como texto');
+    assert(r2.includes('href="/n/wo-abc-123"'),                          '[[id|alias]] usa el id en href');
+
+    // #tag inline (con espacio o inicio)
+    const r3 = linkifyNodeRefs('Es un proyecto #b2b y #madrid.');
+    assert(r3.includes('href="/tags?tag=b2b"'),                          '#tag genera link a /tags?tag=');
+    assert(r3.includes('href="/tags?tag=madrid"'),                       '#tag funciona con varios en la frase');
+    assert(r3.includes('class="sos-tagref"'),                            '#tag tiene class sos-tagref');
+
+    // #tag en inicio de string
+    const r4 = linkifyNodeRefs('#urgente: ver detalle');
+    assert(r4.startsWith('<a'),                                          '#tag al inicio se reconoce');
+
+    // No confundir hashtag dentro de palabra (ej. C#)
+    const r5 = linkifyNodeRefs('lenguaje C#sharp no es tag');
+    assert(!r5.includes('href="/tags'),                                  '#tag pegado a letra anterior NO es tag');
+
+    // Múltiples refs mezcladas
+    const r6 = linkifyNodeRefs('[[proj-ikea-mad|IKEA Madrid]] tiene WO [[wo-1]] urgente #b2b');
+    const matches = (r6.match(/href="\/n\//g) || []).length + (r6.match(/href="\/tags/g) || []).length;
+    assert(matches === 3,                                                'mezcla de [[id]], [[id|alias]] y #tag genera 3 links');
+
+    // ID inválido → no convierte (preserva literal)
+    const r7 = linkifyNodeRefs('Cosas raras [[id con espacios]] aquí');
+    assert(!r7.includes('href="/n/'),                                    'ID con espacios NO se convierte');
+    assert(r7.includes('[[id con espacios]]'),                           'literal preservado escapado');
+
+    // Tag inválido (mayúsculas) NO se convierte
+    const r8 = linkifyNodeRefs('Un #TagMal no debería linkificar');
+    assert(!r8.includes('href="/tags'),                                  'tag con mayúsculas no es válido');
+
+    // XSS · no debe permitir HTML inyectado
+    const r9 = linkifyNodeRefs('texto <script>alert(1)</script>');
+    assert(!r9.includes('<script>'),                                     'escapa <script> embebido');
+    assert(r9.includes('&lt;script&gt;'),                                'lo escapa correctamente');
+
+    // Alias con HTML especial se escapa
+    const r10 = linkifyNodeRefs('[[id-1|<b>negrita</b>]]');
+    assert(!r10.includes('<b>negrita</b>'),                              'alias con HTML se escapa (no se permite tag bruto)');
+    assert(r10.includes('&lt;b&gt;negrita&lt;/b&gt;'),                   'alias escapado en el anchor');
+
+    // linkifyMultiline · saltos de línea
+    const r11 = linkifyMultiline('Línea 1\nLínea 2 con [[wo-1]]');
+    assert(r11.includes('<br>'),                                         'multiline convierte \\n en <br>');
+    assert(r11.includes('href="/n/wo-1"'),                               'multiline también linkifica refs');
+}
+
+// ─── UX-002 · semanticTagger · taxonomía + folksonomía pura ─────
+async function testSemanticTagger() {
+    const mod = await import('../core/semanticTagger.js?v=' + Date.now());
+    const {
+        KNOWN_TAXONOMY_PREFIXES,
+        validateTaxonomyTag,
+        buildTag,
+        taxonomicTagsForProject,
+        taxonomicTagsForRole,
+        taxonomicTagsForTransaction,
+        taxonomicTagsForSop,
+        taxonomicTagsForStep,
+        taxonomicTagsForWo,
+        mergeTags,
+    } = mod;
+
+    // KNOWN_TAXONOMY_PREFIXES contiene los 12+ prefijos canónicos
+    assert(Array.isArray(KNOWN_TAXONOMY_PREFIXES) && KNOWN_TAXONOMY_PREFIXES.length >= 12, 'catálogo de prefijos ≥ 12');
+    ['sector','cnae','kind','role','castell','deliverable','priority','step-kind','approval','status','scope','soc-ref','sop-ref'].forEach(p => {
+        assert(KNOWN_TAXONOMY_PREFIXES.includes(p),                   'catálogo incluye prefijo ' + p);
+    });
+
+    // validateTaxonomyTag reconoce los conocidos
+    const v1 = validateTaxonomyTag('sector:K');
+    assert(v1.taxonomy === true && v1.knownPrefix === true && v1.prefix === 'sector' && v1.value === 'k', 'sector:K reconocido como taxonómico');
+    const v2 = validateTaxonomyTag('proj:foo');
+    assert(v2.taxonomy === false && v2.knownPrefix === false,         '"proj:" (no listado) NO es taxonómico');
+    const v3 = validateTaxonomyTag('urgente');
+    assert(v3.taxonomy === false && v3.value === 'urgente',           'tag sin `:` es folksonómico');
+    const v4 = validateTaxonomyTag('  Kind:Project  ');
+    assert(v4.taxonomy === true && v4.prefix === 'kind' && v4.value === 'project', 'normaliza prefijo y valor');
+    const v5 = validateTaxonomyTag('');
+    assert(v5.ok === false,                                            'tag vacío NO es válido');
+
+    // buildTag normaliza
+    assert(buildTag('Sector', 'K') === 'sector:k',                    'buildTag normaliza prefijo y valor');
+    assert(buildTag('', 'k') === null,                                'buildTag rechaza prefijo vacío');
+    assert(buildTag('sector', '') === null,                           'buildTag rechaza valor vacío');
+
+    // taxonomicTagsForProject
+    const proj = { id: 'proj-ikea-mad', sector_id: 'K', cnae: '4321', nombre: 'IKEA Madrid' };
+    const tagsP = taxonomicTagsForProject(proj);
+    assert(tagsP.includes('kind:project'),                            'project tag · kind:project');
+    assert(tagsP.includes('sector:k'),                                'project tag · sector:k');
+    assert(tagsP.includes('cnae:4321'),                               'project tag · cnae:4321');
+    assert(tagsP.includes('scope:client'),                            'project tag · scope:client por defecto');
+    assert(tagsP.includes('project:proj-ikea-mad'),                   'project tag · project:{id}');
+    assert(new Set(tagsP).size === tagsP.length,                      'project tags únicos');
+
+    // taxonomicTagsForRole
+    const role = { id: 'atencion-cliente', castell_level: 'tronc', name: 'Atención' };
+    const tagsR = taxonomicTagsForRole(role, proj);
+    assert(tagsR.includes('kind:role'),                               'role tag · kind:role');
+    assert(tagsR.includes('role:atencion-cliente'),                   'role tag · role:{id}');
+    assert(tagsR.includes('castell:tronc'),                           'role tag · castell:tronc');
+    assert(tagsR.includes('sector:k'),                                'role tag hereda sector del proyecto');
+    assert(tagsR.includes('project:proj-ikea-mad'),                   'role tag hereda project:{id}');
+
+    // taxonomicTagsForTransaction
+    const tx = { id: 'tx-1', from: 'a', to: 'b', deliverable: 'X', type: 'tangible', is_must: true };
+    const tagsT = taxonomicTagsForTransaction(tx, proj);
+    assert(tagsT.includes('kind:transaction'),                        'tx tag · kind:transaction');
+    assert(tagsT.includes('tx-type:tangible'),                        'tx tag · tx-type:tangible');
+    assert(tagsT.includes('is-must:yes'),                             'tx tag · is-must:yes');
+
+    // taxonomicTagsForSop
+    const sop = { id: 'sop-x', name: 'SOP X', role_ref: 'atencion-cliente', soc_ref: 'soc-vna-network' };
+    const tagsS = taxonomicTagsForSop(sop, proj, role);
+    assert(tagsS.includes('kind:project-role-sop'),                   'sop tag · kind:project-role-sop');
+    assert(tagsS.includes('role:atencion-cliente'),                   'sop tag · role:{ref}');
+    assert(tagsS.includes('soc-ref:soc-vna-network'),                 'sop tag · soc-ref:{slug}');
+    assert(tagsS.includes('castell:tronc'),                           'sop tag hereda castell del rol');
+
+    // taxonomicTagsForStep
+    const step = { id: 's1', role_kind: 'ai', priority: 'high', approval_rule: 'tdd-auto', deliverable_kind: 'propuesta' };
+    const tagsStep = taxonomicTagsForStep(step);
+    assert(tagsStep.includes('step-kind:ai'),                         'step tag · step-kind:ai');
+    assert(tagsStep.includes('priority:high'),                        'step tag · priority:high');
+    assert(tagsStep.includes('approval:tdd-auto'),                    'step tag · approval:tdd-auto');
+    assert(tagsStep.includes('deliverable:propuesta'),                'step tag · deliverable:{kind}');
+
+    // taxonomicTagsForWo
+    const wo = { id: 'wo-1', projectId: 'proj-ikea-mad', content: { sopRef: 'sop-x', priority: 'med', approvalRule: 'manual', status: 'backlog', assignee: { kind: 'human' } } };
+    const tagsW = taxonomicTagsForWo(wo, null, step);
+    assert(tagsW.includes('kind:work-order'),                         'wo tag · kind:work-order');
+    assert(tagsW.includes('status:backlog'),                          'wo tag · status:backlog');
+    assert(tagsW.includes('sop-ref:sop-x'),                           'wo tag · sop-ref:{ref}');
+    assert(tagsW.includes('role-kind:human'),                         'wo tag · role-kind:human (assignee)');
+    assert(tagsW.includes('project:proj-ikea-mad'),                   'wo tag hereda project del wo');
+
+    // mergeTags · taxonomy primero · folksonomy después · únicos · sin perder
+    const merged = mergeTags(['kind:role','sector:k'], ['urgente','b2b','sector:k']);
+    assert(merged[0] === 'kind:role',                                 'mergeTags pone taxonómicos primero');
+    assert(merged.includes('urgente') && merged.includes('b2b'),      'mergeTags conserva folksonómicos');
+    assert(new Set(merged).size === merged.length,                    'mergeTags deduplica');
+
+    // Edge cases · null/undefined
+    assert(taxonomicTagsForProject(null).length === 0,                'null project → []');
+    assert(taxonomicTagsForRole(null).length === 0,                   'null role → []');
+    assert(mergeTags(null, null).length === 0,                        'null inputs → []');
+}
+
+// ─── MKT-001 sprint A · marketService + cnaeSeed puros ──────────
+async function testMarketService() {
+    const mkt   = await import('../core/marketService.js?v=' + Date.now());
+    const cnae  = await import('../core/cnaeSeed.js?v=' + Date.now());
+
+    // CNAE seed · básicos
+    assert(typeof cnae.CNAE_SEED === 'object',                            'CNAE_SEED es objeto');
+    assert(cnae.CNAE_SEED['6201'] && cnae.CNAE_SEED['6201'].sectorTT === 'K', 'CNAE 6201 mapea a sector K (programación)');
+    assert(cnae.CNAE_SEED['4771'] && cnae.CNAE_SEED['4771'].group === 'G',     'CNAE 4771 grupo G (comercio)');
+    assert(cnae.getCnae('6201').name.includes('programación'),            'getCnae("6201") devuelve metadata');
+    assert(cnae.getCnae('9999') === null,                                 'getCnae con código no existente devuelve null');
+    assert(cnae.getCnae('') === null,                                     'getCnae con vacío devuelve null');
+
+    // searchCnae · prefix por código
+    const r1 = cnae.searchCnae('62');
+    assert(Array.isArray(r1) && r1.length > 0,                            'searchCnae prefijo "62" devuelve resultados');
+    assert(r1[0].code.startsWith('62'),                                   'primer resultado coincide con prefijo');
+
+    // searchCnae · prefix por nombre
+    const r2 = cnae.searchCnae('Const');
+    assert(r2.some(x => /Construcción/i.test(x.name)),                   'searchCnae "Const" matchea nombres');
+
+    // searchCnae · vacío devuelve []
+    assert(cnae.searchCnae('').length === 0,                              'searchCnae vacío → []');
+
+    // validateMarketItem · ok mínimo
+    const okItem = {
+        id: 'mkt-1',
+        type: 'market_item',
+        content: { title: 'Mapa de Valor IKEA-style', kind: 'service', priceEur: 495, cnae: '7022', visibility: 'public' }
+    };
+    const v1 = mkt.validateMarketItem(okItem);
+    assert(v1.ok === true && v1.errors.length === 0,                      'validateMarketItem item mínimo válido');
+
+    // validateMarketItem · falla por kind
+    const v2 = mkt.validateMarketItem({ ...okItem, content: { ...okItem.content, kind: 'cosa-rara' } });
+    assert(v2.ok === false && v2.errors.some(e => /kind/.test(e)),        'validateMarketItem detecta kind inválido');
+
+    // validateMarketItem · falla por price negativo
+    const v3 = mkt.validateMarketItem({ ...okItem, content: { ...okItem.content, priceEur: -10 } });
+    assert(v3.ok === false,                                                'validateMarketItem detecta precio negativo');
+
+    // validateMarketItem · falla por type
+    const v4 = mkt.validateMarketItem({ id:'x', type:'project', content:{ title:'a', kind:'service' } });
+    assert(v4.ok === false && v4.errors.some(e => /type/.test(e)),        'validateMarketItem detecta type incorrecto');
+
+    // buildMarketItem · genera id + defaults
+    const built = mkt.buildMarketItem({ title: 'Cosecha VNA', kind: 'service', priceEur: 750, cnae: '7022' });
+    assert(built.id.startsWith('mkt-'),                                    'buildMarketItem genera id con prefijo mkt-');
+    assert(built.type === 'market_item',                                   'buildMarketItem.type === market_item');
+    assert(built.content.title === 'Cosecha VNA',                          'buildMarketItem preserva título');
+    assert(built.content.visibility === 'public',                          'buildMarketItem default visibility=public');
+    assert(built.keywords.includes('market_item'),                         'buildMarketItem añade keywords');
+    assert(mkt.validateMarketItem(built).ok === true,                      'buildMarketItem devuelve item válido');
+
+    // buildMarketItem · sin título lanza
+    let threw = false;
+    try { mkt.buildMarketItem({ kind: 'service' }); } catch(_) { threw = true; }
+    assert(threw === true,                                                 'buildMarketItem sin título lanza');
+
+    // searchMarketItems · setup
+    const items = [
+        mkt.buildMarketItem({ title: 'Mapa Valor B2B',     kind: 'service',  priceEur: 495, cnae: '7022', sectorTT: 'N', tags: ['vna','b2b'] }),
+        mkt.buildMarketItem({ title: 'Plantilla Pacto',    kind: 'template', priceEur: 49,  cnae: '6920', sectorTT: 'N', tags: ['legal'] }),
+        mkt.buildMarketItem({ title: 'Workshop Fent Pinya',kind: 'workshop', priceEur: 250, cnae: '8559', sectorTT: 'Q', tags: ['formacion'] }),
+        mkt.buildMarketItem({ title: 'Skill UX Research',  kind: 'skill',    priceEur: 60,  cnae: '7320', sectorTT: 'P', tags: ['ux'], visibility: 'red-macro' }),
+    ];
+
+    // text search
+    assert(mkt.searchMarketItems(items, { text: 'pacto' }).length === 1,                  'search texto "pacto" devuelve 1');
+    assert(mkt.searchMarketItems(items, { text: 'b2b' }).length === 1,                    'search texto "b2b" matchea tags');
+    assert(mkt.searchMarketItems(items, { text: 'NoExiste' }).length === 0,              'search texto sin match → 0');
+
+    // filtro por kind
+    assert(mkt.searchMarketItems(items, { kinds: ['template','skill'] }).length === 2,    'filtro kinds devuelve 2');
+
+    // filtro por cnae
+    assert(mkt.searchMarketItems(items, { cnaes: ['7022'] }).length === 1,                'filtro cnae devuelve 1');
+
+    // filtro por sectorTT
+    assert(mkt.searchMarketItems(items, { sectorTT: 'N' }).length === 2,                  'filtro sectorTT N devuelve 2');
+
+    // filtro por visibility
+    assert(mkt.searchMarketItems(items, { visibility: 'red-macro' }).length === 1,        'filtro visibility red-macro devuelve 1');
+
+    // rango precio
+    assert(mkt.searchMarketItems(items, { priceMax: 100 }).length === 2,                  'priceMax 100 devuelve 2 (49+60)');
+    assert(mkt.searchMarketItems(items, { priceMin: 200, priceMax: 500 }).length === 2,   'priceMin 200 priceMax 500 devuelve 2');
+
+    // groupBy
+    const byKind   = mkt.groupByKind(items);
+    assert(Object.keys(byKind).length === 4,                                              'groupByKind 4 grupos');
+    assert(byKind.service.length === 1 && byKind.workshop.length === 1,                   'groupByKind correcto');
+    const bySector = mkt.groupBySectorTT(items);
+    assert(bySector.N.length === 2,                                                        'groupBySectorTT N tiene 2 items');
+
+    // computeSaving · sin savingsCompareTo → null
+    assert(mkt.computeSaving(items[0]) === null,                                          'sin savingsCompareTo → null');
+
+    // computeSaving · con compareTo
+    const itemNotaria = mkt.buildMarketItem({ title: 'Pacto firmado', kind: 'service', priceEur: 50 });
+    itemNotaria.content.savingsCompareTo = 'notaria';
+    const s = mkt.computeSaving(itemNotaria);
+    assert(s != null && s.savingEur > 0 && s.savingPct > 90,                              'savingPct frente a notaría >90%');
+
+    // exports
+    assert(Array.isArray(mkt.MARKET_ITEM_KINDS) && mkt.MARKET_ITEM_KINDS.length >= 6,     'MARKET_ITEM_KINDS exportado con ≥6 valores');
+    assert(Array.isArray(mkt.MARKET_VISIBILITY) && mkt.MARKET_VISIBILITY.length >= 4,     'MARKET_VISIBILITY exportado con ≥4 valores');
+    assert(typeof mkt.DEFAULT_CONVENTIONAL_RANGES.notaria === 'object',                   'DEFAULT_CONVENTIONAL_RANGES exportado');
+}
+
+// ─── UX-001 sprint C · projectHubService puro ───────────────────
+async function testProjectHub() {
+    const mod = await import('../core/projectHubService.js?v=' + Date.now());
+    const { aggregateProjectStats, PROJECT_TOOLS, PROJECT_VIEWS, projectViewUrls } = mod;
+
+    const projectId = 'proj-ikea-mad';
+    const nodes = [
+        { id: 'sop-1', type: 'sop', projectId,         content: { name: 'SOP A', steps: [{}, {}] } },
+        { id: 'sop-2', type: 'sop', projectId,         content: { name: 'SOP B' } },
+        { id: 'sop-x', type: 'sop', projectId: 'otro', content: { name: 'NO debe contar' } },
+        { id: 'wo-1',  type: 'work_order', projectId,  content: { status: 'backlog',  assignee: { kind: 'ai'    } } },
+        { id: 'wo-2',  type: 'work_order', projectId,  content: { status: 'doing',    assignee: { kind: 'human' } } },
+        { id: 'wo-3',  type: 'work_order', projectId,  content: { status: 'ledgered', assignee: { kind: 'ai'    } } },
+        { id: 'wo-x',  type: 'work_order', projectId: 'otro', content: { status: 'doing' } },
+        { id: 'mkt-1', type: 'market_item', content: { kind: 'service', providerProjectId: projectId } },
+        { id: 'mkt-2', type: 'market_item', content: { kind: 'service', providerProjectId: 'otro'   } },
+        { id: 'led-1', type: 'ledger_entry', projectId, content: { savingEur: 250.5 } },
+        { id: 'led-2', type: 'ledger_entry', projectId, content: { savingEur: 100   } },
+    ];
+
+    // aggregateProjectStats
+    const s = aggregateProjectStats({ projectId, nodes });
+    assert(s.sops === 2,                                              'aggregate · 2 sops del proyecto (filtra otro)');
+    assert(s.sopsList.every(n => n.projectId === projectId),          'aggregate · sopsList sólo del proyecto');
+    assert(s.workOrders.total === 3,                                  'aggregate · 3 WOs del proyecto');
+    assert(s.workOrders.backlog === 1 && s.workOrders.doing === 1 && s.workOrders.ledgered === 1, 'aggregate · counts por status');
+    assert(s.workOrders.list.length === 3,                            'aggregate · workOrders.list sólo del proyecto');
+    assert(s.woRolesAi === 2 && s.woRolesHuman === 1,                 'aggregate · split AI vs human');
+    assert(s.marketItems.count === 1,                                 'aggregate · 1 oferta del proyecto');
+    assert(s.ledgerEntries.count === 2,                               'aggregate · 2 ledger entries');
+    assert(s.savingEur === 350.5,                                     'aggregate · suma savingEur del ledger');
+
+    // empty case
+    const empty = aggregateProjectStats({ projectId: null, nodes: [] });
+    assert(empty.sops === 0 && empty.workOrders.total === 0,          'aggregate · projectId nulo → stats vacías');
+    assert(empty.savingEur === 0,                                     'aggregate · empty savingEur 0');
+
+    // PROJECT_TOOLS y PROJECT_VIEWS son catálogos cerrados Object.freeze
+    assert(Array.isArray(PROJECT_TOOLS) && PROJECT_TOOLS.length === 6, 'PROJECT_TOOLS tiene 6 herramientas');
+    assert(PROJECT_TOOLS.some(t => t.id === 'pact')        ,           'PROJECT_TOOLS incluye pact');
+    assert(PROJECT_TOOLS.some(t => t.id === 'tokenomics'),             'PROJECT_TOOLS incluye tokenomics');
+    assert(PROJECT_TOOLS.some(t => t.id === 'launchpad'),              'PROJECT_TOOLS incluye launchpad');
+    assert(Array.isArray(PROJECT_VIEWS) && PROJECT_VIEWS.length === 5, 'PROJECT_VIEWS tiene 5 vistas operativas');
+    assert(Object.isFrozen(PROJECT_TOOLS),                              'PROJECT_TOOLS está congelado');
+    assert(Object.isFrozen(PROJECT_VIEWS),                              'PROJECT_VIEWS está congelado');
+
+    // projectViewUrls compone bien
+    const urls = projectViewUrls(projectId);
+    assert(urls.length === 5,                                         'projectViewUrls devuelve 5');
+    assert(urls.find(u => u.id === 'map').url === '/map?project=' + encodeURIComponent(projectId),       'map url correcta');
+    assert(urls.find(u => u.id === 'tags').url === '/tags?tag=project:' + encodeURIComponent(projectId), 'tags url compone tag=project:{id}');
+    assert(projectViewUrls(null).length === 0,                        'projectViewUrls null → []');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -1036,7 +1453,12 @@ const SUITE = [
     { name: 'H7.1 · Kanban Work Orders · CRUD + ledger',          fn: testKanbanWorkOrders },
     { name: 'H7.2 · Kanban · prompt builder IA + TDD eval',       fn: testKanbanExecutionPromptAndTdd },
     { name: 'H7.3 · Generar WOs desde SOP steps[]',               fn: testGenerateWosFromSop },
-    { name: 'H7.6 · WO Assistant · context + prompt builder',     fn: testWoAssistantContext }
+    { name: 'H7.6 · WO Assistant · context + prompt builder',     fn: testWoAssistantContext },
+    { name: 'UX-001 · tagsService · folksonomía pura',            fn: testTagsService },
+    { name: 'UX-001 sprint B · linkifyService · hipertexto puro', fn: testLinkifyService },
+    { name: 'UX-002 · semanticTagger · taxonomía + folksonomía',  fn: testSemanticTagger },
+    { name: 'MKT-001 sprint A · marketService + cnaeSeed puros',  fn: testMarketService },
+    { name: 'UX-001 sprint C · projectHubService puro',           fn: testProjectHub }
 ];
 
 export async function runTests() {

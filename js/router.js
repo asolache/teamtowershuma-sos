@@ -13,12 +13,28 @@ const ROUTES = [
     { path: '/sops',      view: () => import('./views/SopsView.js')     },
     { path: '/focus',     view: () => import('./views/HomeView.js')     },
     { path: '/settings',  view: () => import('./views/SettingsView.js') },
+    // UX-001 · folksonomía universal
+    { path: '/tags',      view: () => import('./views/TagsView.js')     },
+    // MKT-001 · Mercado SOS
+    { path: '/market',    view: () => import('./views/MarketView.js')   },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
+// UX-001 · prefijo dinámico /n/{nodeId} resuelto por NodeView
+const NODE_PATH_PREFIX    = '/n/';
+// UX-001 sprint C · prefijo dinámico /project/{projectId} resuelto por ProjectHubView
+const PROJECT_PATH_PREFIX = '/project/';
+
 async function router() {
     const path  = window.location.pathname.replace(/\/$/, '') || '/';
-    const match = ROUTES.find(r => r.path === path) || ROUTES.find(r => r.path === null);
+    let match;
+    if (path.startsWith(NODE_PATH_PREFIX)) {
+        match = { path, view: () => import('./views/NodeView.js') };
+    } else if (path.startsWith(PROJECT_PATH_PREFIX)) {
+        match = { path, view: () => import('./views/ProjectHubView.js') };
+    } else {
+        match = ROUTES.find(r => r.path === path) || ROUTES.find(r => r.path === null);
+    }
 
     try {
         await store.init();
