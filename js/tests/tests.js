@@ -1270,6 +1270,117 @@ async function testSemanticTagger() {
     assert(mergeTags(null, null).length === 0,                        'null inputs → []');
 }
 
+// ─── MKT-001 sprint A · marketService + cnaeSeed puros ──────────
+async function testMarketService() {
+    const mkt   = await import('../core/marketService.js?v=' + Date.now());
+    const cnae  = await import('../core/cnaeSeed.js?v=' + Date.now());
+
+    // CNAE seed · básicos
+    assert(typeof cnae.CNAE_SEED === 'object',                            'CNAE_SEED es objeto');
+    assert(cnae.CNAE_SEED['6201'] && cnae.CNAE_SEED['6201'].sectorTT === 'K', 'CNAE 6201 mapea a sector K (programación)');
+    assert(cnae.CNAE_SEED['4771'] && cnae.CNAE_SEED['4771'].group === 'G',     'CNAE 4771 grupo G (comercio)');
+    assert(cnae.getCnae('6201').name.includes('programación'),            'getCnae("6201") devuelve metadata');
+    assert(cnae.getCnae('9999') === null,                                 'getCnae con código no existente devuelve null');
+    assert(cnae.getCnae('') === null,                                     'getCnae con vacío devuelve null');
+
+    // searchCnae · prefix por código
+    const r1 = cnae.searchCnae('62');
+    assert(Array.isArray(r1) && r1.length > 0,                            'searchCnae prefijo "62" devuelve resultados');
+    assert(r1[0].code.startsWith('62'),                                   'primer resultado coincide con prefijo');
+
+    // searchCnae · prefix por nombre
+    const r2 = cnae.searchCnae('Const');
+    assert(r2.some(x => /Construcción/i.test(x.name)),                   'searchCnae "Const" matchea nombres');
+
+    // searchCnae · vacío devuelve []
+    assert(cnae.searchCnae('').length === 0,                              'searchCnae vacío → []');
+
+    // validateMarketItem · ok mínimo
+    const okItem = {
+        id: 'mkt-1',
+        type: 'market_item',
+        content: { title: 'Mapa de Valor IKEA-style', kind: 'service', priceEur: 495, cnae: '7022', visibility: 'public' }
+    };
+    const v1 = mkt.validateMarketItem(okItem);
+    assert(v1.ok === true && v1.errors.length === 0,                      'validateMarketItem item mínimo válido');
+
+    // validateMarketItem · falla por kind
+    const v2 = mkt.validateMarketItem({ ...okItem, content: { ...okItem.content, kind: 'cosa-rara' } });
+    assert(v2.ok === false && v2.errors.some(e => /kind/.test(e)),        'validateMarketItem detecta kind inválido');
+
+    // validateMarketItem · falla por price negativo
+    const v3 = mkt.validateMarketItem({ ...okItem, content: { ...okItem.content, priceEur: -10 } });
+    assert(v3.ok === false,                                                'validateMarketItem detecta precio negativo');
+
+    // validateMarketItem · falla por type
+    const v4 = mkt.validateMarketItem({ id:'x', type:'project', content:{ title:'a', kind:'service' } });
+    assert(v4.ok === false && v4.errors.some(e => /type/.test(e)),        'validateMarketItem detecta type incorrecto');
+
+    // buildMarketItem · genera id + defaults
+    const built = mkt.buildMarketItem({ title: 'Cosecha VNA', kind: 'service', priceEur: 750, cnae: '7022' });
+    assert(built.id.startsWith('mkt-'),                                    'buildMarketItem genera id con prefijo mkt-');
+    assert(built.type === 'market_item',                                   'buildMarketItem.type === market_item');
+    assert(built.content.title === 'Cosecha VNA',                          'buildMarketItem preserva título');
+    assert(built.content.visibility === 'public',                          'buildMarketItem default visibility=public');
+    assert(built.keywords.includes('market_item'),                         'buildMarketItem añade keywords');
+    assert(mkt.validateMarketItem(built).ok === true,                      'buildMarketItem devuelve item válido');
+
+    // buildMarketItem · sin título lanza
+    let threw = false;
+    try { mkt.buildMarketItem({ kind: 'service' }); } catch(_) { threw = true; }
+    assert(threw === true,                                                 'buildMarketItem sin título lanza');
+
+    // searchMarketItems · setup
+    const items = [
+        mkt.buildMarketItem({ title: 'Mapa Valor B2B',     kind: 'service',  priceEur: 495, cnae: '7022', sectorTT: 'N', tags: ['vna','b2b'] }),
+        mkt.buildMarketItem({ title: 'Plantilla Pacto',    kind: 'template', priceEur: 49,  cnae: '6920', sectorTT: 'N', tags: ['legal'] }),
+        mkt.buildMarketItem({ title: 'Workshop Fent Pinya',kind: 'workshop', priceEur: 250, cnae: '8559', sectorTT: 'Q', tags: ['formacion'] }),
+        mkt.buildMarketItem({ title: 'Skill UX Research',  kind: 'skill',    priceEur: 60,  cnae: '7320', sectorTT: 'P', tags: ['ux'], visibility: 'red-macro' }),
+    ];
+
+    // text search
+    assert(mkt.searchMarketItems(items, { text: 'pacto' }).length === 1,                  'search texto "pacto" devuelve 1');
+    assert(mkt.searchMarketItems(items, { text: 'b2b' }).length === 1,                    'search texto "b2b" matchea tags');
+    assert(mkt.searchMarketItems(items, { text: 'NoExiste' }).length === 0,              'search texto sin match → 0');
+
+    // filtro por kind
+    assert(mkt.searchMarketItems(items, { kinds: ['template','skill'] }).length === 2,    'filtro kinds devuelve 2');
+
+    // filtro por cnae
+    assert(mkt.searchMarketItems(items, { cnaes: ['7022'] }).length === 1,                'filtro cnae devuelve 1');
+
+    // filtro por sectorTT
+    assert(mkt.searchMarketItems(items, { sectorTT: 'N' }).length === 2,                  'filtro sectorTT N devuelve 2');
+
+    // filtro por visibility
+    assert(mkt.searchMarketItems(items, { visibility: 'red-macro' }).length === 1,        'filtro visibility red-macro devuelve 1');
+
+    // rango precio
+    assert(mkt.searchMarketItems(items, { priceMax: 100 }).length === 2,                  'priceMax 100 devuelve 2 (49+60)');
+    assert(mkt.searchMarketItems(items, { priceMin: 200, priceMax: 500 }).length === 2,   'priceMin 200 priceMax 500 devuelve 2');
+
+    // groupBy
+    const byKind   = mkt.groupByKind(items);
+    assert(Object.keys(byKind).length === 4,                                              'groupByKind 4 grupos');
+    assert(byKind.service.length === 1 && byKind.workshop.length === 1,                   'groupByKind correcto');
+    const bySector = mkt.groupBySectorTT(items);
+    assert(bySector.N.length === 2,                                                        'groupBySectorTT N tiene 2 items');
+
+    // computeSaving · sin savingsCompareTo → null
+    assert(mkt.computeSaving(items[0]) === null,                                          'sin savingsCompareTo → null');
+
+    // computeSaving · con compareTo
+    const itemNotaria = mkt.buildMarketItem({ title: 'Pacto firmado', kind: 'service', priceEur: 50 });
+    itemNotaria.content.savingsCompareTo = 'notaria';
+    const s = mkt.computeSaving(itemNotaria);
+    assert(s != null && s.savingEur > 0 && s.savingPct > 90,                              'savingPct frente a notaría >90%');
+
+    // exports
+    assert(Array.isArray(mkt.MARKET_ITEM_KINDS) && mkt.MARKET_ITEM_KINDS.length >= 6,     'MARKET_ITEM_KINDS exportado con ≥6 valores');
+    assert(Array.isArray(mkt.MARKET_VISIBILITY) && mkt.MARKET_VISIBILITY.length >= 4,     'MARKET_VISIBILITY exportado con ≥4 valores');
+    assert(typeof mkt.DEFAULT_CONVENTIONAL_RANGES.notaria === 'object',                   'DEFAULT_CONVENTIONAL_RANGES exportado');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -1291,7 +1402,8 @@ const SUITE = [
     { name: 'H7.6 · WO Assistant · context + prompt builder',     fn: testWoAssistantContext },
     { name: 'UX-001 · tagsService · folksonomía pura',            fn: testTagsService },
     { name: 'UX-001 sprint B · linkifyService · hipertexto puro', fn: testLinkifyService },
-    { name: 'UX-002 · semanticTagger · taxonomía + folksonomía',  fn: testSemanticTagger }
+    { name: 'UX-002 · semanticTagger · taxonomía + folksonomía',  fn: testSemanticTagger },
+    { name: 'MKT-001 sprint A · marketService + cnaeSeed puros',  fn: testMarketService }
 ];
 
 export async function runTests() {

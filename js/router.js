@@ -15,6 +15,8 @@ const ROUTES = [
     { path: '/settings',  view: () => import('./views/SettingsView.js') },
     // UX-001 · folksonomía universal
     { path: '/tags',      view: () => import('./views/TagsView.js')     },
+    // MKT-001 · Mercado SOS
+    { path: '/market',    view: () => import('./views/MarketView.js')   },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
