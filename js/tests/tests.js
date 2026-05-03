@@ -1441,20 +1441,20 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 7,                           '7 destinos canónicos (dashboard·map·sops·kanban·market·tags·settings)');
+    assert(NAV_DESTINATIONS.length === 10,                          '10 destinos canónicos (+ folders + mind + identity en Ola 9)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 6,                                 'sin projectId · 6 links (sin sops)');
+    assert(linksGlobal.length === 9,                                 'sin projectId · 9 links (sin sops · 10-1)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
     // con projectId → todos + query ?project= en los aplicables
     const linksProject = buildNavLinks({ active: 'kanban', projectId: 'proj-x' });
-    assert(linksProject.length === 7,                               'con projectId · 7 links (incluye sops)');
+    assert(linksProject.length === 10,                              'con projectId · 10 links (incluye sops)');
     assert(linksProject.find(l => l.id === 'sops').href === '/sops?project=proj-x',     'sops con project query');
     assert(linksProject.find(l => l.id === 'map').href === '/map?project=proj-x',       'map con project query');
     assert(linksProject.find(l => l.id === 'market').href === '/market?project=proj-x', 'market con project query');
@@ -1467,6 +1467,223 @@ async function testNavService() {
     assert(typeof html === 'string' && html.includes('href="/map?project=p1"'),         'html incluye href con query');
     assert(html.includes('class="sos-nav-link sos-nav-link-active"'),                   'html marca active class');
     assert(html.includes('data-link'),                                                  'html añade data-link para SPA');
+}
+
+// ─── AUTH-001 sprint A · identityService (helpers puros) ────────
+async function testIdentityService() {
+    const mod = await import('../core/identityService.js?v=' + Date.now());
+    const { validateIdentity, stampNode, buildIdentityNode } = mod;
+
+    // buildIdentityNode · sin args lanza
+    let threwNoArgs = false;
+    try { buildIdentityNode({}); } catch(_) { threwNoArgs = true; }
+    assert(threwNoArgs,                                                   'buildIdentityNode sin primaryDid lanza');
+
+    let threwNoKey = false;
+    try { buildIdentityNode({ primaryDid: 'did:sos:abc' }); } catch(_) { threwNoKey = true; }
+    assert(threwNoKey,                                                    'buildIdentityNode sin publicJwk lanza');
+
+    const node = buildIdentityNode({
+        primaryDid: 'did:sos:abc123def456',
+        publicJwk:  { kty: 'EC', crv: 'P-256', x: 'X', y: 'Y' },
+        displayName: 'Alvaro',
+        handle: '@alvaro',
+        createdAt: 1700000000000,
+    });
+    assert(node.type === 'user_identity',                                 'type es user_identity');
+    assert(node.id.startsWith('user-'),                                   'id con prefijo user-');
+    assert(node.content.primaryDid === 'did:sos:abc123def456',            'primaryDid preservado');
+    assert(node.content.displayName === 'Alvaro',                         'displayName preservado');
+    assert(node.content.handle === '@alvaro',                             'handle preservado');
+    assert(node.content.isPrimary === true,                                'isPrimary default true');
+    assert(node.content.publicKeys && node.content.publicKeys.signing,    'publicKeys.signing presente');
+    assert(node.content.tags.includes('kind:user-identity'),              'tags taxonomy auto');
+    assert(Array.isArray(node.content.wallets) && node.content.wallets.length === 0,        'wallets array vacío');
+    assert(Array.isArray(node.content.oauthProviders) && node.content.oauthProviders.length === 0, 'oauthProviders array vacío');
+
+    // validateIdentity
+    assert(validateIdentity(node).ok === true,                            'identity válida pasa validation');
+    assert(validateIdentity(null).ok === false,                           'null falla');
+    assert(validateIdentity({ ...node, type: 'project' }).ok === false,   'type incorrecto falla');
+    const noDid = JSON.parse(JSON.stringify(node)); delete noDid.content.primaryDid;
+    assert(validateIdentity(noDid).ok === false,                          'sin primaryDid falla');
+
+    // stampNode · puro
+    const wo = { id: 'wo-1', type: 'work_order', content: { title: 'X' } };
+    const stamped = stampNode(wo, node);
+    assert(stamped !== wo,                                                'stampNode no muta · devuelve nuevo');
+    assert(stamped.createdBy === node.id,                                 'createdBy = identity.id');
+    assert(stamped.lastEditedBy === node.id,                              'lastEditedBy = identity.id');
+    assert(typeof stamped.lastEditedAt === 'number' && stamped.lastEditedAt > 0, 'lastEditedAt timestamp');
+    assert(wo.createdBy === undefined,                                    'original NO mutado');
+
+    // stampNode · si createdBy ya existe lo preserva
+    const stamped2 = stampNode({ ...wo, createdBy: 'user-original' }, node);
+    assert(stamped2.createdBy === 'user-original',                        'createdBy preservado si ya existía');
+    assert(stamped2.lastEditedBy === node.id,                             'lastEditedBy actualizado igualmente');
+
+    // stampNode · sin identity devuelve node tal cual
+    assert(stampNode(wo, null) === wo,                                    'sin identity → node sin cambios');
+    assert(stampNode(wo, undefined) === wo,                               'undefined identity → node sin cambios');
+
+    // stampNode · acepta string id
+    const sid = stampNode(wo, 'user-direct-id');
+    assert(sid.createdBy === 'user-direct-id',                            'stampNode acepta string id');
+
+    // exports
+    assert(typeof mod.deriveDidFromJwk === 'function',                    'deriveDidFromJwk exportada');
+    assert(typeof mod.getCurrentIdentity === 'function',                  'getCurrentIdentity exportada');
+    assert(typeof mod.getOrCreateIdentity === 'function',                 'getOrCreateIdentity exportada');
+    assert(typeof mod.updateIdentityProfile === 'function',               'updateIdentityProfile exportada');
+    assert(typeof mod.touchIdentity === 'function',                       'touchIdentity exportada');
+}
+
+// ─── KM-001 sprint A · smartFolderService puro ──────────────────
+async function testSmartFolderService() {
+    const mod = await import('../core/smartFolderService.js?v=' + Date.now());
+    const { validateFolder, buildFolder, executeFolderQuery, DEFAULT_FOLDERS } = mod;
+
+    // DEFAULT_FOLDERS · catálogo cerrado de 5 carpetas del sistema
+    assert(Object.isFrozen(DEFAULT_FOLDERS),                              'DEFAULT_FOLDERS frozen');
+    assert(DEFAULT_FOLDERS.length === 5,                                  '5 carpetas predefinidas');
+    DEFAULT_FOLDERS.forEach(f => {
+        assert(f.type === 'smart_folder' && f.content?.isSystem === true, 'cada DEFAULT es system smart_folder');
+    });
+
+    // buildFolder · normaliza id, defaults
+    const f = buildFolder({ name: 'Mis WOs urgentes', icon: '🚨', query: { types: ['work_order'], tagsAll: ['priority:high'] } });
+    assert(f.type === 'smart_folder' && f.id.startsWith('folder-'),       'buildFolder genera nodo válido');
+    assert(f.content.name === 'Mis WOs urgentes',                         'name preservado');
+    assert(f.content.view === 'list',                                     'view default list');
+    assert(validateFolder(f).ok === true,                                 'buildFolder devuelve válido');
+
+    let threw = false;
+    try { buildFolder({}); } catch(_) { threw = true; }
+    assert(threw,                                                          'buildFolder sin name lanza');
+
+    // validateFolder · errores
+    assert(validateFolder({ id: 'x', type: 'smart_folder', content: { query: {} } }).ok === false, 'sin name falla');
+    assert(validateFolder({ id: 'x', type: 'project', content: { name: 'a', query: {} } }).ok === false, 'type incorrecto falla');
+
+    // executeFolderQuery · setup nodes
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const nodes = [
+        { id: 'wo-1', type: 'work_order', projectId: 'p1', updatedAt: now,         content: { title: 'Recientes urgentes', tags: ['kind:work-order','priority:high','status:doing','role-kind:ai'], priority: 'high' } },
+        { id: 'wo-2', type: 'work_order', projectId: 'p1', updatedAt: now - 30*day, content: { title: 'Vieja',              tags: ['kind:work-order','priority:high','status:ledgered'], priority: 'high' } },
+        { id: 'wo-3', type: 'work_order', projectId: 'p2', updatedAt: now,         content: { title: 'Otro proyecto med',   tags: ['kind:work-order','priority:med','status:backlog'],  priority: 'med'  } },
+        { id: 'sop-1',type: 'sop',         projectId: 'p1', updatedAt: now,         content: { name:  'SOP atención',         tags: ['kind:project-role-sop','role:atencion-cliente'] } },
+        { id: 'mkt-1',type: 'market_item',                                          updatedAt: now, createdAt: now,             content: { title: 'Servicio público',     tags: ['kind:market-item','scope:public'] } },
+        { id: 'mkt-2',type: 'market_item',                                          updatedAt: now, createdAt: now,             content: { title: 'Servicio privado',    tags: ['kind:market-item','scope:client'] } },
+    ];
+
+    // tagsAll filtro
+    const r1 = executeFolderQuery({ content: { query: { types: ['work_order'], tagsAll: ['priority:high'], tagsNone: ['status:ledgered'] } } }, nodes);
+    assert(r1.length === 1 && r1[0].id === 'wo-1',                        'tagsAll + tagsNone filtra correctamente');
+
+    // tagsAny
+    const r2 = executeFolderQuery({ content: { query: { tagsAny: ['priority:med', 'priority:high'] } } }, nodes);
+    assert(r2.length === 3,                                                'tagsAny matchea cualquier tag listado');
+
+    // projectId filtro
+    const r3 = executeFolderQuery({ content: { query: { types: ['work_order'], projectId: 'p1' } } }, nodes);
+    assert(r3.length === 2 && r3.every(n => n.projectId === 'p1'),        'projectId filtra correcto');
+
+    // recentDays cutoff
+    const r4 = executeFolderQuery({ content: { query: { types: ['work_order'], recentDays: 7 } } }, nodes);
+    assert(r4.length === 2 && !r4.some(n => n.id === 'wo-2'),             'recentDays excluye nodos viejos');
+
+    // sortBy priority
+    const r5 = executeFolderQuery({ content: { query: { types: ['work_order'], sortBy: 'priority', sortDir: 'desc' } } }, nodes);
+    assert(r5.length === 3,                                                'sort by priority devuelve todos');
+    assert(r5[0].content.priority === 'high',                              'priority high primero (desc)');
+
+    // limit
+    const r6 = executeFolderQuery({ content: { query: { types: ['work_order'], limit: 1 } } }, nodes);
+    assert(r6.length === 1,                                                'limit 1');
+
+    // ejecutar las 5 default folders contra el dataset · no deben crashear
+    DEFAULT_FOLDERS.forEach(f => {
+        const out = executeFolderQuery(f, nodes);
+        assert(Array.isArray(out),                                         'DEFAULT_FOLDER "' + f.content.name + '" ejecuta sin crash');
+    });
+
+    // empty inputs
+    assert(executeFolderQuery(null, nodes).length === 0,                  'null folder → []');
+    assert(executeFolderQuery({ content: { query: {} } }, null).length === 0, 'null nodes → []');
+}
+
+// ─── H8.1 · mindGraphService puro ───────────────────────────────
+async function testMindGraphService() {
+    const mod = await import('../core/mindGraphService.js?v=' + Date.now());
+    const { buildGraphFromKb, graphStats, MIND_TYPE_COLORS, colorForType, labelForNode } = mod;
+
+    // Catálogo de colores frozen + cobertura por tipo
+    assert(Object.isFrozen(MIND_TYPE_COLORS),                              'MIND_TYPE_COLORS frozen');
+    ['project','role','transaction','sop','work_order','workshop','market_item','ledger_entry','user_identity','smart_folder']
+        .forEach(t => assert(typeof MIND_TYPE_COLORS[t] === 'string',     'color para ' + t));
+    assert(colorForType('inexistente') === MIND_TYPE_COLORS.default,      'colorForType fallback default');
+
+    // labelForNode preferencias
+    assert(labelForNode({ id: 'x', content: { title: 'T', name: 'N' } }) === 'T',  'labelForNode prefiere title');
+    assert(labelForNode({ id: 'x', content: { name: 'N' } }) === 'N',              'fallback a name');
+    assert(labelForNode({ id: 'x', content: { displayName: 'D' } }) === 'D',       'fallback a displayName');
+    assert(labelForNode({ id: 'fallback' }) === 'fallback',                        'fallback a id');
+
+    // buildGraphFromKb · setup
+    const nodes = [
+        { id: 'p1', type: 'project',     content: { nombre: 'IKEA' } },
+        { id: 'r1', type: 'role',        projectId: 'p1', content: { name: 'Atención' } },
+        { id: 'tx1',type: 'transaction', projectId: 'p1', content: { name: 'Pedido' } },
+        { id: 'sop-1', type: 'sop',      projectId: 'p1', content: { name: 'SOP A', role_ref: 'r1', soc_ref: 'soc-x', tags: ['kind:sop','sector:k'] } },
+        { id: 'wo-1', type: 'work_order',projectId: 'p1', content: { title: 'WO 1', sopRef: 'sop-1', tags: ['priority:high','sector:k'] } },
+        { id: 'wo-2', type: 'work_order',projectId: 'p1', content: { title: 'WO 2', sopRef: 'sop-1', tags: ['priority:high','sector:k'] } },
+        { id: 'mkt-1',type: 'market_item',                content: { title: 'Servicio', providerProjectId: 'p1', tags: ['scope:public'] } },
+        { id: 'cfg-x',type: 'config',                     value: 'algo' }, // se debe excluir
+        { id: 'huerf',type: 'work_order', projectId: 'p999', content: { title: 'Huérfano' } }, // proyecto no existe
+    ];
+
+    const g = buildGraphFromKb(nodes);
+    assert(g.nodes.length === 8,                                          'config excluido por excludeTypes default');
+    assert(!g.nodes.some(n => n.type === 'config'),                       'no hay nodos de tipo config');
+
+    // Parent edges
+    const parentEdges = g.edges.filter(e => e.kind === 'parent');
+    assert(parentEdges.length === 5,                                      '5 parent edges (r1, tx1, sop-1, wo-1, wo-2 → p1)');
+    assert(parentEdges.every(e => e.target === 'p1'),                     'todos los parent apuntan a p1');
+    assert(!parentEdges.some(e => e.source === 'huerf'),                  'huérfano sin proyecto en grafo no genera parent');
+
+    // Relation edges
+    const relEdges = g.edges.filter(e => e.kind === 'relation');
+    assert(relEdges.some(e => e.source === 'sop-1' && e.target === 'r1'), 'relation sop→role por role_ref');
+    assert(relEdges.some(e => e.source === 'wo-1' && e.target === 'sop-1'), 'relation wo→sop por sopRef');
+    assert(relEdges.some(e => e.source === 'mkt-1' && e.target === 'p1'), 'relation market→project por providerProjectId');
+
+    // Tag edges (entre wo-1 y wo-2 que comparten 2 tags)
+    const tagEdges = g.edges.filter(e => e.kind === 'tag');
+    assert(tagEdges.length > 0,                                           'al menos una tag edge generada');
+    const woTagEdge = tagEdges.find(e => (e.source === 'wo-1' && e.target === 'wo-2') || (e.source === 'wo-2' && e.target === 'wo-1'));
+    assert(woTagEdge && woTagEdge.weight >= 2,                            'wo-1↔wo-2 con weight ≥ 2');
+
+    // includeTagEdges=false omite la capa
+    const g2 = buildGraphFromKb(nodes, { includeTagEdges: false });
+    assert(g2.edges.every(e => e.kind !== 'tag'),                         'includeTagEdges:false omite capa tag');
+
+    // onlyProjectId filtra
+    const g3 = buildGraphFromKb(nodes, { onlyProjectId: 'p1' });
+    assert(g3.nodes.some(n => n.id === 'p1'),                             'onlyProjectId incluye el propio proyecto');
+    assert(!g3.nodes.some(n => n.id === 'huerf'),                         'onlyProjectId excluye nodos de otro proyecto');
+    assert(g3.nodes.some(n => n.id === 'mkt-1'),                          'onlyProjectId incluye market_item con providerProjectId match');
+
+    // graphStats
+    const s = graphStats(g);
+    assert(s.totalNodes === 8,                                             'stats.totalNodes correcto');
+    assert(s.byType.project === 1 && s.byType.work_order === 2,           'stats.byType correcto');
+    assert(s.byEdgeKind.parent === 5,                                     'stats.byEdgeKind.parent correcto');
+
+    // empty inputs
+    const empty = buildGraphFromKb(null);
+    assert(empty.nodes.length === 0 && empty.edges.length === 0,          'null nodes → grafo vacío');
 }
 
 // ─── Runner ──────────────────────────────────────────────────────
@@ -1493,7 +1710,10 @@ const SUITE = [
     { name: 'UX-002 · semanticTagger · taxonomía + folksonomía',  fn: testSemanticTagger },
     { name: 'MKT-001 sprint A · marketService + cnaeSeed puros',  fn: testMarketService },
     { name: 'UX-001 sprint C · projectHubService puro',           fn: testProjectHub },
-    { name: 'UX-NAV-001 · navService puro',                       fn: testNavService }
+    { name: 'UX-NAV-001 · navService puro',                       fn: testNavService },
+    { name: 'AUTH-001 sprint A · identityService (helpers puros)', fn: testIdentityService },
+    { name: 'KM-001 sprint A · smartFolderService puro',          fn: testSmartFolderService },
+    { name: 'H8.1 · mindGraphService puro',                       fn: testMindGraphService }
 ];
 
 export async function runTests() {
