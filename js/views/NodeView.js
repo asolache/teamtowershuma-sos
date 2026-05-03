@@ -16,6 +16,7 @@ import { KB }           from '../core/kb.js';
 import { navigateTo }   from '../router.js';
 import { renderTagsEditor, persistTagAdd, persistTagRemove } from '../core/tagsService.js';
 import { linkifyMultiline } from '../core/linkifyService.js';
+import { renderNavLinksHtml } from '../core/navService.js';
 
 // Mapping tipo → URL especializada (si existe).
 function specializedUrlFor(node) {
@@ -110,8 +111,7 @@ export default class NodeView {
                 <a href="/" data-link class="nv-logo">🗼 Team<span>Towers</span></a>
                 <span style="color:#aaa;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Nodo · ${this._esc(n.type || 'sin tipo')}</span>
                 <div class="nv-spacer"></div>
-                <a href="/tags" data-link class="nv-link">🏷 Cloud de tags</a>
-                <a href="/dashboard" data-link class="nv-link">← Dashboard</a>
+                ${renderNavLinksHtml({ active: '', projectId: n.projectId || c.providerProjectId, className: 'nv-link' })}
             </div>
             <div class="nv-main">
                 <h1 style="font-size:1.5rem;color:#fff;margin:0 0 0.6rem 0;">${this._esc(title)}</h1>

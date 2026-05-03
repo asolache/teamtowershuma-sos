@@ -13,6 +13,7 @@ import { KB }              from '../core/kb.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { t, langSelectorHtml } from '../i18n.js';
 import { taxonomicTagsForProject, taxonomicTagsForRole, mergeTags, buildTag } from '../core/semanticTagger.js';
+import { renderNavLinksHtml } from '../core/navService.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function uid() { return 'proj-' + Math.random().toString(36).slice(2, 9); }
@@ -431,15 +432,13 @@ export default class DashboardView {
                 <span class="dash-topbar-version">SOS V11</span>
                 <a href="https://teamtowershuma.com" target="_blank" class="dash-topbar-web">teamtowershuma.com ↗</a>
                 <div class="dash-topbar-right">
-                    <a href="/workshops" data-link class="dash-btn">🎯 Workshops</a>
-                    <a href="/kanban"    data-link class="dash-btn">📋 Kanban</a>
+                    ${renderNavLinksHtml({ active: 'dashboard', className: 'dash-btn' })}
                     <button class="dash-btn dash-btn-kb" id="dashBtnKB">📚 Knowledge Base</button>
                     <button class="dash-btn" id="dashBtnClone" title="Clonar sector → cliente con IA (H1.10)">🧬 Clonar sector</button>
                     <button class="dash-btn" id="dashBtnExport" title="Descargar snapshot firmado (ECDSA P-256)">💾 Export</button>
                     <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
                     <input type="file" id="dashImportFile" accept=".json,application/json" style="display:none;">
                     <button class="dash-btn dash-btn-primary" id="dashBtnNew">＋ New Project</button>
-                    <a href="/settings" data-link class="dash-btn">⚙ Settings</a>
                     <div id="dashLangSelector"></div>
                 </div>
             </div>
