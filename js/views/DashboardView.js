@@ -145,6 +145,39 @@ export default class DashboardView {
             .dash-hero h1 span { color: var(--accent-indigo); }
             .dash-hero-sub { font-size: var(--text-sm); color: var(--text-muted); font-family: var(--font-mono); }
 
+            /* ── UX-DASH-001 · onboarding flow + áreas ── */
+            .dash-section-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.12em; font-family: var(--font-mono); margin: 0 0 10px 0; font-weight: 700; }
+            .dash-onboard {
+                display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
+                gap: 10px; margin-bottom: 28px;
+            }
+            .dash-onboard-tile {
+                background: linear-gradient(145deg,rgba(99,102,241,0.04),rgba(0,0,0,0));
+                border: 1px solid var(--glass-border); border-left: 3px solid var(--ob-c,#6366f1);
+                border-radius: var(--radius-md); padding: 12px 14px; cursor: pointer;
+                transition: background 0.15s, transform 0.15s, border-color 0.15s;
+                text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 4px;
+            }
+            .dash-onboard-tile:hover { background: rgba(99,102,241,0.08); transform: translateY(-1px); border-color: var(--accent-indigo); }
+            .dash-onboard-step { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+            .dash-onboard-title { font-size: 0.92rem; font-weight: 800; color: white; line-height: 1.25; }
+            .dash-onboard-desc  { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
+
+            .dash-areas {
+                display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr));
+                gap: 8px; margin-bottom: 28px;
+            }
+            .dash-area-tile {
+                background: rgba(20,20,28,0.5); border: 1px solid var(--glass-border);
+                border-radius: var(--radius-md); padding: 10px 12px; cursor: pointer;
+                transition: background 0.15s, border-color 0.15s; text-decoration: none; color: inherit;
+                display: flex; align-items: center; gap: 10px;
+            }
+            .dash-area-tile:hover { background: rgba(99,102,241,0.08); border-color: var(--accent-indigo); }
+            .dash-area-icon  { font-size: 1.3rem; line-height: 1; }
+            .dash-area-label { font-size: 0.85rem; font-weight: 700; color: white; }
+            .dash-area-hint  { font-size: 0.68rem; color: var(--text-muted); }
+
             /* ── Stats bar ── */
             .dash-stats {
                 display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap;
@@ -469,6 +502,43 @@ export default class DashboardView {
                             <div class="dash-hero-tagline">Every organization has two structures. This maps the real one.</div>
                         </div>
                     </div>
+
+                    <!-- UX-DASH-001 · ¿qué puedes hacer aquí? · 4 pasos del flujo SOS -->
+                    <div class="dash-section-title">¿Cómo funciona SOS? · 4 pasos</div>
+                    <div class="dash-onboard">
+                        <a class="dash-onboard-tile" id="dashStep1" style="--ob-c:#a855f7;">
+                            <span class="dash-onboard-step">Paso 1</span>
+                            <span class="dash-onboard-title">🧬 Crea o clona un proyecto</span>
+                            <span class="dash-onboard-desc">Vacío, plantilla del sector, o cliente personalizado con IA. Un solo wizard.</span>
+                        </a>
+                        <a class="dash-onboard-tile" href="/map" data-link style="--ob-c:#6366f1;">
+                            <span class="dash-onboard-step">Paso 2</span>
+                            <span class="dash-onboard-title">🗺 Diseña la red de valor</span>
+                            <span class="dash-onboard-desc">Roles, transacciones tangibles e intangibles. Edición inline + sugerencias IA.</span>
+                        </a>
+                        <a class="dash-onboard-tile" href="/sops" data-link style="--ob-c:#22c55e;">
+                            <span class="dash-onboard-step">Paso 3</span>
+                            <span class="dash-onboard-title">📜 Genera SOPs por rol con IA</span>
+                            <span class="dash-onboard-desc">Cada rol → procedimiento operativo con steps auto-convertibles en WOs.</span>
+                        </a>
+                        <a class="dash-onboard-tile" href="/kanban" data-link style="--ob-c:#facc15;">
+                            <span class="dash-onboard-step">Paso 4</span>
+                            <span class="dash-onboard-title">⚙ Ejecuta y contabiliza</span>
+                            <span class="dash-onboard-desc">WOs por humano o IA → Ledger triple-entry con ahorro acumulado del cliente.</span>
+                        </a>
+                    </div>
+
+                    <!-- UX-DASH-001 · áreas del sistema (siempre accesibles) -->
+                    <div class="dash-section-title">Áreas del sistema</div>
+                    <div class="dash-areas">
+                        <a class="dash-area-tile" href="/map" data-link><span class="dash-area-icon">🗺</span><div><div class="dash-area-label">Mapa</div><div class="dash-area-hint">Mapa de valor del proyecto activo</div></div></a>
+                        <a class="dash-area-tile" href="/kanban" data-link><span class="dash-area-icon">📋</span><div><div class="dash-area-label">Kanban</div><div class="dash-area-hint">WOs · backlog → ledger</div></div></a>
+                        <a class="dash-area-tile" href="/market" data-link><span class="dash-area-icon">🛒</span><div><div class="dash-area-label">Mercado</div><div class="dash-area-hint">Productos y servicios</div></div></a>
+                        <a class="dash-area-tile" href="/tags" data-link><span class="dash-area-icon">🏷</span><div><div class="dash-area-label">Tags</div><div class="dash-area-hint">Folksonomía cloud</div></div></a>
+                        <a class="dash-area-tile" href="/workshops" data-link><span class="dash-area-icon">🎯</span><div><div class="dash-area-label">Workshops</div><div class="dash-area-hint">Talleres Fent Pinya</div></div></a>
+                        <a class="dash-area-tile" href="/settings" data-link><span class="dash-area-icon">⚙</span><div><div class="dash-area-label">Settings</div><div class="dash-area-hint">API keys · IA</div></div></a>
+                    </div>
+
                     <div class="dash-stats" id="dashStats"></div>
                     <div id="dashProjectList"></div>
                 </div>
@@ -769,10 +839,13 @@ export default class DashboardView {
 
     // ── Topbar ────────────────────────────────────────────────────────────────
     _bindTopbar() {
-        document.getElementById('dashBtnNew')?.addEventListener('click', function() {
+        const openNewProjectModal = function() {
             document.getElementById('dashModalNew').classList.add('open');
             document.getElementById('newProjName').focus();
-        });
+        };
+        document.getElementById('dashBtnNew')?.addEventListener('click', openNewProjectModal);
+        // UX-DASH-001 · "Paso 1" del onboarding abre el mismo wizard
+        document.getElementById('dashStep1')?.addEventListener('click', openNewProjectModal);
 
         document.getElementById('dashBtnKB')?.addEventListener('click', function() {
             const main = document.getElementById('dashMain');
