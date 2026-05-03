@@ -17,6 +17,10 @@ const ROUTES = [
     { path: '/tags',      view: () => import('./views/TagsView.js')     },
     // MKT-001 · Mercado SOS
     { path: '/market',    view: () => import('./views/MarketView.js')   },
+    // AUTH-001 · identidad operador
+    { path: '/identity',  view: () => import('./views/IdentityView.js') },
+    // KM-001 · folders inteligentes
+    { path: '/folders',   view: () => import('./views/FoldersView.js')  },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
