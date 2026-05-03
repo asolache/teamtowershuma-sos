@@ -155,6 +155,70 @@ export async function updateIdentityProfile({ displayName, handle, avatar } = {}
     return updated;
 }
 
+// ─── Wallet binding (sprint B · manual) ────────────────────────────────────
+// Validación de address Ethereum/EVM: 0x + 40 hex chars. NO valida checksum
+// (eso requiere keccak256, lo dejamos para sprint con WalletConnect real).
+const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+
+export function isValidEvmAddress(addr) {
+    return typeof addr === 'string' && EVM_ADDRESS_RE.test(addr.trim());
+}
+
+// Funciones puras que devuelven nuevos nodos sin mutar.
+export function addWalletToIdentity(identityNode, { address, chain = 'gnosis', label = '' }) {
+    if (!identityNode) throw new Error('addWalletToIdentity: identity requerida');
+    if (!isValidEvmAddress(address)) throw new Error('Address EVM inválida (esperado 0x + 40 hex)');
+    const norm = address.trim().toLowerCase();
+    const c = identityNode.content || {};
+    const wallets = Array.isArray(c.wallets) ? c.wallets : [];
+    if (wallets.some(w => (w.address || '').toLowerCase() === norm)) {
+        // Ya existe · no duplicar, retornamos node tal cual
+        return identityNode;
+    }
+    const nextWallets = [...wallets, {
+        address: norm,
+        chain:   chain || 'gnosis',
+        label:   label ? String(label).trim().slice(0, 60) : '',
+        verifiedAt: null,    // sprint B real (con firma) lo rellenará
+        addedAt: Date.now(),
+    }];
+    return {
+        ...identityNode,
+        content: { ...c, wallets: nextWallets, lastActiveAt: Date.now() },
+    };
+}
+
+export function removeWalletFromIdentity(identityNode, address) {
+    if (!identityNode || !address) return identityNode;
+    const norm = address.trim().toLowerCase();
+    const c = identityNode.content || {};
+    const wallets = Array.isArray(c.wallets) ? c.wallets : [];
+    const nextWallets = wallets.filter(w => (w.address || '').toLowerCase() !== norm);
+    if (nextWallets.length === wallets.length) return identityNode;
+    return {
+        ...identityNode,
+        content: { ...c, wallets: nextWallets, lastActiveAt: Date.now() },
+    };
+}
+
+// Helpers async sobre KB
+export async function linkWallet({ address, chain = 'gnosis', label = '' }) {
+    const current = await getOrCreateIdentity();
+    const updated = addWalletToIdentity(current, { address, chain, label });
+    if (updated === current) return current;
+    await store.dispatch({ type: 'KB_UPSERT', payload: { node: updated } });
+    return updated;
+}
+
+export async function unlinkWallet(address) {
+    const current = await getCurrentIdentity();
+    if (!current) return null;
+    const updated = removeWalletFromIdentity(current, address);
+    if (updated === current) return current;
+    await store.dispatch({ type: 'KB_UPSERT', payload: { node: updated } });
+    return updated;
+}
+
 // Marca lastActiveAt = now sin cambiar el resto. Idempotente.
 export async function touchIdentity() {
     const current = await getCurrentIdentity();
