@@ -1536,6 +1536,38 @@ async function testIdentityService() {
     assert(typeof mod.getOrCreateIdentity === 'function',                 'getOrCreateIdentity exportada');
     assert(typeof mod.updateIdentityProfile === 'function',               'updateIdentityProfile exportada');
     assert(typeof mod.touchIdentity === 'function',                       'touchIdentity exportada');
+
+    // ── AUTH-001 sprint B · wallet binding (puro)
+    const { isValidEvmAddress, addWalletToIdentity, removeWalletFromIdentity } = mod;
+    const validAddr = '0x' + 'a'.repeat(40);
+    assert(isValidEvmAddress(validAddr) === true,                         'address válida 0x+40hex');
+    assert(isValidEvmAddress('0xZZ') === false,                           'address corta inválida');
+    assert(isValidEvmAddress('not-an-address') === false,                 'string sin 0x inválida');
+    assert(isValidEvmAddress(null) === false,                             'null inválida');
+
+    const linked = addWalletToIdentity(node, { address: validAddr, chain: 'gnosis', label: 'Safe matriu' });
+    assert(linked !== node,                                                'addWalletToIdentity no muta · devuelve nuevo');
+    assert(Array.isArray(linked.content.wallets) && linked.content.wallets.length === 1, 'wallets array con 1 entrada');
+    assert(linked.content.wallets[0].address === validAddr.toLowerCase(), 'address normalizada lowercase');
+    assert(linked.content.wallets[0].chain === 'gnosis',                  'chain preservado');
+    assert(linked.content.wallets[0].label === 'Safe matriu',             'label preservado');
+    assert(linked.content.wallets[0].verifiedAt === null,                 'verifiedAt null hasta firma WalletConnect');
+
+    // Idempotente: añadir misma address (case-insensitive) devuelve el mismo nodo
+    const dup = addWalletToIdentity(linked, { address: validAddr.toUpperCase(), chain: 'gnosis' });
+    assert(dup === linked,                                                 'address duplicada (case-insensitive) → mismo node');
+
+    // addWallet · address inválida lanza
+    let threwAddr = false;
+    try { addWalletToIdentity(node, { address: 'invalido' }); } catch (_) { threwAddr = true; }
+    assert(threwAddr,                                                       'addWalletToIdentity address inválida lanza');
+
+    // removeWalletFromIdentity
+    const unlinked = removeWalletFromIdentity(linked, validAddr);
+    assert(unlinked.content.wallets.length === 0,                         'removeWallet quita entrada');
+    assert(removeWalletFromIdentity(node, validAddr) === node,            'remove sobre nodo sin wallet → no-op');
+    assert(typeof mod.linkWallet === 'function',                          'linkWallet exportada');
+    assert(typeof mod.unlinkWallet === 'function',                        'unlinkWallet exportada');
 }
 
 // ─── KM-001 sprint A · smartFolderService puro ──────────────────
@@ -1686,6 +1718,108 @@ async function testMindGraphService() {
     assert(empty.nodes.length === 0 && empty.edges.length === 0,          'null nodes → grafo vacío');
 }
 
+// ─── KM-001 sprint C · contextPruner puro ───────────────────────
+async function testContextPruner() {
+    const mod = await import('../core/contextPruner.js?v=' + Date.now());
+    const {
+        DEFAULT_WEIGHTS, DEFAULT_TYPE_BOOSTS, CHARS_PER_TOKEN,
+        extractTaskTags, scoreNode, estimateNodeTokens, pruneContextNodes,
+    } = mod;
+
+    // Defaults frozen + cobertura
+    assert(Object.isFrozen(DEFAULT_WEIGHTS),                              'DEFAULT_WEIGHTS frozen');
+    assert(Object.isFrozen(DEFAULT_TYPE_BOOSTS),                          'DEFAULT_TYPE_BOOSTS frozen');
+    assert(typeof CHARS_PER_TOKEN === 'number' && CHARS_PER_TOKEN > 0,    'CHARS_PER_TOKEN positivo');
+    const sumW = DEFAULT_WEIGHTS.tagOverlap + DEFAULT_WEIGHTS.recency + DEFAULT_WEIGHTS.typeBoost + DEFAULT_WEIGHTS.priority;
+    assert(Math.abs(sumW - 1) < 0.001,                                    'pesos suman ~1.0');
+    assert(DEFAULT_TYPE_BOOSTS.config === 0,                              'config tiene boost 0 (excluido)');
+    assert(DEFAULT_TYPE_BOOSTS.sop > 1,                                    'sop boost > 1 (relevante)');
+
+    // extractTaskTags
+    assert(extractTaskTags({}).length === 0,                              'task vacío → sin tags');
+    const t1 = extractTaskTags({ projectId: 'proj-x', sectorId: 'K', roleId: 'rol-y', types: ['sop','role'] });
+    assert(t1.includes('project:proj-x'),                                 'task tag · project:');
+    assert(t1.includes('sector:k'),                                       'task tag · sector: lowercase');
+    assert(t1.includes('role:rol-y'),                                     'task tag · role:');
+    assert(t1.includes('kind:sop') && t1.includes('kind:role'),           'task tag · kind: por type');
+    const t2 = extractTaskTags({ extraTags: ['urgente', 'b2b'] });
+    assert(t2.includes('urgente') && t2.includes('b2b'),                  'extraTags se preservan');
+
+    // scoreNode · tag overlap
+    const now = Date.now();
+    const sopRel = { id: 'sop-1', type: 'sop', updatedAt: now, projectId: 'p1',
+        content: { name: 'Atención', tags: ['kind:sop','project:p1','sector:k','role:atencion'] } };
+    const sopOff = { id: 'sop-2', type: 'sop', updatedAt: now,
+        content: { name: 'Otro sop', tags: ['kind:sop','sector:z'] } };
+    const cfg    = { id: 'cfg', type: 'config', value: 'secret' };
+    const old    = { id: 'old', type: 'sop', updatedAt: now - 365 * 24 * 60 * 60 * 1000,
+        content: { name: 'Viejo', tags: ['kind:sop','project:p1'] } };
+
+    const task = { projectId: 'p1', sectorId: 'K' };
+    const sRel = scoreNode(sopRel, task);
+    const sOff = scoreNode(sopOff, task);
+    const sCfg = scoreNode(cfg, task);
+    const sOld = scoreNode(old, task);
+
+    assert(sRel > sOff,                                                    'sop relevante > sop sin overlap');
+    assert(sCfg === 0,                                                     'config siempre score 0 (excluido)');
+    assert(sRel > sOld,                                                    'sop reciente > sop viejo · misma overlap');
+    assert(sRel > 0 && sRel <= 1,                                          'score en [0,1]');
+
+    // requireProjectId
+    const taskStrict = { projectId: 'p1', requireProjectId: true };
+    const orphan = { id: 'orph', type: 'sop', projectId: 'p2', content: { tags: ['kind:sop','project:p2'] } };
+    assert(scoreNode(orphan, taskStrict) === 0,                            'requireProjectId · orphan score 0');
+    assert(scoreNode(sopRel, taskStrict) > 0,                              'requireProjectId · pertenece score >0');
+
+    // priority boost
+    const woHigh = { id: 'wo-h', type: 'work_order', updatedAt: now, content: { tags: ['priority:high'] } };
+    const woLow  = { id: 'wo-l', type: 'work_order', updatedAt: now, content: { tags: ['priority:low'] } };
+    assert(scoreNode(woHigh, {}) > scoreNode(woLow, {}),                  'priority:high > priority:low');
+
+    // estimateNodeTokens
+    assert(estimateNodeTokens(null) === 0,                                 'estimateNodeTokens null → 0');
+    const shortNode = { id: 'x', type: 'sop', content: { name: 'A' } };
+    const longNode  = { id: 'y', type: 'sop', content: { name: 'A', description: 'X'.repeat(800) } };
+    assert(estimateNodeTokens(longNode) > estimateNodeTokens(shortNode),  'tokens largos > cortos');
+    assert(estimateNodeTokens(longNode) >= 200,                            '800 chars description ≥ 200 tokens');
+
+    // pruneContextNodes
+    const candidates = [
+        sopRel,
+        sopOff,
+        old,
+        cfg,
+        woHigh,
+        { id: 'big-sop', type: 'sop', updatedAt: now, content: { tags: ['kind:sop','project:p1'], description: 'L'.repeat(20000) } },
+    ];
+    const r1 = pruneContextNodes(candidates, task, { tokenBudget: 1000, minScore: 0.05, maxNodes: 50 });
+    assert(Array.isArray(r1.selected) && r1.selected.length > 0,          'pruner selecciona algún nodo');
+    assert(r1.selected.every(x => x.node.type !== 'config'),              'pruner nunca selecciona config');
+    assert(r1.stats.usedTokens <= 1000,                                   'usedTokens dentro del budget');
+    // El big-sop debería estar en skipped por exceder budget
+    const bigSelected = r1.selected.find(x => x.node.id === 'big-sop');
+    const bigSkipped  = r1.skipped.find(x => x.node && x.node.id === 'big-sop');
+    assert(!bigSelected && bigSkipped && bigSkipped.reason === 'tokenBudget', 'big-sop skipped por tokenBudget');
+    // Orden por score desc
+    for (let i = 1; i < r1.selected.length; i++) {
+        assert(r1.selected[i-1].score >= r1.selected[i].score,             'ordenado por score desc');
+    }
+
+    // maxNodes
+    const r2 = pruneContextNodes(candidates, task, { tokenBudget: 999999, maxNodes: 2 });
+    assert(r2.selected.length === 2,                                       'maxNodes=2 limita a 2');
+
+    // empty inputs
+    const empty = pruneContextNodes([], task);
+    assert(empty.selected.length === 0 && empty.stats.usedTokens === 0,    'candidates vacío → resultado vacío');
+
+    // task como string de tags directos
+    const taskDirect = { tags: ['project:p1','kind:sop'] };
+    const sDirect = scoreNode(sopRel, taskDirect);
+    assert(sDirect > 0,                                                     'task con tags directos funciona');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -1713,7 +1847,8 @@ const SUITE = [
     { name: 'UX-NAV-001 · navService puro',                       fn: testNavService },
     { name: 'AUTH-001 sprint A · identityService (helpers puros)', fn: testIdentityService },
     { name: 'KM-001 sprint A · smartFolderService puro',          fn: testSmartFolderService },
-    { name: 'H8.1 · mindGraphService puro',                       fn: testMindGraphService }
+    { name: 'H8.1 · mindGraphService puro',                       fn: testMindGraphService },
+    { name: 'KM-001 sprint C · contextPruner puro',               fn: testContextPruner }
 ];
 
 export async function runTests() {

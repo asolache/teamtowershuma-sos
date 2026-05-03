@@ -10,6 +10,7 @@
 import { store } from '../core/store.js';
 import {
     getCurrentIdentity, getOrCreateIdentity, updateIdentityProfile,
+    linkWallet, unlinkWallet, isValidEvmAddress,
 } from '../core/identityService.js';
 import { renderNavLinksHtml } from '../core/navService.js';
 
@@ -96,9 +97,26 @@ export default class IdentityView {
                 </div>
 
                 <div class="id-card" style="border-left-color:#facc15;">
-                    <h2>🔗 Conectar wallet</h2>
-                    <div class="id-meta">Vincula una dirección Ethereum/Gnosis a tu identidad para firmar tx, recibir hats SBT y participar en FICE rounds.</div>
-                    <div class="id-stub">🚧 Sprint B · WalletConnect/RainbowKit/Safe SDK · delegado a MAT-001 fase 1.</div>
+                    <h2>🔗 Wallets vinculadas</h2>
+                    <div class="id-meta">Direcciones Ethereum / Gnosis asociadas a esta identidad. Sprint B · binding manual (sin firma de verificación). La firma con wallet real (verifiedAt) se delega a MAT-001 fase 1 con WalletConnect.</div>
+
+                    <div id="idWalletList" style="margin-top:0.7rem;"></div>
+
+                    <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0.4rem;align-items:center;margin-top:0.6rem;">
+                        <input id="idWalletAddr" class="id-input" type="text" placeholder="0x... (40 hex chars)" autocomplete="off" style="font-family:monospace;font-size:0.78rem;">
+                        <select id="idWalletChain" class="id-input" style="width:auto;">
+                            <option value="gnosis">Gnosis</option>
+                            <option value="ethereum">Ethereum</option>
+                            <option value="polygon">Polygon</option>
+                            <option value="base">Base</option>
+                            <option value="optimism">Optimism</option>
+                            <option value="arbitrum">Arbitrum</option>
+                            <option value="other">otra</option>
+                        </select>
+                        <input id="idWalletLabel" class="id-input" type="text" placeholder="etiqueta · ej. Safe matriu" style="width:160px;">
+                        <button class="id-btn id-btn-primary" id="idLinkWallet">＋ Vincular</button>
+                    </div>
+                    <div id="idWalletErr" style="display:none;margin-top:0.4rem;font-size:0.78rem;color:#fca5a5;"></div>
                 </div>
 
                 <div class="id-card" style="border-left-color:#86efac;">
@@ -116,6 +134,32 @@ export default class IdentityView {
     }
 
     async afterRender() {
+        this._renderWalletList();
+
+        document.getElementById('idLinkWallet')?.addEventListener('click', async () => {
+            const addrEl  = document.getElementById('idWalletAddr');
+            const chainEl = document.getElementById('idWalletChain');
+            const labelEl = document.getElementById('idWalletLabel');
+            const errEl   = document.getElementById('idWalletErr');
+            const address = (addrEl.value || '').trim();
+            const chain   = chainEl.value || 'gnosis';
+            const label   = (labelEl.value || '').trim();
+            errEl.style.display = 'none';
+            if (!isValidEvmAddress(address)) {
+                errEl.textContent = '✗ Address inválida · esperado 0x + 40 caracteres hex';
+                errEl.style.display = 'block';
+                return;
+            }
+            try {
+                this.identity = await linkWallet({ address, chain, label });
+                addrEl.value = ''; labelEl.value = '';
+                this._renderWalletList();
+            } catch (err) {
+                errEl.textContent = '✗ ' + err.message;
+                errEl.style.display = 'block';
+            }
+        });
+
         document.getElementById('idSave')?.addEventListener('click', async () => {
             const btn = document.getElementById('idSave');
             const displayName = document.getElementById('idDisplayName').value;
@@ -137,6 +181,35 @@ export default class IdentityView {
             const did = this.identity?.content?.primaryDid || '';
             try { await navigator.clipboard.writeText(did); alert('DID copiado: ' + did); }
             catch (_) { alert('No se pudo copiar (permiso denegado).'); }
+        });
+    }
+
+    _renderWalletList() {
+        const root = document.getElementById('idWalletList');
+        if (!root) return;
+        const wallets = Array.isArray(this.identity?.content?.wallets) ? this.identity.content.wallets : [];
+        if (!wallets.length) {
+            root.innerHTML = '<div style="color:#666;font-size:0.78rem;font-style:italic;">Aún no hay wallets vinculadas.</div>';
+            return;
+        }
+        root.innerHTML = wallets.map(w => {
+            const verified = w.verifiedAt ? '<span class="id-pill" title="firma verificada">verified</span>' : '<span class="id-pill" style="background:rgba(250,204,21,0.12);color:#facc15;" title="manual binding · sin firma · upgrade a WalletConnect en MAT-001">manual</span>';
+            return `<div style="display:flex;align-items:center;gap:0.5rem;padding:6px 8px;background:rgba(0,0,0,0.3);border:1px solid #2a2a35;border-radius:5px;margin-bottom:5px;font-size:0.8rem;">
+                <span style="background:rgba(125,211,252,0.15);color:#7dd3fc;padding:2px 7px;border-radius:8px;font-family:monospace;font-size:0.7rem;">${this._esc(w.chain || 'gnosis')}</span>
+                <code style="color:#ddd;font-size:0.75rem;flex:1;word-break:break-all;">${this._esc(w.address)}</code>
+                ${w.label ? `<span style="color:#aaa;font-size:0.72rem;">${this._esc(w.label)}</span>` : ''}
+                ${verified}
+                <button class="id-btn" data-unlink="${this._esc(w.address)}" style="padding:3px 8px;font-size:0.72rem;border-color:rgba(255,82,82,0.3);color:#ff5252;">Desvincular</button>
+            </div>`;
+        }).join('');
+
+        root.querySelectorAll('button[data-unlink]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const addr = btn.dataset.unlink;
+                if (!confirm('¿Desvincular ' + addr.slice(0, 10) + '…' + addr.slice(-4) + '?')) return;
+                this.identity = await unlinkWallet(addr);
+                this._renderWalletList();
+            });
         });
     }
 
