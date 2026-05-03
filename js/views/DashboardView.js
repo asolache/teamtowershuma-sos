@@ -434,7 +434,6 @@ export default class DashboardView {
                 <div class="dash-topbar-right">
                     ${renderNavLinksHtml({ active: 'dashboard', className: 'dash-btn' })}
                     <button class="dash-btn dash-btn-kb" id="dashBtnKB">📚 Knowledge Base</button>
-                    <button class="dash-btn" id="dashBtnClone" title="Clonar sector → cliente con IA (H1.10)">🧬 Clonar sector</button>
                     <button class="dash-btn" id="dashBtnExport" title="Descargar snapshot firmado (ECDSA P-256)">💾 Export</button>
                     <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
                     <input type="file" id="dashImportFile" accept=".json,application/json" style="display:none;">
@@ -491,26 +490,42 @@ export default class DashboardView {
         <!-- H1.10.1 · Modal Clonar sector (lo monta dinámicamente _openCloneModal) -->
         <div id="dashCloneRoot"></div>
 
-        <!-- MODAL NUEVO PROYECTO -->
+        <!-- MODAL NUEVO PROYECTO · UX-FUSE-001 wizard unificado · 3 modos -->
         <div class="dash-modal-bg" id="dashModalNew">
-            <div class="dash-modal">
-                <h2>New project</h2>
-                <div class="dash-modal-sub">Create a new value network map</div>
+            <div class="dash-modal" style="max-width:540px;">
+                <h2>＋ Nuevo proyecto</h2>
+                <div class="dash-modal-sub">Un solo wizard · 3 caminos según lo que rellenes</div>
+
                 <div class="dash-form-group">
-                    <label class="dash-form-label">Project name *</label>
-                    <input type="text" class="dash-form-input" id="newProjName" placeholder="e.g. ACME Corp · VNA 2025">
+                    <label class="dash-form-label">Nombre del proyecto *</label>
+                    <input type="text" class="dash-form-input" id="newProjName" placeholder="e.g. IKEA Madrid · Servicios">
                 </div>
+
                 <div class="dash-form-group">
-                    <label class="dash-form-label">Sector (optional)</label>
+                    <label class="dash-form-label">Sector base (opcional)</label>
                     <select class="dash-form-input" id="newProjSector" style="font-family:var(--font-base);">
-                        <option value="">— Select sector —</option>
+                        <option value="">— Vacío · sin sector —</option>
                         ${sectorOptions}
                     </select>
                 </div>
-                <div class="dash-modal-actions">
-                    <button class="dash-modal-cancel" id="newProjCancel">Cancel</button>
-                    <button class="dash-modal-confirm" id="newProjConfirm">Create &amp; open map</button>
+
+                <div class="dash-form-group">
+                    <label class="dash-form-label">Descripción del cliente (opcional · activa IA)</label>
+                    <textarea class="dash-form-input" id="newProjDesc" rows="4"
+                        placeholder="Cliente, tamaño, geografía, dolores conocidos, sponsor... Si la rellenas, la IA personaliza nombres, descripciones y actor típico de cada rol al contexto real, y puede añadir 1-3 roles emergentes con prefijo client-."
+                        style="font-family:inherit;resize:vertical;min-height:90px;"></textarea>
                 </div>
+
+                <div id="newProjModeHint" style="font-size:0.78rem;color:#a5b4fc;background:rgba(99,102,241,0.08);border-left:3px solid #6366f1;padding:0.5rem 0.7rem;border-radius:4px;margin:0.5rem 0;">
+                    📦 <strong>Vacío</strong> · proyecto sin roles · los añades tú a mano en el mapa.
+                </div>
+
+                <div class="dash-modal-actions">
+                    <button class="dash-modal-cancel" id="newProjCancel">Cancelar</button>
+                    <button class="dash-modal-confirm" id="newProjConfirm">Crear &amp; abrir mapa</button>
+                </div>
+
+                <div id="newProjStatus" style="display:none;margin-top:0.6rem;color:#aaa;font-size:0.85rem;"></div>
             </div>
         </div>
         `;
@@ -812,9 +827,9 @@ export default class DashboardView {
             }
         });
 
-        // H1.10.1 · Clonar sector → cliente con IA
-        const dashView = this;
-        document.getElementById('dashBtnClone')?.addEventListener('click', () => dashView._openCloneModal());
+        // UX-FUSE-001 · el botón "🧬 Clonar sector" se ha fusionado en el
+        // wizard "+ Nuevo proyecto" (un solo entry point con 3 caminos).
+        // El método _openCloneModal sigue disponible por compat (ej. DevTools).
     }
 
     // ── H1.10.1 · Modal Clonar sector → cliente con IA ────────────────────────
@@ -880,8 +895,27 @@ export default class DashboardView {
     }
 
     async _executeClone({ sectorId, clientName, clientDescription }) {
-        const step2 = document.getElementById('dashCloneStep2');
-        const step1 = document.getElementById('dashCloneStep1');
+        // UX-FUSE-001 · si _executeClone se invoca desde el wizard fusionado
+        // (sin pasar por _openCloneModal), montamos aquí el overlay de
+        // progreso para que el feedback visual funcione igual.
+        let step2 = document.getElementById('dashCloneStep2');
+        let step1 = document.getElementById('dashCloneStep1');
+        if (!step2) {
+            const root = document.getElementById('dashCloneRoot');
+            if (root) {
+                root.innerHTML = `
+                    <div class="dash-clone-bg" id="dashCloneBg" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:flex-start;justify-content:center;z-index:1000;padding:2rem 1rem;overflow-y:auto;">
+                        <div style="background:#0e0e14;border:1px solid #2a2a35;border-radius:10px;padding:1.5rem;width:100%;max-width:620px;color:#e6e6e6;font-family:var(--font-base);">
+                            <h3 style="margin:0 0 0.5rem 0;color:#fff;">🤖 Clonando sector → cliente con IA</h3>
+                            <p style="color:#aaa;font-size:0.78rem;margin:0 0 0.6rem 0;">${this._escapeHtml(clientName)} · sector ${this._escapeHtml(sectorId)}</p>
+                            <div id="dashCloneStep1" style="display:none;"></div>
+                            <div id="dashCloneStep2"></div>
+                        </div>
+                    </div>`;
+                step2 = document.getElementById('dashCloneStep2');
+                step1 = document.getElementById('dashCloneStep1');
+            }
+        }
         if (step1) step1.style.display = 'none';
         if (step2) step2.innerHTML = `
             <p style="color:#aaa;">🤖 Construyendo contexto SOC + sector + descripción cliente…</p>
@@ -1048,33 +1082,109 @@ export default class DashboardView {
 
     // ── Modal nuevo proyecto ──────────────────────────────────────────────────
     _bindModal() {
+        const dashView = this;
         document.getElementById('newProjCancel')?.addEventListener('click', function() {
             document.getElementById('dashModalNew').classList.remove('open');
         });
 
+        // UX-FUSE-001 · hint dinámico que explica el camino que va a tomar
+        const refreshModeHint = () => {
+            const sector = document.getElementById('newProjSector')?.value || '';
+            const desc   = (document.getElementById('newProjDesc')?.value || '').trim();
+            const hint   = document.getElementById('newProjModeHint');
+            if (!hint) return;
+            if (!sector && !desc) {
+                hint.style.background = 'rgba(99,102,241,0.08)';
+                hint.style.borderLeftColor = '#6366f1';
+                hint.style.color = '#a5b4fc';
+                hint.innerHTML = '📦 <strong>Vacío</strong> · proyecto sin roles · los añades tú a mano en el mapa.';
+            } else if (sector && !desc) {
+                hint.style.background = 'rgba(34,197,94,0.08)';
+                hint.style.borderLeftColor = '#22c55e';
+                hint.style.color = '#86efac';
+                hint.innerHTML = '🌱 <strong>Plantilla del sector</strong> · clona los roles y transacciones del sector base sin gastar tokens IA. Rápido. Editable después.';
+            } else if (sector && desc) {
+                hint.style.background = 'rgba(168,85,247,0.08)';
+                hint.style.borderLeftColor = '#a855f7';
+                hint.style.color = '#d8b4fe';
+                hint.innerHTML = '🤖 <strong>Cliente personalizado con IA</strong> · la IA personaliza nombres + descripciones del sector al cliente real, añade roles emergentes y emite folksonomy. 10-30s.';
+            } else {
+                // sector vacío + descripción → tratado como vacío con descripción guardada
+                hint.style.background = 'rgba(250,204,21,0.08)';
+                hint.style.borderLeftColor = '#facc15';
+                hint.style.color = '#facc15';
+                hint.innerHTML = '⚠ Para activar la IA necesitas seleccionar un sector base. Sin sector, la descripción se guarda como nota.';
+            }
+        };
+        document.getElementById('newProjSector')?.addEventListener('change', refreshModeHint);
+        document.getElementById('newProjDesc')?.addEventListener('input',  refreshModeHint);
+
         document.getElementById('newProjConfirm')?.addEventListener('click', async function() {
-            const name     = document.getElementById('newProjName').value.trim();
-            const sectorId = document.getElementById('newProjSector').value || null;
+            const btn  = this;
+            const name        = document.getElementById('newProjName').value.trim();
+            const sectorId    = document.getElementById('newProjSector').value || null;
+            const description = (document.getElementById('newProjDesc').value || '').trim();
+            const status      = document.getElementById('newProjStatus');
             if (!name) { document.getElementById('newProjName').focus(); return; }
 
-            const projectId = uid();
-            await store.dispatch({
-                type:    'CREATE_PROJECT',
-                payload: {
-                    id:               projectId,
-                    nombre:           name,
-                    sector_id:        sectorId,
-                    vna_roles:        [],
-                    vna_transactions: [],
-                    createdAt:        Date.now(),
-                    updatedAt:        Date.now(),
-                }
-            });
+            // Camino 3: sector + descripción → IA (delegado a flujo existente)
+            if (sectorId && description) {
+                document.getElementById('dashModalNew').classList.remove('open');
+                await dashView._executeClone({ sectorId, clientName: name, clientDescription: description });
+                return;
+            }
 
-            document.getElementById('dashModalNew').classList.remove('open');
-            const url = '/map?project=' + projectId + (sectorId ? '&sector=' + sectorId : '');
-            window.navigateTo(url);
-        }.bind(this));
+            btn.disabled = true; btn.textContent = '⏳ Creando…';
+            status.style.display = 'block'; status.textContent = '';
+
+            try {
+                let vnaRoles = [];
+                let vnaTransactions = [];
+                let patterns = [];
+
+                // Camino 2: sector + sin descripción → clonar plantilla local sin IA
+                if (sectorId && !description) {
+                    status.textContent = '🌱 Cargando plantilla del sector ' + sectorId + '…';
+                    const seed = await KnowledgeLoader.getSectorSeed(sectorId);
+                    if (seed) {
+                        vnaRoles        = Array.isArray(seed.roles)        ? JSON.parse(JSON.stringify(seed.roles))        : [];
+                        vnaTransactions = Array.isArray(seed.transactions) ? JSON.parse(JSON.stringify(seed.transactions)) : [];
+                        patterns        = Array.isArray(seed.patterns)     ? JSON.parse(JSON.stringify(seed.patterns))     : [];
+                    }
+                }
+
+                const projectId = uid();
+                await store.dispatch({
+                    type:    'CREATE_PROJECT',
+                    payload: {
+                        id:               projectId,
+                        nombre:           name,
+                        sector_id:        sectorId,
+                        based_on_sector:  sectorId,
+                        vna_roles:        vnaRoles,
+                        vna_transactions: vnaTransactions,
+                        patterns,
+                        cloneStatus:      sectorId ? 'active' : 'draft',
+                        createdAt:        Date.now(),
+                        updatedAt:        Date.now(),
+                    }
+                });
+
+                document.getElementById('dashModalNew').classList.remove('open');
+                btn.disabled = false; btn.textContent = 'Crear & abrir mapa';
+                status.style.display = 'none';
+                const url = '/map?project=' + projectId + (sectorId ? '&sector=' + sectorId : '');
+                window.navigateTo(url);
+            } catch (err) {
+                console.error('[UX-FUSE-001] Error creando proyecto:', err);
+                status.textContent = '✗ ' + err.message;
+                status.style.color = '#ff5252';
+                btn.disabled = false; btn.textContent = 'Crear & abrir mapa';
+            }
+        });
+
+        // Inicializa el hint correctamente al primer render
+        refreshModeHint();
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') document.getElementById('dashModalNew')?.classList.remove('open');
