@@ -15,6 +15,7 @@ import { KB }    from '../core/kb.js';
 import {
     aggregateProjectStats, projectViewUrls, PROJECT_TOOLS,
 } from '../core/projectHubService.js';
+import { renderNavLinksHtml } from '../core/navService.js';
 
 export default class ProjectHubView {
     constructor() {
@@ -93,7 +94,7 @@ export default class ProjectHubView {
                 <a href="/" data-link class="ph-logo">🗼 Team<span>Towers</span></a>
                 <span class="ph-title">Proyecto · panel</span>
                 <div class="ph-spacer"></div>
-                <a href="/dashboard" data-link class="ph-link">← Dashboard</a>
+                ${renderNavLinksHtml({ active: '', projectId: this.projectId, className: 'ph-link' })}
                 <a href="/n/${encodeURIComponent(p.id)}" data-link class="ph-link">📂 Nodo</a>
             </div>
 

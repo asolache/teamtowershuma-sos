@@ -51,7 +51,11 @@
 
 ---
 
-### Ola 3 · Cliente como ciudadano de primera (🟢 EN CURSO en `claude/value-map-tool-8ovUP`)
+### Olas 3-7 · CERRADAS en `main` · tags `v11.3.0…v11.7.0`
+
+> Sección histórica de las olas 3-7 que se desarrollaron en la rama
+> `claude/value-map-tool-8ovUP` y se mergearon a `main` con tags
+> `v11.3.0-ola3 · v11.4.0-ola4 · v11.5.0-ola5 · v11.6.0-ola6 · v11.7.0-ola7`.
 
 | ID | Historia | Estado |
 |---|---|---|
@@ -89,6 +93,24 @@
 | BACK-007 | Modelo tokenómico al crear proyecto cliente | 🟡 |
 | H7.4 | TDD-auto: ampliar sandbox de `tddCheck` más allá de los 4 tipos básicos | 🟡 |
 | H3.1 | Ledger viewer dedicado | 🟡 |
+
+---
+
+### Ola 8 · UX brutal + Auth (🟢 EN CURSO en `claude/value-map-tool-8ovUP`)
+
+> Foco @alvaro 2026-04-30: la calidad del producto se mide en la
+> primera sesión de un nuevo usuario. SOS es potente pero la UX no
+> autoexplica el valor · necesita arquitectura de información de
+> nivel experto. Más pre-requisito de identidad para conectar con
+> Matriu y otras apps del ecosistema.
+
+| ID | Historia | Estado |
+|---|---|---|
+| **UX-FIX-001** | **Selector de sectores en `/market` muestra letra + nombre** — el desplegable actual sólo muestra `A · B · C…` (la letra del sector TT). Cargar `KnowledgeLoader.listSectors()` en `afterRender` y poblar el `<select>` con `{letra} · {nombre}` (ej. `K · Tech / Software / IA`). Aplicar el mismo patrón a otros selectores de sector que sólo muestren letra. Input @alvaro 2026-04-30. | 🟡 |
+| **UX-NAV-001** | **Audit de navegación entre vistas creadas** — revisar topbars de TODAS las vistas (Dashboard, Map, Kanban, SOPs, Workshops, Settings, Tags, Market, NodeView, ProjectHub) para garantizar acceso bidireccional · cualquier vista debe ofrecer links a las principales (Dashboard · Mercado · Tags · Mapa · Kanban del proyecto activo) sin necesidad de teclear URL. Crear barra de navegación unificada o componente reusable. Input @alvaro 2026-04-30. | 🟡 |
+| **UX-FUSE-001** | **Fusionar "Crear proyecto" + "Clonar sector" en un solo wizard** — el botón "🧬 Clonar sector" del topbar se ha eliminado y absorbido en "+ Nuevo proyecto", que ahora es el único entry point. Modal con 3 caminos según lo que rellenes: (1) **Vacío** · sólo nombre → proyecto sin roles. (2) **Plantilla del sector** · nombre + sector → clona roles+transactions+patterns del sector base sin gastar tokens IA. (3) **Cliente personalizado IA** · nombre + sector + descripción → llama a `cloneSectorForClient` con LLM (flujo previo). Hint dinámico bajo el formulario que reflecta el camino elegido en cada momento (color + texto). `_executeClone` ahora monta su propio overlay de progreso si se invoca sin el modal viejo presente, para que el feedback visual funcione desde el wizard nuevo. Input @alvaro 2026-04-30. | ✅ verde |
+| **UX-DASH-001** | **Rediseño del Dashboard como home autoexplicativo** — la primera vista cuenta SOS sin leer docs. Estructura entregada: (1) Hero con título + sub + tagline. (2) **¿Cómo funciona SOS? · 4 pasos** · grid de 4 tiles del flujo (1 Crea/clona proyecto → 2 Diseña red de valor → 3 Genera SOPs IA → 4 Ejecuta y contabiliza) · cada tile auto-explicativo + link directo · "Paso 1" abre el wizard fusionado UX-FUSE-001. (3) **Áreas del sistema** · grid de 6 tiles (Mapa · Kanban · Mercado · Tags · Workshops · Settings) con icon + label + hint. (4) Stats globales originales preservados. (5) Lista de proyectos al final preservada. Aplicados criterios Nielsen (clear primary action · navegación visible · feedback en estado) + Tufte (densidad ajustada · sin chrome innecesario). Input @alvaro 2026-04-30. | ✅ verde MVP |
+| **AUTH-001** | **Identidad del usuario operador** — fundación para asociar nodos del KB a una identidad estable y operar con apps del ecosistema (Matriu, futuras integraciones). 3 caminos compatibles entre sí: (1) **Local-first identity** (clave secp256k1 generada al primer arranque, guardada cifrada con passphrase en IndexedDB) — el default · funciona offline · firma exports y nodos. (2) **Wallet connect** (WalletConnect / RainbowKit) — para usuarios que ya tienen wallet · vincula dirección Ethereum/Gnosis a la identidad local. (3) **OAuth providers** (GitHub · Google · email magic-link) — para onboarding rápido sin cripto. Cada operador tiene un nodo `type='user_identity'` en KB con: id (DID o address), publicKeys, oauthProviders[], createdAt, hatTokens[] (cuando MAT-001 esté operativo). Las WOs/SOPs/proyectos quedan firmadas con la identidad activa. Conecta con MAT-001 (SBT identidad on-chain) como capa siguiente. Ver bloque dedicado abajo. Input @alvaro 2026-04-30. | 🟡 |
 
 ---
 
@@ -902,6 +924,87 @@ manualmente. Formato: `- type='X' id='Y' content={…}`.}
   aprobación del Kanban (manual o tdd-auto).
 - **Bilingüe-ready**: la plantilla puede traducirse a EN para clientes
   internacionales sin rehacer arquitectura.
+
+---
+
+## AUTH-001 · Identidad del operador · 3 caminos compatibles
+
+> Tesis @alvaro 2026-04-30: SOS hoy no sabe quién está usando la app.
+> Para conectar con Matriu (matchmaking · hats · pactos firmados) y
+> con futuras apps del ecosistema, necesitamos una capa de identidad
+> que NO sea bloqueante (cumple local-first) pero permita escalar
+> hacia on-chain cuando el usuario lo decida.
+
+### Tres caminos · compatibles entre sí
+
+| Camino | Cuándo usar | Coste de onboarding | Capacidades |
+|---|---|---|---|
+| **Local-first identity** (default) | Primera sesión de cualquier usuario · operación offline | Cero · clave generada al primer arranque | Firmar exports + nodos del KB · trazabilidad de creador en cada `KB_UPSERT` |
+| **Wallet connect** (WalletConnect / RainbowKit / Safe) | Usuario que ya tiene wallet · va a operar con FICE / pactos / Mercado on-chain | Medio · UX wallet popup | Firmar tx en Gnosis · recibir hats SBT · participar en votaciones FICE · recibir pagos en USDC |
+| **OAuth** (GitHub / Google / email magic-link) | Onboarding rápido sin cripto · usuarios CoP que sólo consumen | Bajo · 1 click | Identificación entre miembros del proyecto · vincular avatar/nombre · NO firma cripto sin upgrade |
+
+Los tres son **compatibles**: el usuario empieza con local-first, conecta wallet más adelante, añade OAuth para que otros le encuentren.
+
+### Schema propuesto · nodo `type='user_identity'`
+
+```json
+{
+  "id": "user-{stableId}",
+  "type": "user_identity",
+  "content": {
+    "displayName": "Alvaro Solache",
+    "handle": "@alvaro",
+    "avatar": "data:image/...|url",
+    "primaryDid": "did:key:zQ3..." ,
+    "publicKeys": {
+      "signing":    "0x04...",
+      "encryption": "0x04..."
+    },
+    "wallets": [
+      { "address": "0xabc...", "chain": "gnosis", "verifiedAt": 1714... }
+    ],
+    "oauthProviders": [
+      { "provider": "github", "username": "asolache", "verifiedAt": 1714... }
+    ],
+    "hatTokens": [],
+    "isPrimary": true,
+    "createdAt": 1714...,
+    "lastActiveAt": 1714...,
+    "tags": ["kind:user-identity", "scope:internal"]
+  },
+  "keywords": ["user_identity", "@alvaro", "local-first"]
+}
+```
+
+### Comportamiento sistémico
+
+- Al crear/editar un nodo del KB se inyecta `node.createdBy` y `node.lastEditedBy` con el `user_identity.id` activo.
+- Export firmado (`H1.3`) ya usa la clave local · ahora queda asociada al `user_identity` (1:1 con `primaryDid`).
+- En `/settings → Identity` se ve el perfil · se hace upgrade a wallet o OAuth con un click.
+- En las vistas de proyecto/Map/Kanban: cada nodo tiene un mini-avatar del autor · click → `/n/{userIdentityId}`.
+
+### Implementación · 3 sprints
+
+| Sprint | Entregable | Coste |
+|---|---|---|
+| **A** Local-first identity | Generación clave secp256k1 al primer arranque · `js/core/identityService.js` puro · vista `/settings → Identity` · stamping `createdBy/lastEditedBy` en `KB_UPSERT` | Medio |
+| **B** Wallet connect | Integración WalletConnect/viem · vinculación address → user_identity · firma transacciones · botón "Connect wallet" en topbar | Alto · introduce dependencia external |
+| **C** OAuth providers | GitHub OAuth · Google OAuth · email magic-link via Netlify Functions · vinculación username → user_identity | Medio |
+
+### Conexión con otras historias
+
+- **MAT-001 fase 1** · mint SBT identidad → escribe `hatTokens[]` en `user_identity` y queda enlazado.
+- **UX-001 sprint C** · panel del proyecto muestra los miembros como `user_identity` cards.
+- **H1.10.8** · el campo "Assignee · ID" para humanos pasa de input texto a selector de `user_identity` del proyecto.
+- **MKT-001 sprint C** · el wallet prepago se asocia al `user_identity` activo.
+- **BILL-001** · las facturas se firman con la `user_identity` del proveedor.
+
+### Decisiones técnicas pendientes
+
+- ¿DID method? (`did:key` simple vs `did:pkh` para wallet).
+- ¿Soportar múltiples identidades por dispositivo? (sí, con flag `isPrimary` para la activa).
+- ¿Cómo se sincroniza la identidad entre dispositivos del mismo usuario? (export/import firmado de identidad · futura integración con Automerge según MAT-001).
+- ¿Cifrar la clave privada con passphrase obligatoria desde el principio o lazy?
 
 ---
 

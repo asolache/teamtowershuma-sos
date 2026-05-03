@@ -13,6 +13,7 @@ import { KB }              from '../core/kb.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { t, langSelectorHtml } from '../i18n.js';
 import { taxonomicTagsForProject, taxonomicTagsForRole, mergeTags, buildTag } from '../core/semanticTagger.js';
+import { renderNavLinksHtml } from '../core/navService.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function uid() { return 'proj-' + Math.random().toString(36).slice(2, 9); }
@@ -143,6 +144,39 @@ export default class DashboardView {
             }
             .dash-hero h1 span { color: var(--accent-indigo); }
             .dash-hero-sub { font-size: var(--text-sm); color: var(--text-muted); font-family: var(--font-mono); }
+
+            /* ── UX-DASH-001 · onboarding flow + áreas ── */
+            .dash-section-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.12em; font-family: var(--font-mono); margin: 0 0 10px 0; font-weight: 700; }
+            .dash-onboard {
+                display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
+                gap: 10px; margin-bottom: 28px;
+            }
+            .dash-onboard-tile {
+                background: linear-gradient(145deg,rgba(99,102,241,0.04),rgba(0,0,0,0));
+                border: 1px solid var(--glass-border); border-left: 3px solid var(--ob-c,#6366f1);
+                border-radius: var(--radius-md); padding: 12px 14px; cursor: pointer;
+                transition: background 0.15s, transform 0.15s, border-color 0.15s;
+                text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 4px;
+            }
+            .dash-onboard-tile:hover { background: rgba(99,102,241,0.08); transform: translateY(-1px); border-color: var(--accent-indigo); }
+            .dash-onboard-step { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+            .dash-onboard-title { font-size: 0.92rem; font-weight: 800; color: white; line-height: 1.25; }
+            .dash-onboard-desc  { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
+
+            .dash-areas {
+                display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr));
+                gap: 8px; margin-bottom: 28px;
+            }
+            .dash-area-tile {
+                background: rgba(20,20,28,0.5); border: 1px solid var(--glass-border);
+                border-radius: var(--radius-md); padding: 10px 12px; cursor: pointer;
+                transition: background 0.15s, border-color 0.15s; text-decoration: none; color: inherit;
+                display: flex; align-items: center; gap: 10px;
+            }
+            .dash-area-tile:hover { background: rgba(99,102,241,0.08); border-color: var(--accent-indigo); }
+            .dash-area-icon  { font-size: 1.3rem; line-height: 1; }
+            .dash-area-label { font-size: 0.85rem; font-weight: 700; color: white; }
+            .dash-area-hint  { font-size: 0.68rem; color: var(--text-muted); }
 
             /* ── Stats bar ── */
             .dash-stats {
@@ -431,15 +465,12 @@ export default class DashboardView {
                 <span class="dash-topbar-version">SOS V11</span>
                 <a href="https://teamtowershuma.com" target="_blank" class="dash-topbar-web">teamtowershuma.com ↗</a>
                 <div class="dash-topbar-right">
-                    <a href="/workshops" data-link class="dash-btn">🎯 Workshops</a>
-                    <a href="/kanban"    data-link class="dash-btn">📋 Kanban</a>
+                    ${renderNavLinksHtml({ active: 'dashboard', className: 'dash-btn' })}
                     <button class="dash-btn dash-btn-kb" id="dashBtnKB">📚 Knowledge Base</button>
-                    <button class="dash-btn" id="dashBtnClone" title="Clonar sector → cliente con IA (H1.10)">🧬 Clonar sector</button>
                     <button class="dash-btn" id="dashBtnExport" title="Descargar snapshot firmado (ECDSA P-256)">💾 Export</button>
                     <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
                     <input type="file" id="dashImportFile" accept=".json,application/json" style="display:none;">
                     <button class="dash-btn dash-btn-primary" id="dashBtnNew">＋ New Project</button>
-                    <a href="/settings" data-link class="dash-btn">⚙ Settings</a>
                     <div id="dashLangSelector"></div>
                 </div>
             </div>
@@ -471,6 +502,43 @@ export default class DashboardView {
                             <div class="dash-hero-tagline">Every organization has two structures. This maps the real one.</div>
                         </div>
                     </div>
+
+                    <!-- UX-DASH-001 · ¿qué puedes hacer aquí? · 4 pasos del flujo SOS -->
+                    <div class="dash-section-title">¿Cómo funciona SOS? · 4 pasos</div>
+                    <div class="dash-onboard">
+                        <a class="dash-onboard-tile" id="dashStep1" style="--ob-c:#a855f7;">
+                            <span class="dash-onboard-step">Paso 1</span>
+                            <span class="dash-onboard-title">🧬 Crea o clona un proyecto</span>
+                            <span class="dash-onboard-desc">Vacío, plantilla del sector, o cliente personalizado con IA. Un solo wizard.</span>
+                        </a>
+                        <a class="dash-onboard-tile" href="/map" data-link style="--ob-c:#6366f1;">
+                            <span class="dash-onboard-step">Paso 2</span>
+                            <span class="dash-onboard-title">🗺 Diseña la red de valor</span>
+                            <span class="dash-onboard-desc">Roles, transacciones tangibles e intangibles. Edición inline + sugerencias IA.</span>
+                        </a>
+                        <a class="dash-onboard-tile" href="/sops" data-link style="--ob-c:#22c55e;">
+                            <span class="dash-onboard-step">Paso 3</span>
+                            <span class="dash-onboard-title">📜 Genera SOPs por rol con IA</span>
+                            <span class="dash-onboard-desc">Cada rol → procedimiento operativo con steps auto-convertibles en WOs.</span>
+                        </a>
+                        <a class="dash-onboard-tile" href="/kanban" data-link style="--ob-c:#facc15;">
+                            <span class="dash-onboard-step">Paso 4</span>
+                            <span class="dash-onboard-title">⚙ Ejecuta y contabiliza</span>
+                            <span class="dash-onboard-desc">WOs por humano o IA → Ledger triple-entry con ahorro acumulado del cliente.</span>
+                        </a>
+                    </div>
+
+                    <!-- UX-DASH-001 · áreas del sistema (siempre accesibles) -->
+                    <div class="dash-section-title">Áreas del sistema</div>
+                    <div class="dash-areas">
+                        <a class="dash-area-tile" href="/map" data-link><span class="dash-area-icon">🗺</span><div><div class="dash-area-label">Mapa</div><div class="dash-area-hint">Mapa de valor del proyecto activo</div></div></a>
+                        <a class="dash-area-tile" href="/kanban" data-link><span class="dash-area-icon">📋</span><div><div class="dash-area-label">Kanban</div><div class="dash-area-hint">WOs · backlog → ledger</div></div></a>
+                        <a class="dash-area-tile" href="/market" data-link><span class="dash-area-icon">🛒</span><div><div class="dash-area-label">Mercado</div><div class="dash-area-hint">Productos y servicios</div></div></a>
+                        <a class="dash-area-tile" href="/tags" data-link><span class="dash-area-icon">🏷</span><div><div class="dash-area-label">Tags</div><div class="dash-area-hint">Folksonomía cloud</div></div></a>
+                        <a class="dash-area-tile" href="/workshops" data-link><span class="dash-area-icon">🎯</span><div><div class="dash-area-label">Workshops</div><div class="dash-area-hint">Talleres Fent Pinya</div></div></a>
+                        <a class="dash-area-tile" href="/settings" data-link><span class="dash-area-icon">⚙</span><div><div class="dash-area-label">Settings</div><div class="dash-area-hint">API keys · IA</div></div></a>
+                    </div>
+
                     <div class="dash-stats" id="dashStats"></div>
                     <div id="dashProjectList"></div>
                 </div>
@@ -492,26 +560,42 @@ export default class DashboardView {
         <!-- H1.10.1 · Modal Clonar sector (lo monta dinámicamente _openCloneModal) -->
         <div id="dashCloneRoot"></div>
 
-        <!-- MODAL NUEVO PROYECTO -->
+        <!-- MODAL NUEVO PROYECTO · UX-FUSE-001 wizard unificado · 3 modos -->
         <div class="dash-modal-bg" id="dashModalNew">
-            <div class="dash-modal">
-                <h2>New project</h2>
-                <div class="dash-modal-sub">Create a new value network map</div>
+            <div class="dash-modal" style="max-width:540px;">
+                <h2>＋ Nuevo proyecto</h2>
+                <div class="dash-modal-sub">Un solo wizard · 3 caminos según lo que rellenes</div>
+
                 <div class="dash-form-group">
-                    <label class="dash-form-label">Project name *</label>
-                    <input type="text" class="dash-form-input" id="newProjName" placeholder="e.g. ACME Corp · VNA 2025">
+                    <label class="dash-form-label">Nombre del proyecto *</label>
+                    <input type="text" class="dash-form-input" id="newProjName" placeholder="e.g. IKEA Madrid · Servicios">
                 </div>
+
                 <div class="dash-form-group">
-                    <label class="dash-form-label">Sector (optional)</label>
+                    <label class="dash-form-label">Sector base (opcional)</label>
                     <select class="dash-form-input" id="newProjSector" style="font-family:var(--font-base);">
-                        <option value="">— Select sector —</option>
+                        <option value="">— Vacío · sin sector —</option>
                         ${sectorOptions}
                     </select>
                 </div>
-                <div class="dash-modal-actions">
-                    <button class="dash-modal-cancel" id="newProjCancel">Cancel</button>
-                    <button class="dash-modal-confirm" id="newProjConfirm">Create &amp; open map</button>
+
+                <div class="dash-form-group">
+                    <label class="dash-form-label">Descripción del cliente (opcional · activa IA)</label>
+                    <textarea class="dash-form-input" id="newProjDesc" rows="4"
+                        placeholder="Cliente, tamaño, geografía, dolores conocidos, sponsor... Si la rellenas, la IA personaliza nombres, descripciones y actor típico de cada rol al contexto real, y puede añadir 1-3 roles emergentes con prefijo client-."
+                        style="font-family:inherit;resize:vertical;min-height:90px;"></textarea>
                 </div>
+
+                <div id="newProjModeHint" style="font-size:0.78rem;color:#a5b4fc;background:rgba(99,102,241,0.08);border-left:3px solid #6366f1;padding:0.5rem 0.7rem;border-radius:4px;margin:0.5rem 0;">
+                    📦 <strong>Vacío</strong> · proyecto sin roles · los añades tú a mano en el mapa.
+                </div>
+
+                <div class="dash-modal-actions">
+                    <button class="dash-modal-cancel" id="newProjCancel">Cancelar</button>
+                    <button class="dash-modal-confirm" id="newProjConfirm">Crear &amp; abrir mapa</button>
+                </div>
+
+                <div id="newProjStatus" style="display:none;margin-top:0.6rem;color:#aaa;font-size:0.85rem;"></div>
             </div>
         </div>
         `;
@@ -755,10 +839,13 @@ export default class DashboardView {
 
     // ── Topbar ────────────────────────────────────────────────────────────────
     _bindTopbar() {
-        document.getElementById('dashBtnNew')?.addEventListener('click', function() {
+        const openNewProjectModal = function() {
             document.getElementById('dashModalNew').classList.add('open');
             document.getElementById('newProjName').focus();
-        });
+        };
+        document.getElementById('dashBtnNew')?.addEventListener('click', openNewProjectModal);
+        // UX-DASH-001 · "Paso 1" del onboarding abre el mismo wizard
+        document.getElementById('dashStep1')?.addEventListener('click', openNewProjectModal);
 
         document.getElementById('dashBtnKB')?.addEventListener('click', function() {
             const main = document.getElementById('dashMain');
@@ -813,9 +900,9 @@ export default class DashboardView {
             }
         });
 
-        // H1.10.1 · Clonar sector → cliente con IA
-        const dashView = this;
-        document.getElementById('dashBtnClone')?.addEventListener('click', () => dashView._openCloneModal());
+        // UX-FUSE-001 · el botón "🧬 Clonar sector" se ha fusionado en el
+        // wizard "+ Nuevo proyecto" (un solo entry point con 3 caminos).
+        // El método _openCloneModal sigue disponible por compat (ej. DevTools).
     }
 
     // ── H1.10.1 · Modal Clonar sector → cliente con IA ────────────────────────
@@ -881,8 +968,27 @@ export default class DashboardView {
     }
 
     async _executeClone({ sectorId, clientName, clientDescription }) {
-        const step2 = document.getElementById('dashCloneStep2');
-        const step1 = document.getElementById('dashCloneStep1');
+        // UX-FUSE-001 · si _executeClone se invoca desde el wizard fusionado
+        // (sin pasar por _openCloneModal), montamos aquí el overlay de
+        // progreso para que el feedback visual funcione igual.
+        let step2 = document.getElementById('dashCloneStep2');
+        let step1 = document.getElementById('dashCloneStep1');
+        if (!step2) {
+            const root = document.getElementById('dashCloneRoot');
+            if (root) {
+                root.innerHTML = `
+                    <div class="dash-clone-bg" id="dashCloneBg" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:flex-start;justify-content:center;z-index:1000;padding:2rem 1rem;overflow-y:auto;">
+                        <div style="background:#0e0e14;border:1px solid #2a2a35;border-radius:10px;padding:1.5rem;width:100%;max-width:620px;color:#e6e6e6;font-family:var(--font-base);">
+                            <h3 style="margin:0 0 0.5rem 0;color:#fff;">🤖 Clonando sector → cliente con IA</h3>
+                            <p style="color:#aaa;font-size:0.78rem;margin:0 0 0.6rem 0;">${this._escapeHtml(clientName)} · sector ${this._escapeHtml(sectorId)}</p>
+                            <div id="dashCloneStep1" style="display:none;"></div>
+                            <div id="dashCloneStep2"></div>
+                        </div>
+                    </div>`;
+                step2 = document.getElementById('dashCloneStep2');
+                step1 = document.getElementById('dashCloneStep1');
+            }
+        }
         if (step1) step1.style.display = 'none';
         if (step2) step2.innerHTML = `
             <p style="color:#aaa;">🤖 Construyendo contexto SOC + sector + descripción cliente…</p>
@@ -1049,33 +1155,109 @@ export default class DashboardView {
 
     // ── Modal nuevo proyecto ──────────────────────────────────────────────────
     _bindModal() {
+        const dashView = this;
         document.getElementById('newProjCancel')?.addEventListener('click', function() {
             document.getElementById('dashModalNew').classList.remove('open');
         });
 
+        // UX-FUSE-001 · hint dinámico que explica el camino que va a tomar
+        const refreshModeHint = () => {
+            const sector = document.getElementById('newProjSector')?.value || '';
+            const desc   = (document.getElementById('newProjDesc')?.value || '').trim();
+            const hint   = document.getElementById('newProjModeHint');
+            if (!hint) return;
+            if (!sector && !desc) {
+                hint.style.background = 'rgba(99,102,241,0.08)';
+                hint.style.borderLeftColor = '#6366f1';
+                hint.style.color = '#a5b4fc';
+                hint.innerHTML = '📦 <strong>Vacío</strong> · proyecto sin roles · los añades tú a mano en el mapa.';
+            } else if (sector && !desc) {
+                hint.style.background = 'rgba(34,197,94,0.08)';
+                hint.style.borderLeftColor = '#22c55e';
+                hint.style.color = '#86efac';
+                hint.innerHTML = '🌱 <strong>Plantilla del sector</strong> · clona los roles y transacciones del sector base sin gastar tokens IA. Rápido. Editable después.';
+            } else if (sector && desc) {
+                hint.style.background = 'rgba(168,85,247,0.08)';
+                hint.style.borderLeftColor = '#a855f7';
+                hint.style.color = '#d8b4fe';
+                hint.innerHTML = '🤖 <strong>Cliente personalizado con IA</strong> · la IA personaliza nombres + descripciones del sector al cliente real, añade roles emergentes y emite folksonomy. 10-30s.';
+            } else {
+                // sector vacío + descripción → tratado como vacío con descripción guardada
+                hint.style.background = 'rgba(250,204,21,0.08)';
+                hint.style.borderLeftColor = '#facc15';
+                hint.style.color = '#facc15';
+                hint.innerHTML = '⚠ Para activar la IA necesitas seleccionar un sector base. Sin sector, la descripción se guarda como nota.';
+            }
+        };
+        document.getElementById('newProjSector')?.addEventListener('change', refreshModeHint);
+        document.getElementById('newProjDesc')?.addEventListener('input',  refreshModeHint);
+
         document.getElementById('newProjConfirm')?.addEventListener('click', async function() {
-            const name     = document.getElementById('newProjName').value.trim();
-            const sectorId = document.getElementById('newProjSector').value || null;
+            const btn  = this;
+            const name        = document.getElementById('newProjName').value.trim();
+            const sectorId    = document.getElementById('newProjSector').value || null;
+            const description = (document.getElementById('newProjDesc').value || '').trim();
+            const status      = document.getElementById('newProjStatus');
             if (!name) { document.getElementById('newProjName').focus(); return; }
 
-            const projectId = uid();
-            await store.dispatch({
-                type:    'CREATE_PROJECT',
-                payload: {
-                    id:               projectId,
-                    nombre:           name,
-                    sector_id:        sectorId,
-                    vna_roles:        [],
-                    vna_transactions: [],
-                    createdAt:        Date.now(),
-                    updatedAt:        Date.now(),
-                }
-            });
+            // Camino 3: sector + descripción → IA (delegado a flujo existente)
+            if (sectorId && description) {
+                document.getElementById('dashModalNew').classList.remove('open');
+                await dashView._executeClone({ sectorId, clientName: name, clientDescription: description });
+                return;
+            }
 
-            document.getElementById('dashModalNew').classList.remove('open');
-            const url = '/map?project=' + projectId + (sectorId ? '&sector=' + sectorId : '');
-            window.navigateTo(url);
-        }.bind(this));
+            btn.disabled = true; btn.textContent = '⏳ Creando…';
+            status.style.display = 'block'; status.textContent = '';
+
+            try {
+                let vnaRoles = [];
+                let vnaTransactions = [];
+                let patterns = [];
+
+                // Camino 2: sector + sin descripción → clonar plantilla local sin IA
+                if (sectorId && !description) {
+                    status.textContent = '🌱 Cargando plantilla del sector ' + sectorId + '…';
+                    const seed = await KnowledgeLoader.getSectorSeed(sectorId);
+                    if (seed) {
+                        vnaRoles        = Array.isArray(seed.roles)        ? JSON.parse(JSON.stringify(seed.roles))        : [];
+                        vnaTransactions = Array.isArray(seed.transactions) ? JSON.parse(JSON.stringify(seed.transactions)) : [];
+                        patterns        = Array.isArray(seed.patterns)     ? JSON.parse(JSON.stringify(seed.patterns))     : [];
+                    }
+                }
+
+                const projectId = uid();
+                await store.dispatch({
+                    type:    'CREATE_PROJECT',
+                    payload: {
+                        id:               projectId,
+                        nombre:           name,
+                        sector_id:        sectorId,
+                        based_on_sector:  sectorId,
+                        vna_roles:        vnaRoles,
+                        vna_transactions: vnaTransactions,
+                        patterns,
+                        cloneStatus:      sectorId ? 'active' : 'draft',
+                        createdAt:        Date.now(),
+                        updatedAt:        Date.now(),
+                    }
+                });
+
+                document.getElementById('dashModalNew').classList.remove('open');
+                btn.disabled = false; btn.textContent = 'Crear & abrir mapa';
+                status.style.display = 'none';
+                const url = '/map?project=' + projectId + (sectorId ? '&sector=' + sectorId : '');
+                window.navigateTo(url);
+            } catch (err) {
+                console.error('[UX-FUSE-001] Error creando proyecto:', err);
+                status.textContent = '✗ ' + err.message;
+                status.style.color = '#ff5252';
+                btn.disabled = false; btn.textContent = 'Crear & abrir mapa';
+            }
+        });
+
+        // Inicializa el hint correctamente al primer render
+        refreshModeHint();
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') document.getElementById('dashModalNew')?.classList.remove('open');

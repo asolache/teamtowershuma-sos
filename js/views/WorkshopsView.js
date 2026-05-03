@@ -15,6 +15,7 @@
 import { store }           from '../core/store.js';
 import { KB }              from '../core/kb.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
+import { renderNavLinksHtml } from '../core/navService.js';
 
 // Orchestrator se importa dinámicamente con cache-bust en los puntos que
 // llaman al LLM para que fixes del parser de respuestas (BUG-002) se
@@ -151,7 +152,7 @@ export default class WorkshopsView {
                 <a href="/" data-link class="ws-logo">🗼 Team<span>Towers</span></a>
                 <span class="ws-title">Workshops · Fent Pinya Ops</span>
                 <div class="ws-spacer"></div>
-                <a href="/dashboard" data-link class="ws-link">← Dashboard</a>
+                ${renderNavLinksHtml({ active: '', className: 'ws-link' })}
                 <button class="ws-btn ws-btn-primary" id="wsBtnNew">＋ Nuevo taller</button>
             </div>
 
