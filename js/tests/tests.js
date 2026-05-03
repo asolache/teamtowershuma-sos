@@ -1435,6 +1435,40 @@ async function testProjectHub() {
     assert(projectViewUrls(null).length === 0,                        'projectViewUrls null → []');
 }
 
+// ─── UX-NAV-001 · navService puro ───────────────────────────────
+async function testNavService() {
+    const mod = await import('../core/navService.js?v=' + Date.now());
+    const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
+
+    assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
+    assert(NAV_DESTINATIONS.length === 7,                           '7 destinos canónicos (dashboard·map·sops·kanban·market·tags·settings)');
+    assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
+    assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
+
+    // sin projectId → omite los no-globales
+    const linksGlobal = buildNavLinks({ active: 'dashboard' });
+    assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
+    assert(linksGlobal.length === 6,                                 'sin projectId · 6 links (sin sops)');
+    assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
+    assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
+
+    // con projectId → todos + query ?project= en los aplicables
+    const linksProject = buildNavLinks({ active: 'kanban', projectId: 'proj-x' });
+    assert(linksProject.length === 7,                               'con projectId · 7 links (incluye sops)');
+    assert(linksProject.find(l => l.id === 'sops').href === '/sops?project=proj-x',     'sops con project query');
+    assert(linksProject.find(l => l.id === 'map').href === '/map?project=proj-x',       'map con project query');
+    assert(linksProject.find(l => l.id === 'market').href === '/market?project=proj-x', 'market con project query');
+    assert(linksProject.find(l => l.id === 'kanban').href === '/kanban?project=proj-x', 'kanban con project query');
+    assert(linksProject.find(l => l.id === 'tags').href === '/tags',                    'tags NO recibe project query');
+    assert(linksProject.find(l => l.id === 'kanban').active === true,                   'active=kanban marcado');
+
+    // renderNavLinksHtml escapa títulos
+    const html = renderNavLinksHtml({ active: 'map', projectId: 'p1' });
+    assert(typeof html === 'string' && html.includes('href="/map?project=p1"'),         'html incluye href con query');
+    assert(html.includes('class="sos-nav-link sos-nav-link-active"'),                   'html marca active class');
+    assert(html.includes('data-link'),                                                  'html añade data-link para SPA');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -1458,7 +1492,8 @@ const SUITE = [
     { name: 'UX-001 sprint B · linkifyService · hipertexto puro', fn: testLinkifyService },
     { name: 'UX-002 · semanticTagger · taxonomía + folksonomía',  fn: testSemanticTagger },
     { name: 'MKT-001 sprint A · marketService + cnaeSeed puros',  fn: testMarketService },
-    { name: 'UX-001 sprint C · projectHubService puro',           fn: testProjectHub }
+    { name: 'UX-001 sprint C · projectHubService puro',           fn: testProjectHub },
+    { name: 'UX-NAV-001 · navService puro',                       fn: testNavService }
 ];
 
 export async function runTests() {

@@ -22,6 +22,8 @@ import {
     DEFAULT_CONVENTIONAL_RANGES,
 } from '../core/marketService.js';
 import { searchCnae, getCnae } from '../core/cnaeSeed.js';
+import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
+import { renderNavLinksHtml } from '../core/navService.js';
 
 const KIND_LABELS = {
     product:      '📦 Producto',
@@ -44,12 +46,20 @@ export default class MarketView {
         document.title = 'Mercado · SOS V11';
         this.items    = [];
         this.projects = [];
+        this.sectors  = [];   // UX-FIX-001 · cargados de KnowledgeLoader.listSectors()
         this.filter   = { text: '', kinds: [], sectorTT: '', visibility: '', projectId: '', cnaes: [] };
         this._searchDebounce = null;
     }
 
     async getHtml() {
         await store.init();
+        // UX-FIX-001 · cargar sectores con nombre legible para los selects
+        try {
+            this.sectors = await KnowledgeLoader.listSectors();
+        } catch (err) {
+            console.warn('[MarketView] listSectors falló, fallback a letras', err);
+            this.sectors = 'ABCDEFGHIJKLMNOPQRSTU'.split('').map(id => ({ id, name: id }));
+        }
         return `
         <style>
             .mk-shell  { height:100dvh; background:#050507; color:#e6e6e6; font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
@@ -111,8 +121,7 @@ export default class MarketView {
                 <a href="/" data-link class="mk-logo">🗼 Team<span>Towers</span></a>
                 <span class="mk-title">Mercado SOS · productos y servicios</span>
                 <div class="mk-spacer"></div>
-                <a href="/dashboard" data-link class="mk-link">← Dashboard</a>
-                <a href="/tags" data-link class="mk-link">🏷 Tags</a>
+                ${renderNavLinksHtml({ active: 'market', className: 'mk-link' })}
                 <button class="mk-btn mk-btn-primary" id="mkBtnNew">＋ Nueva oferta</button>
             </div>
 
@@ -128,7 +137,7 @@ export default class MarketView {
                 </select>
                 <select id="mkSectorTT" class="mk-select" title="Sector TT">
                     <option value="">Todos los sectores TT</option>
-                    ${'ABCDEFGHIJKLMNOPQRSTU'.split('').map(s => `<option value="${s}">${s}</option>`).join('')}
+                    ${this.sectors.map(s => `<option value="${s.id}">${this._esc(s.id + ' · ' + s.name)}</option>`).join('')}
                 </select>
                 <select id="mkProject" class="mk-select" title="Proyecto proveedor">
                     <option value="">Todos los proyectos</option>
@@ -360,7 +369,7 @@ export default class MarketView {
                             <label>Sector TT</label>
                             <select id="mkfSectorTT">
                                 <option value="">— sin sector TT —</option>
-                                ${'ABCDEFGHIJKLMNOPQRSTU'.split('').map(s => `<option value="${s}">${s}</option>`).join('')}
+                                ${this.sectors.map(s => `<option value="${s.id}">${this._esc(s.id + ' · ' + s.name)}</option>`).join('')}
                             </select>
                         </div>
                     </div>

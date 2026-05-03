@@ -17,6 +17,7 @@ import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { Orchestrator }     from '../core/Orchestrator.js';
 import { t, langSelectorHtml, getLang } from '../i18n.js';
 import { taxonomicTagsForSop, mergeTags } from '../core/semanticTagger.js';
+import { renderNavLinksHtml } from '../core/navService.js';
 
 // ─── Constantes visuales ─────────────────────────────────────────────────────
 const COLOR_TANGIBLE   = '#00e676';   // accent-green
@@ -812,7 +813,7 @@ export default class ValueMapView {
                 </div>
                 <div class="vmap-topbar-actions">
                     ${this._state.projectId ? `<a href="/project/${this._state.projectId}" data-link class="vmap-btn" style="text-decoration:none;color:#86efac;border-color:rgba(34,197,94,0.4);" title="Panel del proyecto · stats + ofertas + herramientas">🎛 Panel</a>` : ''}
-                    ${this._state.projectId ? `<a href="/sops?project=${this._state.projectId}" data-link class="vmap-btn" style="text-decoration:none;color:var(--accent-indigo);border-color:rgba(99,102,241,0.4);">📋 SOPs del proyecto</a>` : ''}
+                    ${renderNavLinksHtml({ active: 'map', projectId: this._state.projectId, className: 'vmap-btn' })}
                     <button class="vmap-btn" style="border-color:var(--accent-purple);color:var(--accent-purple);" id="vmapBtnAI">${t('vmap.suggest')}</button>
                     <button class="vmap-btn" id="vmapBtnFit">⊡ ${t('vmap.fit')}</button>
                     <button class="vmap-btn" id="vmapBtnReset">↺ ${t('vmap.reset')}</button>
