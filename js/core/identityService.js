@@ -156,9 +156,10 @@ export async function updateIdentityProfile({ displayName, handle, avatar } = {}
 }
 
 // ─── Wallet binding (sprint B · manual) ────────────────────────────────────
-// Validación de address Ethereum/EVM: 0x + 40 hex chars. NO valida checksum
-// (eso requiere keccak256, lo dejamos para sprint con WalletConnect real).
-const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+// Validación de address Ethereum/EVM: 0x + 40 hex chars · case-insensitive
+// en el prefijo (acepta 0x y 0X). NO valida checksum keccak256 (eso requiere
+// la lib · se delega al sprint con WalletConnect real).
+const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/i;
 
 export function isValidEvmAddress(addr) {
     return typeof addr === 'string' && EVM_ADDRESS_RE.test(addr.trim());
