@@ -1441,20 +1441,20 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 9,                           '9 destinos canónicos (+ folders KM-001 + identity AUTH-001)');
+    assert(NAV_DESTINATIONS.length === 10,                          '10 destinos canónicos (+ folders + mind + identity en Ola 9)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 8,                                 'sin projectId · 8 links (sin sops · 9-1)');
+    assert(linksGlobal.length === 9,                                 'sin projectId · 9 links (sin sops · 10-1)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
     // con projectId → todos + query ?project= en los aplicables
     const linksProject = buildNavLinks({ active: 'kanban', projectId: 'proj-x' });
-    assert(linksProject.length === 9,                               'con projectId · 9 links (incluye sops)');
+    assert(linksProject.length === 10,                              'con projectId · 10 links (incluye sops)');
     assert(linksProject.find(l => l.id === 'sops').href === '/sops?project=proj-x',     'sops con project query');
     assert(linksProject.find(l => l.id === 'map').href === '/map?project=proj-x',       'map con project query');
     assert(linksProject.find(l => l.id === 'market').href === '/market?project=proj-x', 'market con project query');
@@ -1613,6 +1613,79 @@ async function testSmartFolderService() {
     assert(executeFolderQuery({ content: { query: {} } }, null).length === 0, 'null nodes → []');
 }
 
+// ─── H8.1 · mindGraphService puro ───────────────────────────────
+async function testMindGraphService() {
+    const mod = await import('../core/mindGraphService.js?v=' + Date.now());
+    const { buildGraphFromKb, graphStats, MIND_TYPE_COLORS, colorForType, labelForNode } = mod;
+
+    // Catálogo de colores frozen + cobertura por tipo
+    assert(Object.isFrozen(MIND_TYPE_COLORS),                              'MIND_TYPE_COLORS frozen');
+    ['project','role','transaction','sop','work_order','workshop','market_item','ledger_entry','user_identity','smart_folder']
+        .forEach(t => assert(typeof MIND_TYPE_COLORS[t] === 'string',     'color para ' + t));
+    assert(colorForType('inexistente') === MIND_TYPE_COLORS.default,      'colorForType fallback default');
+
+    // labelForNode preferencias
+    assert(labelForNode({ id: 'x', content: { title: 'T', name: 'N' } }) === 'T',  'labelForNode prefiere title');
+    assert(labelForNode({ id: 'x', content: { name: 'N' } }) === 'N',              'fallback a name');
+    assert(labelForNode({ id: 'x', content: { displayName: 'D' } }) === 'D',       'fallback a displayName');
+    assert(labelForNode({ id: 'fallback' }) === 'fallback',                        'fallback a id');
+
+    // buildGraphFromKb · setup
+    const nodes = [
+        { id: 'p1', type: 'project',     content: { nombre: 'IKEA' } },
+        { id: 'r1', type: 'role',        projectId: 'p1', content: { name: 'Atención' } },
+        { id: 'tx1',type: 'transaction', projectId: 'p1', content: { name: 'Pedido' } },
+        { id: 'sop-1', type: 'sop',      projectId: 'p1', content: { name: 'SOP A', role_ref: 'r1', soc_ref: 'soc-x', tags: ['kind:sop','sector:k'] } },
+        { id: 'wo-1', type: 'work_order',projectId: 'p1', content: { title: 'WO 1', sopRef: 'sop-1', tags: ['priority:high','sector:k'] } },
+        { id: 'wo-2', type: 'work_order',projectId: 'p1', content: { title: 'WO 2', sopRef: 'sop-1', tags: ['priority:high','sector:k'] } },
+        { id: 'mkt-1',type: 'market_item',                content: { title: 'Servicio', providerProjectId: 'p1', tags: ['scope:public'] } },
+        { id: 'cfg-x',type: 'config',                     value: 'algo' }, // se debe excluir
+        { id: 'huerf',type: 'work_order', projectId: 'p999', content: { title: 'Huérfano' } }, // proyecto no existe
+    ];
+
+    const g = buildGraphFromKb(nodes);
+    assert(g.nodes.length === 8,                                          'config excluido por excludeTypes default');
+    assert(!g.nodes.some(n => n.type === 'config'),                       'no hay nodos de tipo config');
+
+    // Parent edges
+    const parentEdges = g.edges.filter(e => e.kind === 'parent');
+    assert(parentEdges.length === 5,                                      '5 parent edges (r1, tx1, sop-1, wo-1, wo-2 → p1)');
+    assert(parentEdges.every(e => e.target === 'p1'),                     'todos los parent apuntan a p1');
+    assert(!parentEdges.some(e => e.source === 'huerf'),                  'huérfano sin proyecto en grafo no genera parent');
+
+    // Relation edges
+    const relEdges = g.edges.filter(e => e.kind === 'relation');
+    assert(relEdges.some(e => e.source === 'sop-1' && e.target === 'r1'), 'relation sop→role por role_ref');
+    assert(relEdges.some(e => e.source === 'wo-1' && e.target === 'sop-1'), 'relation wo→sop por sopRef');
+    assert(relEdges.some(e => e.source === 'mkt-1' && e.target === 'p1'), 'relation market→project por providerProjectId');
+
+    // Tag edges (entre wo-1 y wo-2 que comparten 2 tags)
+    const tagEdges = g.edges.filter(e => e.kind === 'tag');
+    assert(tagEdges.length > 0,                                           'al menos una tag edge generada');
+    const woTagEdge = tagEdges.find(e => (e.source === 'wo-1' && e.target === 'wo-2') || (e.source === 'wo-2' && e.target === 'wo-1'));
+    assert(woTagEdge && woTagEdge.weight >= 2,                            'wo-1↔wo-2 con weight ≥ 2');
+
+    // includeTagEdges=false omite la capa
+    const g2 = buildGraphFromKb(nodes, { includeTagEdges: false });
+    assert(g2.edges.every(e => e.kind !== 'tag'),                         'includeTagEdges:false omite capa tag');
+
+    // onlyProjectId filtra
+    const g3 = buildGraphFromKb(nodes, { onlyProjectId: 'p1' });
+    assert(g3.nodes.some(n => n.id === 'p1'),                             'onlyProjectId incluye el propio proyecto');
+    assert(!g3.nodes.some(n => n.id === 'huerf'),                         'onlyProjectId excluye nodos de otro proyecto');
+    assert(g3.nodes.some(n => n.id === 'mkt-1'),                          'onlyProjectId incluye market_item con providerProjectId match');
+
+    // graphStats
+    const s = graphStats(g);
+    assert(s.totalNodes === 8,                                             'stats.totalNodes correcto');
+    assert(s.byType.project === 1 && s.byType.work_order === 2,           'stats.byType correcto');
+    assert(s.byEdgeKind.parent === 5,                                     'stats.byEdgeKind.parent correcto');
+
+    // empty inputs
+    const empty = buildGraphFromKb(null);
+    assert(empty.nodes.length === 0 && empty.edges.length === 0,          'null nodes → grafo vacío');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -1639,7 +1712,8 @@ const SUITE = [
     { name: 'UX-001 sprint C · projectHubService puro',           fn: testProjectHub },
     { name: 'UX-NAV-001 · navService puro',                       fn: testNavService },
     { name: 'AUTH-001 sprint A · identityService (helpers puros)', fn: testIdentityService },
-    { name: 'KM-001 sprint A · smartFolderService puro',          fn: testSmartFolderService }
+    { name: 'KM-001 sprint A · smartFolderService puro',          fn: testSmartFolderService },
+    { name: 'H8.1 · mindGraphService puro',                       fn: testMindGraphService }
 ];
 
 export async function runTests() {

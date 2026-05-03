@@ -21,6 +21,8 @@ const ROUTES = [
     { path: '/identity',  view: () => import('./views/IdentityView.js') },
     // KM-001 · folders inteligentes
     { path: '/folders',   view: () => import('./views/FoldersView.js')  },
+    // H8.1 · vista panorámica del Mind-as-Graph
+    { path: '/mind',      view: () => import('./views/MindGraphView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
