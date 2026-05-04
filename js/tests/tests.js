@@ -1818,6 +1818,58 @@ async function testContextPruner() {
     const taskDirect = { tags: ['project:p1','kind:sop'] };
     const sDirect = scoreNode(sopRel, taskDirect);
     assert(sDirect > 0,                                                     'task con tags directos funciona');
+
+    // ── KM-001 sprint D · formatNodesForPrompt + similarity baseline
+    const { formatNodesForPrompt, jaccardSimilarity, passesContextGate } = mod;
+
+    // formatNodesForPrompt con array vacío
+    assert(formatNodesForPrompt([]) === '',                                 'formatNodesForPrompt vacío → ""');
+    assert(formatNodesForPrompt(null) === '',                               'formatNodesForPrompt null → ""');
+
+    // formato real con un selected
+    const sopForFmt = {
+        node: {
+            id: 'sop-fmt', type: 'sop', projectId: 'p1',
+            content: {
+                name: 'SOP de prueba',
+                description: 'Descripción larga ' + 'X'.repeat(2000),
+                tags: ['kind:sop', 'project:p1', 'urgente', 'b2b'],
+                steps: [
+                    { id: 's1', label: 'Paso 1', role_kind: 'human', duration_minutes: 5 },
+                    { id: 's2', label: 'Paso 2', role_kind: 'ai',    duration_minutes: 3 },
+                ],
+            },
+        },
+        score: 0.9,
+    };
+    const fmt = formatNodesForPrompt([sopForFmt], { maxBodyChars: 100 });
+    assert(typeof fmt === 'string' && fmt.length > 0,                      'formatNodesForPrompt produce string');
+    assert(fmt.includes('CONTEXTO INYECTADO · 1 nodos'),                   'header con count correcto');
+    assert(fmt.includes('sop · sop-fmt'),                                  'incluye type · id');
+    assert(fmt.includes('SOP de prueba'),                                  'incluye título');
+    assert(fmt.includes('Tags: kind:sop · project:p1'),                    'separa taxonómicos');
+    assert(fmt.includes('Folksonomy: urgente · b2b'),                      'separa folksonómicos');
+    assert(fmt.includes('Paso 1') && fmt.includes('Paso 2'),               'incluye steps');
+    // body truncado a maxBodyChars
+    const bodyMatch = fmt.match(/Descripción larga X+/);
+    assert(bodyMatch && bodyMatch[0].length <= 120,                         'body truncado a maxBodyChars');
+
+    // jaccardSimilarity
+    assert(jaccardSimilarity('', '') === 1,                                'ambos vacíos → 1');
+    assert(jaccardSimilarity('hola mundo', '') === 0,                      'uno vacío → 0');
+    assert(jaccardSimilarity('hola mundo', 'hola mundo') === 1,            'idénticos → 1');
+    const sim = jaccardSimilarity('el cliente IKEA Madrid', 'cliente IKEA Madrid retail');
+    assert(sim > 0.4 && sim < 1,                                            'parcial overlap entre 0 y 1');
+    // Stopwords no cuentan: 'el' y 'the' deben ser ignorados
+    const noisy = jaccardSimilarity('el cliente IKEA', 'the cliente IKEA');
+    assert(noisy === 1,                                                     'stopwords no afectan al jaccard');
+
+    // passesContextGate
+    const gate1 = passesContextGate({ baseline: 'hola mundo SOP', candidate: 'hola mundo SOP', threshold: 0.9 });
+    assert(gate1.passes === true && gate1.score === 1,                     'gate pasa con identicos');
+    const gate2 = passesContextGate({ baseline: 'hola mundo', candidate: 'completamente distinto', threshold: 0.5 });
+    assert(gate2.passes === false,                                          'gate falla con dispares');
+    assert(typeof gate2.threshold === 'number',                            'gate retorna threshold');
 }
 
 // ─── Runner ──────────────────────────────────────────────────────

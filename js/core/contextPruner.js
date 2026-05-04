@@ -218,3 +218,94 @@ export function pruneContextNodes(candidates, task, options = {}) {
 function _emptyResult() {
     return { selected: [], skipped: [], stats: { candidates: 0, selected: 0, usedTokens: 0, tokenBudget: 0, taskTags: [] } };
 }
+
+// ─── KM-001 sprint D · helpers para integración con prompts LLM ────────────
+
+// Serializa los nodos seleccionados por el pruner a un string compacto de
+// markdown, listo para inyectar como contexto en el system prompt. Mantiene
+// orden por score descendente y declara explícitamente los tags taxonómicos
+// para que el LLM pueda razonar sobre el grafo cuando importe.
+//
+// PURO · no toca KB · función testeable.
+export function formatNodesForPrompt(selected, options = {}) {
+    if (!Array.isArray(selected) || !selected.length) return '';
+    const maxBodyChars = options.maxBodyChars != null ? options.maxBodyChars : 800;
+    const includeTags  = options.includeTags !== false;
+    const lines = [];
+    lines.push('### CONTEXTO INYECTADO · ' + selected.length + ' nodos seleccionados por relevancia');
+    for (const x of selected) {
+        const n = x.node || x;
+        const c = n.content || {};
+        const title = c.title || c.name || c.displayName || c.nombre || n.id;
+        const body  = (c.description || c.summary || c.body || '').toString().slice(0, maxBodyChars);
+        lines.push('');
+        lines.push('--- ' + n.type + ' · ' + n.id + ' ---');
+        if (title && title !== n.id) lines.push('Título: ' + title);
+        if (n.projectId)              lines.push('Proyecto: ' + n.projectId);
+        if (includeTags && Array.isArray(c.tags) && c.tags.length) {
+            const taxon = c.tags.filter(t => typeof t === 'string' && t.includes(':'));
+            const folks = c.tags.filter(t => typeof t === 'string' && !t.includes(':'));
+            if (taxon.length) lines.push('Tags: ' + taxon.slice(0, 12).join(' · '));
+            if (folks.length) lines.push('Folksonomy: ' + folks.slice(0, 8).join(' · '));
+        }
+        if (body) lines.push(body);
+        // Steps si es un SOP
+        if (Array.isArray(c.steps) && c.steps.length) {
+            const summary = c.steps.slice(0, 6).map((s, i) =>
+                `  ${i + 1}. [${s.role_kind || '?'}] ${s.label || s.id || '?'} (${s.duration_minutes || '?'} min)`
+            ).join('\n');
+            lines.push('Steps:');
+            lines.push(summary);
+            if (c.steps.length > 6) lines.push('  …(' + (c.steps.length - 6) + ' steps más omitidos)');
+        }
+    }
+    return lines.join('\n');
+}
+
+// ─── Similarity baseline · placeholder para TDD-gate ──────────────────────
+// Compara dos respuestas LLM (strings) usando Jaccard sobre tokens normalizados
+// (lowercase, sólo alfanuméricos, sin stopwords mínimas). Devuelve [0,1]
+// donde 1 = idéntico y 0 = nada en común.
+//
+// Es una métrica grosera · pensada como gate básico cuando integremos el
+// pruner en Orchestrator (sprint E): si jaccard(pruned, baseline) ≥ 0.92
+// aceptamos el contexto pruned. Métricas más finas (cosine sobre embeddings,
+// LLM-as-judge) quedan como mejora posterior.
+//
+// PURO · sin dependencias.
+const STOP_WORDS = new Set([
+    'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas',
+    'de', 'del', 'a', 'al', 'en', 'por', 'para', 'con', 'sin', 'sobre',
+    'y', 'o', 'u', 'e', 'ni', 'que', 'qué', 'no', 'sí', 'si',
+    'es', 'son', 'ser', 'fue', 'fueron', 'sea', 'será',
+    'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'and', 'or',
+    'is', 'are', 'be', 'was', 'were', 'this', 'that', 'these', 'those',
+]);
+
+function _tokenize(text) {
+    if (typeof text !== 'string') return new Set();
+    const tokens = text
+        .toLowerCase()
+        .replace(/[^a-záéíóúñü0-9\s]+/g, ' ')
+        .split(/\s+/)
+        .filter(t => t.length >= 3 && !STOP_WORDS.has(t));
+    return new Set(tokens);
+}
+
+export function jaccardSimilarity(textA, textB) {
+    const setA = _tokenize(textA);
+    const setB = _tokenize(textB);
+    if (!setA.size && !setB.size) return 1;
+    if (!setA.size || !setB.size) return 0;
+    let intersection = 0;
+    for (const t of setA) if (setB.has(t)) intersection++;
+    const union = setA.size + setB.size - intersection;
+    return intersection / union;
+}
+
+// Helper de alto nivel: dado un baseline y un candidato pruned, decide
+// si el candidato pasa el TDD-gate.
+export function passesContextGate({ baseline, candidate, threshold = 0.92 }) {
+    const score = jaccardSimilarity(baseline, candidate);
+    return { passes: score >= threshold, score, threshold };
+}
