@@ -1870,6 +1870,48 @@ async function testContextPruner() {
     const gate2 = passesContextGate({ baseline: 'hola mundo', candidate: 'completamente distinto', threshold: 0.5 });
     assert(gate2.passes === false,                                          'gate falla con dispares');
     assert(typeof gate2.threshold === 'number',                            'gate retorna threshold');
+
+    // ── KM-001 sprint E · pruneFromKb async con mock KB
+    const { pruneFromKb } = mod;
+    assert(typeof pruneFromKb === 'function',                              'pruneFromKb exportada');
+
+    // KB null/undefined → resultado vacío sin lanzar
+    const empty = await pruneFromKb({ KB: null });
+    assert(Array.isArray(empty.selected) && empty.selected.length === 0,    'pruneFromKb sin KB → resultado vacío');
+    assert(empty.formatted === '',                                          'pruneFromKb sin KB · formatted vacío');
+
+    // KB mock con query/getAllNodes
+    const nowKb = Date.now();
+    const fakeNodes = [
+        { id: 'p1', type: 'project',     content: { tags: ['kind:project','project:p1'] }, projectId: null, updatedAt: nowKb },
+        { id: 'sop-of-p1', type: 'sop',  projectId: 'p1', updatedAt: nowKb,
+          content: { name: 'SOP del proyecto', tags: ['kind:sop','project:p1','sector:k'] } },
+        { id: 'sop-public', type: 'sop', projectId: null, updatedAt: nowKb,
+          content: { name: 'SOP público TT', tags: ['kind:sop','scope:public','sector:k'] } },
+        { id: 'sop-otro',   type: 'sop', projectId: 'p2', updatedAt: nowKb,
+          content: { name: 'SOP otro proyecto', tags: ['kind:sop','project:p2'] } },
+        { id: 'cfg', type: 'config', value: 'secret' },
+    ];
+    const mockKB = {
+        query:        async (q) => fakeNodes.filter(n =>
+            (q.projectId == null || n.projectId === q.projectId) &&
+            (q.type == null     || n.type === q.type)),
+        getAllNodes:  async ()  => fakeNodes,
+    };
+
+    const r = await pruneFromKb({
+        KB: mockKB,
+        projectId: 'p1',
+        task: { sectorId: 'K', types: ['sop'] },
+        options: { tokenBudget: 5000, minScore: 0 },
+    });
+    assert(r.stats.candidates >= 2,                                        'pruneFromKb proj-p1 incluye p1 + sop-of-p1 + públicos');
+    const ids = r.selected.map(x => x.node.id);
+    assert(ids.includes('sop-of-p1'),                                       'incluye sop del proyecto');
+    assert(ids.includes('sop-public'),                                      'incluye sop público (sin projectId)');
+    assert(!ids.includes('sop-otro'),                                       'NO incluye sop de otro proyecto');
+    assert(!ids.includes('cfg'),                                            'NO incluye config');
+    assert(typeof r.formatted === 'string' && r.formatted.includes('CONTEXTO INYECTADO'), 'formatted listo para system prompt');
 }
 
 // ─── Runner ──────────────────────────────────────────────────────
