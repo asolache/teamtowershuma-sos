@@ -207,6 +207,7 @@ export async function generateWoAssistReport({ wo, humanInput, preferredEngine =
     const systemPrompt = 'Eres el asistente IA del sistema TeamTowers SOS V11. Tu rol es ayudar a un humano que ejecuta una Work Order, aportándole un informe estructurado de alta calidad semántica que respeta los principios SOS. NUNCA inventas datos. Distingues siempre hechos / inferencias / lagunas. Tu output es Markdown puro · sin ```fences``` envolventes · sin texto introductorio antes del primer #.';
 
     const { Orchestrator } = await import('./Orchestrator.js?v=' + Date.now());
+    const pruningOn = await Orchestrator.isContextPruningEnabled();
     const result = await Orchestrator.callLLM({
         preferredEngine,
         systemPrompt,
@@ -214,6 +215,20 @@ export async function generateWoAssistReport({ wo, humanInput, preferredEngine =
         responseFormat: 'text',  // queremos MD, no JSON
         temperature:    0.3,
         maxTokens:      8192,
+        // KM-001 sprint E2 · pruner activo cuando el toggle global está ON.
+        // Para una WO el contexto más rico viene de SOPs hermanos del mismo
+        // proyecto + el rol VNA + transacciones del rol. La WO en sí ya
+        // está embebida en el userPrompt vía buildWoAssistPrompt.
+        contextPruning: pruningOn ? {
+            enabled:   true,
+            projectId: projectId,
+            task: {
+                projectId,
+                sectorId: project?.sector_id || project?.based_on_sector,
+                roleId:   role?.id,
+                types:    ['sop', 'soc', 'role', 'transaction', 'work_order'],
+            },
+        } : null,
     });
 
     return {

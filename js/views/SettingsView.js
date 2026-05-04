@@ -16,6 +16,7 @@ export default class SettingsView {
         const keyDs    = await Orchestrator.getApiKey('deepseek')  || '';
         const keyGem   = await Orchestrator.getApiKey('gemini')    || '';
         const keyMm    = await Orchestrator.getApiKey('minimax')   || '';
+        const pruningOn = await Orchestrator.isContextPruningEnabled();
 
         const pColors  = { anthropic:'var(--accent-purple)', openai:'var(--accent-green)', deepseek:'var(--accent-blue)', gemini:'#fbbc04', minimax:'#ff6b9d', custom:'var(--text-muted)' };
         const pLabels  = { anthropic:'Anthropic · claude-sonnet-4-20250514', openai:'OpenAI · GPT-4o', deepseek:'DeepSeek · V3', gemini:'Gemini · 2.0 Flash', minimax:'MiniMax · Text-01', custom:'Local / Ollama' };
@@ -120,6 +121,21 @@ export default class SettingsView {
                 <div id="svStatus" class="sv-status">✅ Saved in IndexedDB</div>
             </div>
 
+            <div class="sv-card" style="border-top:3px solid #06b6d4;">
+                <h3 style="color:#06b6d4;margin-top:0;">🧠 KM-001 · Context pruning (sprint E)</h3>
+                <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.5;margin-top:0;">
+                    Reduce los tokens enviados al LLM seleccionando sólo los nodos del KB con
+                    mayor relevancia para la task (tagOverlap + recency + typeBoost + priority).
+                    Default <strong>off</strong> · sprint E2 lo enganchará automáticamente
+                    a sectorCloner / roleSopGenerator / woAssistant cuando esté activado.
+                </p>
+                <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:var(--text-sm);margin-top:var(--space-3);">
+                    <input type="checkbox" id="svPruningToggle" ${pruningOn ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
+                    <span>Activar context pruning global</span>
+                    <span id="svPruningStatus" class="sv-key-status" style="${pruningOn ? 'background:rgba(0,230,118,0.12);color:var(--accent-green);' : 'background:rgba(255,255,255,0.05);color:var(--text-muted);'}">${pruningOn ? '✓ ON' : '— OFF'}</span>
+                </label>
+            </div>
+
             <div class="sv-card" style="border-top:3px solid var(--accent-red);">
                 <h3 style="color:var(--accent-red);margin-top:0;">⚠️ Danger zone</h3>
                 <button id="svPurge" style="background:rgba(255,82,82,0.1);border:1px solid var(--accent-red);color:var(--accent-red);padding:10px 18px;border-radius:var(--radius-md);cursor:pointer;font-weight:bold;">🔥 Purge IndexedDB</button>
@@ -202,6 +218,23 @@ export default class SettingsView {
         });
 
         // Purge
+        // KM-001 sprint E · toggle context pruning persistido en KB
+        document.getElementById('svPruningToggle')?.addEventListener('change', async (e) => {
+            const on = !!e.target.checked;
+            try {
+                await Orchestrator.setContextPruningEnabled(on);
+                const badge = document.getElementById('svPruningStatus');
+                if (badge) {
+                    badge.textContent = on ? '✓ ON' : '— OFF';
+                    badge.style.background = on ? 'rgba(0,230,118,0.12)' : 'rgba(255,255,255,0.05)';
+                    badge.style.color      = on ? 'var(--accent-green)' : 'var(--text-muted)';
+                }
+            } catch (err) {
+                console.error('[KM-001] toggle pruning falló:', err);
+                e.target.checked = !on;
+            }
+        });
+
         document.getElementById('svPurge')?.addEventListener('click', () => {
             if (confirm('WARNING: This deletes ALL data (projects, roles, API keys). Cannot be undone. Continue?')) {
                 localStorage.removeItem('tt_v11_fallback');

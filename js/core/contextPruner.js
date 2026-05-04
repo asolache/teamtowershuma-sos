@@ -309,3 +309,52 @@ export function passesContextGate({ baseline, candidate, threshold = 0.92 }) {
     const score = jaccardSimilarity(baseline, candidate);
     return { passes: score >= threshold, score, threshold };
 }
+
+// ─── KM-001 sprint E · integración con KB (async) ───────────────────────
+// Carga candidatos desde el KB y aplica `pruneContextNodes` + serializa el
+// resultado a markdown listo para inyectar al system prompt. Devuelve
+// `{selected, skipped, stats, formatted}`.
+//
+// Uso típico desde Orchestrator.callLLM cuando contextPruning.enabled=true:
+//   const r = await pruneFromKb({ KB, projectId, task, options });
+//   const enriched = r.formatted + '\n\n' + originalSystemPrompt;
+//
+// Si KB es null/undefined o no hay candidatos, devuelve resultado vacío
+// sin lanzar (el caller decide si seguir o no).
+export async function pruneFromKb({ KB, projectId = null, task = {}, options = {}, formatOptions = {} } = {}) {
+    if (!KB || typeof KB.query !== 'function') {
+        return { selected: [], skipped: [], stats: { candidates: 0, selected: 0, usedTokens: 0, tokenBudget: 0, taskTags: [] }, formatted: '' };
+    }
+    // Si tenemos projectId, filtra por proyecto + nodos públicos relevantes
+    // (SOPs públicos, SOCs, market_items públicos no atados a proyecto).
+    let candidates = [];
+    try {
+        if (projectId) {
+            const ofProject = await KB.query({ projectId });
+            const all = await (KB.getAllNodes ? KB.getAllNodes() : KB.query({}));
+            // Públicos relevantes: nodos sin projectId pero del catálogo TT
+            // (sop · soc · market_item con scope:public en tags)
+            const publics = (all || []).filter(n => {
+                if (!n || n.projectId) return false;
+                if (!['sop', 'soc', 'market_item'].includes(n.type)) return false;
+                return true;
+            });
+            // Dedupe por id
+            const seen = new Set();
+            candidates = [...(ofProject || []), ...publics].filter(n => {
+                if (!n || !n.id) return false;
+                if (seen.has(n.id)) return false;
+                seen.add(n.id); return true;
+            });
+        } else {
+            candidates = (KB.getAllNodes ? await KB.getAllNodes() : await KB.query({})) || [];
+        }
+    } catch (err) {
+        return { selected: [], skipped: [], stats: { candidates: 0, selected: 0, usedTokens: 0, tokenBudget: 0, taskTags: [], error: err.message }, formatted: '' };
+    }
+
+    const enrichedTask = projectId ? { projectId, ...task } : task;
+    const result = pruneContextNodes(candidates, enrichedTask, options);
+    const formatted = formatNodesForPrompt(result.selected, formatOptions);
+    return { ...result, formatted };
+}
