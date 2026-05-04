@@ -22,7 +22,8 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'tags',      icon: '🏷', label: 'Tags',      href: '/tags',       global: true,  hint: 'Folksonomía · cloud de tags' },
     { id: 'folders',   icon: '📁', label: 'Folders',   href: '/folders',    global: true,  hint: 'Carpetas inteligentes · queries persistentes' },
     { id: 'mind',      icon: '🕸',  label: 'Mind-Graph',href: '/mind',       global: true,  hint: 'Mind-as-Graph total · panorámica del KB' },
-    { id: 'identity',  icon: '👤', label: 'Identidad', href: '/identity',   global: true,  hint: 'Tu perfil · DID local-first · wallet (sprint B)' },
+    { id: 'efficiency',icon: '⚡', label: 'Eficiencia', href: '/efficiency', global: true,  hint: 'KM-001 · tokens/coste/pruning · ROI IA' },
+    { id: 'identity',  icon: '👤', label: 'Identidad', href: '/identity',   global: true,  hint: 'Tu perfil · DID local-first · wallet' },
     { id: 'settings',  icon: '⚙',  label: 'Settings',  href: '/settings',   global: true,  hint: 'Claves API · IA · purga' },
 ]);
 

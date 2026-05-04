@@ -117,12 +117,24 @@ export async function generateRoleSop({ role, project, sectorBase = null }) {
     const userPrompt = buildRoleSopPrompt({ role, project, sectorBase });
 
     const { Orchestrator } = await import('./Orchestrator.js?v=' + Date.now());
+    const pruningOn = await Orchestrator.isContextPruningEnabled();
     const result = await Orchestrator.callLLM({
         preferredEngine: 'anthropic',
         systemPrompt:    ctx.systemPrompt,
         userPrompt,
         responseFormat:  'json_object',
         temperature:     0.3,
+        // KM-001 sprint E2 · pruner activo cuando el toggle global está ON
+        contextPruning:  pruningOn ? {
+            enabled:   true,
+            projectId: project.id,
+            task: {
+                projectId: project.id,
+                sectorId:  project.sector_id || project.based_on_sector || sectorBase,
+                roleId:    role.id,
+                types:     ['sop', 'soc', 'transaction', 'role'],
+            },
+        } : null,
     });
 
     const generated = result.content;
@@ -265,12 +277,24 @@ export async function regenerateSopWithFeedback({ previousSop, role, project, fe
     const userPrompt = buildRegenerateSopPrompt({ previousSop, role, project, feedback, sectorBase });
 
     const { Orchestrator } = await import('./Orchestrator.js?v=' + Date.now());
+    const pruningOn = await Orchestrator.isContextPruningEnabled();
     const result = await Orchestrator.callLLM({
         preferredEngine: 'anthropic',
         systemPrompt:    ctx.systemPrompt,
         userPrompt,
         responseFormat:  'json_object',
         temperature:     0.4,
+        // KM-001 sprint E2 · pruner activo cuando el toggle global está ON
+        contextPruning:  pruningOn ? {
+            enabled:   true,
+            projectId: project && project.id,
+            task: {
+                projectId: project && project.id,
+                sectorId:  sectorBase || (project && (project.sector_id || project.based_on_sector)),
+                roleId:    role && role.id,
+                types:     ['sop', 'soc', 'transaction', 'role'],
+            },
+        } : null,
     });
 
     const generated = result.content;

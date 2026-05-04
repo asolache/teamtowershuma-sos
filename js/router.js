@@ -23,6 +23,8 @@ const ROUTES = [
     { path: '/folders',   view: () => import('./views/FoldersView.js')  },
     // H8.1 · vista panorámica del Mind-as-Graph
     { path: '/mind',      view: () => import('./views/MindGraphView.js') },
+    // KM-001 sprint E2 · dashboard de eficiencia (tokens / coste / pruning)
+    { path: '/efficiency',view: () => import('./views/EfficiencyView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 

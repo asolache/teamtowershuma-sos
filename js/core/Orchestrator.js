@@ -349,6 +349,32 @@ class OrchestratorCore {
                         detail: { provider, totalTokens: tokenUsage.total_tokens, costUSD: parseFloat(costUSD.toFixed(6)), latencyMs, timestamp: Date.now() }
                     }));
 
+                    // KM-001 sprint E2 · persistir log de eficiencia si hubo pruning.
+                    // Lo guardamos como nodo efficiency_log en KB para alimentar la
+                    // vista /efficiency. Fire-and-forget · no bloqueamos el return.
+                    if (pruningTelemetry && pruningTelemetry.enabled && !pruningTelemetry.error) {
+                        try {
+                            const ts = Date.now();
+                            const logNode = {
+                                id:    'effl-' + Math.random().toString(36).slice(2, 8) + '-' + ts.toString(36),
+                                type:  'efficiency_log',
+                                content: {
+                                    provider,
+                                    promptTokens:     tokenUsage.prompt_tokens,
+                                    completionTokens: tokenUsage.completion_tokens,
+                                    totalTokens:      tokenUsage.total_tokens,
+                                    costUSD:          parseFloat(costUSD.toFixed(6)),
+                                    pruning:          pruningTelemetry,
+                                    timestamp:        ts,
+                                    latencyMs,
+                                },
+                                keywords: ['efficiency_log', 'kind:efficiency-log', 'provider:' + provider],
+                            };
+                            // Sin await · evitamos bloquear la respuesta al caller
+                            KB.upsert(logNode).catch(e => console.warn('[KM-001] efficiency_log save failed:', e?.message));
+                        } catch (e) { /* no debe romper el flujo IA */ }
+                    }
+
                     const modelLabel = provider === 'anthropic' ? ANTHROPIC_MODEL
                                      : provider === 'minimax'   ? MINIMAX_MODEL
                                      : provider;

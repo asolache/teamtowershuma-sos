@@ -119,12 +119,23 @@ export async function cloneSectorForClient({ sectorId, clientName, clientDescrip
     // del Orchestrator (ej. parser BUG-002) se aplique inmediatamente.
     const { Orchestrator } = await import('./Orchestrator.js?v=' + Date.now());
 
+    // KM-001 sprint E2 · si el toggle global está ON, podamos contexto.
+    // En sectorCloner el proyecto aún NO existe en KB, así que el pruner
+    // sólo añadirá nodos públicos relevantes (sops/socs públicos del
+    // sector base). Útil pero modesto · el ROI grande está en
+    // roleSopGenerator y woAssistant donde el proyecto ya existe.
+    const pruningOn = await Orchestrator.isContextPruningEnabled();
     const result = await Orchestrator.callLLM({
         preferredEngine: 'anthropic',
         systemPrompt:    ctx.systemPrompt,
         userPrompt,
         responseFormat:  'json_object',
         temperature:     0.3,
+        contextPruning:  pruningOn ? {
+            enabled:   true,
+            projectId: null,
+            task:      { sectorId, types: ['sop', 'soc'] },
+        } : null,
     });
 
     const cloned = result.content;
