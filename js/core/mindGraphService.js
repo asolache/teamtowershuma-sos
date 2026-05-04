@@ -89,7 +89,10 @@ export function buildGraphFromKb(allNodes, options = {}) {
         type:      n.type,
         label:     labelForNode(n),
         color:     colorForType(n.type),
-        projectId: n.projectId || n.content?.projectId || n.content?.providerProjectId || null,
+        // projectId del nodo (parent jerárquico) · providerProjectId NO va aquí
+        // porque conceptualmente el market_item NO pertenece al proyecto, sólo
+        // ofrece su valor al proyecto · esa relación queda como `relation` aparte.
+        projectId: n.projectId || n.content?.projectId || null,
         tags:      Array.isArray(n.content?.tags) ? n.content.tags : [],
         weight:    1,  // base · podríamos boostear por tipo/recencia en KM-001 sprint C
     }));
@@ -97,10 +100,12 @@ export function buildGraphFromKb(allNodes, options = {}) {
     // 4. Construir aristas
     const edges = [];
 
-    // 4a. Parent edges · cualquier nodo con projectId apunta a su proyecto
-    //     (siempre que el proyecto exista en el grafo y no sea él mismo)
+    // 4a. Parent edges · cualquier nodo con projectId apunta a su proyecto.
+    //     Importante: NO incluir `providerProjectId` aquí · esa relación ya
+    //     se modela como `relation` (con etiqueta 'provider'), evitando
+    //     duplicados sobre el mismo par.
     for (const n of filtered) {
-        const pid = n.projectId || n.content?.projectId || n.content?.providerProjectId;
+        const pid = n.projectId || n.content?.projectId;
         if (!pid || !idSet.has(pid)) continue;
         if (n.id === pid) continue;
         edges.push({ source: n.id, target: pid, kind: 'parent', weight: 2 });
