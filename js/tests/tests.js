@@ -1710,7 +1710,7 @@ async function testMindGraphService() {
     // graphStats
     const s = graphStats(g);
     assert(s.totalNodes === 8,                                             'stats.totalNodes correcto');
-    assert(s.byType.project === 1 && s.byType.work_order === 2,           'stats.byType correcto');
+    assert(s.byType.project === 1 && s.byType.work_order === 3,           'stats.byType correcto (3 wos: wo-1, wo-2, huerf)');
     assert(s.byEdgeKind.parent === 5,                                     'stats.byEdgeKind.parent correcto');
 
     // empty inputs
