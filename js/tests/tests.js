@@ -1876,9 +1876,9 @@ async function testContextPruner() {
     assert(typeof pruneFromKb === 'function',                              'pruneFromKb exportada');
 
     // KB null/undefined → resultado vacío sin lanzar
-    const empty = await pruneFromKb({ KB: null });
-    assert(Array.isArray(empty.selected) && empty.selected.length === 0,    'pruneFromKb sin KB → resultado vacío');
-    assert(empty.formatted === '',                                          'pruneFromKb sin KB · formatted vacío');
+    const emptyKb = await pruneFromKb({ KB: null });
+    assert(Array.isArray(emptyKb.selected) && emptyKb.selected.length === 0,    'pruneFromKb sin KB → resultado vacío');
+    assert(emptyKb.formatted === '',                                          'pruneFromKb sin KB · formatted vacío');
 
     // KB mock con query/getAllNodes
     const nowKb = Date.now();
