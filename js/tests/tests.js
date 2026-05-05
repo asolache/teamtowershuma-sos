@@ -1441,20 +1441,20 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 10,                          '10 destinos canónicos (+ folders + mind + identity en Ola 9)');
+    assert(NAV_DESTINATIONS.length === 11,                          '11 destinos canónicos (+ efficiency en Ola 11)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 9,                                 'sin projectId · 9 links (sin sops · 10-1)');
+    assert(linksGlobal.length === 10,                                'sin projectId · 10 links (sin sops · 11-1)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
     // con projectId → todos + query ?project= en los aplicables
     const linksProject = buildNavLinks({ active: 'kanban', projectId: 'proj-x' });
-    assert(linksProject.length === 10,                              'con projectId · 10 links (incluye sops)');
+    assert(linksProject.length === 11,                              'con projectId · 11 links (incluye sops)');
     assert(linksProject.find(l => l.id === 'sops').href === '/sops?project=proj-x',     'sops con project query');
     assert(linksProject.find(l => l.id === 'map').href === '/map?project=proj-x',       'map con project query');
     assert(linksProject.find(l => l.id === 'market').href === '/market?project=proj-x', 'market con project query');
@@ -1870,6 +1870,48 @@ async function testContextPruner() {
     const gate2 = passesContextGate({ baseline: 'hola mundo', candidate: 'completamente distinto', threshold: 0.5 });
     assert(gate2.passes === false,                                          'gate falla con dispares');
     assert(typeof gate2.threshold === 'number',                            'gate retorna threshold');
+
+    // ── KM-001 sprint E · pruneFromKb async con mock KB
+    const { pruneFromKb } = mod;
+    assert(typeof pruneFromKb === 'function',                              'pruneFromKb exportada');
+
+    // KB null/undefined → resultado vacío sin lanzar
+    const emptyKb = await pruneFromKb({ KB: null });
+    assert(Array.isArray(emptyKb.selected) && emptyKb.selected.length === 0,    'pruneFromKb sin KB → resultado vacío');
+    assert(emptyKb.formatted === '',                                          'pruneFromKb sin KB · formatted vacío');
+
+    // KB mock con query/getAllNodes
+    const nowKb = Date.now();
+    const fakeNodes = [
+        { id: 'p1', type: 'project',     content: { tags: ['kind:project','project:p1'] }, projectId: null, updatedAt: nowKb },
+        { id: 'sop-of-p1', type: 'sop',  projectId: 'p1', updatedAt: nowKb,
+          content: { name: 'SOP del proyecto', tags: ['kind:sop','project:p1','sector:k'] } },
+        { id: 'sop-public', type: 'sop', projectId: null, updatedAt: nowKb,
+          content: { name: 'SOP público TT', tags: ['kind:sop','scope:public','sector:k'] } },
+        { id: 'sop-otro',   type: 'sop', projectId: 'p2', updatedAt: nowKb,
+          content: { name: 'SOP otro proyecto', tags: ['kind:sop','project:p2'] } },
+        { id: 'cfg', type: 'config', value: 'secret' },
+    ];
+    const mockKB = {
+        query:        async (q) => fakeNodes.filter(n =>
+            (q.projectId == null || n.projectId === q.projectId) &&
+            (q.type == null     || n.type === q.type)),
+        getAllNodes:  async ()  => fakeNodes,
+    };
+
+    const r = await pruneFromKb({
+        KB: mockKB,
+        projectId: 'p1',
+        task: { sectorId: 'K', types: ['sop'] },
+        options: { tokenBudget: 5000, minScore: 0 },
+    });
+    assert(r.stats.candidates >= 2,                                        'pruneFromKb proj-p1 incluye p1 + sop-of-p1 + públicos');
+    const ids = r.selected.map(x => x.node.id);
+    assert(ids.includes('sop-of-p1'),                                       'incluye sop del proyecto');
+    assert(ids.includes('sop-public'),                                      'incluye sop público (sin projectId)');
+    assert(!ids.includes('sop-otro'),                                       'NO incluye sop de otro proyecto');
+    assert(!ids.includes('cfg'),                                            'NO incluye config');
+    assert(typeof r.formatted === 'string' && r.formatted.includes('CONTEXTO INYECTADO'), 'formatted listo para system prompt');
 }
 
 // ─── Runner ──────────────────────────────────────────────────────

@@ -145,9 +145,55 @@ class OrchestratorCore {
     // ══════════════════════════════════════════════════════════════
     //  callLLM — Motor central multi-proveedor
     // ══════════════════════════════════════════════════════════════
-    async callLLM({ preferredEngine = 'anthropic', systemPrompt, userPrompt, responseFormat = 'json_object', temperature = 0.2, mcpSkills = [], maxTokens = 8192 }) {
+    async callLLM({
+        preferredEngine = 'anthropic', systemPrompt, userPrompt,
+        responseFormat = 'json_object', temperature = 0.2,
+        mcpSkills = [], maxTokens = 8192,
+        // KM-001 sprint E · context pruning opt-in. Si enabled=true, antes
+        // de llamar al LLM se carga un set de nodos relevantes del KB,
+        // se podan con pruneFromKb y se prefijan al systemPrompt. Default
+        // off · sin tocar el flujo actual de los consumidores existentes.
+        contextPruning = null,
+    }) {
         const providers = await this._getAvailableProviders(preferredEngine);
         let lastError = null;
+
+        // KM-001 sprint E · pre-procesado del contexto si está activo
+        let pruningTelemetry = null;
+        let originalSystemPrompt = systemPrompt;
+        if (contextPruning && contextPruning.enabled) {
+            try {
+                const { pruneFromKb } = await import('./contextPruner.js?v=' + Date.now());
+                const promptCharsBefore = String(originalSystemPrompt || '').length + String(userPrompt || '').length;
+                const tokensBefore = Math.ceil(promptCharsBefore / 4);
+                const r = await pruneFromKb({
+                    KB,
+                    projectId: contextPruning.projectId || null,
+                    task:      contextPruning.task     || {},
+                    options:   contextPruning.options  || { tokenBudget: 3000, minScore: 0.05, maxNodes: 30 },
+                    formatOptions: contextPruning.formatOptions || { maxBodyChars: 600 },
+                });
+                if (r.formatted) {
+                    systemPrompt = r.formatted + '\n\n— — —\n\n' + (originalSystemPrompt || '');
+                }
+                const promptCharsAfter = String(systemPrompt || '').length + String(userPrompt || '').length;
+                const tokensAfter = Math.ceil(promptCharsAfter / 4);
+                pruningTelemetry = {
+                    enabled:        true,
+                    selectedCount:  r.selected.length,
+                    skippedCount:   r.skipped.length,
+                    candidatesCount: r.stats.candidates,
+                    estTokensBefore: tokensBefore,
+                    estTokensAfter:  tokensAfter,
+                    deltaTokens:     tokensAfter - tokensBefore,    // positivo si añadimos contexto
+                    taskTags:       r.stats.taskTags || [],
+                };
+                console.log('[KM-001/Pruner] Context inyectado · ' + r.selected.length + '/' + r.stats.candidates + ' nodos · +' + (tokensAfter - tokensBefore) + ' tokens estimados');
+            } catch (err) {
+                console.warn('[KM-001/Pruner] Falló · sigo con systemPrompt original:', err.message);
+                pruningTelemetry = { enabled: true, error: err.message };
+            }
+        }
 
         for (const { provider, apiKey } of providers) {
             let attempt = 0;
@@ -303,10 +349,36 @@ class OrchestratorCore {
                         detail: { provider, totalTokens: tokenUsage.total_tokens, costUSD: parseFloat(costUSD.toFixed(6)), latencyMs, timestamp: Date.now() }
                     }));
 
+                    // KM-001 sprint E2 · persistir log de eficiencia si hubo pruning.
+                    // Lo guardamos como nodo efficiency_log en KB para alimentar la
+                    // vista /efficiency. Fire-and-forget · no bloqueamos el return.
+                    if (pruningTelemetry && pruningTelemetry.enabled && !pruningTelemetry.error) {
+                        try {
+                            const ts = Date.now();
+                            const logNode = {
+                                id:    'effl-' + Math.random().toString(36).slice(2, 8) + '-' + ts.toString(36),
+                                type:  'efficiency_log',
+                                content: {
+                                    provider,
+                                    promptTokens:     tokenUsage.prompt_tokens,
+                                    completionTokens: tokenUsage.completion_tokens,
+                                    totalTokens:      tokenUsage.total_tokens,
+                                    costUSD:          parseFloat(costUSD.toFixed(6)),
+                                    pruning:          pruningTelemetry,
+                                    timestamp:        ts,
+                                    latencyMs,
+                                },
+                                keywords: ['efficiency_log', 'kind:efficiency-log', 'provider:' + provider],
+                            };
+                            // Sin await · evitamos bloquear la respuesta al caller
+                            KB.upsert(logNode).catch(e => console.warn('[KM-001] efficiency_log save failed:', e?.message));
+                        } catch (e) { /* no debe romper el flujo IA */ }
+                    }
+
                     const modelLabel = provider === 'anthropic' ? ANTHROPIC_MODEL
                                      : provider === 'minimax'   ? MINIMAX_MODEL
                                      : provider;
-                    return { content: parsedContent, telemetry: { provider, model: modelLabel, tokens: tokenUsage, latencyMs } };
+                    return { content: parsedContent, telemetry: { provider, model: modelLabel, tokens: tokenUsage, latencyMs, contextPruning: pruningTelemetry } };
 
                 } catch (err) {
                     lastError = err;
@@ -389,6 +461,22 @@ class OrchestratorCore {
         await this._ensureKB();
         const record = await KB.getNode(KB_KEY_PROVIDER);
         return record?.value || 'anthropic';
+    }
+
+    // KM-001 sprint E · toggle global de context pruning persistente en KB.
+    // Default off · si lo enciende el usuario, los consumidores futuros
+    // (sprint E2 · sectorCloner · roleSopGenerator · woAssistant) pueden
+    // leer este flag para decidir si añadir `contextPruning: {enabled:true,
+    // ...}` al callLLM. Hoy nada lo lee · es preparación de la integración.
+    async setContextPruningEnabled(enabled) {
+        await this._ensureKB();
+        await KB.saveNode({ id: 'sos_context_pruning_enabled', type: 'config', value: !!enabled });
+    }
+
+    async isContextPruningEnabled() {
+        await this._ensureKB();
+        const record = await KB.getNode('sos_context_pruning_enabled');
+        return !!(record && record.value === true);
     }
 }
 
