@@ -13,6 +13,8 @@ body {
     line-height: 1.6;
     height: 100dvh;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -34,11 +36,25 @@ body {
 /* BUG-001 fix: #app permite scroll vertical para que el contenido
    de las vistas (Dashboard, Workshops, etc.) sea accesible cuando
    excede el viewport. Las vistas que necesiten height fijo sin scroll
-   (ej. ValueMap D3) deben gestionar su propio overflow internamente. */
+   (ej. ValueMap D3) deben gestionar su propio overflow internamente.
+
+   UX-NAV-003 sprint A · `body` ahora es flex column · el
+   `#sos-breadcrumb-slot` (inyectado por el router antes de `#app`)
+   ocupa su altura natural arriba y `#app` toma el resto con
+   flex:1 + min-height:0 para que el scroll interno funcione
+   también cuando hay breadcrumb visible. Sin esto, el breadcrumb
+   empujaba el `#app` por debajo de los 100dvh del body y
+   `overflow:hidden` del body recortaba el contenido sin scroll
+   posible (regresión detectada en /settings 2026-05-08). */
+#sos-breadcrumb-slot {
+    flex: 0 0 auto;
+    width: 100vw;
+}
 #app {
     display: flex;
     flex-direction: column;
-    min-height: 100dvh;
+    flex: 1 1 auto;
+    min-height: 0;
     width: 100vw;
     overflow-y: auto;
     overflow-x: hidden;
