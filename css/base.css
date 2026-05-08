@@ -60,6 +60,23 @@ body {
     overflow-x: hidden;
 }
 
+/* UX-NAV-003 sprint A · todas las vistas tienen shells declarados con
+   `height:100dvh` (dash-shell · vmap-shell · kb-shell · ws-shell ·
+   sv-shell · tg-shell · mg-shell · w-shell · mk-shell · ph-shell ·
+   fl-shell · nv-shell · ef-shell · sa-shell · id-shell · home-wrap).
+   Cuando el breadcrumb-slot consume altura encima de `#app`, esos
+   `100dvh` causan desbordamiento dentro del scroll de `#app` y
+   aparece scrollbar interna fea aunque no haya contenido extra.
+   Esta regla normaliza los shells a `100%` del `#app` real · `#app`
+   es flex con `flex:1 + min-height:0` · sus hijos directos pueden
+   `height:100%` con seguridad. Cualquier shell nuevo que siga la
+   convención `*-shell` queda cubierto automáticamente. */
+#app > [class*="-shell"],
+#app > .home-wrap,
+#app > .vmap-shell {
+    height: 100%;
+}
+
 .app-layout {
     display: flex;
     min-height: 100dvh;

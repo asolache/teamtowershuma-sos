@@ -339,6 +339,15 @@ export async function paintBreadcrumb({
         const p = (projects || []).find(x => x && x.id === projectId);
         if (p) phase = detectProjectPhase(p, projectStats);
     }
+    // UX · ocultar el slot cuando no hay valor que mostrar (single-item sin phase)
+    // para no consumir altura en /dashboard etc. Mantiene la regla "el slot
+    // toma su altura natural" del flexbox · 0px cuando display:none.
+    if ((items?.length || 0) <= 1 && !phase) {
+        targetEl.innerHTML = '';
+        targetEl.style.display = 'none';
+        return;
+    }
+    targetEl.style.display = '';
     targetEl.innerHTML = renderBreadcrumbHtml({ items, phase });
 }
 
