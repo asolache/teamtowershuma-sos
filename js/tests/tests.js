@@ -2908,6 +2908,167 @@ async function testSkillTaxonomy() {
     assert(r2.coveredCount === 0,                                           'input no-array · graceful');
 }
 
+// ─── MAT-003 sprint C · swarmMatchmaker ────────────────────────────
+async function testSwarmMatchmaker() {
+    const mod = await import('../core/swarmMatchmaker.js?v=' + Date.now());
+    const { buildSwarmMatchPrompt, parseSwarmMatchResponse, applyMatchToSeats, scoreSwarmCoverage, buildSwarmTeamForProject } = mod;
+
+    // Errores de input
+    let threw = false;
+    try { buildSwarmMatchPrompt(); } catch (_) { threw = true; }
+    assert(threw, 'prompt sin input lanza');
+
+    threw = false;
+    try { buildSwarmMatchPrompt({ project: {}, projectTypeId: 'comunitat-autosuficient', requiredRoles: [{id:'r1',label:'R1',domain:'tech'}], swarmSeats:[{id:'s1'}] }); } catch (_) { threw = true; }
+    assert(threw, 'sin project.id+name lanza');
+
+    threw = false;
+    try { buildSwarmMatchPrompt({ project: { id:'p1', name:'P1' }, projectTypeId: 'inexistente', requiredRoles:[{id:'r1',label:'R1',domain:'tech'}], swarmSeats:[{id:'s1'}] }); } catch (_) { threw = true; }
+    assert(threw, 'projectTypeId inválido lanza');
+
+    threw = false;
+    try { buildSwarmMatchPrompt({ project: { id:'p1', name:'P1' }, projectTypeId:'comunitat-autosuficient', requiredRoles:[], swarmSeats:[{id:'s1'}] }); } catch (_) { threw = true; }
+    assert(threw, 'requiredRoles vacío lanza');
+
+    threw = false;
+    try { buildSwarmMatchPrompt({ project: { id:'p1', name:'P1' }, projectTypeId:'comunitat-autosuficient', requiredRoles:[{id:'r1',label:'R1',domain:'tech'}], swarmSeats:[] }); } catch (_) { threw = true; }
+    assert(threw, 'swarmSeats vacío lanza');
+
+    // Happy path · prompt
+    const built = buildSwarmMatchPrompt({
+        project: { id: 'proj-1', name: 'Hortet de la Vall', description: 'Coop de productores', sector: 'A', phase: 'design' },
+        projectTypeId: 'comunitat-autosuficient',
+        requiredRoles: [
+            { id: 'pages-agricola',     label: 'Pagès',     domain: 'ecology' },
+            { id: 'tresorera',          label: 'Tresorera', domain: 'finance' },
+            { id: 'facilitador-comu',   label: 'Facilita',  domain: 'community' },
+        ],
+        swarmSeats: [
+            { id: 'seat-1', displayName: 'Aitana R.', skillsDeclared: ['regenerative-agriculture','seed-banking'], guardianOf: 'demeter' },
+            { id: 'seat-2', displayName: 'Núria B.',  skillsDeclared: ['triple-entry-accounting','treasury-management'], guardianOf: 'poseidon' },
+            { id: 'seat-3', displayName: 'Jordi T.',  skillsDeclared: ['facilitation','meeting-design'], guardianOf: 'hermes' },
+        ],
+    });
+    assert(built.systemPrompt.includes('Cohort 0 de Matriu'),                'systemPrompt menciona cohort 0');
+    assert(built.userPrompt.includes('Hortet de la Vall'),                    'userPrompt · proyecto');
+    assert(built.userPrompt.includes('demeter'),                              'userPrompt · catálogo guardianes');
+    assert(built.userPrompt.includes('regenerative-agriculture'),             'userPrompt · catálogo skills');
+    assert(built.userPrompt.includes('Aitana R.'),                            'userPrompt · plazas');
+    assert(built.responseFormat === 'json_object',                            'responseFormat json_object');
+    assert(built.temperature === 0.2,                                          'temperature baja');
+    assert(built.meta.projectId === 'proj-1',                                  'meta.projectId');
+    assert(built.meta.rolesCount === 3 && built.meta.seatsCount === 3,         'meta counts');
+
+    // Parser · happy
+    const sample = JSON.stringify({
+        matches: [
+            { roleId: 'pages-agricola',   seatId: 'seat-1', primary: true,  fit: 0.95, rationale: 'Demeter', skillsUsed: ['regenerative-agriculture'] },
+            { roleId: 'tresorera',        seatId: 'seat-2', primary: true,  fit: 0.88, rationale: 'Treasury', skillsUsed: ['treasury-management'] },
+            { roleId: 'facilitador-comu', seatId: 'seat-3', primary: true,  fit: 0.91, rationale: 'Hermes', skillsUsed: ['facilitation'] },
+            { roleId: 'pages-agricola',   seatId: 'seat-3', primary: false, fit: 0.5,  rationale: 'backup', skillsUsed: [] },
+        ],
+        gaps: [],
+        overallRationale: 'Cobertura completa 3/3.',
+    });
+    const parsed = parseSwarmMatchResponse(sample);
+    assert(parsed.matches.length === 4,                                       '4 matches parseados');
+    assert(parsed.gaps.length === 0,                                          'gaps vacío');
+    assert(parsed.overallRationale.length > 0,                                'overallRationale presente');
+
+    // Parser robusto · campos malos
+    const messy = parseSwarmMatchResponse({
+        matches: [
+            { roleId: 'r1', seatId: 's1', primary: true, fit: 0.5 },
+            { roleId: null, seatId: 's2' },                                   // inválido
+            { roleId: 'r3', seatId: 's3', fit: 1.5 },                         // clamp 1
+            { roleId: 'r4', seatId: 's4', fit: -0.3 },                        // clamp 0
+        ],
+        gaps: ['r5', null, 'r6'],
+        overallRationale: 'x'.repeat(800),
+    });
+    assert(messy.matches.length === 3,                                        'parser · roleId null filtrado');
+    assert(messy.matches.find(x => x.roleId === 'r3').fit === 1,              'fit clamp 1.5 → 1');
+    assert(messy.matches.find(x => x.roleId === 'r4').fit === 0,              'fit clamp -0.3 → 0');
+    assert(messy.gaps.length === 2,                                            'gaps · null filtrado');
+    assert(messy.overallRationale.length === 600,                              'overallRationale 600 chars max');
+
+    let parseThrew = false;
+    try { parseSwarmMatchResponse('not json'); } catch (_) { parseThrew = true; }
+    assert(parseThrew,                                                         'parser · invalid JSON lanza');
+
+    // applyMatchToSeats · resuelve conflicto primario
+    const conflict = [
+        { roleId: 'r1', seatId: 'sX', primary: true, fit: 0.9 },
+        { roleId: 'r2', seatId: 'sX', primary: true, fit: 0.95 },
+        { roleId: 'r3', seatId: 'sX', primary: true, fit: 0.7 },
+        { roleId: 'r4', seatId: 'sX', primary: false, fit: 0.6 },
+        { roleId: 'r5', seatId: 'sX', primary: false, fit: 0.5 },
+        { roleId: 'r6', seatId: 'sX', primary: false, fit: 0.4 },
+    ];
+    const reconciled = applyMatchToSeats(conflict, { maxSecondaryRoles: 2 });
+    const primaries = reconciled.filter(x => x.seatId === 'sX' && x.primary);
+    assert(primaries.length === 1,                                             '1 solo primario por seat');
+    assert(primaries[0].roleId === 'r2',                                       'primario es el de fit más alto');
+    const secondaries = reconciled.filter(x => x.seatId === 'sX' && !x.primary);
+    assert(secondaries.length === 2,                                            'max 2 secundarios');
+
+    // scoreSwarmCoverage
+    const required = [
+        { id: 'pages-agricola',   label:'p', domain:'ecology' },
+        { id: 'tresorera',        label:'t', domain:'finance' },
+        { id: 'facilitador-comu', label:'f', domain:'community' },
+        { id: 'huerfano',         label:'h', domain:'culture' },
+    ];
+    const scored = scoreSwarmCoverage(parsed.matches, required);
+    assert(scored.coveredRoles === 3 && scored.totalRoles === 4 && scored.pct === 75, 'cobertura 3/4 · 75%');
+    assert(scored.byRole['huerfano'].primary === 0,                            'huerfano sin primary');
+    const empty = scoreSwarmCoverage([], []);
+    assert(empty.pct === 0 && empty.totalRoles === 0,                          'score vacío gracioso');
+
+    // buildSwarmTeamForProject · mock orchestrator
+    let mainThrew = false;
+    try { await buildSwarmTeamForProject({}); } catch (_) { mainThrew = true; }
+    assert(mainThrew, 'buildSwarmTeamForProject sin orchestrator lanza');
+
+    const mockOrch = {
+        callLLM: async () => ({
+            text: JSON.stringify({
+                matches: [
+                    { roleId: 'pages-agricola',   seatId: 'seat-1', primary: true, fit: 0.95, rationale: 'Demeter', skillsUsed: ['regenerative-agriculture'] },
+                    { roleId: 'tresorera',        seatId: 'seat-2', primary: true, fit: 0.90, rationale: 'Poseidon', skillsUsed: ['treasury-management'] },
+                    { roleId: 'facilitador-comu', seatId: 'seat-3', primary: true, fit: 0.88, rationale: 'Hermes', skillsUsed: ['facilitation'] },
+                ],
+                gaps: [],
+                overallRationale: 'Cobertura completa.',
+            }),
+            provider: 'anthropic',
+            usage: { totalTokens: 1440 },
+            costUSD: 0.012,
+        }),
+    };
+    const team = await buildSwarmTeamForProject({
+        project: { id: 'proj-1', name: 'Hortet' },
+        projectTypeId: 'comunitat-autosuficient',
+        requiredRoles: [
+            { id: 'pages-agricola',   label:'p', domain:'ecology' },
+            { id: 'tresorera',        label:'t', domain:'finance' },
+            { id: 'facilitador-comu', label:'f', domain:'community' },
+        ],
+        swarmSeats: [
+            { id: 'seat-1', skillsDeclared: ['regenerative-agriculture'] },
+            { id: 'seat-2', skillsDeclared: ['treasury-management'] },
+            { id: 'seat-3', skillsDeclared: ['facilitation'] },
+        ],
+        orchestrator: mockOrch,
+    });
+    assert(team.matches.length === 3,                                          'team · 3 matches');
+    assert(team.coverage.pct === 100,                                          'team · 100%');
+    assert(team.telemetry.provider === 'anthropic',                            'team · provider tracked');
+    assert(team.telemetry.tokens.totalTokens === 1440,                          'team · tokens tracked');
+    assert(typeof team.telemetry.latencyMs === 'number',                       'team · latency tracked');
+    assert(team.promptMeta.projectId === 'proj-1',                              'team · promptMeta');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -2944,7 +3105,8 @@ const SUITE = [
     { name: 'MAT-002-G fase A · sosManifesto puro + KB mock',     fn: testSosManifesto },
     { name: 'UX-EDU-001 sprint A · didacticService puro',         fn: testDidacticService },
     { name: 'MAT-003 sprint A · critical108Roles + Pantheon Work', fn: testCritical108Roles },
-    { name: 'MAT-003 sprint B · skillTaxonomy + coverageReport',  fn: testSkillTaxonomy }
+    { name: 'MAT-003 sprint B · skillTaxonomy + coverageReport',  fn: testSkillTaxonomy },
+    { name: 'MAT-003 sprint C · swarmMatchmaker (matchmaker IA)', fn: testSwarmMatchmaker }
 ];
 
 export async function runTests() {

@@ -1544,21 +1544,68 @@ distribución por dominio · helpers · coverageReport vacío · con plazas ·
 resilient (≥3) · fragile (=1) · skill inexistente ignorada · input
 no-array gracioso). Suite global pasa de 33 → 34 con el nuevo test.
 
-#### Sprint C · matchmaker proyecto ↔ enjambre
+#### Sprint C · matchmaker proyecto ↔ enjambre ✅ verde (helpers + función async)
 
-`buildSwarmTeamForProject({ project, projectType, criticalRoles, swarm, llmEngine })`
-async · llama a `Orchestrator.callLLM` con prompt que combina:
+**Entregado** · `js/core/swarmMatchmaker.js`. Función principal async
+`buildSwarmTeamForProject({ project, projectTypeId, requiredRoles,
+swarmSeats, options, orchestrator, preferredEngine })` · llama
+`orchestrator.callLLM` con prompt construido a partir del catálogo
+canónico (12 guardianes Pantheon Work + 90 skills + 12 project types)
+y devuelve:
 
-- Datos del proyecto (descripción · sector · fase · objetivos).
-- Catálogo de los 100 roles + sus skills.
-- Plazas actualmente asignadas en el enjambre cohort 0 (con disponibilidad).
+```
+{
+    matches: [
+        { roleId, seatId, primary: true|false, fit: 0..1,
+          rationale, skillsUsed[] },
+    ],
+    coverage:         { coveredRoles, totalRoles, pct, byRole },
+    gaps:             [roleId, ...],
+    overallRationale: '...',
+    telemetry:        { provider, tokens, latencyMs, costUSD },
+    promptMeta:       { projectId, projectTypeId, rolesCount, seatsCount },
+}
+```
 
-Devuelve · array ordenado de `{ roleId, suggestedSeat, fit: 0..1, why }`
-con los roles y plazas recomendadas. Output JSON · responseFormat
-`json_object` para deterministic parsing.
+**Helpers puros · testeables sin LLM**:
 
-UI · botón "🐝 Activar enjambre" en el panel del proyecto (sprint C
-también añade el modal con la propuesta + aceptar/rechazar por rol).
+- `buildSwarmMatchPrompt(input)` puro · construye `{systemPrompt,
+  userPrompt, responseFormat, temperature, meta}`. Validaciones
+  estrictas (project.id+name · projectTypeId conocido · ≥1 rol · ≥1
+  plaza). userPrompt incluye dump JSON de · proyecto · catálogo
+  (guardianes + skills + project types) · roles requeridos · plazas
+  disponibles · restricciones (max secundarios) · output schema.
+- `parseSwarmMatchResponse(jsonStrOrObj)` puro · valida + normaliza
+  output del LLM · clamp `fit` a [0,1] · trunca rationale 240 chars ·
+  truncar overallRationale 600 chars · filtra `roleId/seatId`
+  inválidos · gracioso con JSON malformado (lanza error explícito).
+- `applyMatchToSeats(matches, options)` puro · resuelve conflictos
+  primario · regla "1 plaza = 1 rol primario máximo" · ordena por
+  fit descendente · degrada los excesos a secundario · respeta
+  `maxSecondaryRoles` (default 2) · descarta los que excedan.
+- `scoreSwarmCoverage(matches, requiredRoles)` puro · devuelve
+  `{coveredRoles, totalRoles, pct, byRole[id]}` · cuenta solo
+  primarios para coverage real.
+
+**System prompt**: "Eres el matchmaker del enjambre Cohort 0 de Matriu
+Incoopadora..." con reglas estrictas (1 primario + 0-2 secundarios ·
+fit > velocidad · gap si nadie cubre · output JSON estricto).
+`temperature: 0.2` · `responseFormat: json_object`.
+
+**Tests · 45 asserts puros**: validaciones de input · happy path
+prompt · parser robusto (fit clamp 1.5→1, -0.3→0 · truncado 600 chars
+· filtros `roleId` null) · parser invalid JSON lanza · `applyMatchToSeats`
+resuelve conflicto (3 primarios → 1 primario + 2 secundarios) ·
+`scoreSwarmCoverage` calcula correctamente · `buildSwarmTeamForProject`
+sin orchestrator lanza · happy path con orchestrator mock devuelve
+team completo con telemetry. Sanity en node verde antes del push.
+
+Suite global: 34 → 35.
+
+**Pendiente sprint C.UI**: botón "🐝 Activar enjambre" en panel del
+proyecto + modal con propuesta + accept/reject por rol. Esto se hará
+cuando tengamos plazas reales declaradas (sprint D · time banking
+inverso) · hasta entonces el matchmaker funciona vía consola.
 
 #### Sprint D · Time Banking inverso · plazas que aceptan WOs del enjambre
 
