@@ -13,7 +13,7 @@ import {
     getWalletForProject, getOrCreateWalletForProject,
     topUpWallet, adjustWallet, persistWallet, walletStats,
     TOPUP_PRESETS,
-} from '../core/walletService.js';import { renderNavLinksHtml } from '../core/navService.js';
+} from '../core/walletService.js';import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 
 const KIND_LABEL = {
     topup:      '⬆ Recarga',
@@ -102,7 +102,7 @@ export default class WalletView {
                 <a href="/" data-link class="w-logo">🗼 Team<span>Towers</span></a>
                 <span class="w-title">Wallet · prepago del proyecto</span>
                 <div class="w-spacer"></div>
-                ${renderNavLinksHtml({ active: '', projectId: this.projectId, className: 'w-link' })}
+                ${renderNavGroupedHtml({ active: '', projectId: this.projectId, className: 'w-link' })}
             </div>
             <div class="w-main" id="wMain">
                 <p style="color:#888;font-size:0.85rem;">Cargando…</p>

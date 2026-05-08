@@ -1,5 +1,9 @@
 // TEAMTOWERS SOS V11 — ROUTER
 import { store } from './core/store.js';
+// UX-NAV-002 · estilos y bind globales para los dropdowns de navegación.
+// Inyectados una vez tras cada render para que los menús agrupados
+// funcionen sin que cada vista tenga que llamarlo a mano.
+import { ensureNavGroupStyle, bindNavGroupDropdowns } from './core/navService.js';
 
 const ROUTES = [
     { path: '/',          view: () => import('./views/DashboardView.js') },
@@ -64,6 +68,11 @@ async function router() {
         document.querySelectorAll('[data-link]').forEach(link => {
             link.addEventListener('click', e => { e.preventDefault(); navigateTo(link.getAttribute('href')); });
         });
+        // UX-NAV-002 · CSS de los dropdowns + bind toggle (idempotente).
+        // Ejecutar después de los data-link para que los anchors dentro del
+        // menú también respondan al SPA. App entera comparte el CSS único.
+        ensureNavGroupStyle();
+        bindNavGroupDropdowns(document.getElementById('app') || document);
     } catch (err) {
         console.error('[Router V11]', err);
         document.getElementById('app').innerHTML = `

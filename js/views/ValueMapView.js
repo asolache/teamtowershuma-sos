@@ -17,7 +17,7 @@ import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { Orchestrator }     from '../core/Orchestrator.js';
 import { t, langSelectorHtml, getLang } from '../i18n.js';
 import { taxonomicTagsForSop, mergeTags } from '../core/semanticTagger.js';
-import { renderNavLinksHtml } from '../core/navService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 import { computeAnimationCycles, normalizeTransactionsOrder, autoFillSequenceOrder, inferFlowOrder } from '../core/flowAnimationService.js';
 
 // ─── Constantes visuales ─────────────────────────────────────────────────────
@@ -814,7 +814,7 @@ export default class ValueMapView {
                 </div>
                 <div class="vmap-topbar-actions">
                     ${this._state.projectId ? `<a href="/project/${this._state.projectId}" data-link class="vmap-btn" style="text-decoration:none;color:#86efac;border-color:rgba(34,197,94,0.4);" title="Panel del proyecto · stats + ofertas + herramientas">🎛 Panel</a>` : ''}
-                    ${renderNavLinksHtml({ active: 'map', projectId: this._state.projectId, className: 'vmap-btn' })}
+                    ${renderNavGroupedHtml({ active: 'map', projectId: this._state.projectId, className: 'vmap-btn' })}
                     <button class="vmap-btn" style="border-color:var(--accent-purple);color:var(--accent-purple);" id="vmapBtnAI">${t('vmap.suggest')}</button>
                     <button class="vmap-btn" id="vmapBtnAnim" title="H_ANIM_001 · animar flujo de valor por sequence_order de las transactions">▶ Animar flujo</button>
                     <button class="vmap-btn" id="vmapBtnInferOrder" title="H_ANIM_001 sprint C · IA infiere sequence_order y phase de todas las transactions">🤖 Inferir orden IA</button>

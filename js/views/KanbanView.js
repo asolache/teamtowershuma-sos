@@ -24,7 +24,7 @@ import { KB }              from '../core/kb.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { linkifyMultiline } from '../core/linkifyService.js';
 import { taxonomicTagsForWo, mergeTags } from '../core/semanticTagger.js';
-import { renderNavLinksHtml } from '../core/navService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 
 // Orchestrator se importa dinámicamente con cache-bust en _executeAi
 // (ver BUG-002/003) para que fixes del parser se apliquen sin requerir
@@ -263,7 +263,7 @@ export default class KanbanView {
                 <a href="/" data-link class="kb-logo">🗼 Team<span>Towers</span></a>
                 <span class="kb-title">Kanban · Work Orders · Antigravity Engine</span>
                 <div class="kb-spacer"></div>
-                ${renderNavLinksHtml({ active: 'kanban', projectId: this.projectFilter, className: 'kb-link', activeClass: 'kb-link-active' })}
+                ${renderNavGroupedHtml({ active: 'kanban', projectId: this.projectFilter, className: 'kb-link', activeClass: 'kb-link-active' })}
                 <select id="kbProjectFilter" class="kb-btn" style="background:#1a1a22;border-color:#2a2a35;cursor:pointer;font-family:inherit;">
                     <option value="">📁 Todos los proyectos</option>
                 </select>

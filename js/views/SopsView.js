@@ -11,7 +11,7 @@
 
 import { store } from '../core/store.js';
 import { KB }    from '../core/kb.js';
-import { renderNavLinksHtml } from '../core/navService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 
 function fmtTs(ts) {
     if (!ts) return '—';
@@ -98,7 +98,7 @@ export default class SopsView {
                 <a href="/" data-link class="sv-logo">🗼 Team<span>Towers</span></a>
                 <span class="sv-title">SOPs del proyecto</span>
                 <div class="sv-spacer"></div>
-                ${renderNavLinksHtml({ active: 'sops', projectId: this.projectId, className: 'sv-link' })}
+                ${renderNavGroupedHtml({ active: 'sops', projectId: this.projectId, className: 'sv-link' })}
                 ${this.projectId ? `<button class="sv-btn sv-btn-primary" id="svBtnBulkGen" title="Genera SOPs faltantes para todos los roles del proyecto">🤖 Generar todos los SOPs</button>` : ''}
             </div>
             <div class="sv-main" id="svMain"></div>

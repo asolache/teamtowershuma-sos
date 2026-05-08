@@ -94,6 +94,9 @@
 | **H_ANIM_001 sprint B (mínimo)** | **Vista lineal del flujo como overlay** — botón "📜 Vista lineal" en topbar de `/map` abre un modal con timeline secuencial (grid responsivo 280px+ por card). Cada card: badge con `sequence_order` · pill MUST · color por type (índigo tangible · naranja intangible) · deliverable · `from → to` con nombres de roles. Separadores visuales por phase · usan `normalizeTransactionsOrder` (sprint A). Sin tocar el grafo D3 · es overlay puro. Pensado para mostrar a un cliente CEO el ciclo en <30s (criterio "brutal y universal" del backlog). | ✅ verde |
 | **H_ANIM_001 sprint C** | **IA infiere `sequence_order` y `phase` de todas las transactions** — `buildFlowOrderPrompt({roles, transactions, projectName})` puro · prompt con catálogo de roles+txs+ids+deliverables+MUST flags · instrucciones explícitas (orden 1..N · ciclo descubrimiento→cobro · MUST tangibles antes · phase kebab-case 1-2 palabras) · output schema JSON `{ordered:[{id,sequence_order,phase}], rationale}`. `applyOrderToTransactions(transactions, ordered)` puro · ignora ids no existentes y sequence_order inválidos. `inferFlowOrder({roles, transactions, projectName, projectId, preferredEngine})` async · llama `Orchestrator.callLLM` con responseFormat='json_object' · respeta toggles de pruning + walletCharge cuando hay projectId. UI: botón "🤖 Inferir orden IA" en topbar · loading "🧠 Pensando…" · modal de revisión con tabla ordenada (#·phase·from→to·deliverable) + rationale del LLM + footer con tokens/provider/latencyMs · botones Cancelar / "✓ Aplicar y guardar" (solo aplica al state · pulsar "💾 Guardar" del topbar persiste). Tests · 14 asserts puros adicionales. | ✅ verde |
 | **H_ANIM_001 sprint D** | **BPMN 2.0 subset + Sankey + service blueprint** — vistas alternativas más complejas. BPMN con gateways/eventos/sub-procesos. Sankey con anchura de aristas según volumen (necesita campo `volume` opcional en transactions · bind a ledger entries). Service blueprint con "line of visibility" separando frontstage/backstage. Pensado para clientes que ya usan Bizagi/Camunda o consultoría BPM. Coste alto · requiere bibliotecas nuevas (sankey via d3-sankey · BPMN via bpmn-js). En cola · cuando MAT-001 fase 1 esté lista para no duplicar trabajo de TS migration. | 🟡 |
+| **UX-NAV-002 sprint A** | **Topbar agrupada por categorías · 5 cats + dropdowns** — input @alvaro 2026-04-30: la topbar tenía 13 botones planos · saturada. Sprint A entregado: catálogo `NAV_CATEGORIES` Object.freeze de 5 grupos canónicos (🏠 Inicio · ⚙ Operaciones · 📚 Conocimiento · 🛒 Mercado & ROI · 👤 Cuenta) · cada `NAV_DESTINATIONS` lleva ahora `category`. `groupNavByCategory({active, projectId})` puro · devuelve los grupos visibles según contexto. `renderNavGroupedHtml({active, projectId, className, activeClass, groupClass, menuClass})` · home y categorías con 1 link como anchor directo · resto como botón + `<div role="menu" hidden>` con aria-haspopup. `bindNavGroupDropdowns(rootEl)` activa toggle on click · cierra al click fuera + Escape. `ensureNavGroupStyle()` inyecta CSS único en `<head>` (idempotente). Router llama ambos automáticamente tras cada render → las 16 vistas migran transparentemente de `renderNavLinksHtml` a `renderNavGroupedHtml` sin tocar cada una. Tests · 33 asserts puros (estructura HTML · agrupación por contexto · home directo · operations sin proj=2 · con proj=4 · aria attrs · exports). | ✅ verde |
+| **UX-NAV-002 sprint B** | **Sidebar lateral colapsable + búsqueda Cmd+K** — sprint pendiente · evolución del sprint A: barra lateral con icon-only por defecto · expand on hover · búsqueda global Cmd+K (KM-001 sprint D backlog) integrada con autocompletado de los 13 destinos + nodos del KB recientes. Decisión tras feedback de @alvaro sobre el sprint A. | 🟡 |
+| **MAT-002** | **Matriu Incoopadora · análisis del modelo + integración SOS como sistema operativo** — input @alvaro 2026-04-30 con Matriu_Landing_standalone.html · análisis completo de la propuesta cooperativa en producción. Ver bloque dedicado abajo. Conexión: SOS V11 es el OS operativo de la Cohort 0 (24/100 plazas) · cada place fundacional usa el mapa de valor + kanban + walletes prepagos para aprender el método y aplicarlo a su propio proyecto. Sub-historias: MAT-002-A · plantilla "proyecto SOS Matriu" pre-configurada con SOC + SOPs específicos · MAT-002-B · UI alineada con el branding Matriu (Instrument Serif + Inter Tight + paleta `#f1ebde`/`#1a1f1a` de la landing). | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
 | H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |
 | H9.x | Skills + CoPs online (matchmaking, validación SOPs por comunidad) | 🟡 |
@@ -743,6 +746,117 @@ operador cuando una folksonomía se vuelve suficientemente densa.
 El proyecto es una **carpeta viva** que tiene su propia
 constitución, contabilidad, mercado y vía de exit · todo accesible
 desde un dashboard único.
+
+---
+
+## MAT-002 · Matriu Incoopadora · modelo operativo y análisis (Matriu_Landing.html · @alvaro 2026-04-30)
+
+> Tesis: SOS V11 ya es el **sistema operativo** que ejecuta el modelo
+> de la Matriu Incoopadora. El landing ya está en producción · Cohort 0
+> abierta con 24/100 plazas. Esto cambia la prioridad de lo abstracto
+> a lo concreto: SOS pasa de ser "kernel" a ser **herramienta práctica
+> de aprendizaje y creación** dentro de la cohort.
+
+### Resumen del modelo Matriu (extraído del landing)
+
+**Misión**: incubadora cooperativa que reparte valor en tiempo real ·
+"Equity, collita, accés, drets d'ús · tot el que aportes es converteix
+en participacions automàtiques i auditables".
+
+**Cohort 0 fundacional**: 100 plazas · 24 ya dentro · 76 disponibles ·
+"se cierran cuando lleguen · sin extensiones".
+
+**Multiplicador fundacional ×1.5 de por vida** sobre cada repartiment
+del proyecto del fundador y sobre la propia Matriu (no es descuento ·
+es derecho estructural).
+
+### Tokenomic · Fair Fractal (4 reglas inmutables)
+
+| # | Regla | Significado |
+|---|---|---|
+| 01 | **Fair** | Cada aportación tiene un precio acordado ex-ante · nunca renegociado después · vale lo que valía cuando se aportó |
+| 02 | **Fractal** | Misma estructura para un huerto comunitario o una empresa de software · proyectos pueden ser propietarios de otros proyectos (composable) |
+| 03 | **Escalable** | Local-first → permaweb (Arweave) → blockchain (Gnosis) · funciona offline · consolida con red |
+| 04 | **Automàtic** | Smart contracts asignan recompensas sin reunión, sin mediadores · governanza vota la regla, no cada caso |
+
+### Value Mapping Engine · 4 tipos de valor que el sistema reconoce
+
+1. **Producto físico** · cestas hortícolas · energía solar comunitaria · productos coops productoras → drets recurrents lligats a temporada (ej: "3 cistelles/mes durant 24 mesos")
+2. **Equity composable** · slicing pie con shares dinámicas que se reajustan al ritmo del proyecto · convertible a equity legal en exit (ej: "12 SHARES · 0.7% si ronda")
+3. **Drets d'ús i accés** · espacios, herramientas, software, talleres, lab compartido · acumulables y transferibles (ej: "1 seient cohort 1 + lab CNC")
+4. **Crèdits & reputació** · plataforma para IA, attestations, certificacions · reputación de hat (TW/TUC/TI/TF) que nunca expira ni se vende (ej: "800 crèdits + +1 hat TF")
+
+### Ejemplo en vivo del feed (extracto del landing)
+
+```
+3 entrades aquesta hora · block 8.241k
+
+JT  Jordi T.   pagès    120 kg verdura · setmana 4   → Hortet de la Vall    +3 CISTL
+NB  Núria B.   dev      Smart contract Pact v2       → Bici-Repara          +12 EQUITY
+AR  Aitana R.  invest.  Capital · 2.500 EURe         → Llavor Digital       +1 SEAT
+ML  Marc L.    facilit. Sessió CoP · 3h              → Cuidem-nos Coop      +45 TW
+LP  Laia P.    comm     EU funding ronda 3           → Matriu (FICE)        +800 SHARES
+```
+
+### Exit model (4 pasos)
+
+1. **Trigger** · oferta compra · ventana liquidación anual · disolución · traspaso (set en la ronda)
+2. **Snapshot** · congela todas las posiciones de slicing pie en ese block · queda en Arweave
+3. **Cálculo** · contrato aplica fórmula a cada posición · cash · tokens swappables · drets futurs (fórmula pública)
+4. **Liquidación** · diners als wallets · drets transferits · reputació mantinguda (<24h · sin cola)
+
+Garantías:
+- El fundador NO decide quién sale · el algoritmo pre-aprobado sí
+- No hay "ronda muerta" · si no cumple métricas, ventana anual obligatoria
+- Auditable on-chain por cualquiera
+
+### Cohort 0 · paquete fundacional (los 6 perks)
+
+1. ✓ Multiplicador ×1.5 fundacional de por vida sobre cada repartiment del proyecto
+2. ✓ Hat TF + ECO de governanza · vot ponderat a totes les rondes FICE futures
+3. ✓ 2.000 crèdits de plataforma · IA · attestations · mints · auditoria
+4. ✓ Cohort intensiva 10 setmanes · Mètode SOS + IA + facilitació humana
+5. ✓ Llinatge visible a la cadena · el teu nom queda als orígens fundacionals
+6. ✓ Accés permanent a CoPs · sense renovació
+
+### Identidad visual de Matriu (a respetar en MAT-002-B)
+
+- Tipografías · Instrument Serif (display, italic) + Inter Tight (UI, monospace para datos)
+- Paleta · `#f1ebde` (fondo crudo) · `#1a1f1a` (verde oscuro casi negro · CTAs primarios)
+- Footer · "Matriu Incoopadora cooperativa · Barcelona, ES · local-first · permaweb · gnosis"
+- Tono · catalán nativo + términos económicos en mayúsculas (`SHARES`, `EQUITY`, `CISTL`, `TW`, `SEAT`)
+
+### Cómo SOS V11 ejecuta el modelo Matriu (mapeo concreto)
+
+| Pieza Matriu | SOS V11 (lo que ya tenemos) | Gap pendiente |
+|---|---|---|
+| Value Mapping Engine | ValueMapView (`/map`) + Kanban (`/kanban`) + Ledger (parcial) | sub-tipos de valor (físico/equity/drets/crèdits) en deliverable de transactions |
+| Slicing pie dinámico | computeSaving + walletService (consume/topup) | falta `share_value` y reajuste dinámico tras cada movement |
+| Hats TW/TUC/TI/TF | identityService (sprint A) + AUTH-001 sprint B (wallet binding) | falta MAT-001 fase 1 con SBT real (ERC-1155) |
+| FICE rondes | (pendiente) | nueva vista `/fice` · escrutinio quadratic voting · gate de MAT-001 |
+| Pacte signat | (pendiente) | Pact.sol en Gnosis · gate de MAT-001 fase 4 |
+| Crèdits plataforma | walletService balanceEur | rebrand "crèdits" + 1 EURe = 1 crèdit |
+| Cohort intensiva 10 sem | savingsService + /efficiency + /savings | plantilla "proyecto SOS Matriu" pre-configurada |
+| Llinatge fundacional | (pendiente) | nodo `type='founder_seat'` con multiplicador ×1.5 visible en ledger |
+| CoPs permanentes | smart_folders del KM-001 | falta export/import de folders entre miembros |
+
+### Sub-historias propuestas dentro de MAT-002
+
+- **MAT-002-A** · plantilla "proyecto SOS Matriu Cohort 0" preconfigurada · al crear cliente con sector "Q · Educación" + descripción "miembro Cohort 0 Matriu", auto-genera SOC matriu-tokenomic + SOPs específicos del método (10 semanas → 10 SOPs por rol) · botón en Dashboard "Soy Cohort 0 Matriu" que clona la plantilla.
+- **MAT-002-B** · skin/branding Matriu para los miembros de la cohort · tema CSS con `--mat-bg:#f1ebde` `--mat-fg:#1a1f1a` · tipografías Instrument Serif + Inter Tight (loadeadas vía CDN o self-host) · toggle en `/settings → Aspecto` para alternar entre SOS estándar (oscuro) y Matriu (claro).
+- **MAT-002-C** · 4 sub-tipos de `transaction.deliverable_kind` para reflejar el Value Mapping Engine · `producto-fisico` · `equity-composable` · `drets-us` · `credits-reputacio` · cada uno con su icono y color · stats agregadas en `/savings` y `/wallet`.
+- **MAT-002-D** · multiplicador ×1.5 fundacional aplicado en `walletService.computeChargeFromTelemetry` cuando el operador tiene tag `cohort:0` · descuento estructural permanente.
+- **MAT-002-E** · vista `/fice?project=` con quadratic voting placeholder · UI sin contratos reales (espera MAT-001 fase 4 con FICE.sol).
+
+### Conexión con MAT-001 fase 1+
+
+- MAT-001 sigue siendo el **proyecto paralelo a TypeScript+React+Vite** · pero MAT-002 es el **uso del SOS actual** para acompañar la cohort 0 mientras tanto.
+- Cuando MAT-001 fase 1 entregue WalletConnect + SBT identidad real, MAT-002 actualizará el binding manual del wallet con firma EIP-191.
+- Cuando MAT-001 fase 4 entregue Pact.sol y FICE.sol on-chain, las vistas `/fice` y los pactos del project hub usarán contratos reales en vez de placeholders.
+
+### Estado actual
+
+🟡 **No iniciado.** Anotado tras revisión del Matriu_Landing_standalone.html (@alvaro 2026-04-30). Posible primer sprint MAT-002-A en Ola 16+ tras consolidar UX-NAV-002.
 
 ---
 

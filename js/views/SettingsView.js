@@ -59,7 +59,7 @@ export default class SettingsView {
             <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;margin-bottom:var(--space-4);">
                 <a href="/" data-link class="sv-back" style="margin-bottom:0;">← Home</a>
                 <span style="color:var(--text-muted);">·</span>
-                ${renderNavLinksHtml({ active: 'settings', className: 'sv-back', activeClass: '' })}
+                ${renderNavGroupedHtml({ active: 'settings', className: 'sv-back', activeClass: '' })}
             </div>
             <h1>Settings <span>·</span> Vault</h1>
             <p style="color:var(--text-muted);margin-bottom:var(--space-8);">API Keys · AI Engine · IndexedDB (zero localStorage)</p>
