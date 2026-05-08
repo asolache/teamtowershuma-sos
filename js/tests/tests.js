@@ -2355,6 +2355,93 @@ async function testFlowAnimationService() {
     assert(applyOrderToTransactions(txOrd, null).length === txOrd.length, 'null ordered → mismo array');
 }
 
+// ─── MAT-002-A · matriuTemplate puro ────────────────────────────
+async function testMatriuTemplate() {
+    const mod = await import('../core/matriuTemplate.js?v=' + Date.now());
+    const {
+        MATRIU_COHORT_0, MATRIU_PERKS, MATRIU_FAIR_FRACTAL_RULES,
+        MATRIU_VALUE_KINDS, buildMatriuCohortProject,
+    } = mod;
+
+    // Constantes frozen
+    assert(Object.isFrozen(MATRIU_COHORT_0),                              'MATRIU_COHORT_0 frozen');
+    assert(MATRIU_COHORT_0.cohort === 0 && MATRIU_COHORT_0.capacity === 100, 'cohort=0 · capacity=100');
+    assert(MATRIU_COHORT_0.multiplier === 1.5,                            'multiplier ×1.5');
+    assert(MATRIU_COHORT_0.initialCredits === 2000,                       '2.000 crèdits');
+    assert(MATRIU_COHORT_0.cohortWeeks === 10,                            '10 setmanes');
+    assert(MATRIU_COHORT_0.sectorTT === 'Q',                              'sector Q · educación');
+
+    assert(Object.isFrozen(MATRIU_PERKS) && MATRIU_PERKS.length === 6,     '6 perks frozen');
+    ['multiplicador','hat-tf-eco','credits','cohort-10sem','llinatge','cops-permanents']
+        .forEach(p => assert(MATRIU_PERKS.find(x => x.id === p),           'perk ' + p));
+
+    assert(Object.isFrozen(MATRIU_FAIR_FRACTAL_RULES) && MATRIU_FAIR_FRACTAL_RULES.length === 4, '4 reglas FF');
+    ['fair','fractal','escalable','automatic']
+        .forEach(r => assert(MATRIU_FAIR_FRACTAL_RULES.find(x => x.id === r), 'regla ' + r));
+
+    assert(Object.isFrozen(MATRIU_VALUE_KINDS) && MATRIU_VALUE_KINDS.length === 4, '4 value kinds');
+    ['producte-fisic','equity-composable','drets-us','credits-reputacio']
+        .forEach(k => assert(MATRIU_VALUE_KINDS.find(x => x.id === k),     'value ' + k));
+
+    // buildMatriuCohortProject · validaciones
+    let threwName = false;
+    try { buildMatriuCohortProject({ projectIdea: 'X' }); } catch(_) { threwName = true; }
+    assert(threwName,                                                      'sin operatorName lanza');
+
+    let threwIdea = false;
+    try { buildMatriuCohortProject({ operatorName: 'Alvaro' }); } catch(_) { threwIdea = true; }
+    assert(threwIdea,                                                      'sin projectIdea lanza');
+
+    // Build completo
+    const out = buildMatriuCohortProject({
+        operatorName:   'Alvaro Solache',
+        operatorHandle: '@alvaro',
+        projectIdea:    'Hortet de la Vall · cooperativa de productores',
+    });
+    assert(out.project && out.project.id.startsWith('proj-matriu-'),       'project id con prefix matriu');
+    assert(out.project.sector_id === 'Q',                                  'sector Q');
+    assert(out.project.matriuCohort === 0 && out.project.matriuMultiplier === 1.5, 'flags Matriu en project');
+    assert(out.project.nombre.includes('Alvaro Solache') && out.project.nombre.includes('Cohort 0'), 'nombre con operator + Cohort 0');
+
+    // kbNodes · 1 SOC + 6 SOPs + 1 wallet = 8
+    assert(Array.isArray(out.kbNodes) && out.kbNodes.length === 8,         '8 nodos KB (1 SOC + 6 SOPs + 1 wallet)');
+    assert(out.kbNodes[0].type === 'soc',                                  'primer nodo · SOC');
+    assert(out.kbNodes[0].content.slug === 'matriu-tokenomic',             'SOC slug matriu-tokenomic');
+    assert(out.kbNodes[0].content.rules.length === 4,                      'SOC tiene 4 reglas');
+
+    const sopNodes = out.kbNodes.filter(n => n.type === 'sop');
+    assert(sopNodes.length === 6,                                          '6 SOPs');
+    sopNodes.forEach(s => {
+        assert(s.content.kind === 'matriu-perk-sop',                       s.id + ' · kind matriu-perk-sop');
+        assert(s.content.soc_ref === out.kbNodes[0].id,                    s.id + ' · soc_ref al SOC del proyecto');
+        assert(s.content.tags.some(t => t === 'cohort:0'),                 s.id + ' · tag cohort:0');
+        assert(s.content.tags.some(t => t === 'project:' + out.project.id), s.id + ' · tag project:{id}');
+    });
+
+    // El SOP de cohort-10sem tiene 10 steps · el resto 3
+    const cohortSop = sopNodes.find(s => s.id.includes('cohort-10sem'));
+    assert(cohortSop && cohortSop.content.steps.length === 10,             'SOP cohort-10sem · 10 steps semanales');
+    const otroSop = sopNodes.find(s => s.id.includes('credits'));
+    assert(otroSop && otroSop.content.steps.length === 3,                  'SOP credits · 3 steps');
+
+    // Wallet · saldo 2000 + movement seed
+    const wallet = out.kbNodes.find(n => n.type === 'wallet');
+    assert(wallet && wallet.content.balanceEur === 2000,                   'wallet · 2.000€ inicial');
+    assert(wallet.content.movements.length === 1,                          'wallet · 1 movement seed');
+    assert(wallet.content.movements[0].kind === 'topup',                   'movement kind topup');
+    assert(wallet.content.movements[0].source === 'matriu-cohort-0',       'movement source · matriu-cohort-0');
+    assert(wallet.content.movements[0].balanceAfter === 2000,              'balanceAfter · 2000');
+
+    // navigateTo
+    assert(out.navigateTo === '/project/' + encodeURIComponent(out.project.id), 'navigateTo · /project/{id}');
+
+    // Tags consistentes
+    out.kbNodes.forEach(n => {
+        const tags = (n.content?.tags || []);
+        assert(tags.some(t => t.startsWith('project:')),                    n.id + ' · tag project:');
+    });
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -2386,7 +2473,8 @@ const SUITE = [
     { name: 'KM-001 sprint C · contextPruner puro',               fn: testContextPruner },
     { name: 'MKT-001 sprint C1 · walletService puro',             fn: testWalletService },
     { name: 'MKT-001 sprint D · savingsService puro',             fn: testSavingsService },
-    { name: 'H_ANIM_001 sprint A · flowAnimationService puro',    fn: testFlowAnimationService }
+    { name: 'H_ANIM_001 sprint A · flowAnimationService puro',    fn: testFlowAnimationService },
+    { name: 'MAT-002-A · matriuTemplate puro',                    fn: testMatriuTemplate }
 ];
 
 export async function runTests() {

@@ -471,6 +471,7 @@ export default class DashboardView {
                     <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
                     <input type="file" id="dashImportFile" accept=".json,application/json" style="display:none;">
                     <button class="dash-btn dash-btn-primary" id="dashBtnNew">＋ New Project</button>
+                    <button class="dash-btn" id="dashBtnMatriu" title="MAT-002-A · plantilla preconfigurada Matriu Cohort 0 (SOC + 6 SOPs perks + 2.000 crèdits seed)" style="background:rgba(241,235,222,0.08);color:#f1ebde;border-color:rgba(241,235,222,0.4);">🎓 Cohort 0 Matriu</button>
                     <div id="dashLangSelector"></div>
                 </div>
             </div>
@@ -846,6 +847,9 @@ export default class DashboardView {
         document.getElementById('dashBtnNew')?.addEventListener('click', openNewProjectModal);
         // UX-DASH-001 · "Paso 1" del onboarding abre el mismo wizard
         document.getElementById('dashStep1')?.addEventListener('click', openNewProjectModal);
+        // MAT-002-A · botón Cohort 0 Matriu abre wizard plantilla preconfigurada
+        const dashView = this;
+        document.getElementById('dashBtnMatriu')?.addEventListener('click', () => dashView._openMatriuCohortModal());
 
         document.getElementById('dashBtnKB')?.addEventListener('click', function() {
             const main = document.getElementById('dashMain');
@@ -1378,5 +1382,100 @@ export default class DashboardView {
 
         svg += '</svg>';
         return '<div class="dash-kb-mini-map">' + svg + '</div>';
+    }
+
+    // ── MAT-002-A · plantilla Matriu Cohort 0 ──────────────────────────────
+    async _openMatriuCohortModal() {
+        // Lazy import del builder · sólo se carga al pulsar el botón
+        const { buildMatriuCohortProject, MATRIU_COHORT_0, MATRIU_PERKS } =
+            await import('../core/matriuTemplate.js?v=' + Date.now());
+
+        let root = document.getElementById('dashMatriuRoot');
+        if (!root) {
+            root = document.createElement('div');
+            root.id = 'dashMatriuRoot';
+            document.body.appendChild(root);
+        }
+        const close = () => { root.innerHTML = ''; };
+
+        const perksHtml = MATRIU_PERKS.map((p, i) => `
+            <div style="display:flex;gap:0.5rem;align-items:center;padding:5px 0;font-size:0.8rem;color:#1a1f1a;">
+                <span style="color:#22c55e;font-weight:700;">${p.icon}</span>
+                <span><strong>${p.label}</strong> · <span style="color:#5a5a5a;">${p.description}</span></span>
+                <span style="margin-left:auto;color:#888;font-family:monospace;font-size:0.7rem;">${String(i + 1).padStart(2, '0')}</span>
+            </div>
+        `).join('');
+
+        root.innerHTML = `
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,0.78);display:flex;align-items:flex-start;justify-content:center;z-index:1000;padding:2rem 1rem;overflow-y:auto;font-family:Georgia,'Instrument Serif',serif;" id="dashMatriuBg">
+                <div style="background:#f1ebde;border-radius:14px;padding:1.8rem;width:100%;max-width:680px;color:#1a1f1a;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+                    <div style="font-family:Georgia,'Instrument Serif',serif;font-style:italic;font-size:0.85rem;color:#5a5a5a;text-transform:uppercase;letter-spacing:0.1em;">cohort 0 · 24/100 places</div>
+                    <h2 style="margin:0.3rem 0 0.6rem 0;color:#1a1f1a;font-family:Georgia,'Instrument Serif',serif;font-size:1.7rem;font-style:italic;font-weight:400;">Sigues part del nucli fundacional</h2>
+                    <p style="color:#3a3a3a;font-size:0.92rem;line-height:1.5;margin:0 0 1rem 0;">
+                        Aquesta plantilla preconfigurada genera al teu KB un projecte complet alineat amb el model Matriu:
+                        1 SOC <code>matriu-tokenomic</code> amb les 4 regles Fair Fractal, ${MATRIU_PERKS.length} SOPs (un per cada perk fundacional)
+                        i un wallet inicial amb <strong>${MATRIU_COHORT_0.initialCredits} crèdits</strong> de plataforma.
+                    </p>
+
+                    <div style="background:rgba(26,31,26,0.04);border-left:3px solid #1a1f1a;border-radius:6px;padding:0.7rem 1rem;margin-bottom:1.2rem;">
+                        ${perksHtml}
+                    </div>
+
+                    <label style="display:block;color:#5a5a5a;font-size:0.78rem;margin-top:0.7rem;margin-bottom:0.25rem;text-transform:uppercase;letter-spacing:0.05em;font-family:monospace;">El teu nom *</label>
+                    <input id="matName" type="text" placeholder="ex. Alvaro Solache"
+                        style="width:100%;box-sizing:border-box;background:#fff;color:#1a1f1a;border:1px solid #d4cdb8;border-radius:6px;padding:0.6rem;font-size:0.95rem;font-family:inherit;">
+
+                    <label style="display:block;color:#5a5a5a;font-size:0.78rem;margin-top:0.7rem;margin-bottom:0.25rem;text-transform:uppercase;letter-spacing:0.05em;font-family:monospace;">Handle (opcional)</label>
+                    <input id="matHandle" type="text" placeholder="@alvaro"
+                        style="width:100%;box-sizing:border-box;background:#fff;color:#1a1f1a;border:1px solid #d4cdb8;border-radius:6px;padding:0.6rem;font-size:0.95rem;font-family:inherit;">
+
+                    <label style="display:block;color:#5a5a5a;font-size:0.78rem;margin-top:0.7rem;margin-bottom:0.25rem;text-transform:uppercase;letter-spacing:0.05em;font-family:monospace;">La teva idea de projecte *</label>
+                    <textarea id="matIdea" placeholder="ex. Hortet de la Vall · cooperativa de productores ecològiques al Vallès"
+                        style="width:100%;box-sizing:border-box;background:#fff;color:#1a1f1a;border:1px solid #d4cdb8;border-radius:6px;padding:0.6rem;font-size:0.92rem;font-family:inherit;min-height:80px;resize:vertical;"></textarea>
+
+                    <div id="matErr" style="color:#c2392f;font-size:0.78rem;margin-top:0.6rem;display:none;"></div>
+
+                    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1.2rem;flex-wrap:wrap;">
+                        <button id="matCancel" style="background:transparent;border:1px solid #d4cdb8;color:#5a5a5a;padding:0.6rem 1rem;border-radius:6px;cursor:pointer;font-family:inherit;font-size:0.9rem;">Cancel·lar</button>
+                        <button id="matCreate" style="background:#1a1f1a;border:1px solid #1a1f1a;color:#f1ebde;padding:0.6rem 1.2rem;border-radius:6px;cursor:pointer;font-family:inherit;font-size:0.9rem;font-weight:700;">Reservar seient · 0 € →</button>
+                    </div>
+                    <small style="display:block;margin-top:0.6rem;color:#888;font-family:monospace;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">No requereix KYC ni wallet · escrow de llinatge fins a la cohort</small>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('matCancel')?.addEventListener('click', close);
+        document.getElementById('dashMatriuBg')?.addEventListener('click', e => { if (e.target.id === 'dashMatriuBg') close(); });
+
+        document.getElementById('matCreate')?.addEventListener('click', async () => {
+            const name   = document.getElementById('matName').value.trim();
+            const handle = document.getElementById('matHandle').value.trim();
+            const idea   = document.getElementById('matIdea').value.trim();
+            const errEl  = document.getElementById('matErr');
+
+            if (!name) { errEl.textContent = '✗ El teu nom és obligatori'; errEl.style.display = 'block'; return; }
+            if (!idea) { errEl.textContent = '✗ Descriu la teva idea de projecte'; errEl.style.display = 'block'; return; }
+            errEl.style.display = 'none';
+
+            try {
+                const out = buildMatriuCohortProject({
+                    operatorName:   name,
+                    operatorHandle: handle,
+                    projectIdea:    idea,
+                });
+                // 1) Crear proyecto en el store
+                await store.dispatch({ type: 'CREATE_PROJECT', payload: out.project });
+                // 2) Persistir nodos KB (SOC + 6 SOPs + wallet)
+                for (const node of out.kbNodes) {
+                    await store.dispatch({ type: 'KB_UPSERT', payload: { node } });
+                }
+                close();
+                if (window.navigateTo) window.navigateTo(out.navigateTo);
+            } catch (err) {
+                console.error('[MAT-002-A] Error creando plantilla Matriu:', err);
+                errEl.textContent = '✗ ' + err.message;
+                errEl.style.display = 'block';
+            }
+        });
     }
 }
