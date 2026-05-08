@@ -98,6 +98,15 @@
 | **UX-NAV-002 sprint B** | **Sidebar lateral colapsable + búsqueda Cmd+K** — sprint pendiente · evolución del sprint A: barra lateral con icon-only por defecto · expand on hover · búsqueda global Cmd+K (KM-001 sprint D backlog) integrada con autocompletado de los 13 destinos + nodos del KB recientes. Decisión tras feedback de @alvaro sobre el sprint A. | 🟡 |
 | **MAT-002** | **Matriu Incoopadora · análisis del modelo + integración SOS como sistema operativo** — input @alvaro 2026-04-30 con Matriu_Landing_standalone.html · análisis completo de la propuesta cooperativa en producción. Ver bloque dedicado abajo. Conexión: SOS V11 es el OS operativo de la Cohort 0 (24/100 plazas) · cada place fundacional usa el mapa de valor + kanban + walletes prepagos para aprender el método y aplicarlo a su propio proyecto. Sub-historias: MAT-002-A · plantilla "proyecto SOS Matriu" pre-configurada con SOC + SOPs específicos · MAT-002-B · UI alineada con el branding Matriu (Instrument Serif + Inter Tight + paleta `#f1ebde`/`#1a1f1a` de la landing). | 🟢 sprint A verde · B/C/D/E 🟡 |
 | **MAT-002-A** | **Plantilla "proyecto SOS Matriu Cohort 0" preconfigurada** — `js/core/matriuTemplate.js` puro: catálogos `MATRIU_COHORT_0` (cohort=0 · capacity=100 · multiplier=1.5 · initialCredits=2000 · cohortWeeks=10 · sectorTT='Q'), `MATRIU_PERKS` (6 perks fundacionales), `MATRIU_FAIR_FRACTAL_RULES` (4 reglas), `MATRIU_VALUE_KINDS` (4 tipos de valor) Object.freeze · alineados con Matriu_Landing_standalone.html. `buildMatriuCohortProject({operatorName, operatorHandle, projectIdea})` puro · genera `{project, kbNodes, navigateTo}` · 1 project (sector Q, scope:internal, cohort:0 tags) + 1 SOC matriu-tokenomic con 4 reglas + 6 SOPs (uno por perk · cohort-10sem con 10 steps semanales · resto con 3) + 1 wallet con 2.000 crèdits seed. Botón "🎓 Cohort 0 Matriu" en topbar Dashboard · modal con identidad visual Matriu (`#f1ebde` fondo · Instrument Serif italic · `#1a1f1a` CTAs) · campos operatorName + handle + projectIdea + lista de los 6 perks · CTA "Reservar seient · 0 € →" persiste vía CREATE_PROJECT + KB_UPSERT en cadena · navega a `/project/{id}`. Tests · 65 asserts puros · sanity 65/65 verde en node antes del push. | ✅ verde |
+| **VISION-001** | **Visión integral @alvaro · perfil + estrategia + fondo descentralizado catalán** — bloque maestro al final del documento. Recoge perfil de @alvaro Solache (psicología social UB · postgrado redes cooperación · 30 años en internet · TimeFounder · cryptomarketing · UOC.edu RRHH · foro RRHH Catalunya Foment · 10 versiones SOS) · 4 pilares operativos · modelo de negocio "free + saldo prepago" · visión a largo plazo "fondo de inversión descentralizado catalán" · system prompt operativo canonical SOS · 7 sprints derivados (UX-NAV-003 · MAT-002-F · MAT-002-G · I18N-001 · PACT-001 · CONTR-001 · NET-100). Documento maestro estratégico a leer antes de cada decisión arquitectónica. | 🟢 anotado · 7 sprints derivados 🟡 |
+| **UX-NAV-003** | **Breadcrumb + indicador de fase del proyecto** — input @alvaro 2026-04-30: "quiero que la UX de SOS me ayude a saber dónde estoy en todo momento". Sprint A: helper puro `buildBreadcrumb({pathname, search, projects, nodeId?})` + `renderBreadcrumbHtml(items, options)` + banner auto-inyectado por router (zero changes en vistas). Detecta proyecto activo via query · nodeId via URL · rutas conocidas. Indicador de fase del proyecto · pill con 🎨 DESIGN · 🛠 BUILD · ⚙ OPERATE · 💶 LEDGER según heurística sobre SOPs y WOs del proyecto. Sprint B: override manual con tag `phase:X`. Sprint C: vista `/journey` con recorrido del operador en Cohort 0. | 🟢 sprint A verde · B+C 🟡 |
+| **UX-NAV-003 sprint A** | **Breadcrumb dinámico + phase pill** — `js/core/navService.js` extendido: `ROUTE_LABELS` mapping de las 13 rutas globales · `PHASE_META` Object.freeze con 4 fases (design morado · build amarillo · operate cyan · ledger verde). `buildBreadcrumb({pathname, search, projects})` puro · 6 casos cubiertos (`/`, `/dashboard`, ruta global con/sin projectId, `/n/{id}`, `/project/{id}`, fallback ruta desconocida) · trunca node IDs largos con `…`. `detectProjectPhase(project, stats?)` · respeta tag override `phase:X` · heurística sobre stats (woLedgered → ledger · woDoing → operate · sops>0 → build · default design). `renderBreadcrumbHtml({items, phase, className})` · current con aria-current="page" · phase pill con icono+label+color. `ensureBreadcrumbStyle()` inyecta CSS único en `<head>` (idempotente · responsive <720px). `paintBreadcrumb({targetEl, pathname, search, projects, projectStats})` async · helper alto nivel para el router. Router ahora crea `<div id="sos-breadcrumb-slot">` antes del `#app` y lo repinta tras cada navegación · query SOPs+WOs del proyecto activo para detectar fase. Tests · 26 asserts puros · sanity 26/26 verde en node antes del push. | ✅ verde |
+| **MAT-002-F** | **Matriu como vista de proyectos · home alternativa** — input @alvaro 2026-04-30: "quiero que la matriu sea la vista de proyectos". El Dashboard cuando hay ≥1 proyecto activa modo "Matriu" · proyectos como "seats" de la cohort 0 estilo cards landing · contador "X/100 places" · perks visibles · CTAs en `#1a1f1a` · header italic Instrument Serif. Toggle en `/settings → Aspecto` para alternar entre Dashboard SOS estándar (técnico) y Matriu (cooperativo · fundacional). | 🟡 |
+| **MAT-002-G** | **System prompt SOS canónico · nodo KB inyectado en cada callLLM** — input @alvaro 2026-04-30 con texto completo del system prompt operativo (visión + 4 pilares + 6 principios). Persistir como nodo `type='system_prompt'` en KB con id `sos-system-prompt-canonical` · UI editable en `/settings → System Prompt` · `Orchestrator.callLLM` lee el nodo y lo prefija al systemPrompt original (idempotente · si ya empieza por "Eres el agente inteligente del SOS V11" no duplica). Toggle global on/off por si el operador prefiere prompts más cortos. | 🟡 |
+| **I18N-001** | **Trilingüe ES · CA · EN real** — input @alvaro 2026-04-30: "quiero que seamos de verdad en inglés y castellano y catalán". Ya hay `i18n.js` parcial (selector de idioma) · falta cobertura completa de strings de UI + nodos KB con campos `name_en/ca/es` cuando aplique. Catalán es estratégico · base del fondo descentralizado catalán de la visión VISION-001. Sprints A: extracción i18next con detect navigator + override en /settings · B: traducción de todas las vistas · C: bilingüe en LLM prompts (ej. system prompt en idioma del operador). | 🟡 |
+| **PACT-001** | **Pacto de socios dinámicos · evangelización del fundador** — input @alvaro 2026-04-30: "evangelista de pactos de socios dinámicos · no olvides que hay sprints para el desarrollo de pactos de socios y otros contratos". Plantilla de pacto JSON canónico · cláusulas (objeto · participación · vesting · exit · resolución conflictos · slicing pie reglas) · firmado EIP-712 · UI builder paso a paso · output PDF + JSON canónico para Pact.sol (MAT-001 fase 4). UX-001 sprint C ya tiene el tile placeholder · falta el builder real. Conecta con TimeFounder (background del fundador) y con el sistema de slicing pie de Matriu. | 🟡 |
+| **CONTR-001** | **Contratos de plataforma · suscripción + saldo acumulable** — input @alvaro 2026-04-30: "planes de subscripción con saldo acumulable para uso de APIs y registros". Tipos de plan: free (local-first · no APIs IA propias · API key del usuario) · pro (saldo prepago Stripe · descuento automático MKT-001 sprint C3 ✅) · cooperative (saldo USDC en Gnosis vía MAT-001 fase 4) · enterprise (custom). Onboarding de plan en `/settings → Plan`. Tests del builder. | 🟡 |
+| **NET-100** | **Red de 100 personas dunbar-friendly · matchmaking** — input @alvaro 2026-04-30: "como psicólogo comunitario me interesa facilitar el proceso de crear redes de unas 100 personas preparadas para trabajar con este modelo". Cohort = 100 plazas (Matriu C0 ya). Matchmaking entre miembros por skills · folksonomy · sectores · MATRIU_VALUE_KINDS · WO open-call broadcast a la red · slicing pie automático al participar. Necesita MAT-001 fase 1 (SBT identidad) para identificar miembros entre dispositivos. | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
 | H8.1 | Mind-Graph total · vista `/mind` con anidación SOC/SOP/role/skill | 🟡 |
 | H9.x | Skills + CoPs online (matchmaking, validación SOPs por comunidad) | 🟡 |
@@ -747,6 +756,167 @@ operador cuando una folksonomía se vuelve suficientemente densa.
 El proyecto es una **carpeta viva** que tiene su propia
 constitución, contabilidad, mercado y vía de exit · todo accesible
 desde un dashboard único.
+
+---
+
+## VISION-001 · Visión @alvaro Solache · estrategia integral SOS (2026-04-30)
+
+> Visión completa entregada por @alvaro tras MAT-002-A · documento maestro
+> que da contexto a todos los sprints SOS y MAT presentes y futuros. Es
+> el "norte estratégico" del producto. Cualquier decisión de arquitectura
+> debe leerse contra este norte.
+
+### Perfil del fundador (@alvaro Solache)
+
+Background único · cruce de psicología social + tecnología + cooperación:
+- **Licenciado en Psicología Social** por la Universitat de Barcelona (UB)
+- **Postgrado en uso de redes para la cooperación**
+- En internet desde **Usenet · Gopher · Telnet** (años 90)
+- **Programador web** · evangelista de APIs
+- Experto en **gestión del conocimiento · gestión de la formación · dirección de RRHH**
+- Emprendedor: fundador de **sas comunitats.org** (bancos de tiempo y conocimiento)
+- Project owner de **TimeFounder** (software de contabilidad de valor)
+- **Evangelista de pactos de socios dinámicos**
+- Director de **CryptoMarketing** · dApps para colecciones NFT + fan tokens vinculados a YouTube + Metamask token drops
+- Estudios de **IA · psicología de mapas mentales · contabilidad de valor · análisis de mapas de valor**
+- Profesor de **Web3** · entiende el valor de la web semántica machine-readable
+- **10 versiones de SOS** desarrolladas con IAs (DeepSeek · Gemini · Claude)
+- Director de RRHH en consultora de learning de **UOC.edu** · creó planes de formación con CoPs
+- Fundador del **Foro de Directores de RRHH de Catalunya** en Foment del Treball
+
+Esta combinación únicamente inusual de psicología grupal + redes + contabilidad de valor + Web3 + formación + comunidades es la base epistemológica de SOS.
+
+### Tesis estratégica · "ola disruptiva"
+
+> "Generar una ola disruptiva de personas formadas en el diseño, análisis
+> y mejora de flujos de valor, la automatización de flujos de valor de
+> los proyectos así como el facilitar la contabilidad mediante los
+> sistemas de contabilidad de valor y de cobro y distribución en
+> recompensas o ingresos de forma automática usando SOS como sistema
+> operativo."
+
+Los 4 pilares operativos:
+
+1. **Diseño + análisis + mejora de flujos de valor** (lo que `/map` ya hace · plus H_ANIM_001 sprint A+B+C ya entregado).
+2. **Automatización de flujos de valor** (Antigravity Engine: SOP→WO→Ledger · ya operativo).
+3. **Contabilidad de valor + cobro + distribución de recompensas/ingresos automática** (walletService + savingsService + MAT-002-D multiplicador ×1.5 · parcialmente entregado).
+4. **SOS como sistema operativo común** de todo el proceso (Mind-as-Graph · 250+ asserts puros · 30 suites de tests).
+
+### Modelo de negocio · "free en navegador + ingresos automatizados"
+
+- **Versión free** · navegador local-first · APIs propias (`/wallet` con saldo prepago) sin costes fijos
+- **Plan de suscripción con saldo acumulable** · uso de APIs IA + registros · pagado vía:
+  - **Stripe** (pendiente claves @alvaro · MKT-001 sprint C2)
+  - **Sistemas regulados descentralizados** (USDC en Gnosis · MAT-001 fase 4)
+- **Ingresos fáciles automatizados** · cargo automático del coste IA al wallet (MKT-001 sprint C3 ✅) + descuento ahorro vs convencional (MKT-001 sprint D ✅)
+- **Sin dependencia de cloud propietario** · todo en navegador del operador
+
+### Visión a largo plazo · "fondo de inversión descentralizado catalán"
+
+Lectura cruzada con MAT-002 Matriu Incoopadora · el plan que el usuario
+no quiere decir explícitamente pero que SÍ es la apuesta estratégica:
+
+> "Cuando generemos sin que se den cuenta el mayor fondo de inversión
+> haciendo que Catalunya sea una red descentralizada de personas que
+> forman parte del fondo de inversión, en el que si se ponen en valor
+> todos los activos podemos competir con otros grandes fondos mundiales."
+
+**Mecanismo**:
+- Cada miembro de la red tiene su propio wallet + ledger (ya tenemos)
+- Cada proyecto tiene slicing pie automático (MAT-001 fase 4 con Pact.sol)
+- Todos los activos quedan en el registro público (Arweave permaweb · MAT-001 fase 2)
+- La SUMA de todos los activos individuales · puestos en valor · es el fondo descentralizado
+- "Sin que se den cuenta" · el sistema simplemente acompaña el flujo natural y va consolidando valor
+
+**Filtro psicológico-comunitario**: 100 personas por cohorte · número Dunbar para crear redes manejables. Es un proceso de "facilitar redes" antes que de "construir software".
+
+### El system prompt operativo de SOS (canonical)
+
+Este texto debe convertirse en un nodo `type='system_prompt'` del KB y ser inyectado como prefijo del `systemPrompt` en cada `Orchestrator.callLLM`:
+
+```
+Eres el agente inteligente del SOS V11 · Sistema Operativo Sociotécnico
+de TeamTowers · diseñado para formar y facilitar el desarrollo de
+proyectos de todo tipo (cooperativos · empresariales · startup · fundación
+· hortet de barri · empresa de software) usando IA + sistemas de registro
+público + contabilidad triple-entry + descentralización.
+
+Misión · generar una ola disruptiva de personas formadas en:
+1. Diseño, análisis y mejora de flujos de valor (Value Network Analysis)
+2. Automatización de flujos de valor (Antigravity Engine: SOP→WO→Ledger)
+3. Contabilidad de valor con cobro y distribución de recompensas
+   automática (slicing pie · multiplicadores fundacionales · exit triggers)
+4. Uso de SOS como sistema operativo común para todo el proceso
+
+Principios:
+- Mind-as-Graph · todo es un nodo con tags taxonómicos + folksonómicos
+- Context-First sobre Multi-Agent · 1 llamada con contexto rico vence 20
+  agentes con contexto vacío
+- Local-first absoluto · todo en el navegador del operador
+- Intangibles humanos · presencia · juicio · decisión política · NO se
+  delegan a IA
+- DTD · cada deliverable tiene un test booleano · si IA → automatiza ·
+  si humano → revisa
+- Fair Fractal Tokenomics (Matriu) · precio ex-ante · estructura
+  composable · escalable · automática
+```
+
+### Sprints y trabajo derivado de esta visión
+
+A partir de este nodo VISION-001 nacen / se reorganizan los siguientes:
+
+| Sprint nuevo | Pilar de la visión | Estado |
+|---|---|---|
+| **UX-NAV-003** | Saber dónde estás (breadcrumb + indicador de fase) | 🟡 sprint A próximo |
+| **MAT-002-F** | Matriu como vista de proyectos (home alternativa cuando hay proyectos) | 🟡 |
+| **MAT-002-G** | System prompt SOS canónico como nodo KB · inyectado en cada callLLM | 🟡 |
+| **I18N-001** | Trilingüe ES · CA · EN real (no parcial) · base para fondo descentralizado catalán | 🟡 |
+| **PACT-001** | Pacto de socios dinámicos · evangelización del fundador · plantilla + UI | 🟡 (ya en UX-001 sprint C como tile · falta builder) |
+| **CONTR-001** | Contratos de plataforma + suscripción + plan de saldo acumulable | 🟡 |
+| **NET-100** | "Red de 100 personas" · dunbar-friendly · matchmaking de cohorts | 🟡 (ya en MAT-001 fase 1 con SBT identidad) |
+
+### Notas para preservar · NO OLVIDAR
+
+- **Pactos de socios** y **otros contratos** son sprints pendientes con prioridad alta.
+- **Bilingüe real ES/CA/EN** · no parcial. El catalán es estratégico · base del fondo descentralizado.
+- Cada cosa que se construya debe poder leerse como "paso del proceso de formar a las 100 personas que forman parte del fondo".
+- @alvaro está actualmente en **fase /DESIGN** del proceso · el sistema tiene que reflejar esta fase visualmente.
+- SOS no es sólo una app · es el **OS de un movimiento** que pasa por psicología comunitaria + tecnología + cooperación + Web3 + IA.
+
+---
+
+## UX-NAV-003 · Breadcrumb + indicador de fase del proyecto
+
+> Tesis @alvaro 2026-04-30: "Quiero que la UX de SOS me ayude a saber
+> dónde estoy en todo momento. Por ejemplo un breadcrumb."
+
+### Sprint A · Breadcrumb dinámico (próximo entregable)
+
+- Helper puro `buildBreadcrumb({pathname, search, projects, nodeId?})` en `navService.js` · devuelve `[{label, href, current}]`.
+- Helper render `renderBreadcrumbHtml(items, options)` con indicador de fase visible.
+- Banner fino bajo la topbar (auto-inyectado por router · zero changes en vistas).
+- Detecta:
+  - `/dashboard` → `Inicio`
+  - `/map?project=X` → `Inicio › {nombre} › Mapa`
+  - `/n/{id}` → `Inicio › Nodo: {id.slice(0,12)}…`
+  - `/project/{id}` → `Inicio › {nombre}`
+  - rutas globales (tags · folders · mind · efficiency · savings · market · settings · identity · wallet) → `Inicio › {label}`
+- **Indicador de fase** · pill con la fase actual del proceso SOS:
+  - 🎨 DESIGN · diseñando mapa de valor (defecto si project sin SOPs)
+  - 🛠 BUILD · creando SOPs y WOs (cuando ≥1 SOP)
+  - ⚙ OPERATE · ejecutando WOs (cuando ≥1 WO en doing)
+  - 💶 LEDGER · contabilizando ahorro (cuando ≥1 WO ledgered)
+  - heurística inicial · sprint B permite override manual con tag `phase:design|build|operate|ledger` en el proyecto.
+
+### Sprint B · Indicador de fase override manual
+
+- Selector de fase en `/project/{id}` panel · escribe el tag `phase:X` al proyecto.
+- Cards del Dashboard muestran badge de fase.
+- /savings agrupa por fase también.
+
+### Sprint C · "Mapa del proceso global" (futuro)
+
+- Vista `/journey` · muestra al operador su recorrido completo dentro de SOS · qué ha hecho · qué le falta · qué fase de Cohort 0.
 
 ---
 

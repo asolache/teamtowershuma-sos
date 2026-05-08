@@ -1516,6 +1516,75 @@ async function testNavService() {
     // exports
     assert(typeof mod.ensureNavGroupStyle === 'function',                              'ensureNavGroupStyle exportada');
     assert(typeof mod.bindNavGroupDropdowns === 'function',                            'bindNavGroupDropdowns exportada');
+
+    // ── UX-NAV-003 · Breadcrumb + detectProjectPhase
+    const { buildBreadcrumb, renderBreadcrumbHtml, detectProjectPhase, PHASE_META, ensureBreadcrumbStyle } = mod;
+    assert(Object.isFrozen(PHASE_META) && PHASE_META.design && PHASE_META.ledger,      'PHASE_META frozen · 4 fases');
+
+    // /dashboard · sólo Inicio current
+    const bc1 = buildBreadcrumb({ pathname: '/dashboard' });
+    assert(bc1.length === 1 && bc1[0].current === true,                                'dashboard · sólo Inicio current');
+
+    // / vacío · igual
+    const bc2 = buildBreadcrumb({ pathname: '/' });
+    assert(bc2.length === 1 && bc2[0].current === true,                                '/ · sólo Inicio current');
+
+    // /map sin proyecto · 2 niveles
+    const bc3 = buildBreadcrumb({ pathname: '/map' });
+    assert(bc3.length === 2 && bc3[1].label.includes('Mapa') && bc3[1].current === true, '/map sin proj · 2 niveles');
+
+    // /map?project=p1 con proyecto · 3 niveles
+    const projects = [{ id: 'p1', nombre: 'Hortet de la Vall' }, { id: 'p2', nombre: 'IKEA Madrid' }];
+    const bc4 = buildBreadcrumb({ pathname: '/map', search: '?project=p1', projects });
+    assert(bc4.length === 3,                                                            '/map?project=p1 · 3 niveles');
+    assert(bc4[1].label.includes('Hortet de la Vall'),                                  'incluye nombre proyecto');
+    assert(bc4[1].href === '/project/p1',                                               'project link al hub');
+    assert(bc4[2].current === true,                                                     'último current');
+
+    // /project/p2 · 2 niveles · current
+    const bc5 = buildBreadcrumb({ pathname: '/project/p2', projects });
+    assert(bc5.length === 2 && bc5[1].label.includes('IKEA Madrid') && bc5[1].current,  '/project/{id} · 2 niveles current');
+
+    // /n/some-id · 2 niveles · trunca id largo
+    const bc6 = buildBreadcrumb({ pathname: '/n/some-very-long-id-12345' });
+    assert(bc6.length === 2 && bc6[1].label.includes('Nodo:') && bc6[1].current,        '/n/{id} · trunca');
+    assert(bc6[1].label.includes('…'),                                                   'truncamiento con ellipsis');
+
+    // ruta desconocida fallback
+    const bc7 = buildBreadcrumb({ pathname: '/wat' });
+    assert(bc7.length === 2 && bc7[1].current,                                          'ruta desconocida · fallback');
+
+    // detectProjectPhase
+    assert(detectProjectPhase(null) === null,                                            'null → null');
+    const projDesign = { id: 'p', vna_roles: [] };
+    assert(detectProjectPhase(projDesign) === 'design',                                  'project sin nada · design');
+    const projWithSops = { id: 'p' };
+    const stats1 = { sopsCount: 2, woDoing: 0, woLedgered: 0 };
+    assert(detectProjectPhase(projWithSops, stats1) === 'build',                        'sops>0 · build');
+    const stats2 = { sopsCount: 2, woDoing: 1, woLedgered: 0 };
+    assert(detectProjectPhase(projWithSops, stats2) === 'operate',                      'wo doing · operate');
+    const stats3 = { sopsCount: 2, woDoing: 0, woLedgered: 3 };
+    assert(detectProjectPhase(projWithSops, stats3) === 'ledger',                       'wo ledgered · ledger');
+    // Override manual con tag phase:X · gana sobre heurística
+    const projTagged = { id: 'p', tags: ['phase:operate'] };
+    assert(detectProjectPhase(projTagged, stats1) === 'operate',                        'tag phase:operate override sobre sops>0');
+
+    // renderBreadcrumbHtml · estructura
+    const html2 = renderBreadcrumbHtml({ items: bc4, phase: 'design' });
+    assert(typeof html2 === 'string',                                                    'render string');
+    assert(html2.includes('Hortet de la Vall'),                                          'incluye nombre proyecto');
+    assert(html2.includes('aria-current="page"'),                                        'current con aria');
+    assert(html2.includes('🎨') && html2.includes('DESIGN'),                            'phase pill con icono');
+    // Sin phase
+    const html3 = renderBreadcrumbHtml({ items: bc1, phase: null });
+    assert(!html3.includes('DESIGN') && !html3.includes('LEDGER'),                       'sin phase · sin pill');
+    // Phase inválida no rompe
+    const html4 = renderBreadcrumbHtml({ items: bc1, phase: 'fake' });
+    assert(typeof html4 === 'string',                                                    'phase inválida no rompe');
+
+    // exports
+    assert(typeof ensureBreadcrumbStyle === 'function',                                  'ensureBreadcrumbStyle exportada');
+    assert(typeof mod.paintBreadcrumb === 'function',                                    'paintBreadcrumb exportada');
 }
 
 // ─── AUTH-001 sprint A · identityService (helpers puros) ────────

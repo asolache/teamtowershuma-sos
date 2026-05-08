@@ -1,9 +1,14 @@
 // TEAMTOWERS SOS V11 — ROUTER
 import { store } from './core/store.js';
+import { KB }    from './core/kb.js';
 // UX-NAV-002 · estilos y bind globales para los dropdowns de navegación.
-// Inyectados una vez tras cada render para que los menús agrupados
-// funcionen sin que cada vista tenga que llamarlo a mano.
-import { ensureNavGroupStyle, bindNavGroupDropdowns } from './core/navService.js';
+// UX-NAV-003 · breadcrumb dinámico bajo la topbar.
+// Inyectados una vez tras cada render para que funcionen sin que cada
+// vista tenga que llamarlo a mano.
+import {
+    ensureNavGroupStyle, bindNavGroupDropdowns,
+    paintBreadcrumb,
+} from './core/navService.js';
 
 const ROUTES = [
     { path: '/',          view: () => import('./views/DashboardView.js') },
@@ -73,6 +78,50 @@ async function router() {
         // menú también respondan al SPA. App entera comparte el CSS único.
         ensureNavGroupStyle();
         bindNavGroupDropdowns(document.getElementById('app') || document);
+
+        // UX-NAV-003 · breadcrumb dinámico bajo la topbar (zero changes en
+        // vistas individuales · el slot se gestiona aquí). Calcula la fase
+        // del proyecto activo si lo hay, vía stats del KB.
+        try {
+            let slot = document.getElementById('sos-breadcrumb-slot');
+            if (!slot) {
+                slot = document.createElement('div');
+                slot.id = 'sos-breadcrumb-slot';
+                // Insertar como hermano del #app, justo antes de él en el body.
+                const app = document.getElementById('app');
+                if (app && app.parentNode) {
+                    app.parentNode.insertBefore(slot, app);
+                } else {
+                    document.body.insertBefore(slot, document.body.firstChild);
+                }
+            }
+            const projects = (store.getState().projects || []);
+            // Heurística de fase · si hay proyecto activo, contamos sops/wos
+            const params = new URLSearchParams(window.location.search);
+            const pid = params.get('project') || (window.location.pathname.startsWith('/project/')
+                ? decodeURIComponent(window.location.pathname.slice(9)) : null);
+            let projectStats = null;
+            if (pid) {
+                try {
+                    await KB.init();
+                    const sops = await KB.query({ type: 'sop', projectId: pid });
+                    const wos  = await KB.query({ type: 'work_order', projectId: pid });
+                    projectStats = {
+                        sopsCount:  (sops || []).length,
+                        woBacklog:  (wos || []).filter(w => w?.content?.status === 'backlog').length,
+                        woDoing:    (wos || []).filter(w => w?.content?.status === 'doing').length,
+                        woLedgered: (wos || []).filter(w => w?.content?.status === 'ledgered').length,
+                    };
+                } catch (e) { /* breadcrumb sigue funcionando sin stats */ }
+            }
+            await paintBreadcrumb({
+                targetEl: slot,
+                pathname: window.location.pathname,
+                search:   window.location.search,
+                projects,
+                projectStats,
+            });
+        } catch (e) { console.warn('[Router · breadcrumb]', e); }
     } catch (err) {
         console.error('[Router V11]', err);
         document.getElementById('app').innerHTML = `
