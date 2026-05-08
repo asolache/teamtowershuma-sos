@@ -2007,6 +2007,52 @@ async function testWalletService() {
     assert(typeof mod.getOrCreateWalletForProject === 'function',          'getOrCreateWalletForProject exportada');
     assert(typeof mod.topUpAndPersist === 'function',                      'topUpAndPersist exportada');
     assert(typeof mod.consumeAndPersist === 'function',                    'consumeAndPersist exportada');
+
+    // ── MKT-001 sprint C3 · computeChargeFromTelemetry (puro)
+    const { computeChargeFromTelemetry, DEFAULT_USD_TO_EUR, chargeWalletForLlmCall } = mod;
+    assert(DEFAULT_USD_TO_EUR === 0.92,                                    'rate USD→EUR default 0.92');
+
+    // sin tokens → invalid
+    const ch0 = computeChargeFromTelemetry(null);
+    assert(ch0.valid === false,                                            'telemetry null → invalid');
+    const ch1 = computeChargeFromTelemetry({});
+    assert(ch1.valid === false,                                            'telemetry sin tokens → invalid');
+
+    // costUSD explícito → costEur = costUSD * rate
+    const ch2 = computeChargeFromTelemetry({ tokens: { total_tokens: 1000 } }, { costUSD: 0.10 });
+    assert(ch2.valid === true && ch2.costUSD === 0.1,                      'costUSD explícito preservado');
+    assert(ch2.costEur === +(0.10 * 0.92).toFixed(6),                      'costEur = costUSD * 0.92');
+
+    // sin costUSD pero con pricing y tokens → calcula
+    const ch3 = computeChargeFromTelemetry(
+        { tokens: { prompt_tokens: 1000000, completion_tokens: 500000, total_tokens: 1500000 } },
+        { pricing: { input: 3.00, output: 15.00 } }
+    );
+    assert(ch3.costUSD === +((1 * 3) + (0.5 * 15)).toFixed(6),             'costUSD calculado de tokens');
+
+    // rate custom
+    const ch4 = computeChargeFromTelemetry({ tokens: { total_tokens: 1 } }, { costUSD: 1, eurRate: 1.0 });
+    assert(ch4.costEur === 1,                                              'rate custom 1.0');
+
+    // chargeWalletForLlmCall · sin projectId → skipped
+    const skip1 = await chargeWalletForLlmCall({ projectId: null, telemetry: { tokens: { total_tokens: 100 } } });
+    assert(skip1.skipped === 'no-projectId' && skip1.charge === null,      'sin projectId → skipped');
+
+    // sin telemetry → skipped
+    const skip2 = await chargeWalletForLlmCall({ projectId: 'proj-x', telemetry: null });
+    assert(skip2.skipped === 'no-telemetry',                               'sin telemetry → skipped');
+
+    // costo cero → skipped (no toca KB)
+    const skip3 = await chargeWalletForLlmCall({
+        projectId: 'proj-x',
+        telemetry: { tokens: { total_tokens: 100 } },
+        costUSD: 0,
+    });
+    assert(skip3.skipped === 'zero-cost',                                  'costo 0 → skipped');
+
+    // exports
+    assert(typeof mod.chargeWalletForLlmCall === 'function',               'chargeWalletForLlmCall exportada');
+    assert(typeof mod.computeChargeFromTelemetry === 'function',           'computeChargeFromTelemetry exportada');
 }
 
 // ─── Runner ──────────────────────────────────────────────────────
