@@ -204,3 +204,58 @@ export async function consumeAndPersist({ projectId, amountEur, ref = null, sour
     const updated = consumeFromWallet({ wallet, amountEur, ref, source, note, allowNegative });
     return await persistWallet(updated);
 }
+
+// ─── MKT-001 sprint C3 · helper puro de cargo por llamada LLM ──────────────
+// Convierte costUSD → costEur con un rate configurable (default 0.92).
+// PURO · sin I/O · testeable.
+export const DEFAULT_USD_TO_EUR = 0.92;
+
+export function computeChargeFromTelemetry(telemetry, options = {}) {
+    if (!telemetry || !Number.isFinite(Number(telemetry.tokens?.total_tokens))) {
+        return { costUSD: 0, costEur: 0, valid: false };
+    }
+    // costUSD viene calculado por Orchestrator (BASE_PRICING) y se pasa
+    // explícito en options.costUSD; si no, lo derivamos de tokens con el
+    // pricing también opcionalmente pasado en options.pricing.
+    let costUSD = Number(options.costUSD);
+    if (!Number.isFinite(costUSD)) {
+        const pricing = options.pricing || { input: 0, output: 0 };
+        const t = telemetry.tokens || {};
+        costUSD = ((t.prompt_tokens     || 0) / 1e6) * pricing.input
+                + ((t.completion_tokens || 0) / 1e6) * pricing.output;
+    }
+    const eurRate = Number.isFinite(Number(options.eurRate)) ? Number(options.eurRate) : DEFAULT_USD_TO_EUR;
+    const costEur = +(Math.max(0, costUSD) * eurRate).toFixed(6);
+    return { costUSD: +costUSD.toFixed(6), costEur, valid: true, eurRate };
+}
+
+// Helper de alto nivel · cobra al wallet de un proyecto el coste de una
+// llamada LLM. Devuelve {wallet, charge, sufficient}.
+// Si saldo insuficiente y allowNegative=true (default), aplica el cargo
+// igualmente · marca sufficient=false para que el caller emita warning.
+export async function chargeWalletForLlmCall({ projectId, telemetry, costUSD = null, eurRate = DEFAULT_USD_TO_EUR, allowNegative = true, refPrefix = 'llm' }) {
+    if (!projectId)  return { wallet: null, charge: null, sufficient: true, skipped: 'no-projectId' };
+    if (!telemetry)  return { wallet: null, charge: null, sufficient: true, skipped: 'no-telemetry' };
+
+    const charge = computeChargeFromTelemetry(telemetry, {
+        costUSD: costUSD != null ? costUSD : undefined,
+        eurRate,
+    });
+    if (!charge.valid || charge.costEur <= 0) {
+        return { wallet: null, charge, sufficient: true, skipped: 'zero-cost' };
+    }
+
+    const wallet = await getOrCreateWalletForProject(projectId);
+    const balance = Number(wallet.content?.balanceEur || 0);
+    const sufficient = balance >= charge.costEur;
+
+    const ref = refPrefix + '-' + (telemetry.provider || 'unknown') + '-' + Date.now().toString(36);
+    const note = (telemetry.tokens?.total_tokens || 0) + ' tokens · ' + (telemetry.provider || '?') + '/' + (telemetry.model || '?');
+    const updated = consumeFromWallet({
+        wallet, amountEur: charge.costEur,
+        ref, source: 'orchestrator', note,
+        allowNegative: true,   // siempre true en este helper · el bloqueo lo decide el caller con sufficient
+    });
+    await persistWallet(updated);
+    return { wallet: updated, charge, sufficient, ref, note };
+}
