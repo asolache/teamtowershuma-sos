@@ -19,6 +19,7 @@ import { t, langSelectorHtml, getLang } from '../i18n.js';
 import { taxonomicTagsForSop, mergeTags } from '../core/semanticTagger.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 import { computeAnimationCycles, normalizeTransactionsOrder, autoFillSequenceOrder, inferFlowOrder } from '../core/flowAnimationService.js';
+import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 // ─── Constantes visuales ─────────────────────────────────────────────────────
 const COLOR_TANGIBLE   = '#00e676';   // accent-green
@@ -810,6 +811,7 @@ export default class ValueMapView {
                     <a href="/" data-link style="color:var(--text-muted);text-decoration:none;font-size:var(--text-xs);">← Inicio</a>
                     <span style="color:var(--glass-border);">|</span>
                     🗺 Mapa de <span>Valor</span>
+                    ${renderExplainerBadge('vna', { size: 'xs' })}
                     <span class="vmap-project-name" id="vmapProjectName">Sin proyecto</span>
                 </div>
                 <div class="vmap-topbar-actions">
@@ -1031,6 +1033,10 @@ export default class ValueMapView {
     // ══════════════════════════════════════════════════════════════════════════
     async afterRender() {
         var self = this;
+
+        // UX-EDU-001 sprint A · activar badges didácticos
+        ensureExplainerStyle();
+        bindExplainerBadges(document);
 
         // Selector de idioma
         const langSel = document.getElementById('vmapLangSel');

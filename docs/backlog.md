@@ -102,7 +102,8 @@
 | **UX-NAV-003** | **Breadcrumb + indicador de fase del proyecto** — input @alvaro 2026-04-30: "quiero que la UX de SOS me ayude a saber dónde estoy en todo momento". Sprint A: helper puro `buildBreadcrumb({pathname, search, projects, nodeId?})` + `renderBreadcrumbHtml(items, options)` + banner auto-inyectado por router (zero changes en vistas). Detecta proyecto activo via query · nodeId via URL · rutas conocidas. Indicador de fase del proyecto · pill con 🎨 DESIGN · 🛠 BUILD · ⚙ OPERATE · 💶 LEDGER según heurística sobre SOPs y WOs del proyecto. Sprint B: override manual con tag `phase:X`. Sprint C: vista `/journey` con recorrido del operador en Cohort 0. | 🟢 sprint A verde · B+C 🟡 |
 | **UX-NAV-003 sprint A** | **Breadcrumb dinámico + phase pill** — `js/core/navService.js` extendido: `ROUTE_LABELS` mapping de las 13 rutas globales · `PHASE_META` Object.freeze con 4 fases (design morado · build amarillo · operate cyan · ledger verde). `buildBreadcrumb({pathname, search, projects})` puro · 6 casos cubiertos (`/`, `/dashboard`, ruta global con/sin projectId, `/n/{id}`, `/project/{id}`, fallback ruta desconocida) · trunca node IDs largos con `…`. `detectProjectPhase(project, stats?)` · respeta tag override `phase:X` · heurística sobre stats (woLedgered → ledger · woDoing → operate · sops>0 → build · default design). `renderBreadcrumbHtml({items, phase, className})` · current con aria-current="page" · phase pill con icono+label+color. `ensureBreadcrumbStyle()` inyecta CSS único en `<head>` (idempotente · responsive <720px). `paintBreadcrumb({targetEl, pathname, search, projects, projectStats})` async · helper alto nivel para el router. Router ahora crea `<div id="sos-breadcrumb-slot">` antes del `#app` y lo repinta tras cada navegación · query SOPs+WOs del proyecto activo para detectar fase. Tests · 26 asserts puros · sanity 26/26 verde en node antes del push. | ✅ verde |
 | **MAT-002-F** | **Matriu como vista de proyectos · home alternativa** — input @alvaro 2026-04-30: "quiero que la matriu sea la vista de proyectos". El Dashboard cuando hay ≥1 proyecto activa modo "Matriu" · proyectos como "seats" de la cohort 0 estilo cards landing · contador "X/100 places" · perks visibles · CTAs en `#1a1f1a` · header italic Instrument Serif. Toggle en `/settings → Aspecto` para alternar entre Dashboard SOS estándar (técnico) y Matriu (cooperativo · fundacional). | 🟡 |
-| **MAT-002-G** | **System prompt SOS canónico · nodo KB inyectado en cada callLLM** — input @alvaro 2026-04-30 con texto completo del system prompt operativo (visión + 4 pilares + 6 principios). Persistir como nodo `type='system_prompt'` en KB con id `sos-system-prompt-canonical` · UI editable en `/settings → System Prompt` · `Orchestrator.callLLM` lee el nodo y lo prefija al systemPrompt original (idempotente · si ya empieza por "Eres el agente inteligente del SOS V11" no duplica). Toggle global on/off por si el operador prefiere prompts más cortos. | 🟡 |
+| **MAT-002-G** | **System prompt SOS canónico · manifesto persistido + UI editable (NO inyección automática en callLLM)** — input @alvaro 2026-05-08 reframe: la visión VISION-001 vive en la memoria del desarrollador y en el documento maestro · NO debe inflar tokens en cada llamada LLM porque eso degrada calidad/coste, que son valores añadidos centrales de SOS. Decisión arquitectónica: persistir el manifesto como nodo KB `type='system_prompt' kind='canonical-manifesto' id='sos-system-prompt-canonical'` · UI editable en `/settings → System Prompt SOS` (read/edit/restaurar default) · **ZERO impacto en `Orchestrator.callLLM` por defecto**. El manifesto es referencia consultable · no premisa inyectada. Sprints derivados: A · persistencia + UI editable. B (opt-in muy específico) · si el operador activa expresamente "Inyectar manifesto en LLM" en `/settings`, los flujos de cloning de sector / generación de SOC pueden incluirlo · jamás los flujos críticos de generación de SOPs ni woAssistant donde el coste por token es crítico. C · audit cuantificado pre-merge · medir delta tokens/coste con muestra real antes de habilitar B en producción. | 🟡 fase A próxima |
+| **UX-EDU-001** | **Capas UX didácticas · aprender haciendo VNA + contabilidad valor + triple-entry + smart contracts + econom-IA** — input @alvaro 2026-05-08: "el programa Matriu se aprenderá haciendo · cada vista de SOS debe incorporar capas didácticas que enseñen los conceptos teóricos sin que el operador tenga que leer un libro". `js/core/didacticService.js` puro: catálogo `EDU_CONCEPTS` Object.freeze con explicaciones cortas (≤140 chars · headline + body + linkRef opcional) por concepto canónico (`vna · value-network-analysis · triple-entry-accounting · slicing-pie · fair-fractal-tokenomics · soc · sop · dtd · antigravity · context-pruning · folksonomy · taxonomy · smart-contract · sbt · cohort-0`). `renderExplainerBadge(conceptId, options)` puro · devuelve HTML del badge (icon `?` + concept slug accesible) · `bindExplainerBadges(rootEl)` activa popovers on-hover/focus (idempotente). Inserción en vistas críticas: `/map` → badge VNA junto al título, `/savings` → badge triple-entry junto al header, `/wallet` → badge econom-IA, `/kanban` → badge antigravity-engine, `/folders` → badge folksonomy/taxonomy, `/identity` → badge SBT/DID. ZERO consumo tokens (todo offline · estático). Sprints: A · service + catálogo (≥10 conceptos) + integración en /map y /savings · B · 4 vistas restantes · C · vista `/learn` con índice navegable + glosario · D · enlaces cruzados a SOPs/SOCs reales del proyecto activo (cuando aplique). Conecta con I18N-001 (trilingüe) y NET-100 (formación de las 100). | 🟡 sprint A próximo |
 | **I18N-001** | **Trilingüe ES · CA · EN real** — input @alvaro 2026-04-30: "quiero que seamos de verdad en inglés y castellano y catalán". Ya hay `i18n.js` parcial (selector de idioma) · falta cobertura completa de strings de UI + nodos KB con campos `name_en/ca/es` cuando aplique. Catalán es estratégico · base del fondo descentralizado catalán de la visión VISION-001. Sprints A: extracción i18next con detect navigator + override en /settings · B: traducción de todas las vistas · C: bilingüe en LLM prompts (ej. system prompt en idioma del operador). | 🟡 |
 | **PACT-001** | **Pacto de socios dinámicos · evangelización del fundador** — input @alvaro 2026-04-30: "evangelista de pactos de socios dinámicos · no olvides que hay sprints para el desarrollo de pactos de socios y otros contratos". Plantilla de pacto JSON canónico · cláusulas (objeto · participación · vesting · exit · resolución conflictos · slicing pie reglas) · firmado EIP-712 · UI builder paso a paso · output PDF + JSON canónico para Pact.sol (MAT-001 fase 4). UX-001 sprint C ya tiene el tile placeholder · falta el builder real. Conecta con TimeFounder (background del fundador) y con el sistema de slicing pie de Matriu. | 🟡 |
 | **CONTR-001** | **Contratos de plataforma · suscripción + saldo acumulable** — input @alvaro 2026-04-30: "planes de subscripción con saldo acumulable para uso de APIs y registros". Tipos de plan: free (local-first · no APIs IA propias · API key del usuario) · pro (saldo prepago Stripe · descuento automático MKT-001 sprint C3 ✅) · cooperative (saldo USDC en Gnosis vía MAT-001 fase 4) · enterprise (custom). Onboarding de plan en `/settings → Plan`. Tests del builder. | 🟡 |
@@ -869,7 +870,8 @@ A partir de este nodo VISION-001 nacen / se reorganizan los siguientes:
 |---|---|---|
 | **UX-NAV-003** | Saber dónde estás (breadcrumb + indicador de fase) | 🟡 sprint A próximo |
 | **MAT-002-F** | Matriu como vista de proyectos (home alternativa cuando hay proyectos) | 🟡 |
-| **MAT-002-G** | System prompt SOS canónico como nodo KB · inyectado en cada callLLM | 🟡 |
+| **MAT-002-G** | System prompt SOS canónico · manifesto persistido + UI editable · NO inyección automática (preserva calidad/coste tokens) | 🟡 fase A próxima |
+| **UX-EDU-001** | Capas UX didácticas · aprender haciendo VNA + triple-entry + smart contracts + econom-IA · zero coste tokens | 🟡 sprint A próximo |
 | **I18N-001** | Trilingüe ES · CA · EN real (no parcial) · base para fondo descentralizado catalán | 🟡 |
 | **PACT-001** | Pacto de socios dinámicos · evangelización del fundador · plantilla + UI | 🟡 (ya en UX-001 sprint C como tile · falta builder) |
 | **CONTR-001** | Contratos de plataforma + suscripción + plan de saldo acumulable | 🟡 |
@@ -1306,6 +1308,110 @@ Los tres son **compatibles**: el usuario empieza con local-first, conecta wallet
 - ¿Soportar múltiples identidades por dispositivo? (sí, con flag `isPrimary` para la activa).
 - ¿Cómo se sincroniza la identidad entre dispositivos del mismo usuario? (export/import firmado de identidad · futura integración con Automerge según MAT-001).
 - ¿Cifrar la clave privada con passphrase obligatoria desde el principio o lazy?
+
+---
+
+## Reframe 2026-05-08 · MAT-002-G & alta de UX-EDU-001
+
+### Decisión arquitectónica (input @alvaro)
+
+> "antes de hacer MAT-002-G asegúrate de que no repercute negativamente en la
+> capacidad de SOS de hacer excepecionalmente bien el mapa de valor en las
+> diferentes fases de un proyecto y que el agente inteligente que es SOS ayude
+> excelentemente a las personas en el desarrollo de su proyecto haciendo un uso
+> excepecional del consumo de tokens para que la calidad coste sea uno de
+> nuestros valores añadidos. Me parece bien no perder la visión de por qué
+> estamos haciendo esto pero quizás es algo más asociado a tu memoria que a la
+> de SOS. SOS lo ha de permitir y tú como desarrollador debes velar como
+> extensión de mí de que estamos haciendo algo que debe desarrollarse con
+> capas de UX didácticas para que el programa de Matriu sea una realidad y se
+> aprenda haciendo pero incorporando teoría de VNA, contabilidad de valor,
+> contabilidad de triple entrada, contratos inteligentes y de su potencial
+> disruptivo al acelerar y automatizar procesos si le sumamos la IA, reduciendo
+> costes de registro y otros beneficios. SOS debe liderar la evolución hacia
+> la econom-IA."
+
+### Conclusión
+
+1. **La visión VISION-001 NO se inyecta en cada `callLLM`.** Vive en este
+   documento + en la memoria del desarrollador. Inflar tokens en cada llamada
+   degradaría calidad/coste, que son valores añadidos centrales de SOS.
+2. **MAT-002-G se reduce a 3 sprints**:
+   - **A · persistencia + UI editable** · nodo KB
+     `type='system_prompt' kind='canonical-manifesto'
+     id='sos-system-prompt-canonical'` · UI en `/settings → System Prompt SOS`
+     · default seed importable desde `js/core/sosManifesto.js` · ZERO impacto
+     en `Orchestrator.callLLM`.
+   - **B · opt-in muy específico** · sólo si el operador activa expresamente
+     "Inyectar manifesto en LLM" en `/settings`, los flujos de **cloning de
+     sector / generación de SOC** pueden incluirlo. **JAMÁS** los flujos
+     críticos de coste por token (generación masiva de SOPs, woAssistant,
+     `inferFlowOrder`).
+   - **C · audit cuantificado pre-merge** · medir delta tokens/coste con
+     muestra real (≥30 llamadas con/sin manifesto) antes de habilitar B en
+     producción. Aprobar sólo si overhead <10% y sin pérdida de calidad
+     subjetiva.
+3. **Nuevo sprint UX-EDU-001 · capas UX didácticas** · la formación de las 100
+   personas (MAT-002 · NET-100 · UOC.edu) ocurre **en la propia interfaz**,
+   no en docs externos ni inyectando teoría en LLMs. Coste tokens: 0.
+
+### Plan UX-EDU-001 (aprender haciendo)
+
+#### Sprint A · catálogo + integración crítica
+- `js/core/didacticService.js` puro:
+  - `EDU_CONCEPTS` Object.freeze con ≥10 conceptos canónicos:
+    - `vna` · Value Network Analysis (Verna Allee 2008 · raíz teórica del mapa)
+    - `triple-entry-accounting` · contabilidad valor + activo + obligación
+    - `slicing-pie` · reparto dinámico equity (Mike Moyer · TimeFounder)
+    - `fair-fractal-tokenomics` · 4 reglas Matriu
+    - `soc` · Standard Operating Concept
+    - `sop` · Standard Operating Procedure
+    - `dtd` · Deliverable Test Driven (TDD aplicado a procesos)
+    - `antigravity-engine` · ciclo SOP→WO→Ledger automatizado
+    - `context-pruning` · scorer 4 señales · ROI tokens
+    - `folksonomy` · tags libres del operador
+    - `taxonomy` · tags canónicos del sistema (`type:` `phase:` `cohort:`)
+    - `smart-contract` · contratos auto-ejecutables (PACT-001 / MAT-001)
+    - `sbt` · Soulbound Token (identidad no transferible)
+    - `cohort-0` · 100 plazas fundacionales Matriu
+    - `econom-ia` · economía colaborativa potenciada por IA
+  - Cada concepto: `{id, headline, body (≤140 chars), linkRef?, sourceRef?}`.
+  - `renderExplainerBadge(conceptId, options)` puro · HTML del badge `?`
+    accesible (aria-describedby + role="button" + tabindex=0).
+  - `bindExplainerBadges(rootEl)` activa popovers on-hover/focus · idempotente
+    · cierra al click fuera + Escape.
+  - `ensureExplainerStyle()` inyecta CSS único en `<head>` · responsive.
+- Integración en 2 vistas críticas:
+  - `/map` → badge VNA junto al título.
+  - `/savings` → badge triple-entry-accounting junto al header.
+- Tests · ≥20 asserts puros (catálogo · render · pure helpers · sin DOM real).
+
+#### Sprint B · cobertura completa
+- `/wallet` → econom-ia.
+- `/kanban` → antigravity-engine.
+- `/folders` → folksonomy + taxonomy.
+- `/identity` → sbt + DID.
+- `/efficiency` → context-pruning.
+- `/market` → slicing-pie.
+
+#### Sprint C · vista `/learn` glosario navegable
+- Índice de los conceptos del catálogo con search + tag filter.
+- Cada concepto enlaza a las vistas donde aparece (back-reference).
+- Marca "ya leído" persistente en KB (`type='didactic_seen'`) para gamificar
+  formación cohort 0.
+
+#### Sprint D · enlaces cruzados a SOPs/SOCs reales
+- Cada concepto puede listar SOPs del proyecto activo que lo materializan
+  (ej. `vna` → SOP "Mapear flujo de valor" del proyecto X).
+- Cierra el bucle: teoría → procedimiento → ejecución → ledger.
+
+### Impacto en otras historias
+
+- **NET-100** · UX-EDU-001 es la materia formativa de las 100 plazas.
+- **I18N-001** · `EDU_CONCEPTS` debe tener variantes ES/CA/EN.
+- **MAT-002** · cohort 0 usa los badges como onboarding implícito.
+- **KM-001 sprint E** · context pruning sigue siendo el motor económico ·
+  la teoría va en badges, no en prompts.
 
 ---
 

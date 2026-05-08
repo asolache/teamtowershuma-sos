@@ -4,6 +4,12 @@ import { KB }                   from '../core/kb.js';
 import { Orchestrator }         from '../core/Orchestrator.js';
 import { t, langSelectorHtml }  from '../i18n.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { loadManifesto, saveManifesto, restoreDefaultManifesto, isDefaultManifesto, SOS_MANIFESTO } from '../core/sosManifesto.js';
+
+function escapeForTextarea(s) {
+    if (typeof s !== 'string') return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 export default class SettingsView {
     constructor() { document.title = 'Settings · SOS V11'; }
@@ -18,6 +24,10 @@ export default class SettingsView {
         const keyMm    = await Orchestrator.getApiKey('minimax')   || '';
         const pruningOn  = await Orchestrator.isContextPruningEnabled();
         const chargingOn = await Orchestrator.isWalletChargingEnabled();
+        const manifesto  = await loadManifesto(KB);
+        const manifestoText  = manifesto.text;
+        const manifestoIsDef = manifesto.isDefault;
+        const manifestoExists = manifesto.exists;
 
         const pColors  = { anthropic:'var(--accent-purple)', openai:'var(--accent-green)', deepseek:'var(--accent-blue)', gemini:'#fbbc04', minimax:'#ff6b9d', custom:'var(--text-muted)' };
         const pLabels  = { anthropic:'Anthropic · claude-sonnet-4-20250514', openai:'OpenAI · GPT-4o', deepseek:'DeepSeek · V3', gemini:'Gemini · 2.0 Flash', minimax:'MiniMax · Text-01', custom:'Local / Ollama' };
@@ -154,6 +164,30 @@ export default class SettingsView {
                 </label>
             </div>
 
+            <div class="sv-card" style="border-top:3px solid #c084fc;">
+                <h3 style="color:#c084fc;margin-top:0;">📜 MAT-002-G · Manifesto SOS canónico</h3>
+                <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.6;margin-top:0;">
+                    Texto de referencia que recoge la <strong>visión + 4 pilares + principios</strong>
+                    de SOS V11 · persistido como nodo KB
+                    <code>${SOS_MANIFESTO.nodeType}</code>/<code>${SOS_MANIFESTO.nodeKind}</code>.
+                    <br><strong style="color:#c084fc;">NO se inyecta automáticamente</strong>
+                    en <code>Orchestrator.callLLM</code> · preserva calidad/coste de tokens
+                    (uno de los valores añadidos centrales de SOS). Es referencia consultable ·
+                    no premisa inyectada. Sprint B futuro permitirá opt-in muy específico
+                    en flujos donde el coste por token no es crítico.
+                </p>
+                <label class="sv-label" style="margin-top:var(--space-4);">Manifesto (editable)
+                    <span class="sv-key-status" style="margin-left:8px;${manifestoIsDef ? 'background:rgba(192,132,252,0.12);color:#c084fc;' : 'background:rgba(0,230,118,0.12);color:var(--accent-green);'}">${manifestoIsDef ? '◆ DEFAULT' : '✎ EDITED'}</span>
+                    <span class="sv-key-status" style="margin-left:6px;${manifestoExists ? 'background:rgba(0,230,118,0.12);color:var(--accent-green);' : 'background:rgba(255,255,255,0.05);color:var(--text-muted);'}">${manifestoExists ? '✓ SAVED' : '— SEED'}</span>
+                </label>
+                <textarea id="svManifesto" rows="14" class="sv-input" style="font-family:var(--font-mono);font-size:var(--text-xs);line-height:1.5;resize:vertical;min-height:240px;">${escapeForTextarea(manifestoText)}</textarea>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:var(--space-3);">
+                    <button id="svManifestoSave" class="sv-btn" style="background:linear-gradient(135deg,#c084fc,#9333ea);">💾 Guardar manifesto</button>
+                    <button id="svManifestoRestore" class="sv-btn-test">↺ Restaurar default</button>
+                </div>
+                <div id="svManifestoStatus" class="sv-test-result"></div>
+            </div>
+
             <div class="sv-card" style="border-top:3px solid var(--accent-red);">
                 <h3 style="color:var(--accent-red);margin-top:0;">⚠️ Danger zone</h3>
                 <button id="svPurge" style="background:rgba(255,82,82,0.1);border:1px solid var(--accent-red);color:var(--accent-red);padding:10px 18px;border-radius:var(--radius-md);cursor:pointer;font-weight:bold;">🔥 Purge IndexedDB</button>
@@ -267,6 +301,80 @@ export default class SettingsView {
             } catch (err) {
                 console.error('[MKT-001] toggle charging falló:', err);
                 e.target.checked = !on;
+            }
+        });
+
+        // MAT-002-G fase A · guardar / restaurar manifesto
+        document.getElementById('svManifestoSave')?.addEventListener('click', async () => {
+            const btn    = document.getElementById('svManifestoSave');
+            const ta     = document.getElementById('svManifesto');
+            const status = document.getElementById('svManifestoStatus');
+            if (!btn || !ta) return;
+            const text = (ta.value || '').toString();
+            if (!text.trim()) {
+                if (status) {
+                    status.style.color = 'var(--accent-red)';
+                    status.textContent = '✗ El manifesto no puede estar vacío';
+                }
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = '⏳ Guardando…';
+            try {
+                await saveManifesto(KB, { text });
+                if (status) {
+                    status.style.color = 'var(--accent-green)';
+                    status.textContent = isDefaultManifesto(text)
+                        ? '✓ Guardado · coincide con default'
+                        : '✓ Guardado · versión personalizada';
+                }
+                btn.textContent = '✅ Guardado';
+                setTimeout(() => {
+                    btn.textContent = '💾 Guardar manifesto';
+                    btn.disabled = false;
+                    if (status) status.textContent = '';
+                    if (window.navigateTo) window.navigateTo('/settings');
+                }, 1500);
+            } catch (err) {
+                console.error('[MAT-002-G] save manifesto falló:', err);
+                if (status) {
+                    status.style.color = 'var(--accent-red)';
+                    status.textContent = '✗ ' + (err?.message || 'error desconocido').slice(0, 100);
+                }
+                btn.textContent = '💾 Guardar manifesto';
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('svManifestoRestore')?.addEventListener('click', async () => {
+            const btn    = document.getElementById('svManifestoRestore');
+            const ta     = document.getElementById('svManifesto');
+            const status = document.getElementById('svManifestoStatus');
+            if (!btn || !ta) return;
+            if (!confirm('¿Restaurar el manifesto al default canónico de SOS V11? Tu versión actual se sobrescribirá en KB.')) return;
+            btn.disabled = true;
+            btn.textContent = '⏳ Restaurando…';
+            try {
+                await restoreDefaultManifesto(KB);
+                ta.value = SOS_MANIFESTO.defaultText;
+                if (status) {
+                    status.style.color = 'var(--accent-green)';
+                    status.textContent = '✓ Restaurado al default';
+                }
+                btn.textContent = '↺ Restaurar default';
+                btn.disabled = false;
+                setTimeout(() => {
+                    if (status) status.textContent = '';
+                    if (window.navigateTo) window.navigateTo('/settings');
+                }, 1200);
+            } catch (err) {
+                console.error('[MAT-002-G] restore manifesto falló:', err);
+                if (status) {
+                    status.style.color = 'var(--accent-red)';
+                    status.textContent = '✗ ' + (err?.message || 'error desconocido').slice(0, 100);
+                }
+                btn.textContent = '↺ Restaurar default';
+                btn.disabled = false;
             }
         });
 
