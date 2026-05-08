@@ -17,6 +17,7 @@ import {
     executeFolderQuery, validateFolder, DEFAULT_FOLDERS,
 } from '../core/smartFolderService.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 export default class FoldersView {
     constructor() {
@@ -67,7 +68,7 @@ export default class FoldersView {
         <div class="fl-shell">
             <div class="fl-topbar">
                 <a href="/" data-link class="fl-logo">🗼 Team<span>Towers</span></a>
-                <span class="fl-title">Folders · carpetas inteligentes</span>
+                <span class="fl-title">Folders · carpetas inteligentes ${renderExplainerBadge('folksonomy', { size: 'xs' })} ${renderExplainerBadge('taxonomy', { size: 'xs' })}</span>
                 <div class="fl-spacer"></div>
                 ${renderNavGroupedHtml({ active: '', className: 'fl-link' })}
             </div>
@@ -84,6 +85,8 @@ export default class FoldersView {
     }
 
     async afterRender() {
+        ensureExplainerStyle();
+        bindExplainerBadges(document);
         await this._load();
         await this._ensureDefaults();
         await this._load();   // releer tras seed

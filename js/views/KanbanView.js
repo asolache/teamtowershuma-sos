@@ -25,6 +25,7 @@ import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { linkifyMultiline } from '../core/linkifyService.js';
 import { taxonomicTagsForWo, mergeTags } from '../core/semanticTagger.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 // Orchestrator se importa dinámicamente con cache-bust en _executeAi
 // (ver BUG-002/003) para que fixes del parser se apliquen sin requerir
@@ -261,7 +262,7 @@ export default class KanbanView {
         <div class="kb-shell">
             <div class="kb-topbar">
                 <a href="/" data-link class="kb-logo">🗼 Team<span>Towers</span></a>
-                <span class="kb-title">Kanban · Work Orders · Antigravity Engine</span>
+                <span class="kb-title">Kanban · Work Orders · Antigravity Engine ${renderExplainerBadge('antigravity-engine', { size: 'xs' })}</span>
                 <div class="kb-spacer"></div>
                 ${renderNavGroupedHtml({ active: 'kanban', projectId: this.projectFilter, className: 'kb-link', activeClass: 'kb-link-active' })}
                 <select id="kbProjectFilter" class="kb-btn" style="background:#1a1a22;border-color:#2a2a35;cursor:pointer;font-family:inherit;">
@@ -282,6 +283,10 @@ export default class KanbanView {
     }
 
     async afterRender() {
+        // UX-EDU-001 sprint B · activar badges didácticos
+        ensureExplainerStyle();
+        bindExplainerBadges(document);
+
         // H7.5 · leer ?project= de la URL (filtro persistente)
         try {
             const url = new URL(window.location.href);

@@ -103,7 +103,9 @@
 | **UX-NAV-003 sprint A** | **Breadcrumb dinámico + phase pill** — `js/core/navService.js` extendido: `ROUTE_LABELS` mapping de las 13 rutas globales · `PHASE_META` Object.freeze con 4 fases (design morado · build amarillo · operate cyan · ledger verde). `buildBreadcrumb({pathname, search, projects})` puro · 6 casos cubiertos (`/`, `/dashboard`, ruta global con/sin projectId, `/n/{id}`, `/project/{id}`, fallback ruta desconocida) · trunca node IDs largos con `…`. `detectProjectPhase(project, stats?)` · respeta tag override `phase:X` · heurística sobre stats (woLedgered → ledger · woDoing → operate · sops>0 → build · default design). `renderBreadcrumbHtml({items, phase, className})` · current con aria-current="page" · phase pill con icono+label+color. `ensureBreadcrumbStyle()` inyecta CSS único en `<head>` (idempotente · responsive <720px). `paintBreadcrumb({targetEl, pathname, search, projects, projectStats})` async · helper alto nivel para el router. Router ahora crea `<div id="sos-breadcrumb-slot">` antes del `#app` y lo repinta tras cada navegación · query SOPs+WOs del proyecto activo para detectar fase. Tests · 26 asserts puros · sanity 26/26 verde en node antes del push. | ✅ verde |
 | **MAT-002-F** | **Matriu como vista de proyectos · home alternativa** — input @alvaro 2026-04-30: "quiero que la matriu sea la vista de proyectos". El Dashboard cuando hay ≥1 proyecto activa modo "Matriu" · proyectos como "seats" de la cohort 0 estilo cards landing · contador "X/100 places" · perks visibles · CTAs en `#1a1f1a` · header italic Instrument Serif. Toggle en `/settings → Aspecto` para alternar entre Dashboard SOS estándar (técnico) y Matriu (cooperativo · fundacional). | 🟡 |
 | **MAT-002-G** | **System prompt SOS canónico · manifesto persistido + UI editable (NO inyección automática en callLLM)** — input @alvaro 2026-05-08 reframe: la visión VISION-001 vive en la memoria del desarrollador y en el documento maestro · NO debe inflar tokens en cada llamada LLM porque eso degrada calidad/coste, que son valores añadidos centrales de SOS. Decisión arquitectónica: persistir el manifesto como nodo KB `type='system_prompt' kind='canonical-manifesto' id='sos-system-prompt-canonical'` · UI editable en `/settings → System Prompt SOS` (read/edit/restaurar default) · **ZERO impacto en `Orchestrator.callLLM` por defecto**. El manifesto es referencia consultable · no premisa inyectada. Sprints derivados: A · persistencia + UI editable. B (opt-in muy específico) · si el operador activa expresamente "Inyectar manifesto en LLM" en `/settings`, los flujos de cloning de sector / generación de SOC pueden incluirlo · jamás los flujos críticos de generación de SOPs ni woAssistant donde el coste por token es crítico. C · audit cuantificado pre-merge · medir delta tokens/coste con muestra real antes de habilitar B en producción. | 🟡 fase A próxima |
-| **UX-EDU-001** | **Capas UX didácticas · aprender haciendo VNA + contabilidad valor + triple-entry + smart contracts + econom-IA** — input @alvaro 2026-05-08: "el programa Matriu se aprenderá haciendo · cada vista de SOS debe incorporar capas didácticas que enseñen los conceptos teóricos sin que el operador tenga que leer un libro". `js/core/didacticService.js` puro: catálogo `EDU_CONCEPTS` Object.freeze con explicaciones cortas (≤140 chars · headline + body + linkRef opcional) por concepto canónico (`vna · value-network-analysis · triple-entry-accounting · slicing-pie · fair-fractal-tokenomics · soc · sop · dtd · antigravity · context-pruning · folksonomy · taxonomy · smart-contract · sbt · cohort-0`). `renderExplainerBadge(conceptId, options)` puro · devuelve HTML del badge (icon `?` + concept slug accesible) · `bindExplainerBadges(rootEl)` activa popovers on-hover/focus (idempotente). Inserción en vistas críticas: `/map` → badge VNA junto al título, `/savings` → badge triple-entry junto al header, `/wallet` → badge econom-IA, `/kanban` → badge antigravity-engine, `/folders` → badge folksonomy/taxonomy, `/identity` → badge SBT/DID. ZERO consumo tokens (todo offline · estático). Sprints: A · service + catálogo (≥10 conceptos) + integración en /map y /savings · B · 4 vistas restantes · C · vista `/learn` con índice navegable + glosario · D · enlaces cruzados a SOPs/SOCs reales del proyecto activo (cuando aplique). Conecta con I18N-001 (trilingüe) y NET-100 (formación de las 100). | 🟡 sprint A próximo |
+| **UX-EDU-001** | **Capas UX didácticas · aprender haciendo VNA + contabilidad valor + triple-entry + smart contracts + econom-IA** — input @alvaro 2026-05-08: "el programa Matriu se aprenderá haciendo · cada vista de SOS debe incorporar capas didácticas que enseñen los conceptos teóricos sin que el operador tenga que leer un libro". `js/core/didacticService.js` puro: catálogo `EDU_CONCEPTS` Object.freeze con 17 conceptos canónicos · `renderExplainerBadge` accesible · `bindExplainerBadges` con hover/focus/click + Escape + click-outside · `ensureExplainerStyle` CSS único. Sprint A · service + integración /map (vna) /savings (triple-entry). Sprint B · 6 vistas restantes (/kanban antigravity · /wallet econom-ia · /folders folksonomy+taxonomy · /identity did+sbt · /efficiency context-pruning · /market slicing-pie). Sprint C · vista `/learn` glosario navegable con sidebar concepts + búsqueda + progress bar (✓ ya leído persistente en KB `type='didactic_seen'`) + back-references a vistas donde aparece cada concepto. Sprint D · enlaces cruzados a SOPs/SOCs reales del proyecto activo. ZERO consumo tokens. | 🟢 A+B+C verde · D 🟡 |
+| **MAT-002-H** | **Landing pública Matriu Incoopadora en `/matriu`** — input @alvaro 2026-05-08 con `Matriu_Landing_standalone.html` adjunto: la página de venta de Matriu vive dentro de SOS, no en una página estática externa · refleja la "incubadora cooperativa que reparteix valor en temps real" en catalán fiel al HTML adjunto. `js/views/MatriuLandingView.js` reusa `MATRIU_COHORT_0`, `MATRIU_PERKS`, `MATRIU_FAIR_FRACTAL_RULES`, `MATRIU_VALUE_KINDS` de `matriuTemplate.js` (single source of truth). Secciones · hero "Sigues / dels primers / en el nucli" + pill "Cohort 0 oberta · 24/100" + CTA "Reservar el teu seient" · stats row (100/24/∞/0s) · "Per què ara" 4 cards (multiplicador ×1.5 · governança ECO · crèdits · llinatge) · "Tokenomic Fair Fractal" 4 reglas FF · "Value mapping engine" 4 ejemplos JT/NB/AR/ML · "Exit model" 4 fases (trigger · snapshot · càlcul · liquidació) + 3 invariantes · "Cohort 0 · 100 places" 6 perks completos · footer CTA "Reservar seient · 0 €" + whitepaper · footer cooperativa con enlaces (Producte · Comunitat · Recursos). Skin Matriu: `#f1ebde` crema · `#2a3a2a` verd fosc · `#c25a3a` terracota · Instrument Serif italic + Inter. Modal de reserva integrado · usa `buildMatriuCohortProject` + CREATE_PROJECT + KB_UPSERT · navega a `/project/{id}` tras reservar. Badges UX-EDU-001 inline (fair-fractal-tokenomics · vna · triple-entry · smart-contract · cohort-0) · refuerzo didáctico durante la lectura. Ruta `/matriu` registrada en router · destino global en navService categoría `home`. | ✅ verde |
+| **MAT-003** | **Matriz inicial multidisciplinar · 100 roles críticos para el enjambre Cohort 0** — input @alvaro 2026-05-08: "los 100 asientos deben ser reales y desarrollar un modelo de que esas 100 personas deben poder ejecutar los 100 roles críticos para una matriz inicial multidisciplinar y multiskills que asegure la potencialidad de los conocimientos del enjambre que junto al agente inteligente SOS ayuden al desarrollo de proyectos de comunidades autosuficientes, startups, empresas, huertos o lo que sea". Concepto: la cohort 0 NO es 100 personas aleatorias · es una matriz cuidadosamente seleccionada donde **cada plaza ejecuta ≥1 rol crítico** y **el conjunto cubre el 100% de las skills necesarias para arrancar cualquier proyecto SOS** (comunidades autosuficientes · startups · empresas · huertos · cooperativas · fundaciones). El "enjambre" + el agente IA SOS forman una "matriz cognitiva fundacional" capaz de bootstrappear proyectos arbitrarios. Sprints definidos abajo en bloque dedicado. | 🟡 sprint A próximo |
 | **I18N-001** | **Trilingüe ES · CA · EN real** — input @alvaro 2026-04-30: "quiero que seamos de verdad en inglés y castellano y catalán". Ya hay `i18n.js` parcial (selector de idioma) · falta cobertura completa de strings de UI + nodos KB con campos `name_en/ca/es` cuando aplique. Catalán es estratégico · base del fondo descentralizado catalán de la visión VISION-001. Sprints A: extracción i18next con detect navigator + override en /settings · B: traducción de todas las vistas · C: bilingüe en LLM prompts (ej. system prompt en idioma del operador). | 🟡 |
 | **PACT-001** | **Pacto de socios dinámicos · evangelización del fundador** — input @alvaro 2026-04-30: "evangelista de pactos de socios dinámicos · no olvides que hay sprints para el desarrollo de pactos de socios y otros contratos". Plantilla de pacto JSON canónico · cláusulas (objeto · participación · vesting · exit · resolución conflictos · slicing pie reglas) · firmado EIP-712 · UI builder paso a paso · output PDF + JSON canónico para Pact.sol (MAT-001 fase 4). UX-001 sprint C ya tiene el tile placeholder · falta el builder real. Conecta con TimeFounder (background del fundador) y con el sistema de slicing pie de Matriu. | 🟡 |
 | **CONTR-001** | **Contratos de plataforma · suscripción + saldo acumulable** — input @alvaro 2026-04-30: "planes de subscripción con saldo acumulable para uso de APIs y registros". Tipos de plan: free (local-first · no APIs IA propias · API key del usuario) · pro (saldo prepago Stripe · descuento automático MKT-001 sprint C3 ✅) · cooperative (saldo USDC en Gnosis vía MAT-001 fase 4) · enterprise (custom). Onboarding de plan en `/settings → Plan`. Tests del builder. | 🟡 |
@@ -1412,6 +1414,187 @@ Los tres son **compatibles**: el usuario empieza con local-first, conecta wallet
 - **MAT-002** · cohort 0 usa los badges como onboarding implícito.
 - **KM-001 sprint E** · context pruning sigue siendo el motor económico ·
   la teoría va en badges, no en prompts.
+
+---
+
+## MAT-003 · Matriz inicial multidisciplinar · 100 roles críticos para el enjambre
+
+### Premisa
+
+La cohort 0 de Matriu Incoopadora son 100 plazas fundacionales. NO son
+100 personas elegidas al azar. Son una **matriz cognitiva inicial**
+diseñada para que el conjunto cubra el 100% de los roles y skills
+necesarios para que SOS V11 pueda bootstrappear cualquier proyecto:
+
+- Comunidad autosuficiente (hortet de barri · ateneus · cooperativas
+  de cures · vivienda colaborativa).
+- Startup tradicional o cooperativa.
+- Empresa establecida (consultoría · agencia · estudio).
+- Cooperativa / Sociedad cooperativa de consumo, trabajo o servicios.
+- Fundación o ONG.
+- Ecosistema regenerativo (huertos · seed banks · cooperativas
+  energéticas · CCSS).
+- Proyecto digital (DAO · plataforma · marketplace · SaaS).
+
+### Modelo del "enjambre + agente IA"
+
+```
+   [ enjambre humano · 100 roles ]
+              ↕
+   [ agente IA SOS V11 · KB + ML ]
+              ↕
+   [ proyecto del cliente externo ]
+```
+
+- El **enjambre** aporta · juicio humano · presencia · decisión
+  política · compliance local · red de contactos · expertise específica.
+- El **agente IA SOS** aporta · velocidad · gestión del KB ·
+  generación de SOPs · contabilidad triple-entry · auditoría
+  automática · matchmaking entre plazas y proyectos.
+- El **proyecto cliente** consume capacidad del enjambre + del
+  agente IA · paga vía wallet prepago (MKT-001 sprint C) · recibe
+  el proyecto modelado, los SOPs ejecutables, los cobros reales.
+
+### Catálogo de los 100 roles críticos
+
+#### Sprint A · esqueleto del catálogo `js/core/critical100Roles.js`
+
+`CRITICAL_100_ROLES` Object.freeze · array de 100 entradas. Cada rol:
+
+```
+{
+    id:           'kebab-case-id',
+    number:       1..100,
+    domain:       'governance' | 'finance' | 'tech' | 'design' |
+                  'operations' | 'community' | 'legal' |
+                  'ecology' | 'education' | 'culture',
+    headline:     'Facilitador comunitario',
+    summary:      'Convoca, modera y documenta sesiones colectivas...',
+    skills:       ['facilitation', 'communication', 'conflict-resolution'],
+    sopsBootstrap: ['onboarding-cohort', 'sesion-cop'],   // SOPs canónicos que este rol ejecuta
+    canBootstrap: ['cooperativa', 'comunidad-autosuficiente'],  // tipos de proyecto donde es crítico
+    handsOver:    ['arquitecto-procesos', 'sponsor-projecte'],  // handoffs naturales
+    minHours:     4,                                      // dedicación mínima semanal cohort
+    multiplier:   1.0,                                    // peso en el slicing pie de matriu
+}
+```
+
+**Distribución propuesta por dominio (suma = 100):**
+
+| Dominio          | Roles | Ejemplos clave |
+|---|---|---|
+| `governance`     | 8  | facilitador comunitario · sponsor projecte · llaurador d'acords · custodi de pacte |
+| `finance`        | 12 | contable triple-entry · auditor de slicing · oracle de preus · gestor de wallet · custodi del fons FICE · tresorera · originador de capital ·... |
+| `tech`           | 18 | arquitecte d'integracions · DevOps cooperatiu · smart-contract dev · IA prompt engineer · mantenidor SOPs codi · arquitecte d'identitat · enginyera de seguretat ·... |
+| `design`         | 8  | dissenyador d'identitat · UX cooperativa · facilitador visual · narrative designer ·... |
+| `operations`     | 14 | arquitecte de processos · operador de KB · controller de qualitat DTD · auditor de ledger · sourcer de proveïdors · lograstre... |
+| `community`      | 12 | encarregat de cohort · ambaixador territorial · custodi del CoP · onboarding buddy · mediadora de conflictes · cèl·lula de barri ·... |
+| `legal`          | 6  | advocat cooperativista · privacy officer · compliance regulatori · notari fundacional ·... |
+| `ecology`        | 8  | agròleg / pagès · enginyer de regeneració · auditor de petjada · seed-bank keeper · monitor de biodiversitat ·... |
+| `education`      | 8  | facilitador de formació · curador de Mètode SOS · mentor TimeFounder · facilitador de CoPs ·... |
+| `culture`        | 6  | curador de manifest · arxiver fundacional · cronista de la xarxa ·... |
+
+**Total · 8+12+18+8+14+12+6+8+8+6 = 100.**
+
+#### Sprint B · catálogo de skills · cobertura del enjambre
+
+`SKILL_TAXONOMY` Object.freeze · ≥80 skills canónicos categorizados.
+Cada rol declara su lista. `coverageReport(roles)` puro · devuelve
+cuántas skills del catálogo están cubiertas por el enjambre actual ·
+cuáles faltan · cuáles tienen redundancia (≥3 personas la dominan).
+
+Permite responder en cualquier momento:
+- "¿Está el enjambre completo?"
+- "¿Qué skills faltan para que cohort 0 cierre?"
+- "¿Cuántas plazas redundantes en cada skill (resilencia)?"
+
+#### Sprint C · matchmaker proyecto ↔ enjambre
+
+`buildSwarmTeamForProject({ project, projectType, criticalRoles, swarm, llmEngine })`
+async · llama a `Orchestrator.callLLM` con prompt que combina:
+
+- Datos del proyecto (descripción · sector · fase · objetivos).
+- Catálogo de los 100 roles + sus skills.
+- Plazas actualmente asignadas en el enjambre cohort 0 (con disponibilidad).
+
+Devuelve · array ordenado de `{ roleId, suggestedSeat, fit: 0..1, why }`
+con los roles y plazas recomendadas. Output JSON · responseFormat
+`json_object` para deterministic parsing.
+
+UI · botón "🐝 Activar enjambre" en el panel del proyecto (sprint C
+también añade el modal con la propuesta + aceptar/rechazar por rol).
+
+#### Sprint D · Time Banking inverso · plazas que aceptan WOs del enjambre
+
+Cada plaza cohort 0 publica disponibilidad horaria + skills + multiplicador.
+Cuando un proyecto necesita un rol, el sistema crea una `work_order`
+abierta (`status='open-call'`) que va al enjambre como market interno.
+Las plazas reaccionan, ofrecen tiempo, el slicing pie se actualiza
+automáticamente al cerrar la WO. Cierra el bucle SOP → WO → Ledger
+del Antigravity Engine al nivel del enjambre completo.
+
+#### Sprint E · Escenarios de bootstrap por tipo de proyecto
+
+Plantillas (similares a `buildMatriuCohortProject`) para cada uno
+de los 7 tipos de proyecto cliente · catálogo
+`PROJECT_BOOTSTRAP_TEMPLATES`:
+
+```
+{
+    type:           'comunidad-autosuficiente',
+    label:          'Comunitat autosuficient (hortet · ateneu · cura)',
+    requiredRoles:  ['facilitador-comunitari', 'pages-agricola',
+                     'tresorera', 'custodi-cop', ...],   // ⊂ los 100
+    optionalRoles:  [...],
+    bootstrapSops:  [...],
+    expectedOutcomes: {
+        socsCreated:  3..5,
+        sopsCreated:  12..18,
+        weeksToOperate: 4..8,
+    },
+}
+```
+
+Por cada tipo · `requiredRoles ⊂ los 100` y `bootstrapSops ⊂ catálogo
+SOC/SOP del Mètode SOS`. Esto es la materialización operativa de
+"cualquier proyecto puede arrancar con la matriz".
+
+### Conexiones con otras historias
+
+- **NET-100** se reescribe como sub-historia de MAT-003 · ya no es
+  matchmaking abstracto sino aplicación de los 100 roles + skills.
+- **MAT-002-A** (`buildMatriuCohortProject`) se enriquece en sprint
+  E con el catálogo de bootstrap templates.
+- **AUTH-001** · cada plaza tendrá `user_identity` con `criticalRoles[]`
+  reclamados + verificados por handoff de otra plaza.
+- **PACT-001** · el pacto de socios dinámicos liga roles ↔ slicing pie.
+- **UX-EDU-001 sprint D** · enlaces cruzados a roles desde los SOPs
+  permite que cada operador en formación entienda qué rol cubre con
+  cada procedimiento que ejecuta.
+
+### Notas de método
+
+- Los 100 roles deben **diseñarse** con @alvaro · NO inferirse por
+  IA en este sprint A · son la huella estratégica del proyecto.
+- Cada rol debe ser **operativo** (ejecuta ≥1 SOP del Mètode SOS) y
+  **diferenciable** (no solapamiento total con otro rol).
+- El equilibrio entre dominios debe garantizar resiliencia · no más
+  de 18 plazas en un dominio para evitar concentración cognitiva.
+- Skills `governance` + `community` + `culture` = 26 plazas (26%) ·
+  reflejan que SOS no es sólo tecnología · es facilitación social
+  con tecnología al servicio.
+- Skills `tech` + `finance` = 30 plazas (30%) · garantizan capacidad
+  de ejecución técnica y económica del Antigravity Engine.
+
+### Próxima conversación con @alvaro · validar antes de codificar
+
+1. ¿Aceptas la distribución 8/12/18/8/14/12/6/8/8/6 por dominio?
+2. ¿Qué 5-8 roles imprescindibles dirías que tiene que estar en el
+   primer sprint A · los que no podemos delegar al "vendrán después"?
+3. ¿Los 7 tipos de proyecto cliente cubren el espacio que tienes
+   en mente o falta alguno (ej. fundació · DAO · ecosistema regional)?
+4. ¿La heurística "1 plaza = 1 rol crítico" o admites "1 plaza puede
+   cubrir 2 roles si demuestra skills en ambos"?
 
 ---
 
