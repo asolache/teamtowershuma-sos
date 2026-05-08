@@ -1469,6 +1469,53 @@ async function testNavService() {
     assert(typeof html === 'string' && html.includes('href="/map?project=p1"'),         'html incluye href con query');
     assert(html.includes('class="sos-nav-link sos-nav-link-active"'),                   'html marca active class');
     assert(html.includes('data-link'),                                                  'html añade data-link para SPA');
+
+    // ── UX-NAV-002 · agrupación por categorías
+    const { NAV_CATEGORIES, groupNavByCategory, renderNavGroupedHtml } = mod;
+    assert(Object.isFrozen(NAV_CATEGORIES) && NAV_CATEGORIES.length === 5,             'NAV_CATEGORIES frozen · 5 categorías');
+    assert(NAV_CATEGORIES.find(c => c.id === 'home'),                                  'cat home existe');
+    assert(NAV_CATEGORIES.find(c => c.id === 'operations'),                            'cat operations existe');
+    assert(NAV_CATEGORIES.find(c => c.id === 'knowledge'),                             'cat knowledge existe');
+    assert(NAV_CATEGORIES.find(c => c.id === 'market'),                                'cat market existe');
+    assert(NAV_CATEGORIES.find(c => c.id === 'identity'),                              'cat identity existe');
+
+    // Cada destination tiene category
+    NAV_DESTINATIONS.forEach(d => {
+        assert(typeof d.category === 'string' && d.category.length > 0,                d.id + ' · tiene category');
+    });
+
+    // groupNavByCategory · sin projectId
+    const groupsNoP = groupNavByCategory({ active: 'dashboard' });
+    // home + knowledge + market + identity (operations sin proyecto sólo tiene map+kanban; sigue apareciendo)
+    assert(groupsNoP.find(g => g.category.id === 'home'),                              'groups · home presente');
+    assert(groupsNoP.find(g => g.category.id === 'knowledge')?.links.length === 3,     'knowledge · 3 links (tags + folders + mind)');
+    // sin projectId · operations sólo tiene 2 (map · kanban) · sops y wallet son global=false
+    const opsNoP = groupsNoP.find(g => g.category.id === 'operations');
+    assert(opsNoP && opsNoP.links.length === 2,                                        'operations sin projectId · 2 links (map · kanban)');
+
+    // groupNavByCategory · con projectId
+    const groupsP = groupNavByCategory({ active: 'wallet', projectId: 'p1' });
+    const opsP = groupsP.find(g => g.category.id === 'operations');
+    assert(opsP && opsP.links.length === 4,                                            'operations con projectId · 4 links (map · sops · kanban · wallet)');
+    assert(opsP.links.find(l => l.id === 'wallet').active === true,                    'active=wallet marcado');
+
+    // renderNavGroupedHtml · estructura HTML
+    const groupedHtml = renderNavGroupedHtml({ active: 'map', projectId: 'p1' });
+    assert(typeof groupedHtml === 'string' && groupedHtml.length > 0,                  'renderNavGroupedHtml string');
+    assert(groupedHtml.includes('data-nav-group="operations"'),                        'incluye data-nav-group operations');
+    assert(groupedHtml.includes('data-nav-group="knowledge"'),                         'incluye data-nav-group knowledge');
+    assert(groupedHtml.includes('data-nav-group="market"'),                            'incluye data-nav-group market');
+    assert(groupedHtml.includes('data-nav-group="identity"'),                          'incluye data-nav-group identity');
+    // home (1 link · dashboard) se renderiza como anchor directo
+    assert(groupedHtml.includes('href="/dashboard"') && !groupedHtml.includes('data-nav-group="home"'), 'home · render directo (no dropdown)');
+    // active dentro de dropdown · agrega activeClass al header del grupo
+    assert(groupedHtml.includes('aria-haspopup="true"'),                               'dropdowns con aria-haspopup');
+    assert(groupedHtml.includes('role="menu"'),                                         'menus con role="menu"');
+    assert(groupedHtml.includes('hidden'),                                              'menus hidden por defecto');
+
+    // exports
+    assert(typeof mod.ensureNavGroupStyle === 'function',                              'ensureNavGroupStyle exportada');
+    assert(typeof mod.bindNavGroupDropdowns === 'function',                            'bindNavGroupDropdowns exportada');
 }
 
 // ─── AUTH-001 sprint A · identityService (helpers puros) ────────

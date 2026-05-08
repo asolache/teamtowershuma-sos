@@ -16,7 +16,7 @@ import { KB }    from '../core/kb.js';
 import {
     executeFolderQuery, validateFolder, DEFAULT_FOLDERS,
 } from '../core/smartFolderService.js';
-import { renderNavLinksHtml } from '../core/navService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 
 export default class FoldersView {
     constructor() {
@@ -69,7 +69,7 @@ export default class FoldersView {
                 <a href="/" data-link class="fl-logo">🗼 Team<span>Towers</span></a>
                 <span class="fl-title">Folders · carpetas inteligentes</span>
                 <div class="fl-spacer"></div>
-                ${renderNavLinksHtml({ active: '', className: 'fl-link' })}
+                ${renderNavGroupedHtml({ active: '', className: 'fl-link' })}
             </div>
 
             <div class="fl-main">

@@ -12,7 +12,7 @@ import { KB }    from '../core/kb.js';
 import {
     computeProjectSavings, buildSavingsTable, accumulateAllProjects,
 } from '../core/savingsService.js';
-import { renderNavLinksHtml } from '../core/navService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 
 const CATEGORY_ICONS = {
     notaria:     '⚖',
@@ -101,7 +101,7 @@ export default class SavingsView {
                 <a href="/" data-link class="sa-logo">🗼 Team<span>Towers</span></a>
                 <span class="sa-title">Ahorro acumulado · cuadro comparativo</span>
                 <div class="sa-spacer"></div>
-                ${renderNavLinksHtml({ active: '', projectId: this.projectId, className: 'sa-link' })}
+                ${renderNavGroupedHtml({ active: '', projectId: this.projectId, className: 'sa-link' })}
             </div>
             <div class="sa-main" id="saMain">
                 <p style="color:#888;font-size:0.85rem;">Cargando…</p>

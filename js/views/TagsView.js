@@ -9,7 +9,7 @@
 
 import { store }              from '../core/store.js';
 import { aggregateTags, nodesWithTag, loadAllNodesForTags, normalizeTag } from '../core/tagsService.js';
-import { renderNavLinksHtml } from '../core/navService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 
 export default class TagsView {
     constructor() {
@@ -54,7 +54,7 @@ export default class TagsView {
                 <a href="/" data-link class="tg-logo">🗼 Team<span>Towers</span></a>
                 <span class="tg-title">Folksonomía · cloud de tags</span>
                 <div class="tg-spacer"></div>
-                ${renderNavLinksHtml({ active: 'tags', className: 'tg-link' })}
+                ${renderNavGroupedHtml({ active: 'tags', className: 'tg-link' })}
             </div>
             <div class="tg-main" id="tgMain">
                 <p style="color:#888;">Cargando…</p>

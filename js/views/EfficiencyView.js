@@ -13,7 +13,7 @@
 
 import { store } from '../core/store.js';
 import { KB }    from '../core/kb.js';
-import { renderNavLinksHtml } from '../core/navService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 
 // Paleta de costes por provider (mirroring del Orchestrator BASE_PRICING)
 // USD per 1M tokens · sirve para extrapolar coste evitado.
@@ -75,7 +75,7 @@ export default class EfficiencyView {
                 <a href="/" data-link class="ef-logo">🗼 Team<span>Towers</span></a>
                 <span class="ef-title">Efficiency · KM-001 ahorro IA</span>
                 <div class="ef-spacer"></div>
-                ${renderNavLinksHtml({ active: '', className: 'ef-link' })}
+                ${renderNavGroupedHtml({ active: '', className: 'ef-link' })}
             </div>
 
             <div class="ef-main" id="efMain">

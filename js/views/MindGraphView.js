@@ -15,7 +15,7 @@ import { KB }    from '../core/kb.js';
 import {
     buildGraphFromKb, graphStats, MIND_TYPE_COLORS, colorForType,
 } from '../core/mindGraphService.js';
-import { renderNavLinksHtml } from '../core/navService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 
 const KIND_LEGEND = [
     { type: 'project',          label: 'Proyectos' },
@@ -83,7 +83,7 @@ export default class MindGraphView {
                 <a href="/" data-link class="mg-logo">🗼 Team<span>Towers</span></a>
                 <span class="mg-title">Mind-as-Graph · vista total</span>
                 <div class="mg-spacer"></div>
-                ${renderNavLinksHtml({ active: '', className: 'mg-link' })}
+                ${renderNavGroupedHtml({ active: '', className: 'mg-link' })}
             </div>
 
             <div class="mg-controls">

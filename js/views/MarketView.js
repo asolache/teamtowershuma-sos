@@ -23,7 +23,7 @@ import {
 } from '../core/marketService.js';
 import { searchCnae, getCnae } from '../core/cnaeSeed.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
-import { renderNavLinksHtml } from '../core/navService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 
 const KIND_LABELS = {
     product:      '📦 Producto',
@@ -121,7 +121,7 @@ export default class MarketView {
                 <a href="/" data-link class="mk-logo">🗼 Team<span>Towers</span></a>
                 <span class="mk-title">Mercado SOS · productos y servicios</span>
                 <div class="mk-spacer"></div>
-                ${renderNavLinksHtml({ active: 'market', className: 'mk-link' })}
+                ${renderNavGroupedHtml({ active: 'market', className: 'mk-link' })}
                 <button class="mk-btn mk-btn-primary" id="mkBtnNew">＋ Nueva oferta</button>
             </div>
 

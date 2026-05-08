@@ -12,7 +12,7 @@ import {
     getCurrentIdentity, getOrCreateIdentity, updateIdentityProfile,
     linkWallet, unlinkWallet, isValidEvmAddress,
 } from '../core/identityService.js';
-import { renderNavLinksHtml } from '../core/navService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 
 export default class IdentityView {
     constructor() {
@@ -65,7 +65,7 @@ export default class IdentityView {
                 <a href="/" data-link class="id-logo">🗼 Team<span>Towers</span></a>
                 <span class="id-title">Identidad · perfil del operador</span>
                 <div class="id-spacer"></div>
-                ${renderNavLinksHtml({ active: '', className: 'id-link' })}
+                ${renderNavGroupedHtml({ active: '', className: 'id-link' })}
             </div>
 
             <div class="id-main">
