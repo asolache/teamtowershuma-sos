@@ -1441,21 +1441,22 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 12,                          '12 destinos canónicos (+ wallet en Ola 12 · global=false sólo aparece con projectId)');
+    assert(NAV_DESTINATIONS.length === 13,                          '13 destinos canónicos (+ savings en Ola 13)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 10,                                'sin projectId · 10 links (sin sops y sin wallet · 12-2)');
+    assert(linksGlobal.length === 11,                                'sin projectId · 11 links (sin sops y sin wallet · 13-2)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
     // con projectId → todos + query ?project= en los aplicables
     const linksProject = buildNavLinks({ active: 'kanban', projectId: 'proj-x' });
-    assert(linksProject.length === 12,                              'con projectId · 12 links (incluye sops y wallet)');
+    assert(linksProject.length === 13,                              'con projectId · 13 links (incluye sops, wallet y savings)');
     assert(linksProject.find(l => l.id === 'wallet').href === '/wallet?project=proj-x', 'wallet con project query');
+    assert(linksProject.find(l => l.id === 'savings').href === '/savings?project=proj-x', 'savings con project query');
     assert(linksProject.find(l => l.id === 'sops').href === '/sops?project=proj-x',     'sops con project query');
     assert(linksProject.find(l => l.id === 'map').href === '/map?project=proj-x',       'map con project query');
     assert(linksProject.find(l => l.id === 'market').href === '/market?project=proj-x', 'market con project query');
@@ -2055,6 +2056,116 @@ async function testWalletService() {
     assert(typeof mod.computeChargeFromTelemetry === 'function',           'computeChargeFromTelemetry exportada');
 }
 
+// ─── MKT-001 sprint D · savingsService puro ─────────────────────
+async function testSavingsService() {
+    const mod = await import('../core/savingsService.js?v=' + Date.now());
+    const {
+        computeWoHumanCost, computeWoAiCost, sumWalletConsumption,
+        sumEfficiencyLogs, compareToConventional, computeProjectSavings,
+        buildSavingsTable, accumulateAllProjects,
+    } = mod;
+
+    // computeWoHumanCost
+    const wo1 = { content: { fmvPerHour: 50, estimatedHours: 2, actualHours: 3 } };
+    const c1  = computeWoHumanCost(wo1);
+    assert(c1.estimated === 100,                                          'cost humano estimated = h·fmv');
+    assert(c1.real === 150,                                                'cost humano real con actualHours');
+
+    const wo2 = { content: { fmvPerHour: 50, estimatedHours: 1 } };       // sin actualHours
+    const c2  = computeWoHumanCost(wo2);
+    assert(c2.estimated === 50 && c2.real === null,                       'sin actualHours · real=null');
+
+    assert(computeWoHumanCost(null).real === null,                        'null devuelve estructura sin lanzar');
+
+    // computeWoAiCost
+    const woAi = { content: { tokensIn: 1e6, tokensOut: 5e5 } };
+    const ai1 = computeWoAiCost(woAi, { input: 3, output: 15 });
+    assert(ai1.costUSD === +((1*3) + (0.5*15)).toFixed(6),                'cost IA · tokens × pricing');
+    assert(computeWoAiCost({ content: {} }) === null,                     'sin tokens · null');
+
+    // sumWalletConsumption
+    const wallet = { content: { movements: [
+        { kind: 'topup',   amountEur: 25 },
+        { kind: 'consume', amountEur: 0.05 },
+        { kind: 'consume', amountEur: 0.03 },
+        { kind: 'refund',  amountEur: 0.01 },
+        { kind: 'adjustment', amountEur: 1 },
+    ]}};
+    const sw = sumWalletConsumption(wallet);
+    assert(sw.totalConsumedEur === 0.08,                                  'wallet consumido suma sólo consumes');
+    assert(sw.movementCount === 2,                                         'count consumes');
+    assert(sumWalletConsumption(null).totalConsumedEur === 0,             'null wallet → 0');
+
+    // sumEfficiencyLogs
+    const logs = [
+        { content: { costUSD: 0.10, totalTokens: 5000, pruning: { taskTags: ['project:p1','sector:k'] } } },
+        { content: { costUSD: 0.05, totalTokens: 2000, pruning: { taskTags: ['project:p2'] } } },
+        { content: { costUSD: 0.20, totalTokens: 8000 } },                // sin tags
+    ];
+    const all = sumEfficiencyLogs(logs);
+    assert(all.totalUsd === 0.35 && all.count === 3,                      'sin filter · todos');
+    const onlyP1 = sumEfficiencyLogs(logs, { projectId: 'p1' });
+    assert(onlyP1.count === 1 && onlyP1.totalUsd === 0.10,                'filtro projectId:p1');
+    assert(onlyP1.totalEur === +(0.10 * 0.92).toFixed(6),                 'totalEur = USD * rate');
+
+    // compareToConventional
+    const cmp1 = compareToConventional({ category: 'notaria', sosEur: 100 });
+    assert(cmp1.available === true,                                       'notaria existe en defaults');
+    assert(cmp1.midEur === 1650,                                          'midpoint notaria · (800+2500)/2');
+    assert(cmp1.savingEur === 1550,                                       'saving = mid - sos');
+    assert(cmp1.savingPct === 94,                                         'pct ~94%');
+
+    const cmpUnknown = compareToConventional({ category: 'inventado', sosEur: 100 });
+    assert(cmpUnknown.available === false,                                'categoria inválida · available false');
+
+    // saving negativo se clamps a 0 (sosEur > mid)
+    const cmpExpensive = compareToConventional({ category: 'notaria', sosEur: 5000 });
+    assert(cmpExpensive.savingEur === 0,                                  'saving clamp a 0 si sos>mid');
+    assert(cmpExpensive.savingPct === 0,                                  'pct 0 también');
+
+    // computeProjectSavings · agregado completo
+    const projWO = [
+        { projectId: 'p1', content: { status: 'ledgered', fmvPerHour: 50, estimatedHours: 2, actualHours: 3 } },
+        { projectId: 'p1', content: { status: 'doing',    fmvPerHour: 50, estimatedHours: 1, actualHours: null } },
+        { projectId: 'p2', content: { status: 'ledgered', fmvPerHour: 50, estimatedHours: 1, actualHours: 1 } },
+    ];
+    const stats = computeProjectSavings({
+        projectId: 'p1', wallet, efficiencyLogs: logs, workOrders: projWO,
+    });
+    assert(stats.projectId === 'p1',                                      'projectId preservado');
+    assert(stats.aiCostEur === 0.08,                                      'aiCostEur usa wallet consumed (mayor que efficiency)');
+    assert(stats.humanCostReal === 150,                                   'humanCostReal sólo p1 · 3h*50');
+    assert(stats.humanHoursReal === 3,                                    'humanHoursReal sólo de WOs ledgered/doing con actualHours · p1');
+    assert(stats.woCount === 2 && stats.woLedgered === 1,                 'WOs cuenta sólo p1');
+    assert(stats.sosTotalCostEur === +(0.08 + 150).toFixed(2),            'sosTotalCostEur = aiEur + humanReal');
+
+    // sin wallet · fallback a efficiency logs
+    const statsNoWallet = computeProjectSavings({
+        projectId: 'p1', wallet: null, efficiencyLogs: logs, workOrders: projWO,
+    });
+    assert(statsNoWallet.aiCostEur === +(0.10 * 0.92).toFixed(4),         'sin wallet · usa efficiency con projectId:p1');
+
+    // empty
+    const empt = computeProjectSavings({ projectId: null });
+    assert(empt.sosTotalCostEur === 0,                                    'sin projectId · stats vacíos');
+
+    // buildSavingsTable
+    const table = buildSavingsTable(stats);
+    assert(Array.isArray(table) && table.length === 4,                    'tabla 4 categorias defaults');
+    assert(table.every(c => c.available === true),                        'las 4 disponibles');
+
+    // accumulateAllProjects
+    const projects = [{ id: 'p1' }, { id: 'p2' }];
+    const wallets  = [wallet];   // sólo p1 lo asignamos abajo
+    wallet.projectId = 'p1';
+    wallet.content.projectId = 'p1';
+    const acc = accumulateAllProjects({ projects, wallets, efficiencyLogs: logs, workOrders: projWO });
+    assert(acc.byProject.length === 2,                                    'byProject 2 entries');
+    assert(acc.totals.aiCallCount === 2,                                  'totals.aiCallCount p1+p2');
+    assert(acc.totals.woLedgered === 2,                                   'totals.woLedgered p1+p2');
+    assert(acc.projectsCount === 2,                                       'projectsCount');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -2084,7 +2195,8 @@ const SUITE = [
     { name: 'KM-001 sprint A · smartFolderService puro',          fn: testSmartFolderService },
     { name: 'H8.1 · mindGraphService puro',                       fn: testMindGraphService },
     { name: 'KM-001 sprint C · contextPruner puro',               fn: testContextPruner },
-    { name: 'MKT-001 sprint C1 · walletService puro',             fn: testWalletService }
+    { name: 'MKT-001 sprint C1 · walletService puro',             fn: testWalletService },
+    { name: 'MKT-001 sprint D · savingsService puro',             fn: testSavingsService }
 ];
 
 export async function runTests() {
