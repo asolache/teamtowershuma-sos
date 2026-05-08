@@ -1441,7 +1441,7 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 13,                          '13 destinos canónicos (+ savings en Ola 13)');
+    assert(NAV_DESTINATIONS.length === 15,                          '15 destinos canónicos (+ learn UX-EDU-001 + matriu MAT-002-H)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
@@ -1488,7 +1488,10 @@ async function testNavService() {
     const groupsNoP = groupNavByCategory({ active: 'dashboard' });
     // home + knowledge + market + identity (operations sin proyecto sólo tiene map+kanban; sigue apareciendo)
     assert(groupsNoP.find(g => g.category.id === 'home'),                              'groups · home presente');
-    assert(groupsNoP.find(g => g.category.id === 'knowledge')?.links.length === 3,     'knowledge · 3 links (tags + folders + mind)');
+    // home ahora tiene 2 links (dashboard + matriu) tras MAT-002-H
+    assert(groupsNoP.find(g => g.category.id === 'home')?.links.length === 2,          'home · 2 links (dashboard + matriu)');
+    // knowledge ahora 4 (tags + folders + mind + learn) tras UX-EDU-001 sprint C
+    assert(groupsNoP.find(g => g.category.id === 'knowledge')?.links.length === 4,     'knowledge · 4 links (tags + folders + mind + learn)');
     // sin projectId · operations sólo tiene 2 (map · kanban) · sops y wallet son global=false
     const opsNoP = groupsNoP.find(g => g.category.id === 'operations');
     assert(opsNoP && opsNoP.links.length === 2,                                        'operations sin projectId · 2 links (map · kanban)');
@@ -1506,8 +1509,9 @@ async function testNavService() {
     assert(groupedHtml.includes('data-nav-group="knowledge"'),                         'incluye data-nav-group knowledge');
     assert(groupedHtml.includes('data-nav-group="market"'),                            'incluye data-nav-group market');
     assert(groupedHtml.includes('data-nav-group="identity"'),                          'incluye data-nav-group identity');
-    // home (1 link · dashboard) se renderiza como anchor directo
-    assert(groupedHtml.includes('href="/dashboard"') && !groupedHtml.includes('data-nav-group="home"'), 'home · render directo (no dropdown)');
+    // home (2 links · dashboard + matriu tras MAT-002-H) ahora se renderiza como dropdown
+    assert(groupedHtml.includes('data-nav-group="home"'),                              'home · dropdown (dashboard + matriu)');
+    assert(groupedHtml.includes('href="/dashboard"') && groupedHtml.includes('href="/matriu"'), 'home dropdown contiene dashboard + matriu');
     // active dentro de dropdown · agrega activeClass al header del grupo
     assert(groupedHtml.includes('aria-haspopup="true"'),                               'dropdowns con aria-haspopup');
     assert(groupedHtml.includes('role="menu"'),                                         'menus con role="menu"');

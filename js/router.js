@@ -38,6 +38,10 @@ const ROUTES = [
     { path: '/wallet',    view: () => import('./views/WalletView.js')    },
     // MKT-001 sprint D · cuadro comparativo de ahorro acumulado vs convencional
     { path: '/savings',   view: () => import('./views/SavingsView.js')   },
+    // MAT-002-H · landing pública Matriu Incoopadora
+    { path: '/matriu',    view: () => import('./views/MatriuLandingView.js') },
+    // UX-EDU-001 sprint C · vista /learn glosario navegable + progreso "ya leído"
+    { path: '/learn',     view: () => import('./views/LearnView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
