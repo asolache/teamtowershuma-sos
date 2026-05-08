@@ -162,6 +162,186 @@ function _esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
 }
 
+// ─── UX-NAV-003 sprint A · Breadcrumb dinámico ────────────────────────────
+// Input @alvaro 2026-04-30: "quiero que la UX de SOS me ayude a saber dónde
+// estoy en todo momento". El breadcrumb se inyecta automáticamente bajo
+// la topbar de cada vista (router · zero changes en vistas individuales).
+
+// Mapeo de routes globales a labels legibles
+const ROUTE_LABELS = Object.freeze({
+    '/dashboard':  '🏠 Inicio',
+    '/map':        '🗺 Mapa',
+    '/sops':       '📜 SOPs',
+    '/kanban':     '📋 Kanban',
+    '/wallet':     '💶 Wallet',
+    '/savings':    '📊 Ahorro',
+    '/efficiency': '⚡ Eficiencia',
+    '/market':     '🛒 Mercado',
+    '/tags':       '🏷 Tags',
+    '/folders':    '📁 Folders',
+    '/mind':       '🕸 Mind-Graph',
+    '/identity':   '👤 Identidad',
+    '/settings':   '⚙ Settings',
+    '/workshops':  '🎓 Workshops',
+});
+
+// Detecta la fase del proyecto · heurística simple sobre stats
+// (KM-001 podría afinarla con datos reales en sprint B).
+// projectStats opcional · {sopsCount, woBacklog, woDoing, woLedgered}.
+export function detectProjectPhase(project, projectStats = null) {
+    if (!project) return null;
+    // Override manual via tag phase:X
+    const tags = (project.tags || project.content?.tags || []);
+    const phaseTag = (Array.isArray(tags) ? tags : []).find(t => typeof t === 'string' && t.startsWith('phase:'));
+    if (phaseTag) {
+        const v = phaseTag.slice(6).toLowerCase();
+        if (['design', 'build', 'operate', 'ledger'].includes(v)) return v;
+    }
+    // Heurística sobre stats si están
+    if (projectStats) {
+        if ((projectStats.woLedgered || 0) > 0) return 'ledger';
+        if ((projectStats.woDoing    || 0) > 0) return 'operate';
+        if ((projectStats.sopsCount  || 0) > 0) return 'build';
+    }
+    // Fallback · si tiene roles → DESIGN avanzado · si vacío → DESIGN inicial
+    return 'design';
+}
+
+const PHASE_META = Object.freeze({
+    design:  { icon: '🎨', label: 'DESIGN',  color: '#a855f7', hint: 'Diseñando el mapa de valor · roles · transacciones' },
+    build:   { icon: '🛠',  label: 'BUILD',   color: '#facc15', hint: 'Creando SOPs · WOs · plantillas' },
+    operate: { icon: '⚙',  label: 'OPERATE', color: '#06b6d4', hint: 'Ejecutando WOs · IA + humanos' },
+    ledger:  { icon: '💶', label: 'LEDGER',  color: '#22c55e', hint: 'Contabilizando · ahorro · slicing pie' },
+});
+export { PHASE_META };
+
+// Construye el breadcrumb. PURO. Devuelve `[{label, href, current}]`.
+// `pathname` y `search` vienen de window.location.
+// `projects` es el array de proyectos del store (puede ser []).
+export function buildBreadcrumb({ pathname = '/', search = '', projects = [] } = {}) {
+    const path = pathname.replace(/\/$/, '') || '/';
+    const params = new URLSearchParams(search || '');
+    const projectId = params.get('project') || null;
+    const project   = projectId ? (projects || []).find(p => p && p.id === projectId) : null;
+
+    const out = [];
+    // Inicio siempre primero (excepto en `/` y `/dashboard`)
+    out.push({ label: '🏠 Inicio', href: '/dashboard', current: false });
+
+    // Caso /n/{id}
+    const nMatch = path.match(/^\/n\/(.+)$/);
+    if (nMatch) {
+        const id = decodeURIComponent(nMatch[1]);
+        out.push({ label: '🔎 Nodo: ' + id.slice(0, 16) + (id.length > 16 ? '…' : ''), href: '#', current: true });
+    }
+    // Caso /project/{id}
+    else if (path.startsWith('/project/')) {
+        const id = decodeURIComponent(path.slice(9));
+        const p  = (projects || []).find(x => x && x.id === id);
+        const name = p?.nombre || p?.name || id;
+        out.push({ label: '🎛 ' + name, href: '/project/' + encodeURIComponent(id), current: true });
+    }
+    // Caso global con project query
+    else if (projectId && project) {
+        const name = project.nombre || project.name || projectId;
+        out.push({ label: '🎛 ' + name, href: '/project/' + encodeURIComponent(projectId), current: false });
+        const label = ROUTE_LABELS[path] || path;
+        out.push({ label, href: path + (search || ''), current: true });
+    }
+    // Caso global sin project · ruta conocida
+    else if (ROUTE_LABELS[path]) {
+        if (path === '/dashboard') {
+            // ya tenemos Inicio · marcamos current
+            out[0].current = true;
+        } else {
+            out.push({ label: ROUTE_LABELS[path], href: path, current: true });
+        }
+    }
+    // Caso `/` · sólo Inicio current
+    else if (path === '/') {
+        out[0].current = true;
+    }
+    // Fallback · ruta desconocida
+    else {
+        out.push({ label: '· ' + path, href: path, current: true });
+    }
+    return out;
+}
+
+// Renderiza el breadcrumb como HTML compacto.
+// items = output de buildBreadcrumb. options.phase = 'design'|...|null.
+export function renderBreadcrumbHtml({ items = [], phase = null, className = 'sos-breadcrumb' } = {}) {
+    const crumbs = items.map((it, i) => {
+        const sep = i > 0 ? '<span class="sos-bc-sep" aria-hidden="true">›</span>' : '';
+        if (it.current) return sep + `<span class="sos-bc-current" aria-current="page">${_esc(it.label)}</span>`;
+        return sep + `<a href="${_esc(it.href)}" data-link class="sos-bc-link">${_esc(it.label)}</a>`;
+    }).join('');
+    let phaseHtml = '';
+    if (phase && PHASE_META[phase]) {
+        const m = PHASE_META[phase];
+        phaseHtml = `<span class="sos-bc-phase" style="background:${m.color}22;color:${m.color};border-color:${m.color}55;" title="${_esc(m.hint)}">${m.icon} ${_esc(m.label)}</span>`;
+    }
+    return `<nav class="${className}" aria-label="Breadcrumb">${crumbs}${phaseHtml}</nav>`;
+}
+
+// CSS único inyectado una vez · idempotente. Llamado desde el router.
+const BREADCRUMB_STYLE_ID = 'sos-breadcrumb-style';
+const BREADCRUMB_CSS = `
+.sos-breadcrumb {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 1.5rem; background: #06060a;
+    border-bottom: 1px solid #1a1a22;
+    font-size: 0.78rem; color: #888;
+    font-family: monospace; flex-wrap: wrap;
+}
+.sos-breadcrumb a, .sos-breadcrumb .sos-bc-current { display: inline-flex; align-items: center; gap: 4px; }
+.sos-breadcrumb a { color: #a5b4fc; text-decoration: none; }
+.sos-breadcrumb a:hover { color: #c7d2fe; text-decoration: underline; }
+.sos-breadcrumb .sos-bc-current { color: #fff; font-weight: 600; }
+.sos-breadcrumb .sos-bc-sep { color: #444; padding: 0 2px; }
+.sos-breadcrumb .sos-bc-phase {
+    margin-left: auto; padding: 2px 9px; border-radius: 10px;
+    border: 1px solid; font-family: monospace; font-size: 0.7rem;
+    letter-spacing: 0.05em; font-weight: 700;
+}
+@media (max-width: 720px) {
+    .sos-breadcrumb { padding: 6px 1rem; }
+    .sos-breadcrumb .sos-bc-phase { margin-left: 4px; }
+}
+`;
+
+export function ensureBreadcrumbStyle() {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById(BREADCRUMB_STYLE_ID)) return;
+    const el = document.createElement('style');
+    el.id = BREADCRUMB_STYLE_ID;
+    el.textContent = BREADCRUMB_CSS;
+    document.head.appendChild(el);
+}
+
+// Helper async · pinta el breadcrumb actual sobre `targetEl`. Llamado por el router.
+// Idempotente · sustituye el HTML anterior. Calcula phase si hay project + KB.
+export async function paintBreadcrumb({
+    targetEl,
+    pathname = window.location.pathname,
+    search   = window.location.search,
+    projects = [],
+    projectStats = null,
+} = {}) {
+    if (!targetEl) return;
+    ensureBreadcrumbStyle();
+    const items = buildBreadcrumb({ pathname, search, projects });
+    // Resolver phase si hay proyecto activo
+    let phase = null;
+    const params = new URLSearchParams(search || '');
+    const projectId = params.get('project') || (pathname.startsWith('/project/') ? decodeURIComponent(pathname.slice(9)) : null);
+    if (projectId) {
+        const p = (projects || []).find(x => x && x.id === projectId);
+        if (p) phase = detectProjectPhase(p, projectStats);
+    }
+    targetEl.innerHTML = renderBreadcrumbHtml({ items, phase });
+}
+
 // CSS mínimo común para los dropdowns · se inyecta una sola vez en <head>.
 // Cada vista puede mantener sus propios estilos para los anchors (className)
 // pero el contenedor del menú compartido necesita posicionamiento absoluto

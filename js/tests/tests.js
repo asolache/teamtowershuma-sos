@@ -1516,6 +1516,75 @@ async function testNavService() {
     // exports
     assert(typeof mod.ensureNavGroupStyle === 'function',                              'ensureNavGroupStyle exportada');
     assert(typeof mod.bindNavGroupDropdowns === 'function',                            'bindNavGroupDropdowns exportada');
+
+    // ── UX-NAV-003 · Breadcrumb + detectProjectPhase
+    const { buildBreadcrumb, renderBreadcrumbHtml, detectProjectPhase, PHASE_META, ensureBreadcrumbStyle } = mod;
+    assert(Object.isFrozen(PHASE_META) && PHASE_META.design && PHASE_META.ledger,      'PHASE_META frozen · 4 fases');
+
+    // /dashboard · sólo Inicio current
+    const bc1 = buildBreadcrumb({ pathname: '/dashboard' });
+    assert(bc1.length === 1 && bc1[0].current === true,                                'dashboard · sólo Inicio current');
+
+    // / vacío · igual
+    const bc2 = buildBreadcrumb({ pathname: '/' });
+    assert(bc2.length === 1 && bc2[0].current === true,                                '/ · sólo Inicio current');
+
+    // /map sin proyecto · 2 niveles
+    const bc3 = buildBreadcrumb({ pathname: '/map' });
+    assert(bc3.length === 2 && bc3[1].label.includes('Mapa') && bc3[1].current === true, '/map sin proj · 2 niveles');
+
+    // /map?project=p1 con proyecto · 3 niveles
+    const projects = [{ id: 'p1', nombre: 'Hortet de la Vall' }, { id: 'p2', nombre: 'IKEA Madrid' }];
+    const bc4 = buildBreadcrumb({ pathname: '/map', search: '?project=p1', projects });
+    assert(bc4.length === 3,                                                            '/map?project=p1 · 3 niveles');
+    assert(bc4[1].label.includes('Hortet de la Vall'),                                  'incluye nombre proyecto');
+    assert(bc4[1].href === '/project/p1',                                               'project link al hub');
+    assert(bc4[2].current === true,                                                     'último current');
+
+    // /project/p2 · 2 niveles · current
+    const bc5 = buildBreadcrumb({ pathname: '/project/p2', projects });
+    assert(bc5.length === 2 && bc5[1].label.includes('IKEA Madrid') && bc5[1].current,  '/project/{id} · 2 niveles current');
+
+    // /n/some-id · 2 niveles · trunca id largo
+    const bc6 = buildBreadcrumb({ pathname: '/n/some-very-long-id-12345' });
+    assert(bc6.length === 2 && bc6[1].label.includes('Nodo:') && bc6[1].current,        '/n/{id} · trunca');
+    assert(bc6[1].label.includes('…'),                                                   'truncamiento con ellipsis');
+
+    // ruta desconocida fallback
+    const bc7 = buildBreadcrumb({ pathname: '/wat' });
+    assert(bc7.length === 2 && bc7[1].current,                                          'ruta desconocida · fallback');
+
+    // detectProjectPhase
+    assert(detectProjectPhase(null) === null,                                            'null → null');
+    const projDesign = { id: 'p', vna_roles: [] };
+    assert(detectProjectPhase(projDesign) === 'design',                                  'project sin nada · design');
+    const projWithSops = { id: 'p' };
+    const stats1 = { sopsCount: 2, woDoing: 0, woLedgered: 0 };
+    assert(detectProjectPhase(projWithSops, stats1) === 'build',                        'sops>0 · build');
+    const stats2 = { sopsCount: 2, woDoing: 1, woLedgered: 0 };
+    assert(detectProjectPhase(projWithSops, stats2) === 'operate',                      'wo doing · operate');
+    const stats3 = { sopsCount: 2, woDoing: 0, woLedgered: 3 };
+    assert(detectProjectPhase(projWithSops, stats3) === 'ledger',                       'wo ledgered · ledger');
+    // Override manual con tag phase:X · gana sobre heurística
+    const projTagged = { id: 'p', tags: ['phase:operate'] };
+    assert(detectProjectPhase(projTagged, stats1) === 'operate',                        'tag phase:operate override sobre sops>0');
+
+    // renderBreadcrumbHtml · estructura
+    const html2 = renderBreadcrumbHtml({ items: bc4, phase: 'design' });
+    assert(typeof html2 === 'string',                                                    'render string');
+    assert(html2.includes('Hortet de la Vall'),                                          'incluye nombre proyecto');
+    assert(html2.includes('aria-current="page"'),                                        'current con aria');
+    assert(html2.includes('🎨') && html2.includes('DESIGN'),                            'phase pill con icono');
+    // Sin phase
+    const html3 = renderBreadcrumbHtml({ items: bc1, phase: null });
+    assert(!html3.includes('DESIGN') && !html3.includes('LEDGER'),                       'sin phase · sin pill');
+    // Phase inválida no rompe
+    const html4 = renderBreadcrumbHtml({ items: bc1, phase: 'fake' });
+    assert(typeof html4 === 'string',                                                    'phase inválida no rompe');
+
+    // exports
+    assert(typeof ensureBreadcrumbStyle === 'function',                                  'ensureBreadcrumbStyle exportada');
+    assert(typeof mod.paintBreadcrumb === 'function',                                    'paintBreadcrumb exportada');
 }
 
 // ─── AUTH-001 sprint A · identityService (helpers puros) ────────
@@ -2442,6 +2511,182 @@ async function testMatriuTemplate() {
     });
 }
 
+// ─── MAT-002-G fase A · sosManifesto puro + helpers KB-bound (mock) ──
+async function testSosManifesto() {
+    const mod = await import('../core/sosManifesto.js?v=' + Date.now());
+    const {
+        SOS_MANIFESTO,
+        buildManifestoNode, extractManifestoText, isDefaultManifesto,
+        loadManifesto, saveManifesto, restoreDefaultManifesto, ensureManifestoSeeded,
+    } = mod;
+
+    // Constantes y forma del export
+    assert(Object.isFrozen(SOS_MANIFESTO),                                'SOS_MANIFESTO frozen');
+    assert(SOS_MANIFESTO.nodeId === 'sos-system-prompt-canonical',        'nodeId canónico');
+    assert(SOS_MANIFESTO.nodeType === 'system_prompt',                    'nodeType system_prompt');
+    assert(SOS_MANIFESTO.nodeKind === 'canonical-manifesto',              'nodeKind canonical-manifesto');
+    assert(typeof SOS_MANIFESTO.defaultText === 'string' && SOS_MANIFESTO.defaultText.length > 200, 'defaultText no vacío');
+    assert(SOS_MANIFESTO.defaultText.startsWith('Eres el agente inteligente del SOS V11'), 'defaultText canónico');
+
+    // buildManifestoNode con default
+    const nDef = buildManifestoNode();
+    assert(nDef.id === SOS_MANIFESTO.nodeId,                              'build · id');
+    assert(nDef.type === SOS_MANIFESTO.nodeType,                          'build · type');
+    assert(nDef.content.kind === SOS_MANIFESTO.nodeKind,                  'build · content.kind');
+    assert(nDef.content.body === SOS_MANIFESTO.defaultText,               'build · body=default');
+    assert(nDef.content.isDefault === true,                               'build · isDefault=true');
+    assert(Array.isArray(nDef.keywords) && nDef.keywords.includes('type:system_prompt'), 'build · keywords taxonómicos');
+
+    // buildManifestoNode con texto custom
+    const customTxt = 'Misión adaptada · operador X';
+    const nCust = buildManifestoNode({ text: customTxt, createdBy: 'did:sos:abcd' });
+    assert(nCust.content.body === customTxt,                              'build · body=custom');
+    assert(nCust.content.isDefault === false,                             'build · isDefault=false con custom');
+    assert(nCust.content.createdBy === 'did:sos:abcd',                    'build · createdBy se persiste');
+
+    // text vacío o whitespace cae a default
+    const nEmpty = buildManifestoNode({ text: '   ' });
+    assert(nEmpty.content.body === SOS_MANIFESTO.defaultText,             'build · text whitespace → default');
+    assert(nEmpty.content.isDefault === true,                             'build · whitespace · isDefault=true');
+
+    // extractManifestoText
+    assert(extractManifestoText(nDef) === SOS_MANIFESTO.defaultText,      'extract · default node');
+    assert(extractManifestoText(null) === '',                             'extract · null → ""');
+    assert(extractManifestoText({}) === '',                               'extract · sin content → ""');
+    assert(extractManifestoText({ content: { body: 'X' } }) === 'X',      'extract · custom body');
+
+    // isDefaultManifesto
+    assert(isDefaultManifesto(SOS_MANIFESTO.defaultText) === true,        'isDefault · texto default');
+    assert(isDefaultManifesto('  ' + SOS_MANIFESTO.defaultText + '  ') === true, 'isDefault · trim-aware');
+    assert(isDefaultManifesto('otra cosa') === false,                     'isDefault · custom');
+    assert(isDefaultManifesto(null) === false,                            'isDefault · null');
+
+    // ── KB mock async ─────────────────────────────────────────────
+    const mockKB = (() => {
+        const store = new Map();
+        return {
+            getNode: async (id) => store.has(id) ? store.get(id) : null,
+            upsert:  async (node) => {
+                const merged = { ...node, updatedAt: Date.now(), createdAt: store.get(node.id)?.createdAt || Date.now() };
+                store.set(node.id, merged);
+                return merged;
+            },
+            _peek: () => store,
+        };
+    })();
+
+    // load sin nodo previo · cae a default
+    const lEmpty = await loadManifesto(mockKB);
+    assert(lEmpty.exists === false,                                       'load · exists=false sin seed');
+    assert(lEmpty.text === SOS_MANIFESTO.defaultText,                     'load · text=default sin seed');
+    assert(lEmpty.isDefault === true,                                     'load · isDefault=true sin seed');
+
+    // ensureManifestoSeeded crea nodo si no existe
+    const seeded = await ensureManifestoSeeded(mockKB);
+    assert(seeded && seeded.id === SOS_MANIFESTO.nodeId,                  'ensure · seed creado');
+    assert(mockKB._peek().has(SOS_MANIFESTO.nodeId),                      'ensure · existe en KB tras seed');
+
+    // ensure idempotente · no rescribe si ya existe
+    const before = mockKB._peek().get(SOS_MANIFESTO.nodeId);
+    const seeded2 = await ensureManifestoSeeded(mockKB);
+    assert(seeded2 === before,                                            'ensure · idempotente · devuelve nodo existente');
+
+    // saveManifesto con custom
+    const savedCustom = await saveManifesto(mockKB, { text: 'Versión adaptada SOS' });
+    assert(savedCustom.content.body === 'Versión adaptada SOS',           'save · custom persiste');
+    const lAfter = await loadManifesto(mockKB);
+    assert(lAfter.exists === true,                                        'load · exists=true tras save');
+    assert(lAfter.text === 'Versión adaptada SOS',                        'load · text=custom tras save');
+    assert(lAfter.isDefault === false,                                    'load · isDefault=false con custom');
+
+    // restoreDefaultManifesto
+    await restoreDefaultManifesto(mockKB);
+    const lRestored = await loadManifesto(mockKB);
+    assert(lRestored.text === SOS_MANIFESTO.defaultText,                  'restore · vuelve al default');
+    assert(lRestored.isDefault === true,                                  'restore · isDefault=true');
+
+    // Errors de uso · KB inválido
+    let threwLoad = false;
+    try { await loadManifesto({}); } catch (_) { threwLoad = true; }
+    assert(threwLoad,                                                     'load · KB sin getNode lanza');
+
+    let threwSave = false;
+    try { await saveManifesto({ getNode: () => null }); } catch (_) { threwSave = true; }
+    assert(threwSave,                                                     'save · KB sin upsert lanza');
+}
+
+// ─── UX-EDU-001 sprint A · didacticService puro ──────────────────
+async function testDidacticService() {
+    const mod = await import('../core/didacticService.js?v=' + Date.now());
+    const { EDU_CONCEPTS, getConcept, listConcepts, renderExplainerBadge } = mod;
+
+    // Catálogo
+    assert(Object.isFrozen(EDU_CONCEPTS),                                 'EDU_CONCEPTS frozen');
+    const ids = Object.keys(EDU_CONCEPTS);
+    assert(ids.length >= 14,                                              'catálogo ≥14 conceptos');
+    ['vna', 'triple-entry-accounting', 'slicing-pie', 'fair-fractal-tokenomics',
+     'soc', 'sop', 'dtd', 'antigravity-engine', 'context-pruning',
+     'folksonomy', 'taxonomy', 'smart-contract', 'sbt', 'cohort-0', 'econom-ia'
+    ].forEach(id => assert(EDU_CONCEPTS[id], 'concepto canónico ' + id));
+
+    // Cada concepto bien formado
+    listConcepts().forEach(c => {
+        assert(typeof c.id === 'string' && c.id.length > 0,               c.id + ' · id');
+        assert(typeof c.headline === 'string' && c.headline.length > 0,   c.id + ' · headline');
+        assert(typeof c.body === 'string' && c.body.length > 0,           c.id + ' · body');
+        assert(c.body.length <= 240,                                       c.id + ' · body ≤240 chars');
+        assert(Object.isFrozen(c),                                         c.id + ' · frozen');
+    });
+
+    // getConcept
+    assert(getConcept('vna').id === 'vna',                                'getConcept · vna');
+    assert(getConcept('inexistente') === null,                            'getConcept · null en miss');
+    assert(getConcept(null) === null,                                     'getConcept · null en input null');
+    assert(getConcept('') === null,                                       'getConcept · null en string vacío');
+
+    // listConcepts
+    const list = listConcepts();
+    assert(Array.isArray(list) && list.length === ids.length,             'listConcepts · array completo');
+
+    // renderExplainerBadge · concepto válido
+    const html = renderExplainerBadge('vna');
+    assert(typeof html === 'string' && html.length > 0,                   'render · html no vacío');
+    assert(html.includes('class="sos-edu-badge'),                         'render · class badge');
+    assert(html.includes('data-edu-concept="vna"'),                       'render · data-attr concepto');
+    assert(html.includes('role="button"'),                                'render · role button');
+    assert(html.includes('aria-haspopup="true"'),                         'render · aria-haspopup');
+    assert(html.includes('tabindex="0"'),                                 'render · tabindex 0');
+    assert(html.includes('Value Network Analysis'),                       'render · headline incluido');
+    assert(html.includes('role="tooltip"'),                               'render · tooltip role');
+    assert(html.includes('hidden'),                                       'render · tooltip hidden default');
+
+    // renderExplainerBadge · concepto inexistente devuelve string vacío
+    assert(renderExplainerBadge('no-existe') === '',                      'render · concepto inválido → ""');
+    assert(renderExplainerBadge(null) === '',                             'render · null → ""');
+
+    // renderExplainerBadge · showLabel
+    const htmlLbl = renderExplainerBadge('triple-entry-accounting', { showLabel: true });
+    assert(htmlLbl.includes('sos-edu-badge-label'),                       'render · showLabel injecta label');
+
+    // renderExplainerBadge · escape HTML en cuerpos (defensivo)
+    // Inyectamos un concepto custom mediante hack del runtime · NO mutamos EDU_CONCEPTS
+    // (verificamos que el escape no rompe en chars normales)
+    const htmlSlicing = renderExplainerBadge('slicing-pie');
+    assert(!htmlSlicing.includes('<script'),                              'render · no scripts injection');
+
+    // Linkref opcional
+    const htmlVna = renderExplainerBadge('vna');
+    assert(htmlVna.includes('sos-edu-tip-link'),                          'render · vna lleva linkRef');
+    const htmlDtd = renderExplainerBadge('dtd');
+    assert(!htmlDtd.includes('sos-edu-tip-link'),                         'render · dtd sin linkRef · no aparece link');
+
+    // Size variants
+    const htmlXs = renderExplainerBadge('sop', { size: 'xs' });
+    assert(htmlXs.includes('sos-edu-size-xs'),                            'render · size xs class');
+    const htmlMd = renderExplainerBadge('sop', { size: 'md' });
+    assert(htmlMd.includes('sos-edu-size-md'),                            'render · size md class');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -2474,7 +2719,9 @@ const SUITE = [
     { name: 'MKT-001 sprint C1 · walletService puro',             fn: testWalletService },
     { name: 'MKT-001 sprint D · savingsService puro',             fn: testSavingsService },
     { name: 'H_ANIM_001 sprint A · flowAnimationService puro',    fn: testFlowAnimationService },
-    { name: 'MAT-002-A · matriuTemplate puro',                    fn: testMatriuTemplate }
+    { name: 'MAT-002-A · matriuTemplate puro',                    fn: testMatriuTemplate },
+    { name: 'MAT-002-G fase A · sosManifesto puro + KB mock',     fn: testSosManifesto },
+    { name: 'UX-EDU-001 sprint A · didacticService puro',         fn: testDidacticService }
 ];
 
 export async function runTests() {

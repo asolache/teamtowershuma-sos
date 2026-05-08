@@ -13,6 +13,7 @@ import {
     computeProjectSavings, buildSavingsTable, accumulateAllProjects,
 } from '../core/savingsService.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 const CATEGORY_ICONS = {
     notaria:     '⚖',
@@ -99,7 +100,7 @@ export default class SavingsView {
         <div class="sa-shell">
             <div class="sa-topbar">
                 <a href="/" data-link class="sa-logo">🗼 Team<span>Towers</span></a>
-                <span class="sa-title">Ahorro acumulado · cuadro comparativo</span>
+                <span class="sa-title">Ahorro acumulado · cuadro comparativo ${renderExplainerBadge('triple-entry-accounting', { size: 'xs' })}</span>
                 <div class="sa-spacer"></div>
                 ${renderNavGroupedHtml({ active: '', projectId: this.projectId, className: 'sa-link' })}
             </div>
@@ -110,8 +111,11 @@ export default class SavingsView {
     }
 
     async afterRender() {
+        ensureExplainerStyle();
+        bindExplainerBadges(document);
         await this._load();
         this._render();
+        bindExplainerBadges(document);
     }
 
     async _load() {
