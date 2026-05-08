@@ -1586,15 +1586,152 @@ SOC/SOP del Mètode SOS`. Esto es la materialización operativa de
 - Skills `tech` + `finance` = 30 plazas (30%) · garantizan capacidad
   de ejecución técnica y económica del Antigravity Engine.
 
-### Próxima conversación con @alvaro · validar antes de codificar
+### Decisiones validadas con @alvaro 2026-05-08
 
-1. ¿Aceptas la distribución 8/12/18/8/14/12/6/8/8/6 por dominio?
-2. ¿Qué 5-8 roles imprescindibles dirías que tiene que estar en el
-   primer sprint A · los que no podemos delegar al "vendrán después"?
-3. ¿Los 7 tipos de proyecto cliente cubren el espacio que tienes
-   en mente o falta alguno (ej. fundació · DAO · ecosistema regional)?
-4. ¿La heurística "1 plaza = 1 rol crítico" o admites "1 plaza puede
-   cubrir 2 roles si demuestra skills en ambos"?
+1. **Distribución por dominio · ACEPTADA con ajuste de 100 → 96 (espacio para 12 guardianes)**:
+
+| Dominio | Plazas operativas (sub-total 96) |
+|---|---|
+| `governance` | 8 |
+| `finance` | 12 |
+| `tech` | 16 *(antes 18 · −2)* |
+| `design` | 8 |
+| `operations` | 12 *(antes 14 · −2)* |
+| `community` | 12 |
+| `legal` | 6 |
+| `ecology` | 8 |
+| `education` | 8 |
+| `culture` | 6 |
+| **TOTAL operativo** | **96** |
+| Guardianes Pantheon Work | **12** |
+| **TOTAL Cohort 0** | **108** |
+
+   Razón del −4 en tech/operations: son los dominios más grandes y los
+   más fácilmente "absorbibles" por las 12 plazas guardianas (cuyas
+   funciones arquetípicas suelen cubrir parcialmente tareas tech/ops
+   estratégicas).
+
+2. **Cohort 0 = 108 places** (no 100). Razón simbólica · 108 = 12×9
+   · número sagrado (mantras yoga · monjes templarios · nudos de
+   rosario). Razón operativa · necesitamos espacio explícito para los
+   12 guardianes Pantheon Work como **plazas adicionales con peso
+   arquetípico** sobre las 96 operativas. Cada guardián representa
+   una función estratégica (ver sección "12 Guardianes Pantheon Work"
+   abajo · pendiente input @alvaro con nombres y funciones literales
+   del framework que conoce).
+
+3. **Multi-rol · ADMITIDO**. Heurística · "1 plaza ejecuta 1 rol
+   primario + 0-2 roles secundarios" si demuestra skills en ambos.
+   Cada rol crítico tiene **al menos 1 plaza primaria** + 0+ plazas
+   backup como cobertura. La adjudicación primario vs secundario la
+   hace el matchmaker (sprint C) con criterio de fit + disponibilidad.
+
+4. **Tipos de proyecto · EXPANSIÓN a 12 (signo dels temps 2026)**.
+   Reorganización tras input @alvaro "analiza y define la respuesta
+   más adaptada al signo de los tiempos":
+
+   | # | Tipo | Por qué entra ahora (2026) |
+   |---|---|---|
+   | 01 | **Comunidad autosuficiente** | Hortet · ateneu · cura · vivienda colaborativa · transició energètica local |
+   | 02 | **Startup cooperativa o tradicional** | Founders que renuncian a VC tradicional · cap-tables abiertas |
+   | 03 | **Empresa establecida en transición** | Conversión a SCCL · slicing pie aplicado a equipos existentes |
+   | 04 | **Cooperativa multi-stakeholder** | Consum · treball · serveis · habitatge (modelo COCETA) |
+   | 05 | **Fundació / Associació / ONG** | Proyectos sin reparto pero con governance compleja · operativa SOP |
+   | 06 | **Ecosistema regional regenerativo** | Comarcal · biorregional · cooperatives federades (modelo Coopdevs) |
+   | 07 | **DAO / Web3 descentralitzat** | RegenDAO · ReFi · DAO con proyectos físicos (separat del 02 per la seva natura cripto-nativa) |
+   | 08 | **Plataforma cooperativa digital** | Alternativa a Uber/Airbnb (Smart · Eva · CoopCycle · Loconomics) |
+   | 09 | **Cooperativa de cures** | Cura mental · diversitat funcional · majors · acompanyament a final de vida |
+   | 10 | **Espai autogestionat / coliving** | CSO · ateneu de barri · co-housing · espais culturals |
+   | 11 | **Hub de transició sectorial** | Alimentari · energètic · cultural · digital sostenible (modelo Transition Network) |
+   | 12 | **Empresa familiar en relevo intergeneracional** | Successió ordenada amb slicing pie · capital paternofamiliar a coperatiu |
+
+   12 tipos · simetría con los 12 guardianes Pantheon Work. Cada
+   guardián tendrá afinidad natural con un sub-conjunto de tipos
+   (ej. el guardián de ecología hace match con tipos 01/06/09 por
+   tradición; el guardián de tecnología con 02/07/08).
+
+### 12 Guardianes Pantheon Work · pendiente input @alvaro
+
+@alvaro me indica que Pantheon Work es un framework concreto que él
+conoce y que pasará los **12 nombres + función + skills** de los 12
+guardianes en el siguiente mensaje. Hasta entonces, este sub-bloque
+queda como placeholder · NO se codifica el sprint A hasta tener los
+12 literales para que la matriz inicial sea fiel al método.
+
+Plantilla para cada guardián (a rellenar):
+
+```
+{
+    id:           'kebab-case-id',
+    pantheonNum:  1..12,
+    name:         'Nom literal Pantheon Work',
+    function:     'Funció estratègica que custodia',
+    domain:       'governance' | 'finance' | ... ,    // dominio principal
+    skills:       [...],
+    bootstrapsAll:true,                                // los 12 son críticos para todos los tipos de proyecto
+    multiplier:   1.5..2.0,                            // peso simbólico extra · TBD
+    sopsBootstrap: [...],                              // SOPs canónicos del Mètode SOS que custodia
+}
+```
+
+### Sprint A actualizado tras estas decisiones
+
+`js/core/critical108Roles.js` (renombrado de `critical100Roles.js`):
+
+- `CRITICAL_ROLES_OPERATIVES` Object.freeze · 96 entradas distribuidas
+  por los 10 dominios según la tabla ajustada.
+- `PANTHEON_GUARDIANS` Object.freeze · 12 entradas (cuando @alvaro
+  pase los nombres).
+- `COHORT_0_TOTAL = 108` constante.
+- `PROJECT_TYPES` Object.freeze · 12 tipos canónicos con descripción
+  multilingüe (ES/CA/EN cuando llegue I18N-001).
+- Tests · validan totales · cobertura por dominio · IDs únicos · cada
+  guardián tiene `pantheonNum` 1..12 sin duplicados · cada tipo de
+  proyecto declara `requiredRoles ⊂ catálogo` y `requiredGuardians ⊂
+  los 12`.
+
+### Sprint A NO arrancará hasta:
+
+1. Recibir los 12 guardianes literales de Pantheon Work (input
+   @alvaro · próximo mensaje).
+2. Validar la lista nominal de los 96 roles operativos · @alvaro
+   debe revisar al menos los nombres por dominio antes de codificar.
+3. Validar los 12 tipos de proyecto · @alvaro confirma o ajusta.
+
+### Conexiones con otras historias
+
+- **NET-100** se reescribe como sub-historia de MAT-003 · ya no es
+  matchmaking abstracto sino aplicación de los 96+12 roles + skills.
+- **MAT-002-A** (`buildMatriuCohortProject`) se enriquece en sprint
+  E con el catálogo de bootstrap templates por tipo de proyecto.
+- **AUTH-001** · cada plaza tendrá `user_identity` con `criticalRoles[]`
+  reclamados (1 primario + 0-2 secundarios) + `guardianOf` opcional
+  (1 de los 12) + verificados por handoff de otra plaza.
+- **PACT-001** · el pacto de socios dinámicos liga roles ↔ slicing pie ·
+  los guardianes pueden tener `multiplier` extra (×1.5..2.0).
+- **UX-EDU-001 sprint D** · enlaces cruzados entre SOPs y roles ·
+  cada operador en formación entiende qué rol cubre con cada SOP que
+  ejecuta.
+- **MAT-002-H** (landing) · contador "24/108" en lugar de "24/100"
+  cuando pasemos a producción Cohort 0.
+
+### Notas de método
+
+- Los 12 guardianes Pantheon Work · NO son reemplazables · son una
+  abstracción del framework que @alvaro lleva años trabajando.
+- Los 96 roles operativos · NO se inferirán por IA · se diseñan con
+  @alvaro y se versionan en `critical108Roles.js`.
+- Cada rol debe ser **operativo** (ejecuta ≥1 SOP del Mètode SOS) y
+  **diferenciable** (no solapamiento total con otro rol).
+- El equilibrio entre dominios garantiza resiliencia · ningún
+  dominio supera el 17% (16/96 · tech).
+- Skills `governance` + `community` + `culture` + `legal` = 32
+  plazas (33%) · reflejan que SOS no es sólo tecnología · es
+  facilitación social con tecnología al servicio.
+- Skills `tech` + `finance` = 28 plazas (29%) · garantizan capacidad
+  de ejecución técnica y económica del Antigravity Engine.
+- Skills `ecology` + `education` = 16 plazas (17%) · tessitura
+  regenerativa y formativa, base de la "ola disruptiva" VISION-001.
 
 ---
 
