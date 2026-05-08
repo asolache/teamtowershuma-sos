@@ -2745,12 +2745,15 @@ async function testCritical108Roles() {
         assert(PANTHEON_GUARDIANS.find(g => g.id === id),              'guardián canónico ' + id);
     });
 
-    // 8 con keywords (literal del PDF) · 4 pending
-    assert(guardiansWithKeywords().length === 8,                       '8 guardianes con keywords');
-    assert(guardiansPendingKeywords().length === 4,                    '4 guardianes pending');
-    const pendingIds = guardiansPendingKeywords().map(g => g.id).sort();
-    assert(JSON.stringify(pendingIds) === JSON.stringify(['hefesto','hera','poseidon','zeus']),
-                                                                       'pending = hefesto/hera/poseidon/zeus');
+    // 12/12 con keywords (8 oficiales del PDF + 4 borradores interpretativos)
+    assert(guardiansWithKeywords().length === 12,                      '12 guardianes con keywords');
+    const { guardiansWithOfficialKeywords, guardiansWithDraftKeywords } = mod;
+    assert(guardiansWithOfficialKeywords().length === 8,               '8 guardianes con keywords oficiales (PDF)');
+    assert(guardiansWithDraftKeywords().length === 4,                  '4 guardianes con keywords __draft');
+    assert(guardiansPendingKeywords().length === 4,                    '4 guardianes pending cuestionario oficial');
+    const draftIds = guardiansWithDraftKeywords().map(g => g.id).sort();
+    assert(JSON.stringify(draftIds) === JSON.stringify(['hefesto','hera','poseidon','zeus']),
+                                                                       '__draft = hefesto/hera/poseidon/zeus');
 
     // Keywords literales del PDF · spot-check
     const afrodita = getGuardianById('afrodita');

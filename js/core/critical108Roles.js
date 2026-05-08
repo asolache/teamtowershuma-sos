@@ -171,10 +171,13 @@ export const PANTHEON_GUARDIANS = Object.freeze([
         name:             'Hefesto',
         domain:           'tech',
         trivalentLogic:   'fusionar',
-        keywords:         null, // PENDING input @alvaro · cuestionario oficial pantheon.work
-        keywordsSource:   null,
+        keywords:         Object.freeze(['forja', 'técnica', 'herramientas', 'ingeniería', 'infraestructura', 'especialización', 'mantenimiento']),
+        keywordsSource:   '__draft · interpretación basada en Robert Graves "Los Mitos Griegos" + Stephen Fry "Mythos" (referencias citadas en PDF Pantheon Work pág. 12). Sustituir por oficial cuando llegue cuestionario pantheon.work.',
+        keywordsDraft:    true,
         pendingFromPantheonWork: true,
-        exampleQuestions: null,
+        exampleQuestions: Object.freeze([
+            '¿Qué herramientas necesita el equipo? ¿Cómo aseguramos la forja y el mantenimiento técnico del flujo de valor?',
+        ]),
         nativePractices:  Object.freeze(['gestion-conocimiento', 'beta']),
         bootstrapsAll:    true,
         multiplier:       1.5,
@@ -186,10 +189,13 @@ export const PANTHEON_GUARDIANS = Object.freeze([
         name:             'Hera',
         domain:           'legal',
         trivalentLogic:   'fusionar',
-        keywords:         null, // PENDING input @alvaro · cuestionario oficial pantheon.work
-        keywordsSource:   null,
+        keywords:         Object.freeze(['pacto', 'alianza', 'fidelidad', 'institución', 'jerarquía formal', 'ritual', 'contrato']),
+        keywordsSource:   '__draft · interpretación basada en Robert Graves "Los Mitos Griegos" + Stephen Fry "Mythos" (referencias citadas en PDF Pantheon Work pág. 12). Sustituir por oficial cuando llegue cuestionario pantheon.work.',
+        keywordsDraft:    true,
         pendingFromPantheonWork: true,
-        exampleQuestions: null,
+        exampleQuestions: Object.freeze([
+            '¿Cómo formalizamos los pactos? ¿Cómo se sostiene la fidelidad estructural entre socios?',
+        ]),
         nativePractices:  Object.freeze(['netiqueta-estricta', 'reconocer-competencias']),
         bootstrapsAll:    true,
         multiplier:       1.5,
@@ -233,10 +239,13 @@ export const PANTHEON_GUARDIANS = Object.freeze([
         name:             'Poseidón',
         domain:           'finance',
         trivalentLogic:   'distinguir',
-        keywords:         null, // PENDING input @alvaro · cuestionario oficial pantheon.work
-        keywordsSource:   null,
+        keywords:         Object.freeze(['capital', 'riesgo', 'profundidad', 'audacia', 'decisión disruptiva', 'exit', 'oráculo', 'liquidación']),
+        keywordsSource:   '__draft · interpretación basada en Robert Graves "Los Mitos Griegos" + Stephen Fry "Mythos" (referencias citadas en PDF Pantheon Work pág. 12). Sustituir por oficial cuando llegue cuestionario pantheon.work.',
+        keywordsDraft:    true,
         pendingFromPantheonWork: true,
-        exampleQuestions: null,
+        exampleQuestions: Object.freeze([
+            '¿Cómo gestionamos el capital y el riesgo? ¿Cuándo y cómo se activa el exit del proyecto?',
+        ]),
         nativePractices:  Object.freeze(['flujo-valor', 'beta']),
         bootstrapsAll:    true,
         multiplier:       1.5,
@@ -248,10 +257,13 @@ export const PANTHEON_GUARDIANS = Object.freeze([
         name:             'Zeus',
         domain:           'governance',
         trivalentLogic:   'relacionar',
-        keywords:         null, // PENDING input @alvaro · cuestionario oficial pantheon.work
-        keywordsSource:   null,
+        keywords:         Object.freeze(['soberanía', 'visión', 'autoridad delegada', 'justicia última', 'fundación', 'sponsor estratégico', 'mando']),
+        keywordsSource:   '__draft · interpretación basada en Robert Graves "Los Mitos Griegos" + Stephen Fry "Mythos" (referencias citadas en PDF Pantheon Work pág. 12). Sustituir por oficial cuando llegue cuestionario pantheon.work.',
+        keywordsDraft:    true,
         pendingFromPantheonWork: true,
-        exampleQuestions: null,
+        exampleQuestions: Object.freeze([
+            '¿Quién tiene la última palabra en la visión estratégica? ¿Cómo delegamos autoridad sin diluir el rumbo?',
+        ]),
         nativePractices:  Object.freeze(['flujo-valor', 'reconocer-competencias']),
         bootstrapsAll:    true,
         multiplier:       2.0, // soberanía / visión última · peso máximo
@@ -317,14 +329,25 @@ export function getProjectTypeById(id) {
     return PROJECT_TYPES.find(t => t.id === id) || null;
 }
 
-// guardiansPendingKeywords() → lista de guardianes sin palabras clave
-// (a la espera de cuestionarios oficiales de pantheon.work).
+// guardiansPendingKeywords() → guardianes con cuestionario oficial pendiente
+// (las palabras clave actuales pueden estar en `__draft` interpretativo).
 export function guardiansPendingKeywords() {
     return PANTHEON_GUARDIANS.filter(g => g.pendingFromPantheonWork === true);
 }
 
 export function guardiansWithKeywords() {
     return PANTHEON_GUARDIANS.filter(g => Array.isArray(g.keywords) && g.keywords.length > 0);
+}
+
+// guardiansWithDraftKeywords() → palabras clave borrador interpretativo
+// (basado en Graves + Fry · sustituir cuando llegue oficial pantheon.work).
+export function guardiansWithDraftKeywords() {
+    return PANTHEON_GUARDIANS.filter(g => g.keywordsDraft === true);
+}
+
+// guardiansWithOfficialKeywords() → palabras clave literales del PDF oficial.
+export function guardiansWithOfficialKeywords() {
+    return PANTHEON_GUARDIANS.filter(g => Array.isArray(g.keywords) && g.keywords.length > 0 && g.keywordsDraft !== true);
 }
 
 // coverageReport() → resumen para verificar la integridad de la matriz.
@@ -350,6 +373,8 @@ export function coverageReport() {
         trivalent,
         guardiansPending: guardiansPendingKeywords().map(g => g.id),
         guardiansReady:   guardiansWithKeywords().map(g => g.id),
+        guardiansOfficial: guardiansWithOfficialKeywords().map(g => g.id),
+        guardiansDraft:    guardiansWithDraftKeywords().map(g => g.id),
         projectTypes:     PROJECT_TYPES.length,
     };
 }

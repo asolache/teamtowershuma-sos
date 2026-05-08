@@ -1694,6 +1694,33 @@ ecosistema · reconocer-competencias · empoderar-mutuamente · beta ·
 netiqueta-estricta · memes-campanas. Cada guardián vehicula 1-2 de
 ellas según declaración en `nativePractices[]`.
 
+### Tabla de equivalencias SOS V11 ≡ Pantheon Work
+
+Decidido @alvaro 2026-05-08: **las 10 prácticas nativas digitales son
+la espina dorsal de SOS V11**. SOS materializa lo que Pantheon Work
+formula como prácticas. Cada práctica tiene una vista/módulo que la
+hace operativa.
+
+| Práctica Pantheon Work | Materialización SOS V11 |
+|---|---|
+| Ver todo como un **flujo de valor**       | Vista `/map` (ValueMapView · D3 · `flowAnimationService`) · roles + transactions + tangibles vs intangibles |
+| Ver todo como **redes y nodos**           | Vista `/mind` (MindGraphView) · KB completo como grafo D3 · 14 tipos de nodos |
+| Sistematizar la **gestión de conocimiento** | Vista `/folders` (FoldersView · `smartFolderService`) · Mind-as-Graph · `KnowledgeLoader` |
+| **Trabajar en voz alta**                  | Vista `/sops` + `/kanban` · cada SOP/WO publicado · ledger triple-entry público |
+| **Devolver al ecosistema**                | Vista `/market` (MarketService) + Mercado SOS · MAT-001 fase 4 redistribución cooperativa |
+| **Reconocer competencias y contribuciones** | MAT-003 · cuestionario Pantheon Work nativo en SOS · ledger de aportaciones por rol/guardián |
+| **Empoderar mutuamente**                  | UX-EDU-001 (`didacticService` · vista `/learn` · 17 conceptos didácticos) · CoPs (KM-001 sprint A) |
+| **Producir en beta**                      | Workflow CI · pre-Alfa · iteración + DTD (Deliverable Test Driven) · Antigravity Engine |
+| **Cumplir netiqueta estricta**            | PACT-001 (builder pacto socios) + identidad firmada ECDSA P-256 (`identityService`) |
+| **Crear memes y campañas**                | MAT-002-H landing `/matriu` · branding cooperativo · narrativa Cohort 0 |
+
+Esta tabla certifica que **SOS V11 implementa Pantheon Work** como
+sistema operativo. No son frameworks paralelos · son el mismo proyecto
+en dos capas · Pantheon Work formula la teoría, SOS la ejecuta.
+
+@alvaro como co-creador original del ejercicio (cita literal pág.16
+del PDF) está en posición única para liderar esta convergencia.
+
 **12 tipos de proyecto cliente** (signo dels temps 2026 · validados
 @alvaro · codificados en `PROJECT_TYPES`):
 01 comunitat-autosuficient · 02 startup-coop-tradicional · 03
