@@ -154,6 +154,11 @@ class OrchestratorCore {
         // se podan con pruneFromKb y se prefijan al systemPrompt. Default
         // off · sin tocar el flujo actual de los consumidores existentes.
         contextPruning = null,
+        // MKT-001 sprint C3 · cargo automático al wallet del proyecto tras
+        // éxito. Si toggle global ON y hay projectId (via contextPruning.
+        // projectId o este param), se descuenta cost USD→EUR. Default off
+        // global · activable por llamada con {enabled:true, projectId}.
+        chargeWallet = null,
     }) {
         const providers = await this._getAvailableProviders(preferredEngine);
         let lastError = null;
@@ -375,10 +380,51 @@ class OrchestratorCore {
                         } catch (e) { /* no debe romper el flujo IA */ }
                     }
 
+                    // MKT-001 sprint C3 · cargo automático al wallet del proyecto.
+                    // Respeta:
+                    //  - param explícito chargeWallet: {projectId, eurRate?, allowNegative?}
+                    //  - O toggle global isWalletChargingEnabled() + projectId vía
+                    //    contextPruning.projectId (heurística natural · si la llamada
+                    //    está vinculada a un proyecto, ya lo sabemos por el pruner).
+                    // Fire-and-forget · NO bloquea el return al caller. Si saldo<coste
+                    // se aplica igualmente con allowNegative y la telemetría avisa.
+                    let walletChargeTelemetry = null;
+                    try {
+                        const chargeProjectId = (chargeWallet && chargeWallet.projectId)
+                            || (contextPruning && contextPruning.projectId)
+                            || null;
+                        const explicitOn  = !!(chargeWallet && chargeWallet.enabled !== false && chargeProjectId);
+                        const globalOn    = chargeProjectId && !explicitOn ? await this.isWalletChargingEnabled() : false;
+                        if ((explicitOn || globalOn) && chargeProjectId && costUSD > 0) {
+                            const ws = await import('./walletService.js?v=' + Date.now());
+                            const r = await ws.chargeWalletForLlmCall({
+                                projectId: chargeProjectId,
+                                telemetry: { provider, model: provider, tokens: tokenUsage },
+                                costUSD,
+                                eurRate:   chargeWallet?.eurRate,
+                                refPrefix: 'llm',
+                            });
+                            walletChargeTelemetry = {
+                                projectId: chargeProjectId,
+                                amountEur: r.charge?.costEur ?? null,
+                                costUSD,
+                                sufficient: r.sufficient,
+                                ref:        r.ref,
+                                skipped:    r.skipped || null,
+                            };
+                            if (r.sufficient === false) {
+                                console.warn('[MKT-001/Wallet] Saldo insuficiente al cobrar ' + r.charge.costEur + '€ · proyecto ' + chargeProjectId + ' · saldo restante negativo (allowNegative)');
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[MKT-001/Wallet] chargeWalletForLlmCall falló:', e?.message);
+                        walletChargeTelemetry = { error: e?.message || String(e) };
+                    }
+
                     const modelLabel = provider === 'anthropic' ? ANTHROPIC_MODEL
                                      : provider === 'minimax'   ? MINIMAX_MODEL
                                      : provider;
-                    return { content: parsedContent, telemetry: { provider, model: modelLabel, tokens: tokenUsage, latencyMs, contextPruning: pruningTelemetry } };
+                    return { content: parsedContent, telemetry: { provider, model: modelLabel, tokens: tokenUsage, latencyMs, contextPruning: pruningTelemetry, walletCharge: walletChargeTelemetry } };
 
                 } catch (err) {
                     lastError = err;
@@ -476,6 +522,23 @@ class OrchestratorCore {
     async isContextPruningEnabled() {
         await this._ensureKB();
         const record = await KB.getNode('sos_context_pruning_enabled');
+        return !!(record && record.value === true);
+    }
+
+    // MKT-001 sprint C3 · toggle global de cargo automático al wallet del
+    // proyecto tras cada callLLM exitoso. Default off. Cuando se activa,
+    // si la llamada lleva projectId vía contextPruning, el coste real
+    // (USD → EUR) se descuenta del wallet del proyecto y queda registrado
+    // como movimiento 'consume' en el ledger. Si no hay saldo suficiente,
+    // se aplica con allowNegative + warning · NO se bloquea la llamada IA.
+    async setWalletChargingEnabled(enabled) {
+        await this._ensureKB();
+        await KB.saveNode({ id: 'sos_wallet_charging_enabled', type: 'config', value: !!enabled });
+    }
+
+    async isWalletChargingEnabled() {
+        await this._ensureKB();
+        const record = await KB.getNode('sos_wallet_charging_enabled');
         return !!(record && record.value === true);
     }
 }

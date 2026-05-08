@@ -16,7 +16,8 @@ export default class SettingsView {
         const keyDs    = await Orchestrator.getApiKey('deepseek')  || '';
         const keyGem   = await Orchestrator.getApiKey('gemini')    || '';
         const keyMm    = await Orchestrator.getApiKey('minimax')   || '';
-        const pruningOn = await Orchestrator.isContextPruningEnabled();
+        const pruningOn  = await Orchestrator.isContextPruningEnabled();
+        const chargingOn = await Orchestrator.isWalletChargingEnabled();
 
         const pColors  = { anthropic:'var(--accent-purple)', openai:'var(--accent-green)', deepseek:'var(--accent-blue)', gemini:'#fbbc04', minimax:'#ff6b9d', custom:'var(--text-muted)' };
         const pLabels  = { anthropic:'Anthropic · claude-sonnet-4-20250514', openai:'OpenAI · GPT-4o', deepseek:'DeepSeek · V3', gemini:'Gemini · 2.0 Flash', minimax:'MiniMax · Text-01', custom:'Local / Ollama' };
@@ -136,6 +137,23 @@ export default class SettingsView {
                 </label>
             </div>
 
+            <div class="sv-card" style="border-top:3px solid #22c55e;">
+                <h3 style="color:#22c55e;margin-top:0;">💶 MKT-001 · Cargo automático al wallet (sprint C3)</h3>
+                <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.5;margin-top:0;">
+                    Cuando una llamada IA está vinculada a un proyecto (vía
+                    <code>contextPruning</code>), descuenta automáticamente el coste real
+                    (USD → EUR a 0.92) del <a href="/wallet" data-link class="sv-link" style="color:#22c55e;">wallet del proyecto</a>.
+                    Si saldo insuficiente, se aplica con <code>allowNegative</code> y se
+                    emite warning · NO bloquea el flujo IA. Cada cargo queda en el ledger
+                    del wallet con kind <code>consume</code>.
+                </p>
+                <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:var(--text-sm);margin-top:var(--space-3);">
+                    <input type="checkbox" id="svChargingToggle" ${chargingOn ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
+                    <span>Activar cargo automático al wallet</span>
+                    <span id="svChargingStatus" class="sv-key-status" style="${chargingOn ? 'background:rgba(0,230,118,0.12);color:var(--accent-green);' : 'background:rgba(255,255,255,0.05);color:var(--text-muted);'}">${chargingOn ? '✓ ON' : '— OFF'}</span>
+                </label>
+            </div>
+
             <div class="sv-card" style="border-top:3px solid var(--accent-red);">
                 <h3 style="color:var(--accent-red);margin-top:0;">⚠️ Danger zone</h3>
                 <button id="svPurge" style="background:rgba(255,82,82,0.1);border:1px solid var(--accent-red);color:var(--accent-red);padding:10px 18px;border-radius:var(--radius-md);cursor:pointer;font-weight:bold;">🔥 Purge IndexedDB</button>
@@ -231,6 +249,23 @@ export default class SettingsView {
                 }
             } catch (err) {
                 console.error('[KM-001] toggle pruning falló:', err);
+                e.target.checked = !on;
+            }
+        });
+
+        // MKT-001 sprint C3 · toggle wallet charging persistido en KB
+        document.getElementById('svChargingToggle')?.addEventListener('change', async (e) => {
+            const on = !!e.target.checked;
+            try {
+                await Orchestrator.setWalletChargingEnabled(on);
+                const badge = document.getElementById('svChargingStatus');
+                if (badge) {
+                    badge.textContent = on ? '✓ ON' : '— OFF';
+                    badge.style.background = on ? 'rgba(0,230,118,0.12)' : 'rgba(255,255,255,0.05)';
+                    badge.style.color      = on ? 'var(--accent-green)' : 'var(--text-muted)';
+                }
+            } catch (err) {
+                console.error('[MKT-001] toggle charging falló:', err);
                 e.target.checked = !on;
             }
         });
