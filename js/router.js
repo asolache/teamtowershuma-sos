@@ -27,6 +27,8 @@ const ROUTES = [
     { path: '/efficiency',view: () => import('./views/EfficiencyView.js') },
     // MKT-001 sprint C · wallet prepago por proyecto
     { path: '/wallet',    view: () => import('./views/WalletView.js')    },
+    // MKT-001 sprint D · cuadro comparativo de ahorro acumulado vs convencional
+    { path: '/savings',   view: () => import('./views/SavingsView.js')   },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
