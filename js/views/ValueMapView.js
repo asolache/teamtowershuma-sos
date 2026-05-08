@@ -18,7 +18,7 @@ import { Orchestrator }     from '../core/Orchestrator.js';
 import { t, langSelectorHtml, getLang } from '../i18n.js';
 import { taxonomicTagsForSop, mergeTags } from '../core/semanticTagger.js';
 import { renderNavLinksHtml } from '../core/navService.js';
-import { computeAnimationCycles, normalizeTransactionsOrder, autoFillSequenceOrder } from '../core/flowAnimationService.js';
+import { computeAnimationCycles, normalizeTransactionsOrder, autoFillSequenceOrder, inferFlowOrder } from '../core/flowAnimationService.js';
 
 // ─── Constantes visuales ─────────────────────────────────────────────────────
 const COLOR_TANGIBLE   = '#00e676';   // accent-green
@@ -817,6 +817,8 @@ export default class ValueMapView {
                     ${renderNavLinksHtml({ active: 'map', projectId: this._state.projectId, className: 'vmap-btn' })}
                     <button class="vmap-btn" style="border-color:var(--accent-purple);color:var(--accent-purple);" id="vmapBtnAI">${t('vmap.suggest')}</button>
                     <button class="vmap-btn" id="vmapBtnAnim" title="H_ANIM_001 · animar flujo de valor por sequence_order de las transactions">▶ Animar flujo</button>
+                    <button class="vmap-btn" id="vmapBtnInferOrder" title="H_ANIM_001 sprint C · IA infiere sequence_order y phase de todas las transactions">🤖 Inferir orden IA</button>
+                    <button class="vmap-btn" id="vmapBtnFlowLine" title="H_ANIM_001 sprint B · ver el flujo como timeline lineal">📜 Vista lineal</button>
                     <button class="vmap-btn" id="vmapBtnFit">⊡ ${t('vmap.fit')}</button>
                     <button class="vmap-btn" id="vmapBtnReset">↺ ${t('vmap.reset')}</button>
                     <button class="vmap-btn vmap-btn-save" id="vmapBtnSave">💾 ${t('vmap.save')}</button>
@@ -1204,6 +1206,8 @@ export default class ValueMapView {
         document.getElementById('vmapBtnReset')?.addEventListener('click',  () => this._restartSim());
         document.getElementById('vmapBtnSave')?.addEventListener('click',   () => this._saveMap());
         document.getElementById('vmapBtnAnim')?.addEventListener('click',   () => this._toggleFlowAnim());
+        document.getElementById('vmapBtnInferOrder')?.addEventListener('click', () => this._inferFlowOrderIA());
+        document.getElementById('vmapBtnFlowLine')?.addEventListener('click',   () => this._openFlowLineModal());
         document.getElementById('vmapAddRole')?.addEventListener('click',   () => this._openRoleModal());
         document.getElementById('vmapAddTx')?.addEventListener('click',     () => this._openTxModal());
         document.getElementById('vmapZoomIn')?.addEventListener('click',    () => this._zoom(1.25));
@@ -2864,6 +2868,167 @@ ${ctxResult.systemPrompt}`;
         // Quitar pulsos del DOM
         const d3 = window.d3;
         if (d3) d3.selectAll('.vmap-flow-pulse').remove();
+    }
+
+    // H_ANIM_001 sprint C · IA infiere sequence_order + phase
+    async _inferFlowOrderIA() {
+        if (!this._state.transactions || !this._state.transactions.length) {
+            alert('No hay transacciones para ordenar.');
+            return;
+        }
+        const btn = document.getElementById('vmapBtnInferOrder');
+        if (btn) { btn.disabled = true; btn.textContent = '🧠 Pensando…'; }
+        try {
+            const projectName = this._state.projectId
+                ? ((store.getState().projects || []).find(p => p.id === this._state.projectId)?.nombre || this._state.projectId)
+                : '';
+            const result = await inferFlowOrder({
+                roles:        this._state.roles,
+                transactions: this._state.transactions,
+                projectName,
+                projectId:    this._state.projectId,
+            });
+            // Mostrar modal de revisión antes de aplicar
+            this._showOrderInferenceModal(result);
+        } catch (err) {
+            console.error('[H_ANIM_001/inferOrder] Error:', err);
+            alert('No se pudo inferir el orden:\n\n' + err.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '🤖 Inferir orden IA'; }
+        }
+    }
+
+    _showOrderInferenceModal(result) {
+        let root = document.getElementById('vmapOrderInfRoot');
+        if (!root) {
+            root = document.createElement('div');
+            root.id = 'vmapOrderInfRoot';
+            document.body.appendChild(root);
+        }
+        const close = () => { root.innerHTML = ''; };
+        // Tabla por orden propuesto
+        const ordered = (result.ordered || []).slice().sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
+        const txMap = new Map(this._state.transactions.map(t => [t.id, t]));
+        const rolesMap = new Map(this._state.roles.map(r => [r.id, r]));
+        const rows = ordered.map(o => {
+            const tx = txMap.get(o.id);
+            if (!tx) return '';
+            const fromName = rolesMap.get(tx.from)?.name || tx.from;
+            const toName   = rolesMap.get(tx.to)?.name   || tx.to;
+            return `<tr>
+                <td style="text-align:center;color:#facc15;font-family:monospace;font-weight:700;">${o.sequence_order}</td>
+                <td style="color:#a5b4fc;font-family:monospace;font-size:0.72rem;">${o.phase ? this._escHtml(o.phase) : '—'}</td>
+                <td style="color:#fff;">${this._escHtml(fromName)} <span style="color:#666;">→</span> ${this._escHtml(toName)}</td>
+                <td style="color:#86efac;font-size:0.78rem;">${this._escHtml(tx.deliverable || '')}</td>
+            </tr>`;
+        }).join('');
+
+        root.innerHTML = `
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,0.78);display:flex;align-items:flex-start;justify-content:center;z-index:1000;padding:2rem 1rem;overflow-y:auto;" id="vmapOrderInfBg">
+                <div style="background:#0e0e14;border:1px solid #2a2a35;border-radius:10px;padding:1.4rem;width:100%;max-width:780px;color:#e6e6e6;">
+                    <h3 style="margin:0 0 0.4rem 0;color:#fff;">🤖 IA propone este orden secuencial</h3>
+                    <div style="color:#aaa;font-size:0.82rem;margin-bottom:0.8rem;line-height:1.5;">${this._escHtml(result.rationale || '(sin razonamiento)')}</div>
+                    <div style="background:#050507;border:1px solid #1a1a22;border-radius:6px;padding:0.5rem;max-height:50vh;overflow-y:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                            <thead><tr style="border-bottom:1px solid #1a1a22;">
+                                <th style="padding:6px;color:#888;font-family:monospace;font-size:0.7rem;text-align:center;">#</th>
+                                <th style="padding:6px;color:#888;font-family:monospace;font-size:0.7rem;text-align:left;">Phase</th>
+                                <th style="padding:6px;color:#888;font-family:monospace;font-size:0.7rem;text-align:left;">From → To</th>
+                                <th style="padding:6px;color:#888;font-family:monospace;font-size:0.7rem;text-align:left;">Deliverable</th>
+                            </tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;flex-wrap:wrap;">
+                        <button class="vmap-btn" id="vmapOrderCancel">Cancelar</button>
+                        <button class="vmap-btn" style="border-color:#22c55e;color:#22c55e;" id="vmapOrderApply">✓ Aplicar y guardar</button>
+                    </div>
+                    <div style="color:#666;font-size:0.7rem;margin-top:0.4rem;font-family:monospace;text-align:right;">
+                        ${result.telemetry?.tokens?.total_tokens || 0} tokens · ${result.telemetry?.provider || '?'} · ${result.telemetry?.latencyMs || 0}ms
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById('vmapOrderCancel')?.addEventListener('click', close);
+        document.getElementById('vmapOrderInfBg')?.addEventListener('click', e => { if (e.target.id === 'vmapOrderInfBg') close(); });
+        document.getElementById('vmapOrderApply')?.addEventListener('click', () => {
+            this._state.transactions = result.applied;
+            close();
+            // Re-render del inspector si la transaction seleccionada está en applied
+            if (this._state.selectedId) {
+                const tx = this._state.transactions.find(t => t.id === this._state.selectedId);
+                if (tx) this._renderTxInspector(tx);
+            }
+            // Si el flujo está animando · reiniciar para usar el nuevo orden
+            if (this._state.flowAnim) {
+                this._stopFlowAnim();
+                setTimeout(() => this._startFlowAnim(), 100);
+            }
+            alert('✓ Aplicado · pulsa "💾 Guardar" en el topbar para persistir el cambio.');
+        });
+    }
+
+    // H_ANIM_001 sprint B · vista lineal del flujo (timeline horizontal)
+    _openFlowLineModal() {
+        if (!this._state.transactions || !this._state.transactions.length) {
+            alert('No hay transacciones que mostrar.');
+            return;
+        }
+        let root = document.getElementById('vmapFlowLineRoot');
+        if (!root) {
+            root = document.createElement('div');
+            root.id = 'vmapFlowLineRoot';
+            document.body.appendChild(root);
+        }
+        const close = () => { root.innerHTML = ''; };
+
+        // Ordenar por sequence_order (sprint A · normalizeTransactionsOrder)
+        const sorted = normalizeTransactionsOrder(this._state.transactions);
+        const rolesMap = new Map(this._state.roles.map(r => [r.id, r]));
+
+        // Agrupar por phase para separadores visuales
+        let lastPhase = null;
+        const stepsHtml = sorted.map((t, i) => {
+            const fromName = rolesMap.get(t.from)?.name || t.from;
+            const toName   = rolesMap.get(t.to)?.name   || t.to;
+            const phaseChange = t.phase && t.phase !== lastPhase;
+            lastPhase = t.phase || lastPhase;
+            const so = typeof t.sequence_order === 'number' ? t.sequence_order : (i + 1);
+            const tangColor = t.type === 'tangible' ? '#a5b4fc' : '#fb923c';
+            return `
+                ${phaseChange ? `<div style="grid-column:1 / -1;margin:1rem 0 0.4rem 0;color:#facc15;font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">— ${this._escHtml(t.phase)} —</div>` : ''}
+                <div style="background:#0e0e14;border:1px solid #1a1a22;border-left:3px solid ${tangColor};border-radius:8px;padding:0.7rem 0.9rem;">
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+                        <span style="background:${tangColor}22;color:${tangColor};padding:2px 8px;border-radius:10px;font-family:monospace;font-size:0.72rem;font-weight:700;">${so}</span>
+                        ${t.is_must ? '<span style="background:rgba(255,255,255,0.06);color:#aaa;font-family:monospace;font-size:0.65rem;padding:1px 6px;border-radius:4px;">MUST</span>' : ''}
+                        ${t.type ? `<span style="color:${tangColor};font-family:monospace;font-size:0.7rem;">${this._escHtml(t.type)}</span>` : ''}
+                    </div>
+                    <div style="color:#fff;font-size:0.92rem;font-weight:600;margin-bottom:0.3rem;">${this._escHtml(t.deliverable || 'Transacción')}</div>
+                    <div style="color:#aaa;font-size:0.78rem;">
+                        <strong>${this._escHtml(fromName)}</strong> <span style="color:${tangColor};">→</span> <strong>${this._escHtml(toName)}</strong>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        root.innerHTML = `
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:flex-start;justify-content:center;z-index:1000;padding:2rem 1rem;overflow-y:auto;" id="vmapFlowLineBg">
+                <div style="background:#050507;border:1px solid #2a2a35;border-radius:12px;padding:1.6rem;width:100%;max-width:1080px;color:#e6e6e6;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;flex-wrap:wrap;gap:0.5rem;">
+                        <h3 style="margin:0;color:#fff;">📜 Vista lineal del flujo · ${sorted.length} pasos</h3>
+                        <button class="vmap-btn" id="vmapFlowLineClose">✕ Cerrar</button>
+                    </div>
+                    <div style="color:#aaa;font-size:0.82rem;margin-bottom:1rem;line-height:1.5;">
+                        Lectura secuencial del flujo de valor en orden lineal (según <code>sequence_order</code> de cada transacción · usa
+                        <strong>🤖 Inferir orden IA</strong> si aún no lo has asignado). Las cards en color índigo son
+                        tangibles (contractuales) · naranja son intangibles (informales).
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.6rem;">
+                        ${stepsHtml}
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById('vmapFlowLineClose')?.addEventListener('click', close);
+        document.getElementById('vmapFlowLineBg')?.addEventListener('click', e => { if (e.target.id === 'vmapFlowLineBg') close(); });
     }
 
     _runFlowPulses() {
