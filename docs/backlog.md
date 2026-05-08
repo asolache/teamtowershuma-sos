@@ -1616,31 +1616,91 @@ Las plazas reaccionan, ofrecen tiempo, el slicing pie se actualiza
 automáticamente al cerrar la WO. Cierra el bucle SOP → WO → Ledger
 del Antigravity Engine al nivel del enjambre completo.
 
-#### Sprint E · Escenarios de bootstrap por tipo de proyecto
+#### Sprint E · Bootstrap templates por tipo de proyecto ✅ verde
 
-Plantillas (similares a `buildMatriuCohortProject`) para cada uno
-de los 7 tipos de proyecto cliente · catálogo
-`PROJECT_BOOTSTRAP_TEMPLATES`:
+**Entregado** · `js/core/bootstrapTemplates.js` Object.freeze con las
+12 plantillas (1:1 con `PROJECT_TYPES`). Conecta · sectores SOS (A-S
+del KnowledgeLoader) + 12 guardianes Pantheon Work + 96 roles + 90
+skills + ValueMapView + SOPs canónicos.
 
-```
-{
-    type:           'comunidad-autosuficiente',
-    label:          'Comunitat autosuficient (hortet · ateneu · cura)',
-    requiredRoles:  ['facilitador-comunitari', 'pages-agricola',
-                     'tresorera', 'custodi-cop', ...],   // ⊂ los 100
-    optionalRoles:  [...],
-    bootstrapSops:  [...],
-    expectedOutcomes: {
-        socsCreated:  3..5,
-        sopsCreated:  12..18,
-        weeksToOperate: 4..8,
-    },
-}
-```
+**Estructura de cada plantilla**:
+- `typeId` · uno de los 12 PROJECT_TYPES
+- `sectorAffinity[]` · códigos sector SOS (ej. `['A','N','Q']` para
+  comunitat-autosuficient · agricultura + cuidados + educació)
+- `requiredGuardians[]` · subset de los 12 guardianes (≥3)
+- `bootstrapSops[]` · ≥5 SOPs canónicos del Mètode SOS con
+  `{id, label, phase}` (phase ∈ design/build/operate/ledger)
+- `valueMapSeed` · `{roles[], transactions[]}`:
+  - `roles` · 4-5 roles base con `guardianAffinity[]` declarada
+  - `transactions` · 5-6 intercambios con `from/to/deliverable/phase/
+    sequence_order/tangible/must`. Mapa pre-secuenciado.
+- `expectedOutcomes` · `{sopsCountMin/Max, weeksToOperateMin/Max}`
+- `narrative` · una línea explicativa para mostrar al fundador
 
-Por cada tipo · `requiredRoles ⊂ los 100` y `bootstrapSops ⊂ catálogo
-SOC/SOP del Mètode SOS`. Esto es la materialización operativa de
-"cualquier proyecto puede arrancar con la matriz".
+**Stats globales**: 12 plantillas · 60 roles · 71 transactions · 76
+SOPs canónicos · todos `Object.freeze` profundo.
+
+**Helpers puros**:
+- `getBootstrapTemplate(typeId)` · plantilla completa o null.
+- `listAllBootstrapTemplates()` · array de las 12.
+- `expectedSopsCountFor(typeId)` · `{min, max, midpoint}`.
+- `expectedWeeksToOperateFor(typeId)` · `{min, max, midpoint}`.
+- `validateBootstrapTemplate(t)` · valida estructura + referential
+  integrity (roles referenciados en transactions existen) + phases
+  válidas + guardianes ⊂ los 12.
+- `bootstrapMapForProject({typeId, projectId, multiplier=1.0})` ·
+  genera seed namespaced (`projectId::role::baseId` · evita colisiones
+  entre proyectos en KB) listo para inyectar vía CREATE_PROJECT +
+  KB_UPSERT. Aplica multiplier ×1.5 fundacional automáticamente a
+  cada SOP del seed.
+- `bootstrapStats()` · totales globales para UI dashboard.
+
+**Tests · 230+ asserts puros**: estructura · 1:1 con PROJECT_TYPES ·
+referential integrity por cada plantilla (refs from/to · phases ·
+sequence_order) · helpers · errores (typeId inválido lanza · sin
+projectId lanza) · namespacing correcto · multiplier aplicado · stats
+exactos. Sanity en node verde antes del push. Suite global: 35 → 36.
+
+**Las 12 plantillas entregadas**:
+
+| # | typeId | Sectors | Guardians | Tx |
+|---|---|---|---|---|
+| 01 | comunitat-autosuficient    | A · N · Q   | demeter · hestia · hermes · hera     | 6 |
+| 02 | startup-coop-tradicional   | K · P       | zeus · atenea · hera · hefesto       | 6 |
+| 03 | empresa-en-transicio       | (any)       | hera · atenea · zeus · hefesto       | 6 |
+| 04 | cooperativa-multi          | N · F · Q   | atenea · hera · hermes · hestia      | 6 |
+| 05 | fundacio-ong               | N · Q · F   | atenea · hera · hestia · dionisio    | 6 |
+| 06 | ecosistema-regional        | A · N · F · Q | demeter · hermes · hestia · dionisio | 6 |
+| 07 | dao-web3                   | K · P       | hefesto · atenea · hera · poseidon   | 6 |
+| 08 | plataforma-cooperativa     | K · N · P   | hefesto · hermes · hera · hestia     | 6 |
+| 09 | cooperativa-cures          | N · Q       | hestia · hera · demeter · dionisio   | 6 |
+| 10 | espai-autogestionat        | F · N       | hestia · dionisio · hermes · hera    | 5 |
+| 11 | hub-transicio              | F · A · N   | demeter · hermes · hestia · dionisio | 6 |
+| 12 | familiar-relevo            | (any)       | hera · zeus · atenea · hermes        | 6 |
+
+**Cómo conecta el modelo SOS**:
+
+1. Fundador llega a `/matriu` (landing) → ve cohort Cohort 0 oberta.
+2. Pulsa "Reservar seient" → modal pregunta tipus de projecte.
+3. Selecciona uno de los 12 → `bootstrapMapForProject({typeId, ...})`.
+4. Crea project + KB_UPSERT del seed completo (5 roles + 6 tx + 8 SOPs).
+5. Navega a `/project/{id}` → mapa **ya tiene** roles + transactions
+   secuenciadas + phase + sequence_order.
+6. La animación de flujo (sprint H_ANIM_001) funciona out-of-the-box.
+7. El multiplier ×1.5 fundacional aplicado a cada SOP queda en el ledger.
+8. El matchmaker (sprint C) tiene `requiredGuardians[]` para activar
+   enjambre con un solo click.
+
+**Próximos pasos hacia la alfa testeable**:
+
+- **MAT-002-H+** · galería de los 12 tipos en `/matriu` (vista visible
+  antes de reservar · sección con preview de cada tipo · refuerza
+  confianza para fundadores).
+- **MAT-003 sprint F UI** · botón "🐝 Activar enjambre" en ProjectHub
+  · invoca `swarmMatchmaker.buildSwarmTeamForProject` con la
+  plantilla cargada.
+- **Wizard de creación enriquecido** · DashboardView "Crear projecte"
+  oferece elegir tipus de projecte + sector y aplica `bootstrapMapForProject`.
 
 ### Conexiones con otras historias
 

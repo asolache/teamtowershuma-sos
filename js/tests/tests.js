@@ -3069,6 +3069,100 @@ async function testSwarmMatchmaker() {
     assert(team.promptMeta.projectId === 'proj-1',                              'team · promptMeta');
 }
 
+// ─── MAT-003 sprint E · bootstrapTemplates · 12 plantillas con seed ──
+async function testBootstrapTemplates() {
+    const m = await import('../core/bootstrapTemplates.js?v=' + Date.now());
+    const c = await import('../core/critical108Roles.js?v=' + Date.now());
+    const {
+        PROJECT_BOOTSTRAP_TEMPLATES, PHASES,
+        getBootstrapTemplate, listAllBootstrapTemplates,
+        expectedSopsCountFor, expectedWeeksToOperateFor,
+        validateBootstrapTemplate, bootstrapMapForProject, bootstrapStats,
+    } = m;
+
+    // Estructura
+    assert(Object.isFrozen(PROJECT_BOOTSTRAP_TEMPLATES),                   'TEMPLATES frozen');
+    assert(PROJECT_BOOTSTRAP_TEMPLATES.length === 12,                      '12 templates');
+    assert(Object.isFrozen(PHASES) && PHASES.length === 4,                 '4 PHASES frozen');
+    ['design','build','operate','ledger'].forEach(p => assert(PHASES.includes(p), 'phase ' + p));
+
+    // 1:1 con PROJECT_TYPES
+    const ptIds  = c.PROJECT_TYPES.map(pt => pt.id).sort();
+    const tplIds = PROJECT_BOOTSTRAP_TEMPLATES.map(t => t.typeId).sort();
+    assert(JSON.stringify(ptIds) === JSON.stringify(tplIds),               '12 templates 1:1 con PROJECT_TYPES');
+
+    // Cada plantilla bien estructurada
+    for (const t of PROJECT_BOOTSTRAP_TEMPLATES) {
+        assert(validateBootstrapTemplate(t),                                t.typeId + ' · valid');
+        assert(t.valueMapSeed.roles.length >= 4,                            t.typeId + ' · ≥4 roles');
+        assert(t.valueMapSeed.transactions.length >= 5,                     t.typeId + ' · ≥5 tx');
+        assert(t.bootstrapSops.length >= 5,                                  t.typeId + ' · ≥5 SOPs');
+        assert(t.requiredGuardians.length >= 3,                              t.typeId + ' · ≥3 guardians');
+        assert(typeof t.narrative === 'string' && t.narrative.length > 30,   t.typeId + ' · narrative');
+        // Referential integrity
+        const roleIds = new Set(t.valueMapSeed.roles.map(r => r.id));
+        for (const tr of t.valueMapSeed.transactions) {
+            assert(roleIds.has(tr.from) && roleIds.has(tr.to),               t.typeId + '·' + tr.id + ' refs');
+            assert(PHASES.includes(tr.phase),                                t.typeId + '·' + tr.id + ' phase');
+            assert(typeof tr.sequence_order === 'number',                    t.typeId + '·' + tr.id + ' seq_order');
+        }
+        // Phases en SOPs válidas
+        for (const sop of t.bootstrapSops) {
+            assert(PHASES.includes(sop.phase),                                t.typeId + '·' + sop.id + ' sop phase');
+        }
+    }
+
+    // Helpers
+    assert(getBootstrapTemplate('comunitat-autosuficient')?.typeId === 'comunitat-autosuficient', 'getBootstrap happy');
+    assert(getBootstrapTemplate('xxx') === null,                            'getBootstrap miss → null');
+    assert(getBootstrapTemplate(null) === null,                              'getBootstrap null input');
+    assert(listAllBootstrapTemplates().length === 12,                       'listAll · 12');
+
+    const expSops = expectedSopsCountFor('comunitat-autosuficient');
+    assert(expSops.min === 8 && expSops.max === 12 && expSops.midpoint === 10, 'expSops 8-12 mid 10');
+    const expWks = expectedWeeksToOperateFor('comunitat-autosuficient');
+    assert(expWks.min === 4 && expWks.max === 8,                             'expWeeks 4-8');
+    assert(expectedSopsCountFor('xxx') === null,                             'expSops · null miss');
+
+    // bootstrapMapForProject · errors
+    let threwBoot = false;
+    try { bootstrapMapForProject({ typeId: 'xxx', projectId: 'p1' }); } catch (_) { threwBoot = true; }
+    assert(threwBoot,                                                        'boot · type inválido lanza');
+    threwBoot = false;
+    try { bootstrapMapForProject({ typeId: 'comunitat-autosuficient' }); } catch (_) { threwBoot = true; }
+    assert(threwBoot,                                                        'boot · sin projectId lanza');
+
+    // bootstrapMapForProject · happy path
+    const seed = bootstrapMapForProject({ typeId: 'comunitat-autosuficient', projectId: 'proj-test', multiplier: 1.5 });
+    assert(seed.roles.length === 5,                                          'seed · 5 roles');
+    assert(seed.transactions.length === 6,                                   'seed · 6 tx');
+    assert(seed.sopsBootstrap.length === 8,                                  'seed · 8 sops');
+    assert(seed.requiredGuardians.length === 4,                              'seed · 4 guardians');
+    assert(seed.sectorAffinity.length === 3,                                 'seed · 3 sectors');
+    assert(seed.roles[0].id.startsWith('proj-test::role::'),                 'seed · roles namespaced');
+    assert(seed.roles[0].baseId === 'pages',                                  'seed · baseId conservado');
+    assert(seed.roles[0].projectId === 'proj-test',                           'seed · projectId en role');
+    assert(seed.transactions[0].id.startsWith('proj-test::tx::'),            'seed · tx namespaced');
+    assert(seed.transactions[0].from.startsWith('proj-test::role::'),         'seed · from remap');
+    assert(seed.transactions[0].to.startsWith('proj-test::role::'),           'seed · to remap');
+    assert(seed.sopsBootstrap[0].id.startsWith('proj-test::sop::'),           'seed · sop namespaced');
+    assert(seed.sopsBootstrap[0].multiplier === 1.5,                          'seed · multiplier ×1.5 aplicado');
+    assert(typeof seed.narrative === 'string',                                'seed · narrative presente');
+
+    // validateBootstrapTemplate · falsy
+    assert(validateBootstrapTemplate(null) === false,                         'validate null');
+    assert(validateBootstrapTemplate({}) === false,                           'validate empty');
+    assert(validateBootstrapTemplate({ typeId: 'xxx' }) === false,            'validate type miss');
+
+    // bootstrapStats
+    const stats = bootstrapStats();
+    assert(stats.totalTemplates === 12,                                       'stats · 12');
+    assert(stats.totalSeedRoles >= 50,                                        'stats · roles >= 50');
+    assert(stats.totalSeedTransactions >= 60,                                  'stats · tx >= 60');
+    assert(stats.totalBootstrapSops >= 60,                                     'stats · sops >= 60');
+    assert(stats.coveredProjectTypes.length === 12,                            'stats · cobertura 12 types');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -3106,7 +3200,8 @@ const SUITE = [
     { name: 'UX-EDU-001 sprint A · didacticService puro',         fn: testDidacticService },
     { name: 'MAT-003 sprint A · critical108Roles + Pantheon Work', fn: testCritical108Roles },
     { name: 'MAT-003 sprint B · skillTaxonomy + coverageReport',  fn: testSkillTaxonomy },
-    { name: 'MAT-003 sprint C · swarmMatchmaker (matchmaker IA)', fn: testSwarmMatchmaker }
+    { name: 'MAT-003 sprint C · swarmMatchmaker (matchmaker IA)', fn: testSwarmMatchmaker },
+    { name: 'MAT-003 sprint E · bootstrapTemplates (12 plantillas)', fn: testBootstrapTemplates }
 ];
 
 export async function runTests() {
