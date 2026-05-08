@@ -1496,17 +1496,53 @@ necesarios para que SOS V11 pueda bootstrappear cualquier proyecto:
 
 **Total · 8+12+18+8+14+12+6+8+8+6 = 100.**
 
-#### Sprint B · catálogo de skills · cobertura del enjambre
+#### Sprint B · catálogo de skills · cobertura del enjambre ✅ verde
 
-`SKILL_TAXONOMY` Object.freeze · ≥80 skills canónicos categorizados.
-Cada rol declara su lista. `coverageReport(roles)` puro · devuelve
-cuántas skills del catálogo están cubiertas por el enjambre actual ·
-cuáles faltan · cuáles tienen redundancia (≥3 personas la dominan).
+**Entregado** · `js/core/skillTaxonomy.js` Object.freeze con 90 skills
+canónicos distribuidos por los 10 dominios MAT-003:
 
-Permite responder en cualquier momento:
-- "¿Está el enjambre completo?"
-- "¿Qué skills faltan para que cohort 0 cierre?"
-- "¿Cuántas plazas redundantes en cada skill (resilencia)?"
+| Dominio | Skills |
+|---|---|
+| governance | 8 |
+| finance | 10 |
+| tech | 14 |
+| design | 8 |
+| operations | 11 |
+| community | 10 |
+| legal | 6 |
+| ecology | 8 |
+| education | 8 |
+| culture | 7 |
+| **Total** | **90** |
+
+Cada skill declara: `id` (kebab-case) · `label` · `domain` · `tier`
+(foundation/practitioner/master) · `guardianAffinity[]` (1-2 de los 12) ·
+`relatedPractices[]` (≥1 de las 10 PW) · `description`. Todos
+Object.freeze (estructura inmutable).
+
+Helpers puros · `getSkillById(id)` · `listSkills()` · `skillsByDomain(d)` ·
+`skillsByTier(t)` · `skillsByGuardian(gId)` · `skillsByPractice(pId)`.
+
+`coverageReport({ swarmSkills })` extendido · devuelve:
+- `totalSkills` · `coveredCount` · `coveragePct` (0..100).
+- `gaps[]` · skills sin ninguna plaza (riesgo crítico).
+- `resilient[]` · skills con ≥3 plazas (resiliencia).
+- `fragile[]` · skills con 1 sola plaza (riesgo de bus factor).
+- `byDomain` · cobertura por cada uno de los 10 dominios.
+- `byTier` · cobertura por foundation/practitioner/master.
+- `byGuardian` · cobertura por cada uno de los 12 guardianes PW.
+
+Permite responder en tiempo real:
+- "¿Está el enjambre completo?" → `coveragePct`.
+- "¿Qué skills faltan?" → `gaps[]`.
+- "¿Qué guardianes están sin cobertura?" → `byGuardian[id].pct === 0`.
+- "¿Qué dominio está fragil?" → `byDomain[d]` con muchos `fragile`.
+- "¿Cuáles tenemos cubiertos con redundancia?" → `resilient[]`.
+
+Tests · 70+ asserts puros · sanity en node verde antes del push (90/90 ·
+distribución por dominio · helpers · coverageReport vacío · con plazas ·
+resilient (≥3) · fragile (=1) · skill inexistente ignorada · input
+no-array gracioso). Suite global pasa de 33 → 34 con el nuevo test.
 
 #### Sprint C · matchmaker proyecto ↔ enjambre
 

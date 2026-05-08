@@ -2818,6 +2818,96 @@ async function testCritical108Roles() {
     assert(rep.domainCoverage.governance.guardians.length === 2,       'report · governance 2 guardianes');
 }
 
+// ─── MAT-003 sprint B · skillTaxonomy + coverageReport ────────────
+async function testSkillTaxonomy() {
+    const mod = await import('../core/skillTaxonomy.js?v=' + Date.now());
+    const {
+        SKILL_TAXONOMY, SKILL_TIERS,
+        getSkillById, listSkills, skillsByDomain, skillsByTier, skillsByGuardian, skillsByPractice,
+        coverageReport,
+    } = mod;
+
+    // Estructura
+    assert(Object.isFrozen(SKILL_TAXONOMY),                                'SKILL_TAXONOMY frozen');
+    assert(SKILL_TAXONOMY.length === 90,                                   '90 skills · ' + SKILL_TAXONOMY.length);
+    assert(Object.isFrozen(SKILL_TIERS) && SKILL_TIERS.length === 3,       'SKILL_TIERS · 3 tiers');
+
+    // Cada skill bien formado
+    SKILL_TAXONOMY.forEach(s => {
+        assert(typeof s.id === 'string' && /^[a-z][a-z0-9-]+$/.test(s.id),  s.id + ' · id kebab');
+        assert(typeof s.label === 'string' && s.label.length > 0,           s.id + ' · label');
+        assert(typeof s.domain === 'string',                                 s.id + ' · domain');
+        assert(SKILL_TIERS.includes(s.tier),                                 s.id + ' · tier válido');
+        assert(Array.isArray(s.guardianAffinity) && s.guardianAffinity.length >= 1, s.id + ' · ≥1 guardian');
+        assert(Array.isArray(s.relatedPractices) && s.relatedPractices.length >= 1, s.id + ' · ≥1 práctica');
+        assert(Object.isFrozen(s),                                            s.id + ' · frozen');
+    });
+
+    // IDs únicos
+    const ids = SKILL_TAXONOMY.map(s => s.id);
+    assert(new Set(ids).size === ids.length,                              'IDs únicos');
+
+    // Distribución por dominio
+    assert(skillsByDomain('governance').length === 8,                     'governance · 8');
+    assert(skillsByDomain('finance').length    === 10,                    'finance · 10');
+    assert(skillsByDomain('tech').length       === 14,                    'tech · 14');
+    assert(skillsByDomain('design').length     === 8,                     'design · 8');
+    assert(skillsByDomain('operations').length === 11,                    'operations · 11');
+    assert(skillsByDomain('community').length  === 10,                    'community · 10');
+    assert(skillsByDomain('legal').length      === 6,                     'legal · 6');
+    assert(skillsByDomain('ecology').length    === 8,                     'ecology · 8');
+    assert(skillsByDomain('education').length  === 8,                     'education · 8');
+    assert(skillsByDomain('culture').length    === 7,                     'culture · 7');
+
+    // Helpers
+    assert(getSkillById('vision-strategic')?.domain === 'governance',     'getSkillById · vision');
+    assert(getSkillById('no-existe') === null,                            'getSkillById · null miss');
+    assert(getSkillById(null) === null,                                    'getSkillById · null input');
+    assert(listSkills().length === 90,                                     'listSkills · 90');
+    assert(skillsByTier('master').length >= 10,                            'master tier ≥10');
+    assert(skillsByTier('foundation').length >= 5,                         'foundation tier ≥5');
+    assert(skillsByGuardian('zeus').length >= 1,                           'zeus skills ≥1');
+    assert(skillsByGuardian('demeter').length >= 1,                        'demeter skills ≥1');
+    assert(skillsByPractice('flujo-valor').length >= 1,                    'flujo-valor skills ≥1');
+    assert(skillsByPractice('memes-campanas').length >= 1,                 'memes-campanas skills ≥1');
+
+    // coverageReport · vacío
+    const r0 = coverageReport();
+    assert(r0.totalSkills === 90,                                          'report · totalSkills=90');
+    assert(r0.coveredCount === 0,                                           'report · 0 cubiertos vacío');
+    assert(r0.coveragePct === 0,                                            'report · pct=0 vacío');
+    assert(r0.gaps.length === 90,                                           'report · 90 gaps vacío');
+    assert(r0.resilient.length === 0,                                       'report · 0 resilient vacío');
+    assert(r0.fragile.length === 0,                                         'report · 0 fragile vacío');
+
+    // coverageReport · con plazas (incluye ID inexistente · debe ignorarse)
+    const swarmSkills = [
+        { skillId: 'vision-strategic', seatId: 's1' },
+        { skillId: 'vision-strategic', seatId: 's2' },
+        { skillId: 'vision-strategic', seatId: 's3' },  // ≥3 → resilient
+        { skillId: 'slicing-pie',      seatId: 's4' },  // 1 → fragile
+        { skillId: 'system-architecture', seatId: 's5' },
+        { skillId: 'system-architecture', seatId: 's6' }, // 2 (no fragile, no resilient)
+        { skillId: 'no-existe',        seatId: 's99' },  // ignorar
+    ];
+    const r1 = coverageReport({ swarmSkills });
+    assert(r1.coveredCount === 3,                                          'report · 3 cubiertos');
+    assert(r1.resilient.includes('vision-strategic'),                      'report · vision resilient');
+    assert(r1.fragile.includes('slicing-pie'),                             'report · slicing-pie fragile');
+    assert(!r1.fragile.includes('system-architecture'),                    'report · 2 plazas no fragile');
+    assert(!r1.resilient.includes('system-architecture'),                  'report · 2 plazas no resilient');
+    assert(r1.gaps.length === 87,                                          'report · 87 gaps restantes');
+    assert(r1.byDomain.governance.covered === 1,                           'governance · 1 cubierto');
+    assert(r1.byDomain.tech.covered === 1,                                 'tech · 1 cubierto');
+    assert(r1.byDomain.governance.gaps.length === 7,                       'governance · 7 gaps');
+    assert(typeof r1.byTier.master.pct === 'number',                       'byTier.master.pct');
+    assert(typeof r1.byGuardian.zeus.pct === 'number',                     'byGuardian.zeus.pct');
+
+    // Robustez · input inválido
+    const r2 = coverageReport({ swarmSkills: 'not an array' });
+    assert(r2.coveredCount === 0,                                           'input no-array · graceful');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -2853,7 +2943,8 @@ const SUITE = [
     { name: 'MAT-002-A · matriuTemplate puro',                    fn: testMatriuTemplate },
     { name: 'MAT-002-G fase A · sosManifesto puro + KB mock',     fn: testSosManifesto },
     { name: 'UX-EDU-001 sprint A · didacticService puro',         fn: testDidacticService },
-    { name: 'MAT-003 sprint A · critical108Roles + Pantheon Work', fn: testCritical108Roles }
+    { name: 'MAT-003 sprint A · critical108Roles + Pantheon Work', fn: testCritical108Roles },
+    { name: 'MAT-003 sprint B · skillTaxonomy + coverageReport',  fn: testSkillTaxonomy }
 ];
 
 export async function runTests() {
