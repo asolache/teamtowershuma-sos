@@ -13,6 +13,7 @@ import {
     linkWallet, unlinkWallet, isValidEvmAddress,
 } from '../core/identityService.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 export default class IdentityView {
     constructor() {
@@ -63,7 +64,7 @@ export default class IdentityView {
         <div class="id-shell">
             <div class="id-topbar">
                 <a href="/" data-link class="id-logo">🗼 Team<span>Towers</span></a>
-                <span class="id-title">Identidad · perfil del operador</span>
+                <span class="id-title">Identidad · perfil del operador ${renderExplainerBadge('did', { size: 'xs' })} ${renderExplainerBadge('sbt', { size: 'xs' })}</span>
                 <div class="id-spacer"></div>
                 ${renderNavGroupedHtml({ active: '', className: 'id-link' })}
             </div>
@@ -134,6 +135,8 @@ export default class IdentityView {
     }
 
     async afterRender() {
+        ensureExplainerStyle();
+        bindExplainerBadges(document);
         this._renderWalletList();
 
         document.getElementById('idLinkWallet')?.addEventListener('click', async () => {

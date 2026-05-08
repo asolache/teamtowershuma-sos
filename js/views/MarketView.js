@@ -24,6 +24,7 @@ import {
 import { searchCnae, getCnae } from '../core/cnaeSeed.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 const KIND_LABELS = {
     product:      '📦 Producto',
@@ -119,7 +120,7 @@ export default class MarketView {
         <div class="mk-shell">
             <div class="mk-topbar">
                 <a href="/" data-link class="mk-logo">🗼 Team<span>Towers</span></a>
-                <span class="mk-title">Mercado SOS · productos y servicios</span>
+                <span class="mk-title">Mercado SOS · productos y servicios ${renderExplainerBadge('slicing-pie', { size: 'xs' })}</span>
                 <div class="mk-spacer"></div>
                 ${renderNavGroupedHtml({ active: 'market', className: 'mk-link' })}
                 <button class="mk-btn mk-btn-primary" id="mkBtnNew">＋ Nueva oferta</button>
@@ -154,6 +155,8 @@ export default class MarketView {
     }
 
     async afterRender() {
+        ensureExplainerStyle();
+        bindExplainerBadges(document);
         await this._load();
         this._populateProjectSelect();
         this._render();

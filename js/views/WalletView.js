@@ -13,7 +13,9 @@ import {
     getWalletForProject, getOrCreateWalletForProject,
     topUpWallet, adjustWallet, persistWallet, walletStats,
     TOPUP_PRESETS,
-} from '../core/walletService.js';import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+} from '../core/walletService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 const KIND_LABEL = {
     topup:      '⬆ Recarga',
@@ -100,7 +102,7 @@ export default class WalletView {
         <div class="w-shell">
             <div class="w-topbar">
                 <a href="/" data-link class="w-logo">🗼 Team<span>Towers</span></a>
-                <span class="w-title">Wallet · prepago del proyecto</span>
+                <span class="w-title">Wallet · prepago del proyecto ${renderExplainerBadge('econom-ia', { size: 'xs' })}</span>
                 <div class="w-spacer"></div>
                 ${renderNavGroupedHtml({ active: '', projectId: this.projectId, className: 'w-link' })}
             </div>
@@ -111,6 +113,8 @@ export default class WalletView {
     }
 
     async afterRender() {
+        ensureExplainerStyle();
+        bindExplainerBadges(document);
         if (!this.projectId) {
             document.getElementById('wMain').innerHTML = `
                 <div class="w-empty">

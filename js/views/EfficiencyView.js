@@ -14,6 +14,7 @@
 import { store } from '../core/store.js';
 import { KB }    from '../core/kb.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 // Paleta de costes por provider (mirroring del Orchestrator BASE_PRICING)
 // USD per 1M tokens · sirve para extrapolar coste evitado.
@@ -73,7 +74,7 @@ export default class EfficiencyView {
         <div class="ef-shell">
             <div class="ef-topbar">
                 <a href="/" data-link class="ef-logo">🗼 Team<span>Towers</span></a>
-                <span class="ef-title">Efficiency · KM-001 ahorro IA</span>
+                <span class="ef-title">Efficiency · KM-001 ahorro IA ${renderExplainerBadge('context-pruning', { size: 'xs' })}</span>
                 <div class="ef-spacer"></div>
                 ${renderNavGroupedHtml({ active: '', className: 'ef-link' })}
             </div>
@@ -85,8 +86,11 @@ export default class EfficiencyView {
     }
 
     async afterRender() {
+        ensureExplainerStyle();
+        bindExplainerBadges(document);
         await this._load();
         this._render();
+        bindExplainerBadges(document);
     }
 
     async _load() {
