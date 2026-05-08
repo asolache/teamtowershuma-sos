@@ -2691,6 +2691,130 @@ async function testDidacticService() {
     assert(htmlMd.includes('sos-edu-size-md'),                            'render · size md class');
 }
 
+// ─── MAT-003 sprint A · critical108Roles + Pantheon Work ──────────
+async function testCritical108Roles() {
+    const mod = await import('../core/critical108Roles.js?v=' + Date.now());
+    const {
+        COHORT_0_TOTAL, OPERATIVE_SEATS, GUARDIAN_SEATS,
+        OPERATIVE_DOMAIN_DISTRIBUTION,
+        PANTHEON_TRIVALENT_LOGIC, PANTHEON_NATIVE_PRACTICES,
+        PANTHEON_GUARDIANS, PROJECT_TYPES,
+        getGuardianById, getGuardiansByDomain, getGuardiansByTrivalentLogic,
+        getProjectTypeById,
+        guardiansPendingKeywords, guardiansWithKeywords, coverageReport,
+    } = mod;
+
+    // Constantes Cohort 0
+    assert(COHORT_0_TOTAL === 108,                                     'COHORT_0_TOTAL = 108');
+    assert(OPERATIVE_SEATS === 96,                                     'OPERATIVE_SEATS = 96');
+    assert(GUARDIAN_SEATS === 12,                                      'GUARDIAN_SEATS = 12');
+    assert(OPERATIVE_SEATS + GUARDIAN_SEATS === COHORT_0_TOTAL,        '96 + 12 = 108');
+
+    // Distribución por dominio · suma 96
+    const sum = Object.values(OPERATIVE_DOMAIN_DISTRIBUTION).reduce((a, b) => a + b, 0);
+    assert(sum === 96,                                                 'distribución por dominio suma 96 · got=' + sum);
+    assert(OPERATIVE_DOMAIN_DISTRIBUTION.governance === 8,             'governance · 8');
+    assert(OPERATIVE_DOMAIN_DISTRIBUTION.finance === 12,               'finance · 12');
+    assert(OPERATIVE_DOMAIN_DISTRIBUTION.tech === 16,                  'tech · 16 (ajustado de 18)');
+    assert(OPERATIVE_DOMAIN_DISTRIBUTION.operations === 12,            'operations · 12 (ajustado de 14)');
+
+    // 10 prácticas nativas digitales
+    assert(Object.isFrozen(PANTHEON_NATIVE_PRACTICES),                 'PANTHEON_NATIVE_PRACTICES frozen');
+    assert(PANTHEON_NATIVE_PRACTICES.length === 10,                    '10 prácticas nativas digitales');
+    assert(PANTHEON_NATIVE_PRACTICES.find(p => p.id === 'flujo-valor'),       'práctica flujo-valor');
+    assert(PANTHEON_NATIVE_PRACTICES.find(p => p.id === 'reconocer-competencias'), 'práctica reconocer-competencias');
+
+    // Lógica trivalente
+    assert(Object.isFrozen(PANTHEON_TRIVALENT_LOGIC),                  'PANTHEON_TRIVALENT_LOGIC frozen');
+    ['distinguir', 'fusionar', 'relacionar'].forEach(k => {
+        assert(PANTHEON_TRIVALENT_LOGIC[k]?.id === k,                  'trivalente · ' + k);
+    });
+
+    // 12 Guardianes · estructura
+    assert(Object.isFrozen(PANTHEON_GUARDIANS),                        'PANTHEON_GUARDIANS frozen');
+    assert(PANTHEON_GUARDIANS.length === 12,                           '12 guardianes');
+    const ids = PANTHEON_GUARDIANS.map(g => g.id);
+    assert(new Set(ids).size === 12,                                   'IDs únicos');
+    const nums = PANTHEON_GUARDIANS.map(g => g.pantheonNum).sort((a, b) => a - b);
+    assert(JSON.stringify(nums) === JSON.stringify([1,2,3,4,5,6,7,8,9,10,11,12]), 'pantheonNum 1..12');
+
+    // 12 nombres canónicos · sin género asumido (cualquiera puede ser cualquier guardián)
+    ['afrodita', 'apolo', 'atenea', 'demeter', 'dionisio', 'hebe',
+     'hefesto', 'hera', 'hermes', 'hestia', 'poseidon', 'zeus'
+    ].forEach(id => {
+        assert(PANTHEON_GUARDIANS.find(g => g.id === id),              'guardián canónico ' + id);
+    });
+
+    // 8 con keywords (literal del PDF) · 4 pending
+    assert(guardiansWithKeywords().length === 8,                       '8 guardianes con keywords');
+    assert(guardiansPendingKeywords().length === 4,                    '4 guardianes pending');
+    const pendingIds = guardiansPendingKeywords().map(g => g.id).sort();
+    assert(JSON.stringify(pendingIds) === JSON.stringify(['hefesto','hera','poseidon','zeus']),
+                                                                       'pending = hefesto/hera/poseidon/zeus');
+
+    // Keywords literales del PDF · spot-check
+    const afrodita = getGuardianById('afrodita');
+    assert(afrodita.keywords.includes('estética'),                     'Afrodita · estética');
+    assert(afrodita.keywords.includes('seducción'),                    'Afrodita · seducción');
+    const apolo = getGuardianById('apolo');
+    assert(apolo.keywords.includes('conocimiento teórico'),            'Apolo · conocimiento teórico');
+    assert(apolo.keywords.includes('predicción'),                      'Apolo · predicción');
+    const atenea = getGuardianById('atenea');
+    assert(atenea.keywords.includes('estrategia defensiva y ofensiva'), 'Atenea · estrategia');
+    assert(atenea.keywords.includes('civismo'),                        'Atenea · civismo');
+    const hestia = getGuardianById('hestia');
+    assert(hestia.keywords.includes('alma'),                           'Hestia · alma');
+    assert(hestia.keywords.includes('centro'),                         'Hestia · centro');
+    const hermes = getGuardianById('hermes');
+    assert(hermes.keywords.includes('argucia'),                        'Hermes · argucia');
+    assert(hermes.keywords.includes('intercambio'),                    'Hermes · intercambio');
+
+    // Lógica trivalente del PDF (figura 4)
+    const distLogic = getGuardiansByTrivalentLogic('distinguir').map(g => g.id).sort();
+    assert(JSON.stringify(distLogic) === JSON.stringify(['apolo','atenea','hebe','poseidon']),
+                                                                       'distinguir = apolo,atenea,hebe,poseidon (PDF fig.4)');
+    const fusLogic = getGuardiansByTrivalentLogic('fusionar').map(g => g.id).sort();
+    assert(JSON.stringify(fusLogic) === JSON.stringify(['demeter','dionisio','hefesto','hera']),
+                                                                       'fusionar = demeter,dionisio,hefesto,hera (PDF fig.4)');
+    const relLogic = getGuardiansByTrivalentLogic('relacionar').map(g => g.id).sort();
+    assert(JSON.stringify(relLogic) === JSON.stringify(['afrodita','hermes','hestia','zeus']),
+                                                                       'relacionar = afrodita,hermes,hestia,zeus (PDF fig.4)');
+
+    // Guardianes por dominio
+    assert(getGuardiansByDomain('governance').length === 2,            'governance · 2 guardianes (atenea + zeus)');
+    assert(getGuardiansByDomain('community').length === 2,             'community · 2 guardianes (hermes + hestia)');
+    assert(getGuardiansByDomain('finance').length === 1,               'finance · 1 guardián (poseidon)');
+    assert(getGuardiansByDomain('tech').length === 1,                  'tech · 1 guardián (hefesto)');
+    assert(getGuardiansByDomain('inexistente').length === 0,           'dominio inexistente · []');
+
+    // Cada guardián tiene domain en la lista canónica
+    const validDomains = Object.keys(OPERATIVE_DOMAIN_DISTRIBUTION);
+    PANTHEON_GUARDIANS.forEach(g => {
+        assert(validDomains.includes(g.domain),                        g.id + ' · domain canónico (' + g.domain + ')');
+    });
+
+    // 12 tipos de proyecto
+    assert(Object.isFrozen(PROJECT_TYPES),                             'PROJECT_TYPES frozen');
+    assert(PROJECT_TYPES.length === 12,                                '12 tipos de proyecto');
+    const projectIds = PROJECT_TYPES.map(t => t.id);
+    assert(new Set(projectIds).size === 12,                            'IDs únicos en PROJECT_TYPES');
+    assert(getProjectTypeById('comunitat-autosuficient'),              'comunitat-autosuficient encontrado');
+    assert(getProjectTypeById('dao-web3'),                             'dao-web3 encontrado');
+    assert(getProjectTypeById('cooperativa-cures'),                    'cooperativa-cures encontrado');
+    assert(getProjectTypeById('inexistente') === null,                 'tipo inexistente · null');
+
+    // Coverage report agregado
+    const rep = coverageReport();
+    assert(rep.cohort0Total === 108,                                   'report · cohort0Total 108');
+    assert(rep.operativeSeats === 96,                                  'report · operativeSeats 96');
+    assert(rep.guardianSeats === 12,                                   'report · guardianSeats 12');
+    assert(rep.operativeDomainSum === 96,                              'report · suma de dominios = 96');
+    assert(rep.guardiansPending.length === 4,                          'report · 4 pending');
+    assert(rep.guardiansReady.length === 8,                            'report · 8 ready');
+    assert(rep.projectTypes === 12,                                    'report · 12 project types');
+    assert(rep.domainCoverage.governance.guardians.length === 2,       'report · governance 2 guardianes');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -2725,7 +2849,8 @@ const SUITE = [
     { name: 'H_ANIM_001 sprint A · flowAnimationService puro',    fn: testFlowAnimationService },
     { name: 'MAT-002-A · matriuTemplate puro',                    fn: testMatriuTemplate },
     { name: 'MAT-002-G fase A · sosManifesto puro + KB mock',     fn: testSosManifesto },
-    { name: 'UX-EDU-001 sprint A · didacticService puro',         fn: testDidacticService }
+    { name: 'UX-EDU-001 sprint A · didacticService puro',         fn: testDidacticService },
+    { name: 'MAT-003 sprint A · critical108Roles + Pantheon Work', fn: testCritical108Roles }
 ];
 
 export async function runTests() {

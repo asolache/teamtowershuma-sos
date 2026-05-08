@@ -1650,29 +1650,68 @@ SOC/SOP del Mètode SOS`. Esto es la materialización operativa de
    (ej. el guardián de ecología hace match con tipos 01/06/09 por
    tradición; el guardián de tecnología con 02/07/08).
 
-### 12 Guardianes Pantheon Work · pendiente input @alvaro
+### 12 Guardianes Pantheon Work · 8 codificados literal · 4 pendientes
 
-@alvaro me indica que Pantheon Work es un framework concreto que él
-conoce y que pasará los **12 nombres + función + skills** de los 12
-guardianes en el siguiente mensaje. Hasta entonces, este sub-bloque
-queda como placeholder · NO se codifica el sprint A hasta tener los
-12 literales para que la matriz inicial sea fiel al método.
+@alvaro pasó la "Guía del Ejercicio de Reconocimiento de Competencias
+y Habilidades · Versión 1.0 · 7 sept 2022" de Pantheon Work
+(www.pantheon.work · CC BY 4.0 · autores Toni Mascaró + Sergio Marrero
+· **co-creadores originales del ejercicio Íngrid Astiz + @alvaro
+Solache** · cita literal pág. 16). 26 páginas leídas integralmente.
 
-Plantilla para cada guardián (a rellenar):
+Catálogo Pantheon Work codificado en `js/core/critical108Roles.js`:
 
-```
-{
-    id:           'kebab-case-id',
-    pantheonNum:  1..12,
-    name:         'Nom literal Pantheon Work',
-    function:     'Funció estratègica que custodia',
-    domain:       'governance' | 'finance' | ... ,    // dominio principal
-    skills:       [...],
-    bootstrapsAll:true,                                // los 12 son críticos para todos los tipos de proyecto
-    multiplier:   1.5..2.0,                            // peso simbólico extra · TBD
-    sopsBootstrap: [...],                              // SOPs canónicos del Mètode SOS que custodia
-}
-```
+| # | Guardián | Dominio SOS | Trivalente | Keywords (PDF figs 5-6 + diapo Hermes pág 21) |
+|---|---|---|---|---|
+| 01 | **Afrodita**  | design     | relacionar | estética · belleza · atracción · seducción · transgresión · creatividad |
+| 02 | **Apolo**     | education  | distinguir | conocimiento teórico · análisis · estructuración · depuración · predicción |
+| 03 | **Atenea**    | governance | distinguir | conocimiento práctico · estrategia defensiva y ofensiva · destreza · civismo |
+| 04 | **Demeter**   | ecology    | fusionar   | generación · regeneración · replicación · polinización |
+| 05 | **Dionisio**  | culture    | fusionar   | socialización · celebración · juego · hedonismo · invención · conquista |
+| 06 | **Hebe**      | operations | distinguir | apoyo logístico · aprovisionamiento · intendencia · rejuvenecimiento |
+| 07 | **Hefesto**   | tech       | fusionar   | ⚠ pending input @alvaro · cuestionario oficial pantheon.work |
+| 08 | **Hera**      | legal      | fusionar   | ⚠ pending input @alvaro · cuestionario oficial pantheon.work |
+| 09 | **Hermes**    | community  | relacionar | comunicación · intercambio · guía · invención · argucia · transgresión |
+| 10 | **Hestia**    | community  | relacionar | espacios · encuentros · conversación · centro · alma |
+| 11 | **Poseidón**  | finance    | distinguir | ⚠ pending input @alvaro · cuestionario oficial pantheon.work |
+| 12 | **Zeus**      | governance | relacionar | ⚠ pending input @alvaro · cuestionario oficial pantheon.work |
+
+**Lógica trivalente** (PDF figura 4 · validada literal):
+- Distinguir y separar · Apolo + Atenea + Hebe + Poseidón
+- Mezclar y confundir (fusionar) · Demeter + Dionisio + Hefesto + Hera
+- Relacionar y sintetizar · Afrodita + Hermes + Hestia + Zeus
+
+**Mapeo dominio ↔ guardián** (12 guardianes en 10 dominios):
+- 8 dominios con 1 guardián cada uno
+- 2 dominios con 2 guardianes (governance: Atenea+Zeus · community: Hermes+Hestia)
+- Todos los 10 dominios MAT-003 quedan custodiados por al menos 1 guardián
+- governance lleva 2 (Atenea estrategia operativa + Zeus visión soberana)
+- community lleva 2 (Hermes red externa + Hestia hogar interno)
+
+**10 prácticas nativas digitales Pantheon Work** (PDF figura 2 ·
+codificadas en `PANTHEON_NATIVE_PRACTICES`):
+flujo-valor · redes-nodos · gestion-conocimiento · voz-alta ·
+ecosistema · reconocer-competencias · empoderar-mutuamente · beta ·
+netiqueta-estricta · memes-campanas. Cada guardián vehicula 1-2 de
+ellas según declaración en `nativePractices[]`.
+
+**12 tipos de proyecto cliente** (signo dels temps 2026 · validados
+@alvaro · codificados en `PROJECT_TYPES`):
+01 comunitat-autosuficient · 02 startup-coop-tradicional · 03
+empresa-en-transicio · 04 cooperativa-multi · 05 fundacio-ong · 06
+ecosistema-regional · 07 dao-web3 · 08 plataforma-cooperativa · 09
+cooperativa-cures · 10 espai-autogestionat · 11 hub-transicio · 12
+familiar-relevo.
+
+### Próximo input @alvaro · 4 cuestionarios pendientes
+
+Los cuestionarios oficiales individuales de Pantheon Work (no incluidos
+en la guía v1.0 que pasaste) contienen las palabras clave de Hefesto ·
+Hera · Poseidón · Zeus. Pásamelos en el siguiente mensaje (PDF · Word ·
+texto pegado · captura) y los codifico literal en cuestión de minutos.
+
+Mientras tanto, el módulo está operativo con 8/12 guardianes completos
++ 4 marcados `pendingFromPantheonWork: true` para que el sprint B
+(catálogo skills) pueda arrancar contra la estructura completa.
 
 ### Sprint A actualizado tras estas decisiones
 
