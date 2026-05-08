@@ -23,6 +23,7 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'folders',   icon: '📁', label: 'Folders',   href: '/folders',    global: true,  hint: 'Carpetas inteligentes · queries persistentes' },
     { id: 'mind',      icon: '🕸',  label: 'Mind-Graph',href: '/mind',       global: true,  hint: 'Mind-as-Graph total · panorámica del KB' },
     { id: 'efficiency',icon: '⚡', label: 'Eficiencia', href: '/efficiency', global: true,  hint: 'KM-001 · tokens/coste/pruning · ROI IA' },
+    { id: 'wallet',    icon: '💶', label: 'Wallet',    href: '/wallet',     global: false, hint: 'Saldo prepago del proyecto · ledger movimientos' },
     { id: 'identity',  icon: '👤', label: 'Identidad', href: '/identity',   global: true,  hint: 'Tu perfil · DID local-first · wallet' },
     { id: 'settings',  icon: '⚙',  label: 'Settings',  href: '/settings',   global: true,  hint: 'Claves API · IA · purga' },
 ]);
@@ -38,7 +39,7 @@ export function buildNavLinks({ active = '', projectId = null } = {}) {
         .filter(d => d.global || !!projectId)
         .map(d => {
             let href = d.href;
-            if (projectId && ['map', 'sops', 'kanban', 'market'].includes(d.id)) {
+            if (projectId && ['map', 'sops', 'kanban', 'market', 'wallet'].includes(d.id)) {
                 href += '?project=' + encodeURIComponent(projectId);
             }
             return {

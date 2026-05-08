@@ -1441,20 +1441,21 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 11,                          '11 destinos canónicos (+ efficiency en Ola 11)');
+    assert(NAV_DESTINATIONS.length === 12,                          '12 destinos canónicos (+ wallet en Ola 12 · global=false sólo aparece con projectId)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 10,                                'sin projectId · 10 links (sin sops · 11-1)');
+    assert(linksGlobal.length === 10,                                'sin projectId · 10 links (sin sops y sin wallet · 12-2)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
     // con projectId → todos + query ?project= en los aplicables
     const linksProject = buildNavLinks({ active: 'kanban', projectId: 'proj-x' });
-    assert(linksProject.length === 11,                              'con projectId · 11 links (incluye sops)');
+    assert(linksProject.length === 12,                              'con projectId · 12 links (incluye sops y wallet)');
+    assert(linksProject.find(l => l.id === 'wallet').href === '/wallet?project=proj-x', 'wallet con project query');
     assert(linksProject.find(l => l.id === 'sops').href === '/sops?project=proj-x',     'sops con project query');
     assert(linksProject.find(l => l.id === 'map').href === '/map?project=proj-x',       'map con project query');
     assert(linksProject.find(l => l.id === 'market').href === '/market?project=proj-x', 'market con project query');
@@ -1914,6 +1915,100 @@ async function testContextPruner() {
     assert(typeof r.formatted === 'string' && r.formatted.includes('CONTEXTO INYECTADO'), 'formatted listo para system prompt');
 }
 
+// ─── MKT-001 sprint C1 · walletService puro ─────────────────────
+async function testWalletService() {
+    const mod = await import('../core/walletService.js?v=' + Date.now());
+    const {
+        MOVEMENT_KINDS, TOPUP_PRESETS,
+        validateWallet, buildWalletForProject,
+        topUpWallet, consumeFromWallet, refundWallet, adjustWallet,
+        walletStats,
+    } = mod;
+
+    // Constantes
+    assert(Object.isFrozen(MOVEMENT_KINDS),                                'MOVEMENT_KINDS frozen');
+    assert(MOVEMENT_KINDS.includes('topup') && MOVEMENT_KINDS.includes('consume'), 'kinds incluye topup/consume');
+    assert(Object.isFrozen(TOPUP_PRESETS) && TOPUP_PRESETS.length === 4,   'TOPUP_PRESETS · 4 tramos frozen');
+
+    // buildWalletForProject
+    let threwNoPid = false;
+    try { buildWalletForProject(); } catch(_) { threwNoPid = true; }
+    assert(threwNoPid,                                                      'sin projectId lanza');
+
+    const w0 = buildWalletForProject('proj-x');
+    assert(w0.id === 'wallet-proj-x' && w0.type === 'wallet',              'wallet id y type correctos');
+    assert(w0.content.balanceEur === 0,                                    'balance inicial 0');
+    assert(Array.isArray(w0.content.movements) && w0.content.movements.length === 0, 'movements vacío');
+    assert(w0.projectId === 'proj-x',                                      'projectId en root');
+    assert(w0.content.tags.includes('kind:wallet'),                        'tags taxonomy auto');
+    assert(validateWallet(w0).ok === true,                                 'wallet recién construido válido');
+
+    // validateWallet · errores
+    assert(validateWallet(null).ok === false,                              'null falla');
+    assert(validateWallet({ ...w0, type: 'project' }).ok === false,        'type incorrecto falla');
+
+    // topUpWallet · pureza
+    const w1 = topUpWallet({ wallet: w0, amountEur: 25, source: 'preset', note: 'test' });
+    assert(w1 !== w0,                                                      'topUp no muta · devuelve nuevo');
+    assert(w1.content.balanceEur === 25,                                   'balance actualizado');
+    assert(w1.content.movements.length === 1,                              'movement añadido');
+    assert(w1.content.movements[0].kind === 'topup',                       'movement kind topup');
+    assert(w1.content.movements[0].amountEur === 25,                       'movement amount preservado');
+    assert(w1.content.movements[0].balanceAfter === 25,                    'balanceAfter en movement');
+    assert(w0.content.balanceEur === 0,                                    'original NO mutado');
+
+    // topUpWallet · validaciones
+    let threwNeg = false;
+    try { topUpWallet({ wallet: w1, amountEur: -5 }); } catch(_) { threwNeg = true; }
+    assert(threwNeg,                                                        'topUp negativo lanza');
+
+    // consumeFromWallet · saldo suficiente
+    const w2 = consumeFromWallet({ wallet: w1, amountEur: 0.05, ref: 'llm-call-abc', source: 'orchestrator' });
+    assert(w2.content.balanceEur === +(25 - 0.05).toFixed(6),              'balance tras consume');
+    assert(w2.content.movements[0].kind === 'consume',                     'kind consume primero (más reciente)');
+    assert(w2.content.movements[1].kind === 'topup',                       'topup queda en posición 1');
+
+    // consumeFromWallet · saldo insuficiente
+    let threwInsuf = false;
+    let insufErr;
+    try { consumeFromWallet({ wallet: w0, amountEur: 100 }); } catch(e) { threwInsuf = true; insufErr = e; }
+    assert(threwInsuf && insufErr.code === 'INSUFFICIENT_FUNDS',           'consume con saldo insuficiente lanza con code');
+    assert(insufErr.balance === 0 && insufErr.required === 100,            'error trae balance y required');
+
+    // consumeFromWallet · allowNegative
+    const wNeg = consumeFromWallet({ wallet: w0, amountEur: 5, allowNegative: true });
+    assert(wNeg.content.balanceEur === -5,                                 'allowNegative permite saldo negativo');
+
+    // refundWallet
+    const w3 = refundWallet({ wallet: w2, amountEur: 0.02, ref: 'refund-test' });
+    assert(w3.content.balanceEur > w2.content.balanceEur,                  'refund suma saldo');
+    assert(w3.content.movements[0].kind === 'refund',                      'kind refund');
+
+    // adjustWallet
+    const wPlus = adjustWallet({ wallet: w0, deltaEur: 100, note: 'inicial' });
+    assert(wPlus.content.balanceEur === 100,                               'adjust positivo suma');
+    const wMinus = adjustWallet({ wallet: wPlus, deltaEur: -30, note: 'corrección' });
+    assert(wMinus.content.balanceEur === 70,                               'adjust negativo resta');
+
+    let threwZero = false;
+    try { adjustWallet({ wallet: w0, deltaEur: 0 }); } catch(_) { threwZero = true; }
+    assert(threwZero,                                                       'adjust con delta=0 lanza');
+
+    // walletStats
+    const stats = walletStats(w3);
+    assert(stats.balance === w3.content.balanceEur,                        'stats.balance correcto');
+    assert(stats.totalTopups === 25,                                       'stats.totalTopups');
+    assert(stats.totalConsumed === 0.05,                                   'stats.totalConsumed');
+    assert(stats.totalRefunds === 0.02,                                    'stats.totalRefunds');
+    assert(stats.movementCount === 3,                                      'stats.movementCount');
+
+    // exports
+    assert(typeof mod.getWalletForProject === 'function',                  'getWalletForProject exportada');
+    assert(typeof mod.getOrCreateWalletForProject === 'function',          'getOrCreateWalletForProject exportada');
+    assert(typeof mod.topUpAndPersist === 'function',                      'topUpAndPersist exportada');
+    assert(typeof mod.consumeAndPersist === 'function',                    'consumeAndPersist exportada');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -1942,7 +2037,8 @@ const SUITE = [
     { name: 'AUTH-001 sprint A · identityService (helpers puros)', fn: testIdentityService },
     { name: 'KM-001 sprint A · smartFolderService puro',          fn: testSmartFolderService },
     { name: 'H8.1 · mindGraphService puro',                       fn: testMindGraphService },
-    { name: 'KM-001 sprint C · contextPruner puro',               fn: testContextPruner }
+    { name: 'KM-001 sprint C · contextPruner puro',               fn: testContextPruner },
+    { name: 'MKT-001 sprint C1 · walletService puro',             fn: testWalletService }
 ];
 
 export async function runTests() {

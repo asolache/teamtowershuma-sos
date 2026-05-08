@@ -25,6 +25,8 @@ const ROUTES = [
     { path: '/mind',      view: () => import('./views/MindGraphView.js') },
     // KM-001 sprint E2 · dashboard de eficiencia (tokens / coste / pruning)
     { path: '/efficiency',view: () => import('./views/EfficiencyView.js') },
+    // MKT-001 sprint C · wallet prepago por proyecto
+    { path: '/wallet',    view: () => import('./views/WalletView.js')    },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
