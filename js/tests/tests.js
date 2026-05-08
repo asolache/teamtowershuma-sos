@@ -2255,6 +2255,57 @@ async function testFlowAnimationService() {
     // empty/null inputs
     const emptyCycle = computeAnimationCycles(null);
     assert(emptyCycle.pulses.length === 0 && emptyCycle.totalDuration === 0, 'null → ciclo vacío');
+
+    // ── H_ANIM_001 sprint C · buildFlowOrderPrompt + applyOrderToTransactions
+    const { buildFlowOrderPrompt, applyOrderToTransactions } = mod;
+
+    const roles = [
+        { id: 'r1', name: 'Cliente',     castell_level: 'pinya' },
+        { id: 'r2', name: 'Comercial',   castell_level: 'tronc' },
+        { id: 'r3', name: 'Operario' },
+    ];
+    const txOrd = [
+        { id: 'tx-1', from: 'r1', to: 'r2', deliverable: 'Solicitud',  type: 'tangible',   is_must: true },
+        { id: 'tx-2', from: 'r2', to: 'r3', deliverable: 'Brief',      type: 'intangible', is_must: false },
+        { id: 'tx-3', from: 'r3', to: 'r1', deliverable: 'Entrega',    type: 'tangible',   is_must: true },
+    ];
+
+    const prompt = buildFlowOrderPrompt({ roles, transactions: txOrd, projectName: 'Cliente XYZ' });
+    assert(typeof prompt === 'string' && prompt.length > 200,             'buildFlowOrderPrompt · string sustancioso');
+    assert(prompt.includes('Cliente XYZ'),                                'projectName en prompt');
+    assert(prompt.includes('tx-1') && prompt.includes('tx-3'),            'incluye tx ids');
+    assert(prompt.includes('Solicitud') && prompt.includes('Brief'),      'incluye deliverables');
+    assert(prompt.includes('MUST'),                                       'marca MUST');
+    assert(prompt.includes('"sequence_order"'),                           'output schema con sequence_order');
+    assert(prompt.includes('"phase"'),                                    'output schema con phase');
+    assert(prompt.includes('"rationale"'),                                'output schema con rationale');
+
+    // sin transactions lanza
+    let threwEmpty = false;
+    try { buildFlowOrderPrompt({ roles, transactions: [] }); } catch(_) { threwEmpty = true; }
+    assert(threwEmpty,                                                     'sin transactions lanza');
+
+    // applyOrderToTransactions
+    const ordered = [
+        { id: 'tx-1', sequence_order: 1, phase: 'descubrimiento' },
+        { id: 'tx-3', sequence_order: 3, phase: 'entrega' },
+        { id: 'tx-2', sequence_order: 2 },                               // sin phase
+        { id: 'tx-bad' },                                                 // id no existe en txs · ignored
+    ];
+    const applied = applyOrderToTransactions(txOrd, ordered);
+    assert(applied[0].sequence_order === 1 && applied[0].phase === 'descubrimiento', 'tx-1 · order y phase aplicados');
+    assert(applied[1].sequence_order === 2 && applied[1].phase === null, 'tx-2 · order sin phase');
+    assert(applied[2].sequence_order === 3 && applied[2].phase === 'entrega', 'tx-3 · order y phase');
+    assert(applied !== txOrd,                                             'devuelve nuevo array · pureza');
+    // sin sequence_order válido → tx queda intacta
+    const partialOrdered = [{ id: 'tx-1', sequence_order: -5 }, { id: 'tx-2', sequence_order: 'foo' }];
+    const partial = applyOrderToTransactions(txOrd, partialOrdered);
+    assert(partial[0].sequence_order === undefined,                       'sequence_order inválido (negativo) ignorado');
+    assert(partial[1].sequence_order === undefined,                       'sequence_order no numérico ignorado');
+
+    // null inputs
+    assert(applyOrderToTransactions(null, ordered).length === 0,         'null transactions → []');
+    assert(applyOrderToTransactions(txOrd, null).length === txOrd.length, 'null ordered → mismo array');
 }
 
 // ─── Runner ──────────────────────────────────────────────────────

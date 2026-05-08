@@ -158,3 +158,102 @@ export const ANIMATION_MODES = Object.freeze([
     { id: 'sequential',         label: 'Secuencial',          hint: 'Pulsos uno a uno respetando sequence_order' },
     { id: 'parallel-by-phase',  label: 'Paralelo por fase',   hint: 'Pulsos del mismo phase a la vez · entre fases hay gap' },
 ]);
+
+// ─── H_ANIM_001 sprint C · prompt builder para inferir orden con IA ────────
+// Construye el user prompt para el LLM. PURO · testeable sin tokens.
+// roles: array {id, name, description?, castell_level?}
+// transactions: array {id, from, to, deliverable?, type?, is_must?}
+// projectName: string (opcional, para contexto)
+export function buildFlowOrderPrompt({ roles = [], transactions = [], projectName = '' } = {}) {
+    if (!Array.isArray(roles) || !Array.isArray(transactions)) {
+        throw new Error('buildFlowOrderPrompt: roles y transactions deben ser arrays');
+    }
+    if (transactions.length === 0) {
+        throw new Error('buildFlowOrderPrompt: no hay transactions para ordenar');
+    }
+    const rolesSummary = roles.map(r => '  - ' + r.id + (r.name ? ' · ' + r.name : '') + (r.castell_level ? ' (' + r.castell_level + ')' : '')).join('\n') || '  (sin roles definidos)';
+    const txsList = transactions.map(t =>
+        '  - ' + t.id + ' · ' + t.from + ' → ' + t.to +
+        (t.deliverable ? ' · "' + t.deliverable + '"' : '') +
+        (t.type ? ' [' + t.type + (t.is_must ? ' · MUST' : '') + ']' : '')
+    ).join('\n');
+
+    return [
+        'TAREA: Inferir el ORDEN SECUENCIAL más razonable del flujo de valor de un proyecto VNA (Value Network Analysis), asignando a cada transaction un sequence_order (entero ≥1) y opcionalmente un phase (string · ej. "descubrimiento", "propuesta", "producción", "entrega", "cobro", "cierre").',
+        '',
+        'PROYECTO: ' + (projectName || '(sin nombre)'),
+        '',
+        'ROLES VNA:',
+        rolesSummary,
+        '',
+        'TRANSACTIONS (' + transactions.length + '):',
+        txsList,
+        '',
+        'INSTRUCCIONES:',
+        '1. Asigna un sequence_order ÚNICO entre 1 y ' + transactions.length + ' a cada transaction.',
+        '2. El orden refleja el ciclo natural de creación de valor: descubrimiento → propuesta → ejecución → entrega → cobro → cierre.',
+        '3. Las transactions con `is_must: true` y `type: "tangible"` suelen ir antes en cada fase.',
+        '4. Asigna un phase razonable (kebab-case · 1-2 palabras) cuando 2+ transactions agrupen.',
+        '5. Si dos transactions son simultáneas conceptualmente, asígnales sequence_order distintos pero contiguos y el mismo phase.',
+        '',
+        'OUTPUT: SÓLO JSON válido con este schema:',
+        '{',
+        '  "ordered": [',
+        '    { "id": "tx-id", "sequence_order": 1, "phase": "descubrimiento" },',
+        '    ...',
+        '  ],',
+        '  "rationale": "Texto breve (1-2 frases) explicando el criterio de ordenación elegido."',
+        '}',
+    ].join('\n');
+}
+
+// Aplica el resultado del LLM (`ordered` array) a una lista de transactions.
+// PURO · devuelve nueva lista con sequence_order y phase actualizados.
+// `ordered` debe ser array de {id, sequence_order, phase?}.
+export function applyOrderToTransactions(transactions, ordered) {
+    if (!Array.isArray(transactions) || !Array.isArray(ordered)) return transactions || [];
+    const map = new Map();
+    for (const o of ordered) {
+        if (!o || !o.id) continue;
+        const so = Number(o.sequence_order);
+        if (!Number.isFinite(so) || so < 1) continue;
+        map.set(o.id, { sequence_order: so, phase: typeof o.phase === 'string' && o.phase.trim() ? o.phase.trim() : null });
+    }
+    return transactions.map(t => {
+        if (!t || !map.has(t.id)) return t;
+        const upd = map.get(t.id);
+        return { ...t, sequence_order: upd.sequence_order, phase: upd.phase || t.phase || null };
+    });
+}
+
+// Orquestador async · llama al LLM y devuelve {ordered, rationale, applied}.
+// Caller decide si hacer commit del applied al store.
+export async function inferFlowOrder({ roles, transactions, projectName = '', projectId = null, preferredEngine = 'anthropic' } = {}) {
+    const userPrompt = buildFlowOrderPrompt({ roles, transactions, projectName });
+    const systemPrompt = 'Eres el asistente IA del sistema TeamTowers SOS V11. Tu rol aquí es analizar un grafo de Value Network Analysis (VNA) y ordenar sus transactions secuencialmente para visualizar el flujo de valor. Respondes SÓLO con JSON válido, sin markdown ni texto adicional.';
+
+    const { Orchestrator } = await import('./Orchestrator.js?v=' + Date.now());
+    const result = await Orchestrator.callLLM({
+        preferredEngine,
+        systemPrompt,
+        userPrompt,
+        responseFormat: 'json_object',
+        temperature:    0.2,
+        maxTokens:      4096,
+        // Si el toggle global de pruning está ON, también pasamos contexto · KM-001
+        contextPruning: projectId ? { enabled: false, projectId, task: { projectId, types: ['sop','transaction'] } } : null,
+        chargeWallet:   projectId ? { projectId } : null,
+    });
+
+    const out = result.content;
+    if (!out || out.parseError || !Array.isArray(out.ordered)) {
+        throw new Error('LLM devolvió respuesta no parseable o sin "ordered" array');
+    }
+    const applied = applyOrderToTransactions(transactions, out.ordered);
+    return {
+        ordered:  out.ordered,
+        rationale: out.rationale || '',
+        applied,
+        telemetry: result.telemetry,
+    };
+}
