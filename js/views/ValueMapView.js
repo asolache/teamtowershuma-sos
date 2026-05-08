@@ -18,6 +18,7 @@ import { Orchestrator }     from '../core/Orchestrator.js';
 import { t, langSelectorHtml, getLang } from '../i18n.js';
 import { taxonomicTagsForSop, mergeTags } from '../core/semanticTagger.js';
 import { renderNavLinksHtml } from '../core/navService.js';
+import { computeAnimationCycles, normalizeTransactionsOrder, autoFillSequenceOrder } from '../core/flowAnimationService.js';
 
 // ─── Constantes visuales ─────────────────────────────────────────────────────
 const COLOR_TANGIBLE   = '#00e676';   // accent-green
@@ -815,6 +816,7 @@ export default class ValueMapView {
                     ${this._state.projectId ? `<a href="/project/${this._state.projectId}" data-link class="vmap-btn" style="text-decoration:none;color:#86efac;border-color:rgba(34,197,94,0.4);" title="Panel del proyecto · stats + ofertas + herramientas">🎛 Panel</a>` : ''}
                     ${renderNavLinksHtml({ active: 'map', projectId: this._state.projectId, className: 'vmap-btn' })}
                     <button class="vmap-btn" style="border-color:var(--accent-purple);color:var(--accent-purple);" id="vmapBtnAI">${t('vmap.suggest')}</button>
+                    <button class="vmap-btn" id="vmapBtnAnim" title="H_ANIM_001 · animar flujo de valor por sequence_order de las transactions">▶ Animar flujo</button>
                     <button class="vmap-btn" id="vmapBtnFit">⊡ ${t('vmap.fit')}</button>
                     <button class="vmap-btn" id="vmapBtnReset">↺ ${t('vmap.reset')}</button>
                     <button class="vmap-btn vmap-btn-save" id="vmapBtnSave">💾 ${t('vmap.save')}</button>
@@ -1099,6 +1101,12 @@ export default class ValueMapView {
             this._state.d3Sim.stop();
             this._state.d3Sim = null;
         }
+        // H_ANIM_001 · parar animación de flujo si está corriendo
+        if (this._state && this._state.flowAnim) {
+            this._state.flowAnim = false;
+            if (this._state.flowAnimTimer) clearTimeout(this._state.flowAnimTimer);
+            this._state.flowAnimTimer = null;
+        }
     }
 
     // ── Cargar D3 desde CDN ───────────────────────────────────────────────────
@@ -1195,6 +1203,7 @@ export default class ValueMapView {
         document.getElementById('vmapBtnFit')?.addEventListener('click',    () => this._fitGraph());
         document.getElementById('vmapBtnReset')?.addEventListener('click',  () => this._restartSim());
         document.getElementById('vmapBtnSave')?.addEventListener('click',   () => this._saveMap());
+        document.getElementById('vmapBtnAnim')?.addEventListener('click',   () => this._toggleFlowAnim());
         document.getElementById('vmapAddRole')?.addEventListener('click',   () => this._openRoleModal());
         document.getElementById('vmapAddTx')?.addEventListener('click',     () => this._openTxModal());
         document.getElementById('vmapZoomIn')?.addEventListener('click',    () => this._zoom(1.25));
@@ -2111,13 +2120,66 @@ export default class ValueMapView {
                 <div class="vmap-inspector-value" style="color:var(--accent-orange);">⚠ ${tx.health_hint}</div>
             </div>` : ''}
 
+            <!-- H_ANIM_001 sprint A · orden secuencial + phase para animación de flujo -->
+            <div class="vmap-inspector-field">
+                <div class="vmap-inspector-label">Orden secuencial (H_ANIM_001)</div>
+                <div style="display:grid;grid-template-columns:90px 1fr;gap:6px;align-items:center;">
+                    <input class="vmap-inline-input" id="inlTxOrder"
+                        type="number" min="1" step="1"
+                        value="${typeof tx.sequence_order === 'number' ? tx.sequence_order : ''}"
+                        data-field="sequence_order" data-tx="${tx.id}"
+                        placeholder="1, 2, 3…"
+                        style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);color:white;padding:6px 8px;border-radius:var(--radius-sm);font-size:var(--text-xs);font-family:monospace;outline:none;">
+                    <input class="vmap-inline-input" id="inlTxPhase"
+                        type="text"
+                        value="${tx.phase ? this._escHtml(tx.phase) : ''}"
+                        data-field="phase" data-tx="${tx.id}"
+                        placeholder="fase opcional · ej. cosecha"
+                        style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);color:white;padding:6px 8px;border-radius:var(--radius-sm);font-size:var(--text-xs);outline:none;">
+                </div>
+                <div style="color:var(--text-muted);font-size:9px;margin-top:4px;font-family:monospace;">orden 1, 2, 3… para animar pulsos · phase agrupa pasos</div>
+            </div>
+
             <div class="vmap-inspector-actions">
                 <button class="vmap-inspector-btn" id="inspBtnEditTx">✏️ Editar transacción</button>
                 <button class="vmap-inspector-btn danger" id="inspBtnDeleteTx">✕ Eliminar</button>
             </div>`;
 
+        // H_ANIM_001 · guardar inline al cambiar orden / phase
+        const bindTxField = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const save = () => {
+                const txId  = el.dataset.tx;
+                const field = el.dataset.field;
+                const raw   = el.value;
+                let value;
+                if (field === 'sequence_order') {
+                    const n = parseInt(raw, 10);
+                    value = Number.isFinite(n) && n >= 1 ? n : null;
+                } else {
+                    value = raw.trim() || null;
+                }
+                this._saveTxField(txId, field, value);
+            };
+            el.addEventListener('blur', save);
+            el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+        };
+        bindTxField('inlTxOrder');
+        bindTxField('inlTxPhase');
+
         document.getElementById('inspBtnEditTx')?.addEventListener('click',   () => this._openTxModal(null, tx));
         document.getElementById('inspBtnDeleteTx')?.addEventListener('click', () => this._deleteTx(tx.id));
+    }
+
+    // H_ANIM_001 · helper para guardar campos inline en transactions
+    _saveTxField(txId, field, value) {
+        if (!txId || !field) return;
+        const idx = this._state.transactions.findIndex(t => t && t.id === txId);
+        if (idx < 0) return;
+        const current = this._state.transactions[idx][field];
+        if (current === value) return;
+        this._state.transactions[idx] = { ...this._state.transactions[idx], [field]: value };
     }
 
     // ── Modales ───────────────────────────────────────────────────────────────
@@ -2761,5 +2823,94 @@ ${ctxResult.systemPrompt}`;
             if (btn) { btn.textContent = '❌ Error'; btn.disabled = false; }
             setTimeout(() => { if (btn) btn.textContent = '💾 Guardar'; }, 3000);
         }
+    }
+
+    // ── H_ANIM_001 sprint A · animación de pulsos sobre las aristas ───────────
+    _toggleFlowAnim() {
+        if (this._state.flowAnim) {
+            this._stopFlowAnim();
+            return;
+        }
+        if (!this._state.transactions || !this._state.transactions.length) {
+            alert('No hay transacciones para animar.');
+            return;
+        }
+        // Si ninguna transaction tiene sequence_order, ofrece auto-rellenar
+        const anyOrdered = this._state.transactions.some(t => typeof t?.sequence_order === 'number');
+        if (!anyOrdered) {
+            const ok = confirm('Ninguna transacción tiene `sequence_order` definido. ¿Quieres que SOS asigne orden automático (1, 2, 3…) según el orden actual? Puedes ajustarlo después en el inspector de cada transacción.');
+            if (!ok) return;
+            this._state.transactions = autoFillSequenceOrder(this._state.transactions);
+        }
+        this._startFlowAnim();
+    }
+
+    _startFlowAnim() {
+        if (!window.d3) return;
+        this._state.flowAnim = true;
+        const btn = document.getElementById('vmapBtnAnim');
+        if (btn) { btn.textContent = '⏸ Pausar'; btn.style.background = 'rgba(99,102,241,0.15)'; }
+        this._runFlowPulses();
+    }
+
+    _stopFlowAnim() {
+        this._state.flowAnim = false;
+        const btn = document.getElementById('vmapBtnAnim');
+        if (btn) { btn.textContent = '▶ Animar flujo'; btn.style.background = ''; }
+        if (this._state.flowAnimTimer) {
+            clearTimeout(this._state.flowAnimTimer);
+            this._state.flowAnimTimer = null;
+        }
+        // Quitar pulsos del DOM
+        const d3 = window.d3;
+        if (d3) d3.selectAll('.vmap-flow-pulse').remove();
+    }
+
+    _runFlowPulses() {
+        if (!this._state.flowAnim || !window.d3) return;
+        const d3 = window.d3;
+        const cycle = computeAnimationCycles(this._state.transactions, {
+            mode: 'sequential',
+            pulseDuration: 1400,
+            gap: 250,
+        });
+        if (!cycle.pulses.length) { this._stopFlowAnim(); return; }
+
+        const svg = d3.select(this._svg);
+        const grp = svg.select('g.vmap-graph-grp').node() ? svg.select('g.vmap-graph-grp') : svg.select('g');
+        // Limpiar pulsos previos
+        svg.selectAll('.vmap-flow-pulse').remove();
+
+        // Helper · resolver posición actual de un nodo por id
+        const nodeMap = new Map();
+        d3.selectAll('.node').each(function(d) { if (d && d.id) nodeMap.set(d.id, d); });
+
+        cycle.pulses.forEach((pulse) => {
+            const fromNode = nodeMap.get(pulse.from);
+            const toNode   = nodeMap.get(pulse.to);
+            if (!fromNode || !toNode) return;
+            this._state.flowAnimTimer = setTimeout(() => {
+                if (!this._state.flowAnim) return;
+                const circle = grp.append('circle')
+                    .attr('class', 'vmap-flow-pulse')
+                    .attr('r', 5)
+                    .attr('fill', '#a5b4fc')
+                    .attr('opacity', 0.95)
+                    .attr('cx', fromNode.x || 0)
+                    .attr('cy', fromNode.y || 0)
+                    .style('filter', 'drop-shadow(0 0 6px rgba(165,180,252,0.9))');
+                circle.transition()
+                    .duration(pulse.duration)
+                    .ease(d3.easeCubicInOut)
+                    .attr('cx', () => (toNode.x || 0))
+                    .attr('cy', () => (toNode.y || 0))
+                    .on('end', () => circle.remove());
+            }, pulse.delay);
+        });
+
+        // Loop infinito · al acabar el ciclo, encolar el siguiente
+        this._state.flowAnimTimer = setTimeout(() => {
+            if (this._state.flowAnim) this._runFlowPulses();
+        }, cycle.totalDuration + 100);
     }
 }

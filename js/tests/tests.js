@@ -2166,6 +2166,97 @@ async function testSavingsService() {
     assert(acc.projectsCount === 2,                                       'projectsCount');
 }
 
+// ─── H_ANIM_001 sprint A · flowAnimationService puro ────────────
+async function testFlowAnimationService() {
+    const mod = await import('../core/flowAnimationService.js?v=' + Date.now());
+    const {
+        normalizeTransactionsOrder, groupTransactionsByPhase,
+        computeAnimationCycles, validateFlowOrder, autoFillSequenceOrder,
+        ANIMATION_MODES,
+    } = mod;
+
+    // Constantes
+    assert(Object.isFrozen(ANIMATION_MODES) && ANIMATION_MODES.length === 2, '2 ANIMATION_MODES frozen');
+
+    // normalizeTransactionsOrder
+    const txs = [
+        { id: 'a', from: 'r1', to: 'r2', sequence_order: 3 },
+        { id: 'b', from: 'r2', to: 'r3' },                    // sin orden
+        { id: 'c', from: 'r1', to: 'r3', sequence_order: 1 },
+        { id: 'd', from: 'r3', to: 'r1', sequence_order: 2 },
+        { id: 'e', from: 'r1', to: 'r4' },                    // sin orden
+    ];
+    const sorted = normalizeTransactionsOrder(txs);
+    assert(sorted.length === 5,                                            'normalize · 5');
+    assert(sorted[0].id === 'c' && sorted[1].id === 'd' && sorted[2].id === 'a',
+        'orden: c(1) · d(2) · a(3)');
+    assert(sorted[3].id === 'b' && sorted[4].id === 'e',                  'sin orden van al final · estable');
+    assert(normalizeTransactionsOrder(null).length === 0,                 'null → []');
+    assert(normalizeTransactionsOrder([]).length === 0,                   '[] → []');
+
+    // groupTransactionsByPhase
+    const txsPhases = [
+        { id: 'a', phase: 'cosecha',   sequence_order: 1 },
+        { id: 'b', phase: 'cosecha',   sequence_order: 2 },
+        { id: 'c', phase: 'entrega',   sequence_order: 3 },
+        { id: 'd' },                                          // sin phase ni orden
+    ];
+    const groups = groupTransactionsByPhase(txsPhases);
+    assert(groups.cosecha?.length === 2,                                  'phase cosecha · 2');
+    assert(groups.entrega?.length === 1,                                  'phase entrega · 1');
+    assert(groups.__unphased?.length === 1,                               '__unphased · 1');
+
+    // computeAnimationCycles · sequential (default)
+    const cyc = computeAnimationCycles(txs, { pulseDuration: 1000, gap: 100 });
+    assert(cyc.pulses.length === 5,                                       '5 pulsos · uno por tx');
+    assert(cyc.pulses[0].txId === 'c' && cyc.pulses[0].delay === 0,       'primer pulso = c con delay 0');
+    assert(cyc.pulses[1].delay === 1100,                                  'segundo delay · 1000+100');
+    assert(cyc.pulses[2].delay === 2200,                                  'tercer delay · 2x(1000+100)');
+    assert(cyc.totalDuration === 5500,                                    'totalDuration · 5*(1000+100)');
+    assert(cyc.pulses.every(p => p.duration === 1000),                    'todos pulses con duration=1000');
+
+    // computeAnimationCycles · parallel-by-phase
+    const cycPhase = computeAnimationCycles(txsPhases, {
+        mode: 'parallel-by-phase', pulseDuration: 500, gap: 100,
+    });
+    assert(cycPhase.pulses.length === 4,                                  'parallel-by-phase · 4 pulsos');
+    // Pulsos del mismo phase tienen el mismo delay
+    const cosechaP = cycPhase.pulses.filter(p => p.phase === 'cosecha');
+    assert(cosechaP.length === 2 && cosechaP[0].delay === cosechaP[1].delay, 'cosecha · 2 pulsos mismo delay');
+
+    // validateFlowOrder
+    const v1 = validateFlowOrder([
+        { id: 'a', sequence_order: 1 },
+        { id: 'b', sequence_order: 2 },
+        { id: 'c', sequence_order: 3 },
+    ]);
+    assert(v1.ok === true && v1.warnings.length === 0,                    'orden perfecto · sin warnings');
+
+    const v2 = validateFlowOrder([
+        { id: 'a', sequence_order: 1 },
+        { id: 'b' },
+        { id: 'c', sequence_order: 1 },          // duplicado
+        { id: 'd', sequence_order: 5 },          // gap
+    ]);
+    assert(v2.ok === false,                                                'incompleto · ok false');
+    assert(v2.warnings.some(w => /sin sequence_order/.test(w)),           'warning · sin sequence_order');
+    assert(v2.warnings.some(w => /se repite/.test(w)),                    'warning · duplicado');
+    assert(v2.warnings.some(w => /gap/.test(w)),                          'warning · gap');
+
+    // autoFillSequenceOrder
+    const filled = autoFillSequenceOrder([
+        { id: 'a', sequence_order: 5 },
+        { id: 'b' },
+        { id: 'c' },
+    ]);
+    assert(filled[0].sequence_order === 5,                                'preserva orden existente');
+    assert(filled[1].sequence_order === 6 && filled[2].sequence_order === 7, 'continúa desde max+1');
+
+    // empty/null inputs
+    const emptyCycle = computeAnimationCycles(null);
+    assert(emptyCycle.pulses.length === 0 && emptyCycle.totalDuration === 0, 'null → ciclo vacío');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -2196,7 +2287,8 @@ const SUITE = [
     { name: 'H8.1 · mindGraphService puro',                       fn: testMindGraphService },
     { name: 'KM-001 sprint C · contextPruner puro',               fn: testContextPruner },
     { name: 'MKT-001 sprint C1 · walletService puro',             fn: testWalletService },
-    { name: 'MKT-001 sprint D · savingsService puro',             fn: testSavingsService }
+    { name: 'MKT-001 sprint D · savingsService puro',             fn: testSavingsService },
+    { name: 'H_ANIM_001 sprint A · flowAnimationService puro',    fn: testFlowAnimationService }
 ];
 
 export async function runTests() {
