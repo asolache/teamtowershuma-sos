@@ -3,7 +3,7 @@ import { store }                from '../core/store.js';
 import { KB }                   from '../core/kb.js';
 import { Orchestrator }         from '../core/Orchestrator.js';
 import { t, langSelectorHtml }  from '../i18n.js';
-import { renderNavLinksHtml }   from '../core/navService.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 
 export default class SettingsView {
     constructor() { document.title = 'Settings · SOS V11'; }
