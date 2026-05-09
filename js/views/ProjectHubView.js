@@ -16,6 +16,8 @@ import {
     aggregateProjectStats, projectViewUrls, PROJECT_TOOLS,
 } from '../core/projectHubService.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { listSeats, listAvailableSeats, seedDemoSeatsToKb, extractSwarmInput, persistAssignments, listProjectAssignments } from '../core/cohortSeatService.js';
+import { getProjectTypeById } from '../core/critical108Roles.js';
 
 export default class ProjectHubView {
     constructor() {
@@ -38,6 +40,14 @@ export default class ProjectHubView {
 
         const allNodes = await KB.getAllNodes();
         this.stats = aggregateProjectStats({ projectId: this.projectId, nodes: allNodes });
+
+        // MAT-003 sprint F · datos del enjambre + bootstrap meta
+        const projectNodes = allNodes.filter(n => n.projectId === this.projectId);
+        const seatNodes    = allNodes.filter(n => n?.type === 'cohort_seat');
+        const assignNodes  = allNodes.filter(n => n?.type === 'swarm_assignment' && n.projectId === this.projectId);
+        this.swarmInput    = extractSwarmInput({ projectNodes, seatNodes });
+        this.assignments   = assignNodes;
+        this.totalSeats    = seatNodes.length;
 
         const p = this.project;
         const s = this.stats;
@@ -138,6 +148,8 @@ export default class ProjectHubView {
                     </div>
                 </div>
 
+                ${this._renderSwarmSection()}
+
                 <div class="ph-section">
                     <h2>Vistas operativas</h2>
                     <div class="ph-grid">
@@ -208,6 +220,282 @@ export default class ProjectHubView {
                 });
             }
         });
+
+        // MAT-003 sprint F · handlers de la sección Enjambre
+        document.getElementById('phSeedSeats')?.addEventListener('click', () => this._handleSeedSeats());
+        document.getElementById('phActivateSwarm')?.addEventListener('click', () => this._handleActivateSwarm());
+        document.getElementById('phSwarmModalClose')?.addEventListener('click', () => this._closeSwarmModal());
+        document.getElementById('phSwarmModalApply')?.addEventListener('click', () => this._applySwarmMatching());
+        const modal = document.getElementById('phSwarmModal');
+        modal?.addEventListener('click', (e) => { if (e.target === modal) this._closeSwarmModal(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this._closeSwarmModal(); });
+    }
+
+    // ── MAT-003 sprint F UI · Enjambre Cohort 0 ────────────────────
+
+    _renderSwarmSection() {
+        const meta = this.swarmInput?.bootstrapMeta;
+        const projectType = meta?.typeId ? getProjectTypeById(meta.typeId) : null;
+        const requiredGuardians = meta?.requiredGuardians || [];
+        const requiredRolesCount = (this.swarmInput?.requiredRoles || []).length;
+        const totalSeats = this.totalSeats || 0;
+        const assignmentsCount = (this.assignments || []).length;
+
+        return `
+        <div class="ph-section ph-swarm">
+            <h2>🐝 Enjambre Cohort 0 <span style="color:#888;font-weight:400;font-size:0.85rem;">· matchmaker IA proyecto ↔ enjambre</span></h2>
+            ${meta ? `
+                <div style="background:rgba(192,132,252,0.06);border:1px solid rgba(192,132,252,0.25);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem;font-size:0.85rem;">
+                    <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;color:#c8c8d4;">
+                        <strong style="color:#c084fc;font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Tipus</strong>
+                        <span>${this._esc(projectType?.label || meta.typeId)}</span>
+                        <strong style="color:#c084fc;font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Sectors</strong>
+                        <span>${this._esc((meta.sectorAffinity || []).join(' · ') || '—')}</span>
+                        <strong style="color:#c084fc;font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Guardians</strong>
+                        <span>${(requiredGuardians.map(g => `<span class="ph-badge" style="background:rgba(192,132,252,0.18);color:#c084fc;border:1px solid rgba(192,132,252,0.4);">${this._esc(g)}</span>`)).join(' ') || '—'}</span>
+                        <strong style="color:#c084fc;font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Setmanes est.</strong>
+                        <span>${meta.expectedOutcomes?.weeksToOperateMin ?? '?'}–${meta.expectedOutcomes?.weeksToOperateMax ?? '?'}</span>
+                    </div>
+                </div>
+            ` : `
+                <div style="background:rgba(255,255,255,0.04);border:1px dashed rgba(255,255,255,0.15);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem;color:#888;font-size:0.85rem;">
+                    Aquest projecte no té bootstrap meta · activar enjambre funcionarà amb els roles que tu definis al mapa de valor.
+                </div>
+            `}
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.8rem;margin-bottom:1rem;">
+                <div class="ph-stat" style="--ph-c:#c084fc;">
+                    <div class="label">Roles requerits</div>
+                    <div class="value">${requiredRolesCount}</div>
+                </div>
+                <div class="ph-stat" style="--ph-c:#fbbf24;">
+                    <div class="label">Plaçes Cohort 0</div>
+                    <div class="value">${totalSeats}</div>
+                    <div class="sub">disponibles a la KB</div>
+                </div>
+                <div class="ph-stat" style="--ph-c:#22c55e;">
+                    <div class="label">Assignacions</div>
+                    <div class="value">${assignmentsCount}</div>
+                    <div class="sub">role ↔ seat persistides</div>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">
+                <button id="phActivateSwarm" class="ph-link" style="background:linear-gradient(135deg,#c084fc,#6366f1);color:#fff;border:0;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.9rem;">
+                    🐝 Activar enjambre IA
+                </button>
+                ${totalSeats === 0 ? `
+                    <button id="phSeedSeats" class="ph-link" style="background:rgba(251,191,36,0.12);border:1px solid #fbbf24;color:#fbbf24;padding:10px 20px;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.85rem;">
+                        ⚡ Seed 5 plaçes demo
+                    </button>
+                ` : ''}
+                <span style="color:#666;font-size:0.78rem;">
+                    ${totalSeats === 0
+                        ? 'Encara no hi ha plaçes registrades · genera 5 demo per provar.'
+                        : `${totalSeats} plaçes registrades · clica "Activar" per a córrer matchmaker.`}
+                </span>
+            </div>
+
+            <!-- Modal matchmaker -->
+            <div id="phSwarmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+                <div style="background:#0f0f15;border:1px solid rgba(192,132,252,0.3);border-radius:12px;padding:1.5rem;max-width:760px;width:calc(100% - 32px);max-height:90vh;overflow-y:auto;color:#e6e6e6;font-family:var(--font-base,sans-serif);">
+                    <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;margin-bottom:1rem;">
+                        <h3 style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:1.6rem;color:#c084fc;margin:0;">🐝 Matchmaker · enjambre ↔ projecte</h3>
+                        <button id="phSwarmModalClose" style="background:none;border:0;color:#888;cursor:pointer;font-size:1.4rem;line-height:1;">×</button>
+                    </div>
+                    <div id="phSwarmModalBody" style="font-size:0.88rem;line-height:1.55;">
+                        <div style="color:#888;">…</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+    }
+
+    async _handleSeedSeats() {
+        const btn = document.getElementById('phSeedSeats');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Seeding…'; }
+        try {
+            await seedDemoSeatsToKb(KB, 5);
+            // Reload vista para refrescar contadores
+            if (window.navigateTo) window.navigateTo(window.location.pathname + window.location.search);
+            else window.location.reload();
+        } catch (err) {
+            console.error('[MAT-003 F] seedDemoSeats falló:', err);
+            alert('Error generant plaçes demo: ' + (err?.message || err));
+            if (btn) { btn.disabled = false; btn.textContent = '⚡ Seed 5 plaçes demo'; }
+        }
+    }
+
+    _openSwarmModal() {
+        const modal = document.getElementById('phSwarmModal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    _closeSwarmModal() {
+        const modal = document.getElementById('phSwarmModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    _setSwarmModalBody(html) {
+        const body = document.getElementById('phSwarmModalBody');
+        if (body) body.innerHTML = html;
+    }
+
+    async _handleActivateSwarm() {
+        this._openSwarmModal();
+        this._setSwarmModalBody(`
+            <div style="text-align:center;padding:2rem 0;">
+                <div style="font-size:2rem;margin-bottom:0.6rem;">🧠</div>
+                <div style="color:#c084fc;">Carregant catàleg + plaçes…</div>
+            </div>
+        `);
+
+        try {
+            const seats = await listAvailableSeats(KB);
+            if (!seats || seats.length === 0) {
+                this._setSwarmModalBody(`
+                    <p>No hi ha cap plaça disponible al KB.</p>
+                    <p style="color:#888;font-size:0.82rem;">Tanca aquest modal i clica "⚡ Seed 5 plaçes demo" per generar el set inicial.</p>
+                `);
+                return;
+            }
+            const requiredRoles = this.swarmInput?.requiredRoles || [];
+            const projectTypeId = this.swarmInput?.projectTypeId;
+            if (requiredRoles.length === 0) {
+                this._setSwarmModalBody(`
+                    <p>Aquest projecte no té rols requerits declarats al bootstrap.</p>
+                    <p style="color:#888;font-size:0.82rem;">Reserva el projecte des de /matriu amb un tipus seleccionat per a generar el bootstrap meta automàticament.</p>
+                `);
+                return;
+            }
+            if (!projectTypeId) {
+                this._setSwarmModalBody(`
+                    <p>El bootstrap meta no té projectTypeId.</p>
+                `);
+                return;
+            }
+
+            this._setSwarmModalBody(`
+                <div style="text-align:center;padding:2rem 0;">
+                    <div style="font-size:2rem;margin-bottom:0.6rem;">🤖</div>
+                    <div style="color:#c084fc;">L'agent IA està matching ${requiredRoles.length} roles ↔ ${seats.length} plaçes…</div>
+                    <div style="color:#666;font-size:0.78rem;margin-top:0.4rem;">això pot trigar 10-30s segons el provider</div>
+                </div>
+            `);
+
+            const swarmSeats = seats.map(s => ({
+                id:             s.id,
+                displayName:    s?.content?.displayName || s.id,
+                skillsDeclared: s?.content?.skillsDeclared || [],
+                guardianOf:     s?.content?.guardianOf || null,
+                availability:   s?.content?.availability || 'normal',
+            }));
+
+            const { buildSwarmTeamForProject } = await import('../core/swarmMatchmaker.js?v=' + Date.now());
+            const { Orchestrator } = await import('../core/Orchestrator.js?v=' + Date.now());
+            const team = await buildSwarmTeamForProject({
+                project: { id: this.projectId, name: this.project.nombre || this.project.name || this.projectId, description: this.project.description || '', sector: this.project.sector_id || null, phase: 'design' },
+                projectTypeId,
+                requiredRoles,
+                swarmSeats,
+                orchestrator: Orchestrator,
+            });
+
+            this._lastTeam = team;   // guardar para apply
+            this._renderSwarmTeam(team, seats);
+        } catch (err) {
+            console.error('[MAT-003 F] activateSwarm falló:', err);
+            this._setSwarmModalBody(`
+                <p style="color:#fca5a5;">Error: ${this._esc(err?.message || String(err))}</p>
+                <p style="color:#888;font-size:0.78rem;">Comprova que tens la API key del provider configurada a /settings.</p>
+            `);
+        }
+    }
+
+    _renderSwarmTeam(team, seats) {
+        const seatById = new Map((seats || []).map(s => [s.id, s]));
+        const matchesHtml = (team.matches || []).map(m => {
+            const seat = seatById.get(m.seatId);
+            const seatLabel = seat?.content?.displayName || m.seatId;
+            const fitColor = m.fit >= 0.85 ? '#22c55e' : (m.fit >= 0.6 ? '#fbbf24' : '#fca5a5');
+            return `
+                <tr>
+                    <td style="padding:8px 10px;border-bottom:1px solid #1a1a22;">${this._esc(m.roleId.split('::').pop())}</td>
+                    <td style="padding:8px 10px;border-bottom:1px solid #1a1a22;">${this._esc(seatLabel)}</td>
+                    <td style="padding:8px 10px;border-bottom:1px solid #1a1a22;text-align:center;">
+                        <span style="padding:2px 8px;border:1px solid ${m.primary ? '#c084fc' : '#666'};color:${m.primary ? '#c084fc' : '#888'};border-radius:99px;font-size:0.72rem;font-family:monospace;">${m.primary ? 'PRIMARY' : 'secondary'}</span>
+                    </td>
+                    <td style="padding:8px 10px;border-bottom:1px solid #1a1a22;text-align:right;color:${fitColor};font-family:monospace;">${m.fit.toFixed(2)}</td>
+                    <td style="padding:8px 10px;border-bottom:1px solid #1a1a22;color:#aaa;font-size:0.82rem;">${this._esc(m.rationale || '')}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const gapsHtml = (team.gaps && team.gaps.length > 0) ? `
+            <div style="margin-top:1rem;padding:0.8rem;background:rgba(252,165,165,0.06);border:1px solid rgba(252,165,165,0.3);border-radius:6px;">
+                <strong style="color:#fca5a5;">Gaps · roles sense plaça:</strong>
+                <span style="color:#ddd;">${team.gaps.map(g => this._esc(g.split('::').pop())).join(' · ')}</span>
+            </div>
+        ` : '';
+
+        const cov = team.coverage || { coveredRoles: 0, totalRoles: 0, pct: 0 };
+        const tel = team.telemetry || {};
+
+        this._setSwarmModalBody(`
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.6rem;margin-bottom:1rem;">
+                <div class="ph-stat" style="--ph-c:#c084fc;"><div class="label">Cobertura</div><div class="value">${cov.pct}%</div><div class="sub">${cov.coveredRoles}/${cov.totalRoles} roles</div></div>
+                <div class="ph-stat" style="--ph-c:#22c55e;"><div class="label">Matches</div><div class="value">${(team.matches || []).length}</div></div>
+                <div class="ph-stat" style="--ph-c:#fbbf24;"><div class="label">Provider</div><div class="value" style="font-size:1.05rem;">${this._esc(tel.provider || '?')}</div><div class="sub">${tel.latencyMs || 0}ms</div></div>
+            </div>
+            <p style="color:#aaa;line-height:1.55;margin-bottom:0.8rem;font-style:italic;">${this._esc(team.overallRationale || '')}</p>
+            <table style="width:100%;border-collapse:collapse;margin-top:0.4rem;">
+                <thead>
+                    <tr style="color:#888;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;font-family:monospace;">
+                        <th style="padding:8px 10px;border-bottom:1px solid #2a2a32;text-align:left;">Rol</th>
+                        <th style="padding:8px 10px;border-bottom:1px solid #2a2a32;text-align:left;">Plaça</th>
+                        <th style="padding:8px 10px;border-bottom:1px solid #2a2a32;text-align:center;">Tipus</th>
+                        <th style="padding:8px 10px;border-bottom:1px solid #2a2a32;text-align:right;">Fit</th>
+                        <th style="padding:8px 10px;border-bottom:1px solid #2a2a32;text-align:left;">Per què</th>
+                    </tr>
+                </thead>
+                <tbody>${matchesHtml}</tbody>
+            </table>
+            ${gapsHtml}
+            <div style="display:flex;gap:0.6rem;justify-content:flex-end;margin-top:1.2rem;">
+                <button id="phSwarmModalClose" style="background:none;border:1px solid #333;color:#aaa;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:0.85rem;">Cancel·lar</button>
+                <button id="phSwarmModalApply" style="background:linear-gradient(135deg,#c084fc,#6366f1);color:#fff;border:0;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.85rem;">✓ Aplicar matching · persistir al KB</button>
+            </div>
+        `);
+
+        // Re-bind handlers
+        document.getElementById('phSwarmModalClose')?.addEventListener('click', () => this._closeSwarmModal());
+        document.getElementById('phSwarmModalApply')?.addEventListener('click', () => this._applySwarmMatching());
+    }
+
+    async _applySwarmMatching() {
+        if (!this._lastTeam || !this._lastTeam.matches) return;
+        const btn = document.getElementById('phSwarmModalApply');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Persistint…'; }
+        try {
+            await persistAssignments({ KB, projectId: this.projectId, matches: this._lastTeam.matches });
+            this._setSwarmModalBody(`
+                <div style="text-align:center;padding:2rem 0;">
+                    <div style="font-size:2.4rem;color:#22c55e;margin-bottom:0.6rem;">✓</div>
+                    <div style="color:#22c55e;font-weight:700;font-size:1.05rem;">${this._lastTeam.matches.length} assignacions persistides al KB</div>
+                    <div style="color:#888;font-size:0.82rem;margin-top:0.4rem;">type='swarm_assignment' · projectId='${this._esc(this.projectId)}'</div>
+                </div>
+            `);
+            setTimeout(() => {
+                this._closeSwarmModal();
+                if (window.navigateTo) window.navigateTo(window.location.pathname + window.location.search);
+                else window.location.reload();
+            }, 1400);
+        } catch (err) {
+            console.error('[MAT-003 F] persistAssignments falló:', err);
+            alert('Error persistint: ' + (err?.message || err));
+            if (btn) { btn.disabled = false; btn.textContent = '✓ Aplicar matching · persistir al KB'; }
+        }
     }
 
     _htmlError(msg) {
