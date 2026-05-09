@@ -68,6 +68,8 @@ export function validateMatriuMember(node) {
 
 // buildMatriuMember · puro · construye el nodo. Acepta camps opcionals
 // de qualsevol font (cohort_seat o user_identity).
+// Sprint E · `sectorsExperience` (codis A-S del KnowledgeLoader) · array
+//           opcional de sectors on el membre té experiència professional.
 export function buildMatriuMember({
     displayName,
     handle           = null,
@@ -79,6 +81,7 @@ export function buildMatriuMember({
     oauthProviders   = [],
     guardianOf       = null,
     skillsDeclared   = [],
+    sectorsExperience = [],
     availability     = 'normal',
     status           = 'active',
     cohortNumber     = 0,
@@ -110,7 +113,8 @@ export function buildMatriuMember({
             wallets:        wallets.slice(),
             oauthProviders: oauthProviders.slice(),
             guardianOf,
-            skillsDeclared: skillsDeclared.slice(),
+            skillsDeclared:    skillsDeclared.slice(),
+            sectorsExperience: (sectorsExperience || []).slice(),
             availability,
             status,
             cohortNumber,
@@ -124,6 +128,7 @@ export function buildMatriuMember({
             'cohort:' + cohortNumber,
             ...(guardianOf ? ['guardianOf:' + guardianOf] : []),
             ...(skillsDeclared || []).map(s => 'skill:' + s),
+            ...((sectorsExperience || []).map(s => 'sector:' + s)),
             ...(availability ? ['avail:' + availability] : []),
             ...(status ? ['status:' + status] : []),
         ],

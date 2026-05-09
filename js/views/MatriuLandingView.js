@@ -622,26 +622,53 @@ export default class MatriuLandingView {
                         </div>
                         <div class="mt-input-row">
                             <label for="mtGuardian">El teu guardian Pantheon Work</label>
+                            <small style="font-size:11px;color:#5a6e4f;opacity:0.85;margin-bottom:6px;">Cada guardian custodia uns rols i entregables (sobretot <strong>intangibles</strong> · valor profund que el sistema reconeix). Tria el que millor s'alinea amb el que aportes.</small>
                             <select id="mtGuardian" class="mt-input">
-                                <option value="">— Tria el guardian que millor et representa —</option>
-                                <option value="afrodita">Afrodita · disseny · cohesió emocional</option>
-                                <option value="apolo">Apolo · educació · claredat</option>
-                                <option value="atenea">Atenea · governança · estratègia</option>
-                                <option value="demeter">Demeter · ecologia · regeneració</option>
-                                <option value="dionisio">Dionisio · cultura · ritual · transformació</option>
-                                <option value="hebe">Hebe · operacions · onboarding · servei</option>
-                                <option value="hefesto">Hefesto · tecnologia · forja · eines</option>
-                                <option value="hera">Hera · pacte · alianza · compliance</option>
-                                <option value="hermes">Hermes · comunitat · xarxa · comunicació</option>
-                                <option value="hestia">Hestia · cures · hospitalitat · llar</option>
-                                <option value="poseidon">Poseidon · finances · capital · risc</option>
-                                <option value="zeus">Zeus · governança · visió fundacional</option>
+                                <option value="">— Tria el guardian que millor t'identifica —</option>
+                                <option value="afrodita">Afrodita · ✦ disseny · cohesió · 🪶 estètica · narrativa · seducció</option>
+                                <option value="apolo">Apolo · ✦ educació · 🪶 claredat · prospectiva · curriculum</option>
+                                <option value="atenea">Atenea · ✦ estratègia · 🪶 governança deliberativa · protecció flux valor</option>
+                                <option value="demeter">Demeter · ✦ ecologia · 🪶 regeneració · cicles · soberania alimentària</option>
+                                <option value="dionisio">Dionisio · ✦ cultura · 🪶 ritual · transformació · cohesió emocional</option>
+                                <option value="hebe">Hebe · ✦ operacions · 🪶 servei · onboarding · joventut · relleu</option>
+                                <option value="hefesto">Hefesto · ✦ tecnologia · 🪶 forja · eines · infraestructura</option>
+                                <option value="hera">Hera · ✦ pacte · 🪶 fidelitat estructural · alianza · compliance</option>
+                                <option value="hermes">Hermes · ✦ comunitat · 🪶 xarxa · mediació · interoperabilitat</option>
+                                <option value="hestia">Hestia · ✦ cures · 🪶 hospitalitat · llar · cohesió íntima</option>
+                                <option value="poseidon">Poseidon · ✦ finances · 🪶 capital + risc · audàcia · oràcle</option>
+                                <option value="zeus">Zeus · ✦ visió fundacional · 🪶 soberania · autoritat delegada</option>
                             </select>
+                            <small style="font-size:10px;color:#888;opacity:0.7;margin-top:4px;font-family:ui-monospace,monospace;">✦ rol · 🪶 valor intangible</small>
                         </div>
                         <div class="mt-input-row">
                             <label for="mtSkills">Les teves skills (separades per coma · 3-7)</label>
                             <input type="text" id="mtSkills" class="mt-input" placeholder="ex. regenerative-agriculture, seed-banking, food-systems">
-                            <small style="font-size:11px;color:#5a6e4f;opacity:0.85;margin-top:4px;">Veure el catàleg de 90 skills a <a href="/learn" data-link style="color:#c25a3a;">/learn</a> · escriu-les en kebab-case</small>
+                            <small style="font-size:11px;color:#5a6e4f;opacity:0.85;margin-top:4px;">Veure el catàleg de 90 skills a <a href="/learn" data-link style="color:#c25a3a;">/learn</a> · escriu-les en kebab-case · taxonomia universal pendent (SKILL-TAX-002)</small>
+                        </div>
+                        <div class="mt-input-row">
+                            <label for="mtSectors">Sectors on tens experiència (multi-selecció)</label>
+                            <select id="mtSectors" class="mt-input" multiple size="6" style="height:auto;">
+                                <option value="A">A · Agricultura · ramaderia · pesca</option>
+                                <option value="B">B · Indústries extractives</option>
+                                <option value="C">C · Indústria manufacturera</option>
+                                <option value="D">D · Energia · electricitat · gas</option>
+                                <option value="E">E · Aigua · sanejament · residus</option>
+                                <option value="F">F · Construcció</option>
+                                <option value="G">G · Comerç · vehicles</option>
+                                <option value="H">H · Transport · emmagatzematge</option>
+                                <option value="I">I · Hostaleria</option>
+                                <option value="J">J · Informació · comunicacions</option>
+                                <option value="K">K · Tech · software · IA</option>
+                                <option value="L">L · Activitats financeres · assegurances</option>
+                                <option value="M">M · Immobiliàries</option>
+                                <option value="N">N · Cures · serveis socials</option>
+                                <option value="O">O · Educació · formació</option>
+                                <option value="P">P · Finance · slicing pie · contabilitat</option>
+                                <option value="Q">Q · Educació superior · cohort</option>
+                                <option value="R">R · Cultura · arts · oci</option>
+                                <option value="S">S · Altres serveis</option>
+                            </select>
+                            <small style="font-size:11px;color:#5a6e4f;opacity:0.85;margin-top:4px;">Pulsa Cmd/Ctrl per seleccionar múltiples · pots acotar després al perfil</small>
                         </div>
                         <div class="mt-modal-actions">
                             <button class="mt-modal-cancel" id="mtModalCancel">Cancel·lar</button>
@@ -748,6 +775,10 @@ export default class MatriuLandingView {
             const bio       = document.getElementById('mtBio')?.value?.trim() || '';
             const guardian  = document.getElementById('mtGuardian')?.value || '';
             const skillsRaw = document.getElementById('mtSkills')?.value?.trim() || '';
+            const sectorsSelect = document.getElementById('mtSectors');
+            const sectorsExperience = sectorsSelect
+                ? Array.from(sectorsSelect.selectedOptions).map(o => o.value).filter(Boolean)
+                : [];
             if (!name) { alert('Cal el teu nom · primer pas.'); return; }
             if (!guardian) { alert('Tria el teu guardian (qui millor et representa).'); return; }
             const skills = skillsRaw.split(',').map(s => s.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-')).filter(Boolean);
@@ -769,6 +800,20 @@ export default class MatriuLandingView {
                     availability:   'normal',
                     cohortNumber:   0,
                 });
+                // MAT-002-I sprint E · sectors d'experiència opcionals
+                if (sectorsExperience.length > 0) {
+                    createdMember = {
+                        ...createdMember,
+                        content: {
+                            ...createdMember.content,
+                            sectorsExperience,    // ['A','K','P']
+                        },
+                        keywords: [
+                            ...createdMember.keywords,
+                            ...sectorsExperience.map(s => 'sector:' + s),
+                        ],
+                    };
+                }
                 await KB.upsert(createdMember);
                 // Pasar a step 2
                 document.getElementById('mtStep1').style.display = 'none';

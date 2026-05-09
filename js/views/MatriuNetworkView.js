@@ -194,6 +194,12 @@ export default class MatriuNetworkView {
                         ${skills.length > 6 ? `<span class="mn-skill mn-skill-more">+${skills.length - 6}</span>` : ''}
                     </div>
                 ` : ''}
+                ${(c.sectorsExperience || []).length > 0 ? `
+                    <div class="mn-card-sectors">
+                        <span class="mn-sectors-label">Sectors:</span>
+                        ${(c.sectorsExperience || []).slice(0, 8).map(s => `<span class="mn-sector-pill">${escapeHtml(s)}</span>`).join('')}
+                    </div>
+                ` : ''}
                 <footer class="mn-card-foot">
                     <span class="mn-foot-item" title="Disponibilitat">${availIcon} ${escapeHtml(c.availability || 'normal')}</span>
                     <span class="mn-foot-item" title="Projectes assignats">📋 ${projects.length}</span>
@@ -319,6 +325,9 @@ export default class MatriuNetworkView {
             .mn-card-skills { display: flex; gap: 4px; flex-wrap: wrap; }
             .mn-skill { background: rgba(42,58,42,0.06); color: #2a3a2a; padding: 3px 9px; border-radius: 99px; font-family: ui-monospace, monospace; font-size: 0.7rem; }
             .mn-skill-more { background: rgba(194,90,58,0.12); color: #c25a3a; }
+            .mn-card-sectors { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+            .mn-sectors-label { font-family: monospace; font-size: 0.7rem; color: #888; }
+            .mn-sector-pill { background: rgba(90,110,79,0.18); color: #2a3a2a; border: 1px solid rgba(90,110,79,0.4); padding: 2px 7px; border-radius: 99px; font-family: ui-monospace, monospace; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; }
 
             .mn-card-foot { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid rgba(42,58,42,0.08); font-family: ui-monospace, monospace; font-size: 0.74rem; color: #5a6e4f; }
             .mn-foot-item { display: inline-flex; align-items: center; gap: 4px; }

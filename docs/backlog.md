@@ -882,6 +882,48 @@ A partir de este nodo VISION-001 nacen / se reorganizan los siguientes:
 | **CONTR-001** | Contratos de plataforma + suscripción + plan de saldo acumulable | 🟡 |
 | **NET-100** | "Red de 100 personas" · dunbar-friendly · matchmaking de cohorts | 🟡 (ya en MAT-001 fase 1 con SBT identidad) |
 
+### Direccions estratègiques afegides 2026-05-09 (input @alvaro)
+
+> "A `/matriu/network` quiero que en el desplegable de guardianes a
+> parte del nombre se indiquen los roles y/o entregables tangibles
+> o intangibles de los mismos para facilitar que los usuarios puedan
+> asignar o que se les asignen guardianes (quizás valor intangible
+> más que tangible)... estructurar las habilidades en base a una
+> taxonomía pendiente o no de definir que sea universal con foco en
+> el público potencial según los tipos de proyectos de la matriu...
+> los usuarios también deberían poder indicar los sectores en los
+> que tienen experiencia con posibilidad de acotar dentro de cada
+> sector... empezar a plantearnos qué podríamos añadir en la permaweb
+> para que empecemos a crear una base de datos de nodos humanos que
+> puedan interactuar sincronizando sus SOS locales con nodos en la
+> nube permaweb o en redes de registro público de contabilidad de
+> triple entrada o sistemas de timestamping con validez legal con
+> el objetivo de acabar de desarrollar la infraestructura para hacer
+> la visión de SOS realidad y poder empezar a tener la alfa con Stripe
+> integrado para cargar saldo para usar permaweb apis de IA y
+> registros en gnosis u otras redes."
+
+### Sprints derivats nous · prioritzats per a tancar alfa testeable
+
+| ID nou | Història | Estat |
+|---|---|---|
+| **MAT-002-I sprint E** | ✅ entregat. Step 1 modal /matriu enriquit · select guardian amb rol (✦) + valor intangible (🪶) per cada un dels 12 PW · ex. "Atenea · ✦ estratègia · 🪶 governança deliberativa · protecció flux valor". Llegenda sota select. Multi-select de sectors d'experiència (A-S del KnowledgeLoader) amb 19 opcions etiquetades. matriuMemberService.buildMatriuMember accepta `sectorsExperience: ['A','K','P']` · es persisteix al schema + keywords (`sector:A`). MatriuNetworkView mostra pills de sectors al peu de cada card amb skin verd olivó (rgba(90,110,79)). Sub-camp "especialitat" dins de cada sector pendent · sprint posterior · necessita primer la taxonomia universal SKILL-TAX-002. | ✅ verde |
+| **SKILL-TAX-002** | **Taxonomía universal de skills amb foco públic potencial Matriu** · expansió del SKILL_TAXONOMY actual (90 skills MAT-003 sprint B). Reorganitzar per `audience · public-target` · cada skill declara per a quins dels 12 tipus de projecte és més rellevant (ex. `regenerative-agriculture` afí a comunitat-autosuficient + ecosistema-regional + cooperativa-cures). Afegir camp `intangibleValueOf` per cada guardian (ex. Hera = "fidelitat estructural" intangible, "compliance" tangible). Compatible amb estàndards externs (ESCO · O*NET · LinkedIn skills) per import/export. Sub-categorització · soft-skills · hard-skills · meta-skills · cures · governance. | 🟡 pendent disseny |
+| **PERMAWEB-001** | **Sincronització SOS local ↔ permaweb (Arweave)** · base de dades distribuïda de nodes humans (matriu_member). Cada usuari pot opt-in a publicar el seu perfil públic a Arweave · els altres SOS locals descobreixen i fan caching. 4 capes: A · key derivation per ARGON2 + auth · B · publicador (firma ECDSA + mint Arweave tx) · C · indexador descentralitzat (gateway gql Arweave) · D · cache local del KB amb TTL. Privacitat · usuari decideix què surt públic (perfil bàsic · skills) vs privat (DID claves · wallets · projectes interns). | 🟡 pendent disseny |
+| **PUBLICREG-001** | **Registre públic de contabilitat triple-entry + timestamping legal** · integració amb · 1) Gnosis Chain (Pact.sol per pactes · MAT-001 fase 4) · 2) OpenTimestamps (validesa legal a EU eIDAS) · 3) Arweave (immutable storage + timestamp). Cada `value_contribution` o `pact` important pot ser timestampejat opt-in. Triple-entry literal · "el ledger ja és públic per disseny". Per validesa fiscal · format export ESEF + TimestampToken eIDAS. | 🟡 pendent disseny |
+| **ALPHA-STRIPE-001** | **Tancament alfa testeable amb Stripe checkout per a saldo permaweb + IA + Gnosis** · sprint integrador final. Continuació de MKT-001 sprint C2 (esperant claus @alvaro). Saldo prepago s'usa per: a) crides LLM (Anthropic via proxy · DeepSeek · MiniMax) · b) AR txs (mint pact a Arweave) · c) Gnosis txs (slicing pie on-chain) · d) ENS / DID resolución. Subscripcions de plan · free (local-first sense IA) · pro (saldo + IA + permaweb) · cooperative (saldo USDC). Quan es tanqui MAT-001 fase 4 · saldo també pot ser USDC al wallet del projecte. | 🟡 ALPHA target |
+
+Aquests 5 sprints completen la trajectòria fins a la **Alfa testeable
+pública** amb infraestructura per a:
+
+1. **108 places amb perfil ric** (MAT-002-I E + SKILL-TAX-002).
+2. **Identitat i contractes amb validesa legal** (PERMAWEB-001 +
+   PUBLICREG-001 + PACT-001 sprint D EIP-712).
+3. **Cobrar i operar** (ALPHA-STRIPE-001 + MKT-001 C2 + MAT-001 fase 1).
+
+Sense aquests, SOS és un esquelet potent; amb ells és **el OS
+operatiu de Matriu** llest per a presentar als 100 fundadors.
+
 ### Notas para preservar · NO OLVIDAR
 
 - **Pactos de socios** y **otros contratos** son sprints pendientes con prioridad alta.
