@@ -20,7 +20,9 @@ import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavG
 import {
     DEFAULT_PACT_CLAUSES, validateClauses, validatePact, mergeClauses,
     buildPactDraft, addSignature, pactSummary, renderPactMarkdown,
+    signPactWithKey, verifyPactSignature,
 } from '../core/pactService.js';
+import { getOrCreateSigningKey } from '../core/projectIO.js';
 import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 const PACT_NODE_ID_SUFFIX = '::pact::sos-v1';
@@ -284,7 +286,7 @@ export default class PactBuilderView {
                             <td>${escapeHtml(pt.contributionType)}</td>
                             <td style="text-align:right;font-family:'Instrument Serif',Georgia,serif;font-style:italic;color:#c084fc;font-size:1.1rem;">${(pt.initialShare * 100).toFixed(1)}%</td>
                             <td style="text-align:center;font-family:monospace;color:#fbbf24;">${pt.multiplier ? '×' + pt.multiplier : '—'}</td>
-                            <td>${signed ? '<span style="color:#4ade80;font-family:monospace;">✓ ' + new Date(signed.signedAt).toLocaleDateString('ca-ES') + '</span>' : '<button class="pb-btn-sign" data-sign="' + escapeHtml(pt.identityId) + '">Signar</button>'}</td>
+                            <td>${signed ? `<span style="color:#4ade80;font-family:monospace;font-size:0.78rem;" title="${escapeHtml(signed.algorithm || 'symbolic')} · ${escapeHtml(signed.hashSnapshot || '')}">✓ ${new Date(signed.signedAt).toLocaleDateString('ca-ES')} ${signed.algorithm === 'ecdsa-p256-sha256' ? '🔐' : '·'}</span>` : '<button class="pb-btn-sign" data-sign="' + escapeHtml(pt.identityId) + '">Signar</button>'}</td>
                             <td><button class="pb-btn-remove" data-remove="${i}" title="Treure">🗑</button></td>
                         </tr>
                         `;
@@ -515,14 +517,30 @@ export default class PactBuilderView {
     }
 
     async _handleSign(identityId) {
-        // PACT-001 sprint B · firma simbólica · sprint C entregará firma ECDSA real
-        const sig = 'sym-sign-' + identityId.slice(0, 12) + '-' + Date.now().toString(36);
-        const hashSnapshot = 'sha256-snapshot-pending-' + (this.pact.content.updatedAt || Date.now()).toString(36);
+        // PACT-001 sprint C · firma ECDSA P-256 real amb la clau del navegador
+        // (la mateixa que usa projectIO per snapshots firmats). Una sola clau
+        // per dispositiu · si vols firmar com una altra party, has de fer-ho
+        // des del seu navegador.
         try {
-            const next = addSignature(this.pact, { identityId, signature: sig, hashSnapshot });
+            const keypair = await getOrCreateSigningKey();
+            const { signature, hashSnapshot, publicJwk } = await signPactWithKey({ pact: this.pact, keypair });
+            const next = addSignature(this.pact, {
+                identityId, signature, hashSnapshot, publicJwk,
+                algorithm: 'ecdsa-p256-sha256',
+            });
+            // Verify just-in-case (sanity)
+            const justAdded = next.content.signatures.find(s => s.identityId === identityId);
+            const ok = await verifyPactSignature({ pact: next, signatureEntry: justAdded });
+            if (!ok) {
+                alert('⚠ Signatura inconsistent · no s\'aplicarà.');
+                return;
+            }
             await KB.upsert(next);
             if (window.navigateTo) window.navigateTo(window.location.pathname + window.location.search);
-        } catch (err) { alert('Error signant: ' + (err?.message || err)); }
+        } catch (err) {
+            console.error('[PACT-001 C] sign falló:', err);
+            alert('Error signant: ' + (err?.message || err));
+        }
     }
 
     async _handleCopyMarkdown() {

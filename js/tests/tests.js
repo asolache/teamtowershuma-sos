@@ -3326,6 +3326,47 @@ async function testPactService() {
     assert(md.includes('Alvaro') && md.includes('Ingrid'),                   'markdown · parties');
     assert(md.includes('startup-coop-tradicional'),                          'markdown · projectType');
     assert(renderPactMarkdown({}).includes('inválido'),                       'markdown · placeholder en inválido');
+
+    // ── PACT-001 sprint C · firma ECDSA real ──────────────────────
+    const { pactSnapshotForSigning, signPactWithKey, verifyPactSignature } = m;
+    const json = pactSnapshotForSigning(draft);
+    assert(typeof json === 'string' && json.includes('did:sos:abc'),         'snapshot · party');
+    assert(!json.includes('signatures'),                                     'snapshot NO incluye signatures');
+
+    // addSignature backwards compat (sin algorithm) → 'symbolic'
+    const sigBasic = addSignature(draft, { identityId: 'did:sos:abc', signature: 'sym', hashSnapshot: 'h' });
+    assert(sigBasic.content.signatures[0].algorithm === 'symbolic',          'algorithm default · symbolic');
+
+    // addSignature con publicJwk + algorithm
+    const sigEcdsa = addSignature(draft, {
+        identityId: 'did:sos:abc', signature: 'real', hashSnapshot: 'sha256-x',
+        publicJwk: { kty: 'EC', crv: 'P-256' }, algorithm: 'ecdsa-p256-sha256',
+    });
+    assert(sigEcdsa.content.signatures[0].algorithm === 'ecdsa-p256-sha256', 'algorithm ecdsa');
+    assert(sigEcdsa.content.signatures[0].publicJwk?.kty === 'EC',           'publicJwk persistido');
+
+    let threwSign = false;
+    try { await signPactWithKey({}); } catch(_) { threwSign = true; }
+    assert(threwSign,                                                         'signPactWithKey sin args lanza');
+
+    if (typeof crypto !== 'undefined' && crypto?.subtle?.generateKey) {
+        const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+        const publicJwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
+        const privateJwk = await crypto.subtle.exportKey('jwk', pair.privateKey);
+        const signed = await signPactWithKey({ pact: draft, keypair: { publicJwk, privateJwk } });
+        assert(signed.signature.length > 0,                                   'sign · signature string');
+        assert(signed.hashSnapshot.startsWith('sha256-'),                     'sign · hash sha256-');
+        const signedPact = addSignature(draft, {
+            identityId: 'did:sos:abc',
+            signature: signed.signature, hashSnapshot: signed.hashSnapshot,
+            publicJwk: signed.publicJwk, algorithm: 'ecdsa-p256-sha256',
+        });
+        const okSig = await verifyPactSignature({ pact: signedPact, signatureEntry: signedPact.content.signatures[0] });
+        assert(okSig === true,                                                'verify · firma válida true');
+        const tampered = { ...signedPact, content: { ...signedPact.content, clauses: { ...signedPact.content.clauses, object: 'CHANGED' } } };
+        const okTampered = await verifyPactSignature({ pact: tampered, signatureEntry: signedPact.content.signatures[0] });
+        assert(okTampered === false,                                          'verify · alterado false');
+    }
 }
 
 // ─── VAL-001 sprint A · valueAccountingService · Slicing Pie + FairShares ─────────
