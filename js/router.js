@@ -44,6 +44,8 @@ const ROUTES = [
     { path: '/learn',     view: () => import('./views/LearnView.js') },
     // VAL-001 sprint B · vista /value-accounting · tarta del proyecto (Slicing Pie + FairShares)
     { path: '/value-accounting', view: () => import('./views/ValueAccountingView.js') },
+    // PACT-001 sprint B · UI builder del primer contrato (pacto socios)
+    { path: '/pact',      view: () => import('./views/PactBuilderView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
