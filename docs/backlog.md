@@ -2381,6 +2381,22 @@ valueAccountingService ejecuta el "cuánto" en tiempo real.
 | **UX-AUDIT-001 sprint F · Auditoria d'arquitectura d'informació** | (Input @alvaro 2026-05-09 · "auditoria de arquitectura de informacion para mejorar el flujo de trabajo añadiendo un sistema inteligente para elaborar la presentacion del proyecto"). Mapejar tots els punts d'entrada del usuari · catalogar destinacions (ja 19 ara) per intent (descobrir, dissenyar, executar, contabilitzar, presentar, configurar) · simplificar la navegació superior a 5 categories canòniques · proposar una "barra inferior" tipus app per mòbil · proposar Information Scent (etiquetes que prediuen què trobarà l'usuari). El sistema intel·ligent de presentació: a `/presentation` afegir un mode "auto-narrativa IA" que genera el text del hero + descripcions dels rols a partir del KB, adaptat al PROJECT_TYPE i a una audiència seleccionable (founders/equip/usuaris/inversors/comunitat) · cost ~150 tokens per generació · cache al KB. |
 | **UX-AUDIT-001 sprint G · Mobile PWA implementation** | Implementar les 4 pantalles del mockup `/mobile` com a PWA real · service worker + manifest + install prompt · WebCrypto signing per evidències · IndexedDB sync amb el desktop SOS via export firmat · Stripe Payment Links per top-up · Arweave-js + WalletConnect + OpenTimestamps. Roadmap 8 setmanes · 5 sprints documentat al mockup mateix. |
 
+### Sprint B entregat 2026-05-09 · Wizard enriquit + dataset subtipus
+
+| Fix | Detall |
+|---|---|
+| **`js/core/sectorSubtypes.js` nou** | Dataset `SECTOR_SUBTYPES` Object.frozen amb 2-5 subtipus per cada un dels 19 sectors A-S (49 subtipus total). Cada subtipus té `id` · `label` · `hint` · `iaContextHint` (text que enriqueix el system prompt de la IA). Helper `getSubtypesForSector(sectorId)` · `getSubtypeById(sectorId, subtypeId)` · `buildIaContextHint({sectorId, subtypeId, projectType, clientDescription})` · zero side effects. |
+| **Wizard New Project enriquit** | DashboardView modal "+ Nou projecte" · 2 nous selectors revelats segons sector seleccionat: `<select>` subtipus dins del sector (es revela quan canvies sector si n'hi ha subtipus) i `<select>` dels 12 PROJECT_TYPES Matriu. Hints dinàmics sota cada select. Tots els camps opcionals · cap regressió en el flux actual buit/plantilla. |
+| **CREATE_PROJECT augmentat** | Persisteix `subtypeId` · `projectType` · `ia_context_hint` als nous projectes. Camí 3 (sector + descripció · IA): el `_executeClone` reb subtype + projectType i els injecta a la `clientDescription` que rep el `sectorCloner` (zero refactor del cloner) · prompt context-rich per a la IA. |
+
+### Sprint F entregat 2026-05-09 · IA narrativa per /presentation (parcial)
+
+| Fix | Detall |
+|---|---|
+| **Bloc 🤖 Narrativa IA a PresentationView** | A `/presentation?project=...` · panell sobre el hero amb selector d'audiència (5 PUBLIC_AUDIENCES · fundadors/equip/usuaris/inversors/comunitat) + botó "🤖 Generar". Crida `Orchestrator.callLLM({preferredEngine:'anthropic', responseFormat:'json_object', maxTokens:2048})` · ~150-300 tokens consumits per generació. Persistit a `project.presentation_narrative_v1 = {heroTag, heroTitle, heroMantra, roleDescriptions: {roleId: '...'}, audienceId, generatedAt}` via `UPDATE_PROJECT_INFO` action. |
+| **Hero + role descs adaptables** | Si hi ha narrativa IA, el hero (tag + title + mantra) i les descripcions dels rols es renderitzen amb la versió IA · badge "🤖 IA · ${audience}" al meta del hero · icona 🤖 al costat de cada role-desc generada. Botó "↻ Regenerar" (canvia audiència o regenera) i "✕ Esborrar" (torna als textos default per projectType). Tots els textos cap-curts (slice 80/120/240 chars) per garantir hero llegible. |
+| **Sense races** | Refresca in-place reemplaçant `app.innerHTML` + cridant `afterRender()` · idèntic patró sprint A2 · zero `navigateTo()` que pugui sortir per timeout. |
+
 
 ---
 

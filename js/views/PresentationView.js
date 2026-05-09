@@ -15,6 +15,10 @@ import { store } from '../core/store.js';
 import { KB }    from '../core/kb.js';
 import { renderNavGroupedHtml } from '../core/navService.js';
 import { getProjectTypeById, getGuardianById } from '../core/critical108Roles.js';
+import { Orchestrator } from '../core/Orchestrator.js';
+// UX-AUDIT-001 sprint F · PUBLIC_AUDIENCES per al selector de la narrativa IA
+import { PUBLIC_AUDIENCES } from '../core/skillTaxonomyExtension.js';
+import { getSubtypeById } from '../core/sectorSubtypes.js';
 
 function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
@@ -123,6 +127,21 @@ export default class PresentationView {
         const txTangibles   = (transactions || []).filter(t => (t.kind || t.tipo) === 'tangible' || (t.kind || t.tipo) === 'tangible-physical' || (t.tipo === 'tangible-money'));
         const txIntangibles = (transactions || []).filter(t => (t.kind || t.tipo) === 'intangible');
 
+        // UX-AUDIT-001 sprint F · narrativa IA persistida (si existeix · sobreescriu hero + role descs)
+        const narrative = project.presentation_narrative_v1 || null;
+        const heroTitle = (narrative && narrative.heroTitle)  ? narrative.heroTitle  : (project.nombre || project.name || 'Projecte');
+        const heroMantra = (narrative && narrative.heroMantra) ? narrative.heroMantra : hero.mantra;
+        const heroTag    = (narrative && narrative.heroTag)    ? narrative.heroTag    : hero.tag;
+        const narrativeAudience = narrative?.audienceId || null;
+        const narrativeAt       = narrative?.generatedAt || null;
+        // Subtipus llegit per pintar al meta
+        const subtype = (project.sectorId && project.subtypeId) ? getSubtypeById(project.sectorId, project.subtypeId) : null;
+
+        // Cache global · expose project + roles per als handlers async
+        this._project       = project;
+        this._roles         = roles;
+        this._narrative     = narrative;
+
         return `
         <style>
             .pv-wrap { max-width: 1080px; margin: 0 auto; padding: var(--space-8) var(--space-6); animation: fadeIn 0.4s var(--ease-out); color: var(--text-main); }
@@ -183,15 +202,31 @@ export default class PresentationView {
             </div>
 
             <div class="pv-hero">
-                <div class="pv-tag">${esc(hero.tag)}</div>
-                <h1>${esc(project.nombre || project.name || 'Projecte')}</h1>
-                <div class="pv-mantra">${esc(hero.mantra)}</div>
+                <div class="pv-tag">${esc(heroTag)}</div>
+                <h1>${esc(heroTitle)}</h1>
+                <div class="pv-mantra">${esc(heroMantra)}</div>
                 <div class="pv-meta">
                     ${ptype ? `<span>📦 ${esc(ptype.label)}</span>` : ''}
                     ${project.sectorId ? `<span>🏷 ${esc(project.sectorId)}</span>` : ''}
+                    ${subtype ? `<span>· ${esc(subtype.label)}</span>` : ''}
                     ${guardian ? `<span>🪶 ${esc(guardian.icon || '✦')} ${esc(guardian.name || guardian.id)}</span>` : ''}
                     ${project.matriuCohort === 0 ? `<span style="border-color:#c25a3a;color:#c25a3a;">✦ Matriu Cohort 0</span>` : ''}
+                    ${narrative ? `<span style="border-color:var(--accent-purple);color:var(--accent-purple);" title="Narrativa generada amb IA · audiència ${esc(narrativeAudience || '·')} · ${narrativeAt ? new Date(narrativeAt).toLocaleString() : ''}">🤖 IA · ${esc(narrativeAudience || '·')}</span>` : ''}
                 </div>
+            </div>
+
+            <!-- UX-AUDIT-001 sprint F · IA narrativa adaptable per audiència -->
+            <div class="pv-section pv-print-hide-mobile" style="background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:var(--space-6);">
+                <div style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;">
+                    <span style="font-weight:800;color:var(--accent-purple);">🤖 Narrativa IA</span>
+                    <span class="pv-mut" style="font-size:var(--text-xs);color:var(--text-muted);flex:1;min-width:200px;">Genera el hero + descripcions de rols adaptat al projectType + audiència seleccionada.</span>
+                    <select id="pvAudience" class="pv-back" style="background:var(--bg-panel);color:var(--text-main);border:1px solid var(--glass-border);padding:6px 10px;border-radius:var(--radius-sm);font-size:var(--text-xs);">
+                        ${PUBLIC_AUDIENCES.map(a => `<option value="${a.id}" ${narrativeAudience === a.id ? 'selected' : ''}>${a.icon} ${esc(a.label)}</option>`).join('')}
+                    </select>
+                    <button id="pvBtnGenerateNarrative" class="pv-back" style="background:var(--accent-purple);color:white;border:0;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:var(--text-xs);">${narrative ? '↻ Regenerar' : '🤖 Generar'}</button>
+                    ${narrative ? `<button id="pvBtnClearNarrative" class="pv-back" style="background:transparent;color:var(--accent-red);border:1px solid var(--accent-red);padding:8px 12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:var(--text-xs);">✕ Esborrar</button>` : ''}
+                </div>
+                <div id="pvNarrativeStatus" style="margin-top:var(--space-3);font-size:var(--text-xs);color:var(--text-muted);font-family:var(--font-mono);min-height:18px;"></div>
             </div>
 
             <div class="pv-stat-strip">
@@ -222,10 +257,13 @@ export default class PresentationView {
                             const inn = txByRoleIn.get(r.id)  || [];
                             const rsops = sopsByRole.get(r.id) || [];
                             const rwos  = wosByRole.get(r.id)  || [];
+                            // UX-AUDIT-001 sprint F · si hi ha narrativa IA, fa servir la descripció generada
+                            const iaDesc = (narrative && narrative.roleDescriptions && narrative.roleDescriptions[r.id]) || null;
+                            const showDesc = iaDesc || r.description || '';
                             return `
                             <div class="pv-role-card">
                                 <div class="pv-role-name">${esc(r.label || r.name || r.id)}</div>
-                                ${r.description ? `<div class="pv-role-desc">${esc(r.description)}</div>` : ''}
+                                ${showDesc ? `<div class="pv-role-desc">${esc(showDesc)}${iaDesc ? ' <span style="color:var(--accent-purple);font-size:0.7em;">🤖</span>' : ''}</div>` : ''}
                                 ${out.length > 0 ? `
                                     <div class="pv-role-section">↗ Entregables (OUT)</div>
                                     ${out.slice(0, 8).map(t => {
@@ -265,6 +303,142 @@ export default class PresentationView {
     async afterRender() {
         document.getElementById('pvBtnPrint')?.addEventListener('click', () => {
             window.print();
+        });
+
+        // UX-AUDIT-001 sprint F · generar narrativa IA adaptada per audiència
+        document.getElementById('pvBtnGenerateNarrative')?.addEventListener('click', async () => {
+            const btn      = document.getElementById('pvBtnGenerateNarrative');
+            const status   = document.getElementById('pvNarrativeStatus');
+            const audience = document.getElementById('pvAudience')?.value || 'fundadors';
+            if (!btn || !this._project) return;
+            const apiKey = await Orchestrator.getApiKey('anthropic');
+            if (!apiKey) {
+                if (status) {
+                    status.style.color = 'var(--accent-red)';
+                    status.innerHTML = 'Falta API key Anthropic · <a href="/settings" data-link style="color:var(--accent-indigo);text-decoration:underline;">obrir Settings</a>';
+                }
+                return;
+            }
+            const audienceMeta = PUBLIC_AUDIENCES.find(a => a.id === audience);
+            const ptype = this._project.projectType ? getProjectTypeById(this._project.projectType) : null;
+            const subtype = (this._project.sectorId && this._project.subtypeId) ? getSubtypeById(this._project.sectorId, this._project.subtypeId) : null;
+            const orig = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Generant…';
+            if (status) {
+                status.style.color = 'var(--text-muted)';
+                status.textContent = 'Cridant Claude · ~5-12s · cost ~150 tokens.';
+            }
+
+            // System prompt · CONCISE · zero verbositat
+            const systemPrompt = `Ets un copywriter expert en projectes cooperatius i d'economia social. Generes textos breus, directes, motivadors, sense floritures, en català.
+Adapta tot el text al públic destinatari indicat. Sigues concret i basa't en les dades reals del projecte.
+Format obligatori · respon NOMÉS amb un objecte JSON vàlid amb aquesta forma exacta · sense markdown ni explicacions:
+{"heroTag":"3-6 paraules","heroTitle":"el mateix nom del projecte o un que el reflecteixi","heroMantra":"1 frase potent · max 18 paraules","roleDescriptions":{"<roleId>":"1 frase concisa adaptada a l'audiència seleccionada · max 20 paraules"}}`;
+
+            const rolesShort = (this._roles || []).map(r => ({
+                id: r.id,
+                label: r.label || r.name || r.id,
+                desc:  r.description || '',
+            }));
+
+            const userPrompt = `PROJECTE:
+- Nom: ${this._project.nombre || this._project.name || this._project.id}
+- Sector: ${this._project.sectorId || 'sense sector'}
+- Subtipus: ${subtype ? subtype.label + ' · ' + subtype.hint : 'genèric'}
+- Tipus Matriu: ${ptype ? ptype.label + ' · ' + ptype.hint : 'sense tipus Matriu'}
+- Audiència destinatària: ${audienceMeta?.label || audience} · ${audienceMeta?.desc || ''}
+
+ROLS DEL PROJECTE (necessites generar 1 frase per cada un):
+${rolesShort.map(r => `- ${r.id}: ${r.label}${r.desc ? ' (actual: ' + r.desc.slice(0, 80) + ')' : ''}`).join('\n')}
+
+INSTRUCCIONS:
+1. heroTag = etiqueta curta tipus "Cooperativa de cures" / "DAO regenerativa" / "Plataforma cooperativa".
+2. heroTitle = el nom del projecte (no l'inventis).
+3. heroMantra = 1 frase potent que captura el propòsit per a l'audiència ${audienceMeta?.label}.
+4. roleDescriptions = mapping {roleId: "1 frase"} explicant què fa el rol des del punt de vista de l'audiència ${audienceMeta?.label}.
+
+Respon NOMÉS el JSON.`;
+
+            try {
+                const response = await Orchestrator.callLLM({
+                    preferredEngine: 'anthropic',
+                    systemPrompt,
+                    userPrompt,
+                    responseFormat:  'json_object',
+                    temperature:     0.4,
+                    maxTokens:       2048,
+                });
+                // Extract JSON
+                const { extractJsonFromLlmOutput } = await import('../core/Orchestrator.js');
+                let parsed;
+                try {
+                    parsed = extractJsonFromLlmOutput(response.text || response.content || response);
+                } catch (_) {
+                    parsed = JSON.parse(response.text || response.content || response);
+                }
+                if (!parsed || typeof parsed !== 'object') throw new Error('JSON invàlid retornat per la IA');
+                const narrative = {
+                    heroTag:          String(parsed.heroTag || '').slice(0, 80),
+                    heroTitle:        String(parsed.heroTitle || this._project.nombre || '').slice(0, 120),
+                    heroMantra:       String(parsed.heroMantra || '').slice(0, 240),
+                    roleDescriptions: parsed.roleDescriptions && typeof parsed.roleDescriptions === 'object'
+                        ? Object.fromEntries(Object.entries(parsed.roleDescriptions).slice(0, 50).map(([k, v]) => [k, String(v).slice(0, 240)]))
+                        : {},
+                    audienceId:       audience,
+                    generatedAt:      Date.now(),
+                };
+                // Persistir al projecte · UPDATE_PROJECT preserva la resta de camps
+                await store.dispatch({
+                    type: 'UPDATE_PROJECT_INFO',
+                    payload: {
+                        projectId: this._project.id,
+                        updates:   { presentation_narrative_v1: narrative, updatedAt: Date.now() },
+                    }
+                });
+                if (status) {
+                    status.style.color = 'var(--accent-green)';
+                    status.textContent = '✓ Narrativa generada · re-renderitzant…';
+                }
+                // Re-render in-place sense navegar (evita races · idèntic patró sprint A2)
+                setTimeout(async () => {
+                    const app = document.getElementById('app');
+                    if (app) {
+                        app.innerHTML = await this.getHtml();
+                        await this.afterRender();
+                    }
+                }, 250);
+            } catch (err) {
+                console.error('[UX-AUDIT-001 sprint F] generar narrativa:', err);
+                if (status) {
+                    status.style.color = 'var(--accent-red)';
+                    status.textContent = '✗ ' + ((err?.message || 'error desconegut').slice(0, 140));
+                }
+                btn.disabled = false;
+                btn.textContent = orig;
+            }
+        });
+
+        // Esborrar narrativa
+        document.getElementById('pvBtnClearNarrative')?.addEventListener('click', async () => {
+            if (!this._project) return;
+            if (!confirm('Esborrar la narrativa IA? El hero i descripcions tornaran als textos default per projectType.')) return;
+            try {
+                await store.dispatch({
+                    type: 'UPDATE_PROJECT_INFO',
+                    payload: {
+                        projectId: this._project.id,
+                        updates:   { presentation_narrative_v1: null, updatedAt: Date.now() },
+                    }
+                });
+                const app = document.getElementById('app');
+                if (app) {
+                    app.innerHTML = await this.getHtml();
+                    await this.afterRender();
+                }
+            } catch (err) {
+                alert('Error esborrant narrativa: ' + (err?.message || err));
+            }
         });
     }
 }
