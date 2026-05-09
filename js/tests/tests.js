@@ -1448,7 +1448,7 @@ async function testNavService() {
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 11,                                'sin projectId · 11 links (sin sops y sin wallet · 13-2)');
+    assert(linksGlobal.length === 13,                                'sin projectId · 13 links (sin sops y sin wallet · 15-2)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
@@ -2813,7 +2813,7 @@ async function testCritical108Roles() {
     assert(rep.guardianSeats === 12,                                   'report · guardianSeats 12');
     assert(rep.operativeDomainSum === 96,                              'report · suma de dominios = 96');
     assert(rep.guardiansPending.length === 4,                          'report · 4 pending');
-    assert(rep.guardiansReady.length === 8,                            'report · 8 ready');
+    assert(rep.guardiansReady.length === 12,                           'report · 12 ready (8 oficial + 4 __draft)');
     assert(rep.projectTypes === 12,                                    'report · 12 project types');
     assert(rep.domainCoverage.governance.guardians.length === 2,       'report · governance 2 guardianes');
 }
