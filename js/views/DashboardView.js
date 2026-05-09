@@ -902,7 +902,7 @@ export default class DashboardView {
             +   '<div class="dash-matriu-head">'
             +     '<div>'
             +       '<h2 class="dash-matriu-title">El teu seient a <strong>Matriu</strong></h2>'
-            +       '<div class="dash-matriu-subtitle">Tens ' + seatsTaken + ' projecte' + (seatsTaken !== 1 ? 's' : '') + ' Cohort 0 actiu' + (seatsTaken !== 1 ? 's' : '') + '. Multiplicador ×1.5 fundacional aplicat. Cada projecte té el seu mapa de valor pre-configurat.</div>'
+            +       '<div class="dash-matriu-subtitle">Tens ' + seatsTaken + ' projecte' + (seatsTaken !== 1 ? 's' : '') + ' del nucli fundacional. Multiplicador ×1.5 fundacional aplicat. Cada projecte té el seu mapa de valor pre-configurat.</div>'
             +     '</div>'
             +     '<span class="dash-matriu-counter">' + seatsTaken + '/' + COHORT_TOTAL + ' places</span>'
             +   '</div>'
