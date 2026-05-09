@@ -243,14 +243,19 @@ export function renderPactMarkdown(pact) {
 
 // addSignature · puro · añade signatura a un pacto draft/signed.
 // La signatura ECDSA real la calcula el caller con projectIO/identityService
-// y se pasa aquí ya formada.
-export function addSignature(pact, { identityId, signature, hashSnapshot }) {
+// y se pasa aquí ya formada. `publicJwk` opcional · si está, permite
+// verificar la firma posteriormente con verifyPactSignature.
+// `algorithm` opcional · default 'symbolic' · 'ecdsa-p256-sha256' cuando
+// es firma real (sprint C).
+export function addSignature(pact, { identityId, signature, hashSnapshot, publicJwk = null, algorithm = 'symbolic' }) {
     if (!validatePact(pact)) throw new Error('addSignature requires valid pact');
     if (!identityId || !signature || !hashSnapshot) {
         throw new Error('addSignature requires { identityId, signature, hashSnapshot }');
     }
     const already = (pact.content.signatures || []).find(s => s.identityId === identityId);
     if (already) return pact;   // idempotent
+    const sigEntry = { identityId, signedAt: Date.now(), signature, hashSnapshot, algorithm };
+    if (publicJwk) sigEntry.publicJwk = publicJwk;
     const next = {
         ...pact,
         content: {
@@ -258,7 +263,7 @@ export function addSignature(pact, { identityId, signature, hashSnapshot }) {
             updatedAt: Date.now(),
             signatures: [
                 ...(pact.content.signatures || []),
-                { identityId, signedAt: Date.now(), signature, hashSnapshot },
+                sigEntry,
             ],
         },
     };
@@ -295,4 +300,101 @@ export function pactSummary(pact) {
         createdAt:        c.createdAt,
         updatedAt:        c.updatedAt,
     };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// PACT-001 sprint C · firma ECDSA P-256 real (browser-only · WebCrypto)
+// ─────────────────────────────────────────────────────────────────────
+// Reusa la clave del operador almacenada en KB (ver projectIO ·
+// `getOrCreateSigningKey`). NO importamos directamente para evitar
+// cycle de imports · el caller (PactBuilderView) hace el import
+// dinámico y nos pasa la keypair.
+
+function _bytesToB64(bytes) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s);
+}
+
+function _b64ToBytes(b64) {
+    const s = atob(b64);
+    const bytes = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
+    return bytes;
+}
+
+async function _sha256Hex(bytes) {
+    const buf = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// pactSnapshotForSigning · puro · devuelve el JSON canónico que se firma.
+// Se incluye projectId + version + clauses + parties (sin signatures · para
+// que cada signatura cubra el mismo contenido independientemente del orden
+// de firmas).
+export function pactSnapshotForSigning(pact) {
+    if (!pact || !pact.content) throw new Error('pactSnapshotForSigning requires valid pact');
+    const c = pact.content;
+    const canonical = {
+        projectId:     pact.projectId,
+        version:       c.version,
+        projectTypeId: c.projectTypeId || null,
+        clauses:       c.clauses,
+        parties:       c.parties.map(p => ({
+            identityId:        p.identityId,
+            displayName:       p.displayName,
+            role:              p.role,
+            contributionType:  p.contributionType,
+            initialShare:      p.initialShare,
+            multiplier:        p.multiplier || null,
+        })),
+    };
+    return JSON.stringify(canonical);
+}
+
+// signPactWithKey · async browser-only · firma el snapshot canónico.
+// Devuelve `{ signature, hashSnapshot, publicJwk }` listo para `addSignature`.
+// keypair · `{publicJwk, privateJwk}` (igual format que projectIO).
+export async function signPactWithKey({ pact, keypair } = {}) {
+    if (!pact) throw new Error('signPactWithKey requires pact');
+    if (!keypair?.privateJwk || !keypair?.publicJwk) throw new Error('signPactWithKey requires keypair {publicJwk, privateJwk}');
+    if (typeof crypto?.subtle?.sign !== 'function') throw new Error('WebCrypto subtle.sign not available');
+    const json = pactSnapshotForSigning(pact);
+    const data = new TextEncoder().encode(json);
+    const hashHex = await _sha256Hex(data);
+    const privateKey = await crypto.subtle.importKey(
+        'jwk', keypair.privateJwk,
+        { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']
+    );
+    const sigBuf = await crypto.subtle.sign(
+        { name: 'ECDSA', hash: 'SHA-256' },
+        privateKey,
+        data
+    );
+    return {
+        signature:    _bytesToB64(new Uint8Array(sigBuf)),
+        hashSnapshot: 'sha256-' + hashHex,
+        publicJwk:    keypair.publicJwk,
+    };
+}
+
+// verifyPactSignature · async browser-only · verifica una signatura
+// individual contra el snapshot canónico actual del pacto.
+export async function verifyPactSignature({ pact, signatureEntry } = {}) {
+    if (!pact) throw new Error('verifyPactSignature requires pact');
+    if (!signatureEntry?.signature || !signatureEntry?.publicJwk) {
+        throw new Error('verifyPactSignature requires signatureEntry {signature, publicJwk}');
+    }
+    if (typeof crypto?.subtle?.verify !== 'function') throw new Error('WebCrypto subtle.verify not available');
+    const json = pactSnapshotForSigning(pact);
+    const data = new TextEncoder().encode(json);
+    const pub = await crypto.subtle.importKey(
+        'jwk', signatureEntry.publicJwk,
+        { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']
+    );
+    const sig = _b64ToBytes(signatureEntry.signature);
+    return crypto.subtle.verify(
+        { name: 'ECDSA', hash: 'SHA-256' },
+        pub, sig, data
+    );
 }

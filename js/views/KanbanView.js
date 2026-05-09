@@ -340,6 +340,8 @@ export default class KanbanView {
         this.workOrders = await KB.query({ type: 'work_order' });
         this.workshops  = await KB.query({ type: 'workshop' });
         this.projects   = (store.getState().projects || []).filter(p => !p.isArchived);
+        // WO-ASSIGN-001 · plazas Matriu disponibles (todas · type cohort_seat)
+        this.cohortSeats = await KB.query({ type: 'cohort_seat' });
         this.workOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     }
 
@@ -651,9 +653,17 @@ export default class KanbanView {
         const c = w.content || {};
         const ass = c.assignee || {};
         const cost = computeWOCost(w);
-        const assigneeBadge = ass.kind === 'ai'
-            ? `<span class="kb-badge ai">🤖 ${this._esc(ass.engine || '?')}</span>`
-            : `<span class="kb-badge human">👤 ${this._esc(ass.id || 'pending')}</span>`;
+        // WO-ASSIGN-001 · si hay plaza Matriu assignada, prioritzar-la sobre l'assignee legacy
+        let assigneeBadge;
+        if (c.assignedToSeatId) {
+            const seat = (this.cohortSeats || []).find(s => s.id === c.assignedToSeatId);
+            const name = (seat?.content?.displayName || c.assignedToSeatId.slice(-12));
+            assigneeBadge = `<span class="kb-badge human" style="background:rgba(192,132,252,0.15);color:#c084fc;border-color:rgba(192,132,252,0.4);" title="Plaza Matriu · ${this._esc(c.assignedToSeatId)}">🐝 ${this._esc(name)}</span>`;
+        } else if (ass.kind === 'ai') {
+            assigneeBadge = `<span class="kb-badge ai">🤖 ${this._esc(ass.engine || '?')}</span>`;
+        } else {
+            assigneeBadge = `<span class="kb-badge human">👤 ${this._esc(ass.id || 'pending')}</span>`;
+        }
         const tddBadge = c.approvalRule === 'tdd-auto' ? `<span class="kb-badge tdd">TDD</span>` : '';
         const prioBadge = c.priority && c.priority !== 'low'
             ? `<span class="kb-badge ${c.priority}">${this._esc(c.priority)}</span>`
@@ -1108,6 +1118,21 @@ export default class KanbanView {
                         </div>
                     </div>
 
+                    <!-- WO-ASSIGN-001 · selector plaza Matriu -->
+                    <label style="margin-top:0.7rem;">🐝 Assignat a (plaza Matriu / DID)</label>
+                    <select id="kbdAssignedSeat" style="width:100%;">
+                        <option value="">— sense assignar (legacy: ${this._esc(c.assignee?.id || 'pending')}) —</option>
+                        ${(this.cohortSeats || []).map(s => {
+                            const sel = (c.assignedToSeatId === s.id) ? 'selected' : '';
+                            const name = s.content?.displayName || s.id;
+                            const guard = s.content?.guardianOf ? ' · ' + s.content.guardianOf : '';
+                            return `<option value="${this._esc(s.id)}" ${sel}>${this._esc(name)}${this._esc(guard)}</option>`;
+                        }).join('')}
+                    </select>
+                    <p style="color:#666;font-size:0.7rem;margin-top:0.2rem;font-family:monospace;">
+                        Quan WO passi a "ledgered" + horas reales, /value-accounting podrà importar-lo com a aportació time del party seleccionat.
+                    </p>
+
                     ${status === 'doing' || status === 'done' ? `
                         <div class="row">
                             <div>
@@ -1196,6 +1221,12 @@ export default class KanbanView {
                     estimatedHours: parseFloat(document.getElementById('kbdEstHrs').value) || c.estimatedHours,
                     fmvPerHour:     parseFloat(document.getElementById('kbdFmv').value)    || c.fmvPerHour,
                 };
+                // WO-ASSIGN-001 · capturar plaza assignada (string buit = sense assignar)
+                const seatSel = document.getElementById('kbdAssignedSeat');
+                if (seatSel) {
+                    const seatVal = seatSel.value || '';
+                    extras.assignedToSeatId = seatVal || null;
+                }
                 // Capturar el aiOutput editado por el humano antes de aprobar
                 const aiOutEdit = document.getElementById('kbdAiOutput');
                 if (aiOutEdit) extras.aiOutput = aiOutEdit.value;
