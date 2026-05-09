@@ -32,6 +32,23 @@
     /* ── TIPOGRAFÍA ─────────────────────────────────────────── */
     --font-base: 'Space Grotesk', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+    /* MAT-002-B · Matriu skin · disponible para hero italic + landing */
+    --font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+    --font-tight: 'Inter Tight', 'Inter', system-ui, sans-serif;
+
+    /* ── PALETA MATRIU (MAT-002-B) ───────────────────────────── */
+    /* Disponible globalmente · cualquier vista que quiera skin Matriu
+       las usa como variables en lugar de hardcodear hex codes.
+       Coherente con MatriuLandingView + DashboardView strip. */
+    --mat-cream:    #f1ebde;
+    --mat-cream-2:  #ede5d2;
+    --mat-dark:     #2a3a2a;
+    --mat-ink:      #1a1f1a;
+    --mat-tcotta:   #c25a3a;
+    --mat-olive:    #5a6e4f;
+    --mat-blue-d:   #2c4a7a;
+    --mat-rule:     rgba(42,58,42,0.18);
+    --mat-line:     rgba(42,58,42,0.10);
 
     --text-main:      #ffffff;
     --text-secondary: #b0b0ba;

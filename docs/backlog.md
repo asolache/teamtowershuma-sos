@@ -1018,7 +1018,29 @@ Garantías:
 ### Sub-historias propuestas dentro de MAT-002
 
 - **MAT-002-A** · plantilla "proyecto SOS Matriu Cohort 0" preconfigurada · al crear cliente con sector "Q · Educación" + descripción "miembro Cohort 0 Matriu", auto-genera SOC matriu-tokenomic + SOPs específicos del método (10 semanas → 10 SOPs por rol) · botón en Dashboard "Soy Cohort 0 Matriu" que clona la plantilla.
-- **MAT-002-B** · skin/branding Matriu para los miembros de la cohort · tema CSS con `--mat-bg:#f1ebde` `--mat-fg:#1a1f1a` · tipografías Instrument Serif + Inter Tight (loadeadas vía CDN o self-host) · toggle en `/settings → Aspecto` para alternar entre SOS estándar (oscuro) y Matriu (claro).
+- **MAT-002-B** · ✅ entregat (2026-05-09 · scope incremental opt-in):
+  - Google Fonts global · Instrument Serif (italic) + Inter Tight cargados
+    en `index.html` junto a Space Grotesk + JetBrains Mono.
+  - Vars CSS Matriu en `css/tokens.css` `:root` · `--font-serif` ·
+    `--font-tight` · `--mat-cream` · `--mat-cream-2` · `--mat-dark`
+    · `--mat-ink` · `--mat-tcotta` · `--mat-olive` · `--mat-blue-d`
+    · `--mat-rule` · `--mat-line`. Disponibles globalmente sin
+    contaminar el tema oscuro existente.
+  - Utility classes en `css/base.css`:
+    - `.mat-italic` · Instrument Serif italic genérico.
+    - `.mat-tight` · Inter Tight body.
+    - `.mat-accent` / `.mat-accent-bg` · color terracota `#c25a3a`.
+    - `.mat-hero-h1` · h1 italic Matriu con strong en terracota ·
+      selector `h1.mat-hero-h1` para mayor specificity contra reglas
+      existentes tipo `.dash-hero h1` (gana sin `!important`).
+  - Aplicat a · DashboardView (hero principal "Value **Network** Dashboard")
+    · ProjectHubView (h1 del proyecto) · SettingsView (h1 "Settings · Vault")
+    · WalletView (h1) · SavingsView (3 h1) · EfficiencyView (2 h1).
+  - Toggle "/settings → Aspecto" pendent · scope reduït · de moment
+    sempre actiu via classe opt-in. Si l'operador vol tornar al
+    tipogràfic original, treure `class="mat-hero-h1"` localment.
+  - Alineat amb el strip MAT-002-F i la landing /matriu (que ja
+    usen aquestes vars + fonts internament).
 - **MAT-002-C** · 4 sub-tipos de `transaction.deliverable_kind` para reflejar el Value Mapping Engine · `producto-fisico` · `equity-composable` · `drets-us` · `credits-reputacio` · cada uno con su icono y color · stats agregadas en `/savings` y `/wallet`.
 - **MAT-002-D** · multiplicador ×1.5 fundacional aplicado en `walletService.computeChargeFromTelemetry` cuando el operador tiene tag `cohort:0` · descuento estructural permanente.
 - **MAT-002-E** · vista `/fice?project=` con quadratic voting placeholder · UI sin contratos reales (espera MAT-001 fase 4 con FICE.sol).

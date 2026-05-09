@@ -323,3 +323,18 @@ body {
 .text-mono    { font-family: var(--font-mono); }
 .animate-fade { animation: fadeIn var(--dur-base) var(--ease-out); }
 .truncate     { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── MAT-002-B · Matriu skin utilities ──────────────────────── */
+/* Clases opt-in para aplicar tipografía + paleta Matriu en
+   elementos puntuales (hero h1, badges, accent text). NO se
+   aplican globalmente · cada vista las invoca cuando quiere. */
+.mat-italic       { font-family: var(--font-serif, 'Instrument Serif', Georgia, serif); font-style: italic; font-weight: 400; }
+.mat-tight        { font-family: var(--font-tight, 'Inter Tight', system-ui, sans-serif); }
+.mat-accent       { color: var(--mat-tcotta, #c25a3a); }
+.mat-accent-bg    { background: var(--mat-tcotta, #c25a3a); color: var(--mat-cream, #f1ebde); }
+
+/* Hero refinement · cuando una vista quiere su h1 con flow Matriu.
+   Selector h1.mat-hero-h1 para tener specificity (0,1,1) y ganar
+   contra reglas tipo .dash-hero h1 que ya existían. */
+h1.mat-hero-h1, .mat-hero-h1 { font-family: var(--font-serif, 'Instrument Serif', Georgia, serif); font-style: italic; font-weight: 400; letter-spacing: -0.01em; line-height: 1.05; }
+h1.mat-hero-h1 strong, .mat-hero-h1 strong { font-weight: 400; color: var(--mat-tcotta, #c25a3a); font-family: var(--font-serif, 'Instrument Serif', Georgia, serif); }

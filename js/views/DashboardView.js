@@ -353,9 +353,11 @@ export default class DashboardView {
             .dash-hero-inner { position: relative; z-index: 1; }
             .dash-hero { position: relative; margin-bottom: 32px; padding: 28px 0 24px;
                 border-bottom: 1px solid var(--glass-border); animation: fadeIn 0.5s var(--ease-out); }
-            .dash-hero h1 { font-size: 2rem; font-weight: 900; color: white;
-                letter-spacing: -0.5px; margin-bottom: 4px; line-height: 1.2; }
+            .dash-hero h1 { font-size: 2.4rem; color: white;
+                letter-spacing: -0.5px; margin-bottom: 4px; line-height: 1.05; }
             .dash-hero h1 span { color: var(--accent-indigo); }
+            /* MAT-002-B · cuando .mat-hero-h1 está activo, el strong/span coge acento Matriu */
+            .dash-hero h1.mat-hero-h1 strong { color: var(--mat-tcotta); font-weight: 400; }
             .dash-hero-sub { font-size: var(--text-sm); color: var(--text-muted);
                 font-family: var(--font-mono); margin-top: 6px; }
             .dash-hero-tagline { font-size: var(--text-xs); color: var(--text-muted);
@@ -521,7 +523,7 @@ export default class DashboardView {
                             </svg>
                         </div>
                         <div class="dash-hero-inner">
-                            <h1>Value <span>Network</span> Dashboard</h1>
+                            <h1 class="mat-hero-h1">Value <strong>Network</strong> Dashboard</h1>
                             <div class="dash-hero-sub" id="dashHeroSub">Loading projects…</div>
                             <div class="dash-hero-tagline">Every organization has two structures. This maps the real one.</div>
                         </div>

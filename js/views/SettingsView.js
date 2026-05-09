@@ -71,7 +71,7 @@ export default class SettingsView {
                 <span style="color:var(--text-muted);">·</span>
                 ${renderNavGroupedHtml({ active: 'settings', className: 'sv-back', activeClass: '' })}
             </div>
-            <h1>Settings <span>·</span> Vault</h1>
+            <h1 class="mat-hero-h1">Settings <strong>·</strong> Vault</h1>
             <p style="color:var(--text-muted);margin-bottom:var(--space-8);">API Keys · AI Engine · IndexedDB (zero localStorage)</p>
 
             <div class="sv-card" style="border-top:3px solid ${pColor};">
