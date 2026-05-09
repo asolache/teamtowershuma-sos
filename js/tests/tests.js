@@ -3725,6 +3725,45 @@ async function testMatriuMemberService() {
     assert(mockKB._peek().size === 1,                                       'real · 1 nodo persistit');
 }
 
+// ─── SKILL-TAX-002 sprint A · skillTaxonomyExtension ─────────────
+async function testSkillTaxonomyExtension() {
+    const m = await import('../core/skillTaxonomyExtension.js?v=' + Date.now());
+    assert(Object.isFrozen(m.SKILL_CATEGORIES),                       'SKILL_CATEGORIES frozen');
+    assert(Object.keys(m.SKILL_CATEGORIES).length === 5,              '5 categories');
+    assert(m.categoryForSkill('pact-design') === 'governance',        'pact-design → governance');
+    assert(m.categoryForSkill('conflict-mediation') === 'care',       'conflict-mediation → care');
+    assert(m.categoryForSkill('multi-loop-learning') === 'meta',      'multi-loop-learning → meta');
+    assert(m.categoryForSkill('facilitation') === 'soft',             'facilitation → soft');
+    assert(m.categoryForSkill('system-architecture') === 'hard',      'system-architecture → hard default');
+    assert(m.categoryForSkill('xxx-no') === null,                     'no skill → null');
+    assert(m.skillsByCategory('care').length >= 5,                    'care category ≥5');
+
+    const aud1 = m.audienceProjectTypesForSkill('pact-design');
+    assert(aud1.length === 12,                                         'pact-design audience · 12 project types');
+    const aud2 = m.audienceProjectTypesForSkill('seed-banking');
+    assert(aud2.includes('comunitat-autosuficient'),                  'seed-banking audience · comunitat');
+    assert(!aud2.includes('dao-web3'),                                 'seed-banking audience · NO dao-web3');
+
+    assert(m.skillsForProjectType('comunitat-autosuficient').length >= 2, 'comunitat skills ≥2');
+
+    const iv = m.intangibleValueOfGuardian('atenea');
+    assert(iv && iv.primary === 'governança deliberativa',            'atenea intangible primary');
+    assert(Array.isArray(iv.secondary) && iv.secondary.length === 3,  'atenea secondary 3');
+
+    const ts = m.topSkillsForGuardian('atenea', 5);
+    assert(ts.length >= 1,                                             'atenea top skills ≥1');
+    assert(ts.every(s => s.guardianAffinity.includes('atenea')),       'top skills · atenea afinitat');
+
+    assert(m.PUBLIC_AUDIENCES.length === 5,                            '5 audiencias públicas');
+    assert(m.audiencesForSkill('pact-design').includes('fundadors'),  'pact-design · fundadors');
+    assert(m.audiencesForSkill('regenerative-agriculture').includes('comunitat'), 'regen-agri · comunitat');
+
+    const r = m.coverageReportExtended();
+    assert(r.totalSkills === 90,                                       'total 90 skills');
+    assert(r.byCategory.governance > 0,                                 'byCategory governance > 0');
+    assert(r.intangibleValuesDefined === 12,                            '12 intangible values defined');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -3768,7 +3807,8 @@ const SUITE = [
     { name: 'PACT-001 sprint A · pactService (primer contrato)',  fn: testPactService },
     { name: 'VAL-001 sprint A · valueAccountingService (Slicing Pie + FairShares)', fn: testValueAccounting },
     { name: 'VAL-001 sprint C · woContributionService (WO ledgered → contrib)', fn: testWoContributionService },
-    { name: 'MAT-002-I sprint B · matriuMemberService (schema unificat)',     fn: testMatriuMemberService }
+    { name: 'MAT-002-I sprint B · matriuMemberService (schema unificat)',     fn: testMatriuMemberService },
+    { name: 'SKILL-TAX-002 sprint A · skillTaxonomyExtension (audience+cat)', fn: testSkillTaxonomyExtension }
 ];
 
 export async function runTests() {
