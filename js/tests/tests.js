@@ -3624,6 +3624,107 @@ async function testWoContributionService() {
     assert(stats.skippedReasons['not-contributable'] === 2,                        'stats · skipped reasons');
 }
 
+// ─── MAT-002-I sprint B · matriuMemberService · schema unificat ──
+async function testMatriuMemberService() {
+    const m = await import('../core/matriuMemberService.js?v=' + Date.now());
+    const { buildMatriuMember, validateMatriuMember, migrateCohortSeatToMember,
+            mergeIdentityIntoMember, migrateIdentityToMember, summarizeMember,
+            migrateAllToMatriuMembers } = m;
+
+    let threw = false;
+    try { buildMatriuMember(); } catch(_) { threw = true; }
+    assert(threw, 'buildMatriuMember sin displayName lanza');
+    threw = false;
+    try { buildMatriuMember({ displayName: 'A', availability: 'super-high' }); } catch(_) { threw = true; }
+    assert(threw, 'availability inválida lanza');
+    threw = false;
+    try { buildMatriuMember({ displayName: 'A', status: 'banned' }); } catch(_) { threw = true; }
+    assert(threw, 'status inválido lanza');
+
+    const m1 = buildMatriuMember({
+        displayName: 'Aitana R.', handle: '@aitana', bio: 'Pagesa',
+        guardianOf: 'demeter', skillsDeclared: ['regenerative-agriculture'],
+        availability: 'high', cohortNumber: 0, seatId: 'cohort-seat-demo-aitana',
+    });
+    assert(m1.type === 'matriu_member',                                'type matriu_member');
+    assert(m1.id.startsWith('matriu-member-'),                          'id prefix');
+    assert(m1.id.endsWith('-c0'),                                       'id suffix cohort');
+    assert(m1.content.guardianOf === 'demeter',                         'guardianOf');
+    assert(m1.keywords.includes('cohort:0'),                             'keyword cohort');
+    assert(m1.keywords.includes('guardianOf:demeter'),                   'keyword guardian');
+
+    assert(validateMatriuMember(m1) === true,                            'validate true');
+    assert(validateMatriuMember(null) === false,                         'validate null false');
+    assert(validateMatriuMember({}) === false,                           'validate empty false');
+
+    // migrateCohortSeatToMember
+    const seat = {
+        id: 'cohort-seat-demo-nuria', type: 'cohort_seat',
+        content: { displayName: 'Núria B.', handle: '@nuria', guardianOf: 'hefesto',
+                   skillsDeclared: ['smart-contract-development'], availability: 'normal', bio: 'Dev' },
+    };
+    const m2 = migrateCohortSeatToMember(seat);
+    assert(m2.type === 'matriu_member',                                  'migrate seat · type');
+    assert(m2.content.displayName === 'Núria B.',                        'migrate · displayName');
+    assert(m2.content.migratedFrom.seatId === 'cohort-seat-demo-nuria',  'migrate · trace seatId');
+
+    let threwMig = false;
+    try { migrateCohortSeatToMember({ type: 'wrong' }); } catch(_) { threwMig = true; }
+    assert(threwMig,                                                      'migrate seat · wrong type lanza');
+
+    // mergeIdentityIntoMember
+    const identity = {
+        id: 'user-identity-abc', type: 'user_identity',
+        content: { primaryDid: 'did:sos:abc123', publicKeys: { signing: { kty: 'EC' } },
+                   wallets: [{ address: '0xabc', chain: 'gnosis' }],
+                   handle: '@nuria', displayName: 'Núria B.' },
+    };
+    const m3 = mergeIdentityIntoMember(m2, identity);
+    assert(m3.content.primaryDid === 'did:sos:abc123',                    'merge · primaryDid');
+    assert(m3.content.publicJwk?.kty === 'EC',                            'merge · publicJwk');
+    assert(m3.content.wallets.length === 1,                                'merge · wallets');
+    assert(m3.content.migratedFrom.identityId === 'user-identity-abc',    'merge · trace identityId');
+    assert(m3.content.migratedFrom.seatId === 'cohort-seat-demo-nuria',   'merge · preserves seatId trace');
+
+    // migrateIdentityToMember
+    const m4 = migrateIdentityToMember(identity);
+    assert(m4.content.cohortNumber === 99,                                'identity standalone · cohort 99');
+    const m5 = migrateIdentityToMember(identity, { cohortNumber: 1 });
+    assert(m5.content.cohortNumber === 1,                                 'identity · override cohort 1');
+
+    // summarizeMember
+    const sum = summarizeMember(m3);
+    assert(sum.displayName === 'Núria B.',                                'summary displayName');
+    assert(sum.skillsCount === 1,                                          'summary skillsCount');
+    assert(sum.walletsCount === 1,                                         'summary walletsCount');
+    assert(sum.hasPrimaryDid === true,                                     'summary hasPrimaryDid');
+    assert(sum.isFundacional === true,                                     'summary isFundacional');
+    assert(summarizeMember(null) === null,                                 'summary null');
+
+    // migrateAllToMatriuMembers con KB mock
+    const mockKB = (() => {
+        const store = new Map();
+        return {
+            query: async ({ type }) => {
+                if (type === 'cohort_seat') return [seat];
+                if (type === 'user_identity') return [identity];
+                return [];
+            },
+            upsert: async (node) => { store.set(node.id, node); return node; },
+            _peek: () => store,
+        };
+    })();
+    const dry = await migrateAllToMatriuMembers(mockKB, { dryRun: true });
+    assert(dry.stats.seatsCount === 1,                                     'dryRun · 1 seat');
+    assert(dry.stats.membersGenerated === 1,                                'dryRun · 1 member (identity matched seat)');
+    assert(dry.stats.cohort0Count === 1,                                    'dryRun · 1 cohort 0');
+    assert(mockKB._peek().size === 0,                                       'dryRun · 0 nodes escrits');
+
+    const real = await migrateAllToMatriuMembers(mockKB, { dryRun: false });
+    assert(real.stats.dryRun === false,                                     'real · dryRun=false');
+    assert(mockKB._peek().size === 1,                                       'real · 1 nodo persistit');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -3666,7 +3767,8 @@ const SUITE = [
     { name: 'MAT-003 sprint F · cohortSeatService (CRUD + extract)', fn: testCohortSeatService },
     { name: 'PACT-001 sprint A · pactService (primer contrato)',  fn: testPactService },
     { name: 'VAL-001 sprint A · valueAccountingService (Slicing Pie + FairShares)', fn: testValueAccounting },
-    { name: 'VAL-001 sprint C · woContributionService (WO ledgered → contrib)', fn: testWoContributionService }
+    { name: 'VAL-001 sprint C · woContributionService (WO ledgered → contrib)', fn: testWoContributionService },
+    { name: 'MAT-002-I sprint B · matriuMemberService (schema unificat)',     fn: testMatriuMemberService }
 ];
 
 export async function runTests() {

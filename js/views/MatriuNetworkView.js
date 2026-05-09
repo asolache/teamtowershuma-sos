@@ -16,6 +16,7 @@ import { KB }    from '../core/kb.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 import { COHORT_0_TOTAL, PANTHEON_GUARDIANS, getGuardianById } from '../core/critical108Roles.js';
 import { listSeats } from '../core/cohortSeatService.js';
+import { listMatriuMembers, migrateAllToMatriuMembers } from '../core/matriuMemberService.js';
 import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 // Color por guardian (consistent amb la landing /matriu)
@@ -52,7 +53,21 @@ export default class MatriuNetworkView {
     async getHtml() {
         await store.init();
         await KB.init();
+        // Sprint B · prioritzar matriu_member si existeixen, fallback a cohort_seat legacy
+        this.members = (await listMatriuMembers(KB)) || [];
         this.seats = await listSeats(KB) || [];
+        // Si hi ha matriu_members, els fem servir com a "seats" virtuals (mantenint
+        // l'API actual del view); altrament usem els seats legacy.
+        if (this.members.length > 0) {
+            this.seats = this.members.map(m => ({
+                id:      m.id,
+                type:    'cohort_seat',          // virtual cast per a no canviar el render
+                content: { ...m.content },
+            }));
+            this.usingMembers = true;
+        } else {
+            this.usingMembers = false;
+        }
         const allNodes = await KB.getAllNodes();
         this.assignments = allNodes.filter(n => n?.type === 'swarm_assignment');
         this.workOrders = allNodes.filter(n => n?.type === 'work_order');
@@ -83,6 +98,13 @@ export default class MatriuNetworkView {
                     <h1 class="mat-hero-h1">Els <strong>${taken}</strong> membres del <strong>nucli</strong></h1>
                     <p class="mn-hero-sub">Perfil complet de cada plaça · skills declarades · guardian assignat · projectes on participa. Sprint A · llistat. Sprint B unificarà amb user_identity.</p>
 
+                    ${this.usingMembers
+                        ? `<div class="mn-migrate-banner is-done">✓ Schema unificat · ${this.members.length} matriu_members actius</div>`
+                        : `<div class="mn-migrate-banner">
+                              <span>⚠ Schema legacy · llegint <code>cohort_seat</code>. Migra a <code>matriu_member</code> per a unificar amb identitat (DID + clau ECDSA + wallets).</span>
+                              <button class="mn-migrate-btn" id="mnMigrateBtn">🔄 Migrar a matriu_member</button>
+                           </div>`
+                    }
                     <div class="mn-stats-row">
                         <div class="mn-stat" style="--mn-c:#c084fc;">
                             <div class="mn-stat-label">Places ocupades</div>
@@ -264,6 +286,13 @@ export default class MatriuNetworkView {
             .mn-hero h1 strong { color: #c25a3a; }
             .mn-hero-sub { color: #5a6e4f; font-size: 0.95rem; max-width: 720px; line-height: 1.6; margin-bottom: 22px; }
 
+            .mn-migrate-banner { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; }
+            .mn-migrate-banner:not(.is-done) { background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.45); color: #5a4e1f; }
+            .mn-migrate-banner.is-done { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.4); color: #2a4a2a; }
+            .mn-migrate-banner code { background: rgba(42,58,42,0.12); padding: 1px 6px; border-radius: 4px; font-size: 0.8em; }
+            .mn-migrate-btn { background: #1a1f1a; color: #f1ebde; border: 0; padding: 8px 16px; border-radius: 99px; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: transform 0.15s; margin-left: auto; }
+            .mn-migrate-btn:hover { transform: translateY(-1px); }
+            .mn-migrate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
             .mn-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
             .mn-stat { background: rgba(255,255,255,0.55); border: 1px solid rgba(42,58,42,0.12); border-left: 3px solid var(--mn-c, #888); border-radius: 10px; padding: 14px 16px; }
             .mn-stat-label { font-family: ui-monospace, monospace; font-size: 0.7rem; color: #5a6e4f; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -331,6 +360,41 @@ export default class MatriuNetworkView {
         document.getElementById('mnGuardian')?.addEventListener('change', update);
         document.getElementById('mnAvailability')?.addEventListener('change', update);
         document.getElementById('mnHasProject')?.addEventListener('change', update);
+
+        // Sprint B · botó migració
+        document.getElementById('mnMigrateBtn')?.addEventListener('click', async () => this._handleMigrate());
+    }
+
+    async _handleMigrate() {
+        const btn = document.getElementById('mnMigrateBtn');
+        if (!btn) return;
+        btn.disabled = true;
+        btn.textContent = '⏳ Analitzant…';
+        try {
+            // Dry run primer · preview
+            const dry = await migrateAllToMatriuMembers(KB, { dryRun: true });
+            const msg = `Migració dryRun · resum:\n\n`
+                + `· ${dry.stats.seatsCount} cohort_seat\n`
+                + `· ${dry.stats.identitiesCount} user_identity\n`
+                + `· ${dry.stats.membersGenerated} matriu_member generats\n`
+                + `  - ${dry.stats.cohort0Count} al nucli fundacional (cohort 0)\n`
+                + `  - ${dry.stats.networkCount} a la xarxa estesa (cohort 99)\n\n`
+                + `Aplicar la migració?`;
+            if (!confirm(msg)) {
+                btn.disabled = false;
+                btn.textContent = '🔄 Migrar a matriu_member';
+                return;
+            }
+            btn.textContent = '⏳ Migrant…';
+            const real = await migrateAllToMatriuMembers(KB, { dryRun: false });
+            alert(`✓ Migració completada · ${real.stats.membersGenerated} matriu_member persistits al KB. Els nodes legacy (cohort_seat / user_identity) continuen per a backwards-compat.`);
+            if (window.navigateTo) window.navigateTo(window.location.pathname);
+        } catch (err) {
+            console.error('[MAT-002-I B] migrate failed:', err);
+            alert('Error en la migració: ' + (err?.message || String(err)));
+            btn.disabled = false;
+            btn.textContent = '🔄 Migrar a matriu_member';
+        }
     }
 
     destroy() { /* nothing */ }
