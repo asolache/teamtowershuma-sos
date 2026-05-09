@@ -3235,6 +3235,99 @@ async function testCohortSeatService() {
     assert(threwA,                                                           'buildSwarmAssignmentNode sin args lanza');
 }
 
+// ─── PACT-001 sprint A · pactService · primer contrato ─────────────
+async function testPactService() {
+    const m = await import('../core/pactService.js?v=' + Date.now());
+    const {
+        DEFAULT_PACT_CLAUSES, validateClauses, validatePact,
+        mergeClauses, buildPactDraft, addSignature, pactSummary, renderPactMarkdown,
+    } = m;
+
+    // Defaults
+    assert(Object.isFrozen(DEFAULT_PACT_CLAUSES),                          'DEFAULT_PACT_CLAUSES frozen');
+    assert(validateClauses(DEFAULT_PACT_CLAUSES),                          'defaults válidos');
+
+    // mergeClauses
+    const merged = mergeClauses(DEFAULT_PACT_CLAUSES, { object: 'Hortet de barri.', vesting: { months: 12 } });
+    assert(merged.object === 'Hortet de barri.',                            'mergeClauses · override object');
+    assert(merged.vesting.months === 12,                                    'mergeClauses · vesting.months override');
+    assert(merged.vesting.cliffMonths === 6,                                'mergeClauses · vesting.cliff preservado');
+    assert(merged.participation === 'slicing-pie',                          'mergeClauses · participation default');
+
+    // buildPactDraft errors
+    let threw = false;
+    try { buildPactDraft(); } catch (_) { threw = true; }
+    assert(threw,                                                            'buildPactDraft · sin args lanza');
+    threw = false;
+    try { buildPactDraft({ projectId: 'p1', parties: [] }); } catch (_) { threw = true; }
+    assert(threw,                                                            'buildPactDraft · sin parties lanza');
+    threw = false;
+    try { buildPactDraft({ projectId: 'p1', parties: [{ }] }); } catch (_) { threw = true; }
+    assert(threw,                                                            'buildPactDraft · party inválida lanza');
+
+    // buildPactDraft happy
+    const parties = [
+        { identityId: 'did:sos:abc', displayName: 'Alvaro', role: 'CEO', contributionType: 'time-and-vision', initialShare: 0.4, multiplier: 1.5 },
+        { identityId: 'did:sos:def', displayName: 'Ingrid', role: 'CTO', contributionType: 'code-and-time', initialShare: 0.4 },
+    ];
+    const draft = buildPactDraft({ projectId: 'proj-X', parties, projectTypeId: 'startup-coop-tradicional' });
+    assert(draft.id === 'proj-X::pact::sos-v1',                             'draft · id namespaced');
+    assert(draft.type === 'pact',                                           'draft · type=pact');
+    assert(draft.content.status === 'draft',                                'draft · status=draft');
+    assert(draft.content.parties.length === 2,                              'draft · 2 parties');
+    assert(draft.keywords.includes('type:pact'),                            'draft · keywords pact');
+    assert(draft.keywords.includes('projectType:startup-coop-tradicional'), 'draft · keywords projectType');
+    assert(validatePact(draft),                                              'validatePact · draft válido');
+
+    // sum > 1.0 → validatePact rechaza
+    const overShared = buildPactDraft({ projectId: 'p1', parties: [
+        { identityId: 'a', displayName: 'A', role: 'r', contributionType: 't', initialShare: 0.6 },
+        { identityId: 'b', displayName: 'B', role: 'r', contributionType: 't', initialShare: 0.6 },
+    ]});
+    assert(validatePact(overShared) === false,                              'validatePact · sum>1 falla');
+
+    // addSignature
+    const sig1 = addSignature(draft, { identityId: 'did:sos:abc', signature: 'sig-A', hashSnapshot: 'h-1' });
+    assert(sig1.content.signatures.length === 1,                            'addSignature · 1 firma');
+    assert(sig1.content.status === 'draft',                                 'addSignature · sigue draft (1/2)');
+
+    const sig2 = addSignature(sig1, { identityId: 'did:sos:def', signature: 'sig-B', hashSnapshot: 'h-2' });
+    assert(sig2.content.signatures.length === 2,                            'addSignature · 2 firmas');
+    assert(sig2.content.status === 'signed',                                'addSignature · status=signed (todas)');
+    assert(sig2.keywords.includes('status:signed'),                         'addSignature · keyword updated');
+    assert(!sig2.keywords.includes('status:draft'),                         'addSignature · keyword draft removed');
+
+    // idempotent
+    const sig2b = addSignature(sig2, { identityId: 'did:sos:abc', signature: 'sig-A', hashSnapshot: 'h-1' });
+    assert(sig2b.content.signatures.length === 2,                           'addSignature · idempotent');
+
+    // errors
+    let threwSig = false;
+    try { addSignature(null, { identityId: 'x', signature: 'y', hashSnapshot: 'z' }); } catch (_) { threwSig = true; }
+    assert(threwSig,                                                        'addSignature · pact inválido lanza');
+    threwSig = false;
+    try { addSignature(draft, { identityId: 'x' }); } catch (_) { threwSig = true; }
+    assert(threwSig,                                                        'addSignature · sin sig/hash lanza');
+
+    // pactSummary
+    const summary = pactSummary(sig2);
+    assert(summary.partiesCount === 2,                                       'summary · 2 parties');
+    assert(summary.signaturesCount === 2,                                    'summary · 2 sigs');
+    assert(summary.signedAll === true,                                       'summary · signedAll');
+    assert(summary.initialSharePct === 80,                                    'summary · 80% inicial');
+    assert(summary.slicingPiePct === 20,                                      'summary · 20% slicing pie');
+    assert(summary.quorumPct === 66,                                          'summary · 66% quorum');
+    assert(pactSummary({}) === null,                                          'summary · null en inválido');
+
+    // renderPactMarkdown
+    const md = renderPactMarkdown(sig2);
+    assert(typeof md === 'string' && md.length > 200,                        'markdown · render');
+    assert(md.includes('# Pacte de socis dinàmic'),                          'markdown · header');
+    assert(md.includes('Alvaro') && md.includes('Ingrid'),                   'markdown · parties');
+    assert(md.includes('startup-coop-tradicional'),                          'markdown · projectType');
+    assert(renderPactMarkdown({}).includes('inválido'),                       'markdown · placeholder en inválido');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -3274,7 +3367,8 @@ const SUITE = [
     { name: 'MAT-003 sprint B · skillTaxonomy + coverageReport',  fn: testSkillTaxonomy },
     { name: 'MAT-003 sprint C · swarmMatchmaker (matchmaker IA)', fn: testSwarmMatchmaker },
     { name: 'MAT-003 sprint E · bootstrapTemplates (12 plantillas)', fn: testBootstrapTemplates },
-    { name: 'MAT-003 sprint F · cohortSeatService (CRUD + extract)', fn: testCohortSeatService }
+    { name: 'MAT-003 sprint F · cohortSeatService (CRUD + extract)', fn: testCohortSeatService },
+    { name: 'PACT-001 sprint A · pactService (primer contrato)',  fn: testPactService }
 ];
 
 export async function runTests() {
