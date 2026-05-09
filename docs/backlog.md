@@ -2211,12 +2211,61 @@ del backend (calculateProjectPie etc.) ja en VAL-001 sprint A.5.
 Suite global · 39 tests sense canvi · navService updated 15→16
 destinos amb 2 asserts ajustats (linksGlobal sigue 13 · value es no-global).
 
-### Sprint C · integración con WOs
+### Sprint C · integración con WOs ✅ verde
 
-Cada WO en estado `ledgered` con `assignedToSeatId` (de WO-ASSIGN-001)
-+ `actualHoursWorked` genera automáticamente una contribution
-`type='time'` para esa party. El operador puede ajustar el
-fairValueEur (default · `2 × salary / 2000`) en el panel del proyecto.
+Entregat · `js/core/woContributionService.js` puro · cierra el bucle
+SOP → WO → Ledger → Slice del Antigravity Engine.
+
+Filosofía @alvaro 2026-05-09: "las contributions deberían ser las
+WOs contabilizadas". Implementación literal · cada WO en
+`status='ledgered'` con `actualHours > 0` + party identificado
+(via `assignedToSeatId` u `assignee.id` ≠ pending/agente_*) genera
+automáticamente una `value_contribution` type='time'.
+
+Helpers puros:
+- `partyIdForWo(wo)` · resuelve party con priority order
+  · `assignedToSeatId` (futuro WO-ASSIGN-001) → `assignee.id` válido
+  → null. Blacklist · pending · unknown · agente_anthropic ·
+  agente_openai · etc.
+- `woHasContributableLedger(wo)` · 3 condiciones · ledgered + horas
+  + party. Retorna bool.
+- `woFairValueEur(wo, options)` · si WO declara `fmvPerHour`, prevalece;
+  si no, fórmula Slicing Pie default `2 × annualSalary / 2000h × hours`.
+  `DEFAULT_ANNUAL_SALARY_EUR = 36000` (≈ 18 €/h · ajustable per
+  party con `salaryByPartyId`).
+- `woToContribution(wo, options)` · genera contribution válida via
+  `valueAccountingService.buildContribution` · `evidenceRef = wo.id`
+  · description = "WO ledgered · {title} · {hours}h" · timestamp
+  del `wo.updatedAt`.
+- `importWosToContributions({wos, projectId, options})` · filtra
+  WOs por proyecto + bulk transform · devuelve `{contributions[],
+  skipped[] (con motivos), partyTypeMapInferred}`. Heurística ·
+  todos los parties WO-derived van por defecto a 'team' (operador
+  ajusta luego).
+- `importStats({contributions, skipped})` · resumen para UI ·
+  imported · skipped · parties · totalSlices · totalEur · razones.
+
+UI · botón "🔄 Escanejar WOs i importar" en `/value-accounting` ·
+sección antes del form manual:
+1. Click → KB.query work_order del proyecto
+2. importWosToContributions filtra y transforma
+3. Si 0 contribs · mostrar diagnóstico con razones de skip
+4. Si ≥1 · `confirm(...)` con stats (X membres · Y € · Z slices)
+5. Persistir cada contribution + actualizar `value_party_map`
+   (preservando overrides existentes del operador)
+6. Reload vista → tarta actualizada
+
+Tests · 32 asserts puros · partyId resolution con todos los edge
+cases (pending · agente IA · DID · seat ID · override) · contributable
+con todos los estados · fairValue con/sin fmvPerHour · import bulk
+con filter projeto · stats. Sanity en node verde.
+
+Suite global · 39 → 40.
+
+División clara · contributions tipo `time` vienen del Kanban · todo
+el resto (cash, assets, ideas, vendor, relationships) sigue en form
+manual. Aclarado en UI · sub-texto del form `+ Afegir aportació
+manual` · "per a aportacions que NO vénen del Kanban".
 
 ### Sprint D · integración con PACT-001
 
