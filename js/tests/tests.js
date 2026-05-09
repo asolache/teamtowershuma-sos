@@ -1441,20 +1441,20 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 17,                          '17 destinos canónicos (+ pact PACT-001)');
+    assert(NAV_DESTINATIONS.length === 18,                          '18 destinos canónicos (+ skills SKILL-TAX-002)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 13,                                'sin projectId · 13 links (sin sops · wallet · value · pact · 17-4)');
+    assert(linksGlobal.length === 14,                                'sin projectId · 14 links (sin sops · wallet · value · pact · 18-4)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
     // con projectId → todos + query ?project= en los aplicables
     const linksProject = buildNavLinks({ active: 'kanban', projectId: 'proj-x' });
-    assert(linksProject.length === 17,                              'con projectId · 17 links (todos · incluye sops · wallet · savings · value VAL-001 · pact PACT-001)');
+    assert(linksProject.length === 18,                              'con projectId · 18 links (todos · + skills SKILL-TAX-002)');
     assert(linksProject.find(l => l.id === 'wallet').href === '/wallet?project=proj-x', 'wallet con project query');
     assert(linksProject.find(l => l.id === 'savings').href === '/savings?project=proj-x', 'savings con project query');
     assert(linksProject.find(l => l.id === 'sops').href === '/sops?project=proj-x',     'sops con project query');
@@ -1491,7 +1491,7 @@ async function testNavService() {
     // home ahora tiene 2 links (dashboard + matriu) tras MAT-002-H
     assert(groupsNoP.find(g => g.category.id === 'home')?.links.length === 2,          'home · 2 links (dashboard + matriu)');
     // knowledge ahora 4 (tags + folders + mind + learn) tras UX-EDU-001 sprint C
-    assert(groupsNoP.find(g => g.category.id === 'knowledge')?.links.length === 4,     'knowledge · 4 links (tags + folders + mind + learn)');
+    assert(groupsNoP.find(g => g.category.id === 'knowledge')?.links.length === 5,     'knowledge · 5 links (tags + folders + mind + learn + skills)');
     // sin projectId · operations sólo tiene 2 (map · kanban) · sops y wallet son global=false
     const opsNoP = groupsNoP.find(g => g.category.id === 'operations');
     assert(opsNoP && opsNoP.links.length === 2,                                        'operations sin projectId · 2 links (map · kanban)');
@@ -3764,6 +3764,86 @@ async function testSkillTaxonomyExtension() {
     assert(r.intangibleValuesDefined === 12,                            '12 intangible values defined');
 }
 
+// ─── ALPHA-STRIPE-001 sprint A · stripeService ────────────────────
+async function testStripeService() {
+    const m = await import('../core/stripeService.js?v=' + Date.now());
+    const { SOS_PLANS, VALID_PLAN_IDS, validatePublishableKey, detectKeyType,
+            validatePaymentLinkUrl, buildPlanNode, buildConfigNode,
+            loadStripeConfig, saveStripeConfig, loadCurrentPlan, setCurrentPlan,
+            openTopupPaymentLink } = m;
+
+    assert(Object.isFrozen(SOS_PLANS),                                 'SOS_PLANS frozen');
+    assert(VALID_PLAN_IDS.length === 4,                                '4 plans');
+    assert(SOS_PLANS.pro.priceEurMonth === 9,                          'pro 9€/mes');
+
+    // Security · sk_/rk_ rejected
+    assert(validatePublishableKey('pk_test_' + 'a'.repeat(30)) === true,  'pk_test_ valid');
+    assert(validatePublishableKey('sk_test_' + 'a'.repeat(30)) === false, 'sk_ REJECTED');
+    assert(validatePublishableKey('rk_test_' + 'a'.repeat(30)) === false, 'rk_ REJECTED');
+    assert(validatePublishableKey('pk_test_short') === false,             'pk_ massa curt');
+    assert(validatePublishableKey(null) === false,                         'null invàlid');
+
+    assert(detectKeyType('pk_test_x') === 'publishable',                  'detect pk');
+    assert(detectKeyType('sk_test_x') === 'secret',                       'detect sk');
+    assert(detectKeyType('rk_test_x') === 'restricted',                   'detect rk');
+    assert(detectKeyType('foo') === 'invalid',                            'detect invalid');
+
+    assert(validatePaymentLinkUrl('https://buy.stripe.com/test_aBc') === true,  'valid link');
+    assert(validatePaymentLinkUrl('https://example.com/x') === false,            'reject not stripe');
+    assert(validatePaymentLinkUrl('http://buy.stripe.com/test_x') === false,     'reject http');
+
+    let threwPlan = false;
+    try { buildPlanNode({ planId: 'invalid' }); } catch(_) { threwPlan = true; }
+    assert(threwPlan,                                                        'planId invalid lanza');
+
+    const pn = buildPlanNode({ planId: 'pro', walletBalanceEur: 50 });
+    assert(pn.type === 'subscription_plan',                              'plan node type');
+    assert(pn.content.planId === 'pro',                                  'plan node planId');
+    assert(pn.keywords.includes('plan:pro'),                             'plan node keyword');
+
+    // buildConfigNode defensive · sk_ NOT persisted
+    const cn = buildConfigNode({ publishableKey: 'sk_test_' + 'x'.repeat(30) });
+    assert(cn.content.publishableKey === null,                           'sk_ not persisted');
+
+    const cn2 = buildConfigNode({
+        publishableKey: 'pk_test_' + 'x'.repeat(30),
+        paymentLinks: {
+            10:  'https://buy.stripe.com/test_link10',
+            999: 'http://malicious.com/x',
+        },
+    });
+    assert(cn2.content.publishableKey.startsWith('pk_test_'),            'pk persisted');
+    assert(Object.keys(cn2.content.paymentLinks).length === 1,           'malicious link rejected · only 1');
+
+    // KB mock
+    const mockKB = (() => {
+        const store = new Map();
+        return {
+            getNode: async (id) => store.has(id) ? store.get(id) : null,
+            upsert:  async (node) => { store.set(node.id, node); return node; },
+        };
+    })();
+    const cfg0 = await loadStripeConfig(mockKB);
+    assert(cfg0.publishableKey === null,                                  'no config initially');
+    await saveStripeConfig(mockKB, { publishableKey: 'pk_test_' + 'a'.repeat(30), paymentLinks: { 10: 'https://buy.stripe.com/test_AAA' } });
+    const cfg1 = await loadStripeConfig(mockKB);
+    assert(cfg1.exists === true,                                          'config saved');
+    assert(cfg1.publishableKey.startsWith('pk_test_'),                    'pk loaded');
+
+    const plan0 = await loadCurrentPlan(mockKB);
+    assert(plan0.planId === 'free' && plan0.fromDefault === true,         'default plan free');
+    await setCurrentPlan(mockKB, { planId: 'pro', walletBalanceEur: 50 });
+    const plan1 = await loadCurrentPlan(mockKB);
+    assert(plan1.planId === 'pro' && plan1.walletBalanceEur === 50,        'plan now pro · 50€');
+
+    let threwTopup = false;
+    try { await openTopupPaymentLink({ kb: mockKB, amountEur: -1 }); } catch(_) { threwTopup = true; }
+    assert(threwTopup,                                                     'topup amount invalid lanza');
+    let threwTopup2 = false;
+    try { await openTopupPaymentLink({ kb: mockKB, amountEur: 999 }); } catch(_) { threwTopup2 = true; }
+    assert(threwTopup2,                                                    'topup sense link configurat lanza');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -3808,7 +3888,8 @@ const SUITE = [
     { name: 'VAL-001 sprint A · valueAccountingService (Slicing Pie + FairShares)', fn: testValueAccounting },
     { name: 'VAL-001 sprint C · woContributionService (WO ledgered → contrib)', fn: testWoContributionService },
     { name: 'MAT-002-I sprint B · matriuMemberService (schema unificat)',     fn: testMatriuMemberService },
-    { name: 'SKILL-TAX-002 sprint A · skillTaxonomyExtension (audience+cat)', fn: testSkillTaxonomyExtension }
+    { name: 'SKILL-TAX-002 sprint A · skillTaxonomyExtension (audience+cat)', fn: testSkillTaxonomyExtension },
+    { name: 'ALPHA-STRIPE-001 sprint A · stripeService (Payment Links)',     fn: testStripeService }
 ];
 
 export async function runTests() {

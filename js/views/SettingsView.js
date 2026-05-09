@@ -5,6 +5,7 @@ import { Orchestrator }         from '../core/Orchestrator.js';
 import { t, langSelectorHtml }  from '../i18n.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 import { loadManifesto, saveManifesto, restoreDefaultManifesto, isDefaultManifesto, SOS_MANIFESTO } from '../core/sosManifesto.js';
+import { SOS_PLANS, VALID_PLAN_IDS, DEFAULT_TOPUP_AMOUNTS, validatePublishableKey, detectKeyType, validatePaymentLinkUrl, loadStripeConfig, saveStripeConfig, loadCurrentPlan, setCurrentPlan, openTopupPaymentLink } from '../core/stripeService.js';
 
 function escapeForTextarea(s) {
     if (typeof s !== 'string') return '';
@@ -16,6 +17,9 @@ export default class SettingsView {
 
     async getHtml() {
         await store.init();
+        await KB.init();
+        const stripeCfg  = await loadStripeConfig(KB);
+        const currentPlan = await loadCurrentPlan(KB) || { planId: 'free', walletBalanceEur: 0 };
         const provider = await Orchestrator.getDefaultProvider();
         const keyAnt   = await Orchestrator.getApiKey('anthropic') || '';
         const keyOai   = await Orchestrator.getApiKey('openai')    || '';
@@ -186,6 +190,52 @@ export default class SettingsView {
                     <button id="svManifestoRestore" class="sv-btn-test">↺ Restaurar default</button>
                 </div>
                 <div id="svManifestoStatus" class="sv-test-result"></div>
+            </div>
+
+            <div class="sv-card" style="border-top:3px solid #635bff;">
+                <h3 style="color:#635bff;margin-top:0;">💳 ALPHA-STRIPE-001 · Saldo prepagat + plans</h3>
+                <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.6;margin-top:0;">
+                    Pla actual · <strong style="color:#635bff;">${escapeForTextarea(currentPlan.planId)}</strong>
+                    · saldo wallet <strong>${currentPlan.walletBalanceEur.toFixed(2)} €</strong>.
+                    SOS és local-first sense backend propi · per al cobrament usem
+                    <strong>Stripe Payment Links</strong> (URLs creades manualment al
+                    Stripe Dashboard) · zero claus secret/restricted al codi.
+                </p>
+
+                <div style="background:rgba(255,82,82,0.08);border:1px solid rgba(255,82,82,0.3);border-radius:6px;padding:10px 12px;margin:14px 0;font-size:var(--text-xs);color:#fca5a5;">
+                    ⚠️ <strong>SEGURETAT</strong> · MAI posis aquí <code>sk_test_</code>,
+                    <code>sk_live_</code>, <code>rk_test_</code> o <code>rk_live_</code>
+                    · només la clau pública (<code>pk_test_</code> / <code>pk_live_</code>)
+                    pot anar al frontend. Si has compartit una clau secret/restricted
+                    accidentalment · revoca-la a
+                    <a href="https://dashboard.stripe.com/test/apikeys" target="_blank" rel="noopener noreferrer" style="color:#fca5a5;">dashboard.stripe.com/test/apikeys</a>.
+                </div>
+
+                <label class="sv-label">Plan SOS V11</label>
+                <select id="svPlan" class="sv-input sv-select" style="margin-bottom:14px;">
+                    ${VALID_PLAN_IDS.map(p => `<option value="${p}" ${p === currentPlan.planId ? 'selected' : ''}>${escapeForTextarea(SOS_PLANS[p].label)} ${SOS_PLANS[p].priceEurMonth !== null ? '· ' + SOS_PLANS[p].priceEurMonth + ' €/mes' : '· custom'}</option>`).join('')}
+                </select>
+
+                <label class="sv-label">Stripe Publishable Key (pk_test_ / pk_live_) · OPCIONAL</label>
+                <input type="text" id="svStripePk" class="sv-input" value="${escapeForTextarea(stripeCfg.publishableKey || '')}" placeholder="pk_test_... · NOMÉS pk_ accepted">
+                <div id="svStripePkStatus" class="sv-test-result"></div>
+
+                <label class="sv-label" style="margin-top:14px;">Payment Links (Stripe Dashboard → Payment Links → crea un per cada amount)</label>
+                ${DEFAULT_TOPUP_AMOUNTS.map(amount => {
+                    const cur = stripeCfg.paymentLinks?.[String(amount)] || '';
+                    return `
+                        <div class="sv-key-row" style="margin-bottom:8px;">
+                            <input type="url" id="svStripeLink${amount}" class="sv-input" value="${escapeForTextarea(cur)}" placeholder="${amount}€ · https://buy.stripe.com/test_...">
+                            <button class="sv-btn-test" data-topup="${amount}" style="white-space:nowrap;${cur ? '' : 'opacity:0.5;'}">↗ Recarregar ${amount}€</button>
+                        </div>
+                    `;
+                }).join('')}
+
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;">
+                    <button id="svStripeSave" class="sv-btn">💾 Guardar config Stripe</button>
+                    <button id="svPlanSave" class="sv-btn" style="background:linear-gradient(135deg,#635bff,#0a2540);">💳 Aplicar pla</button>
+                </div>
+                <div id="svStripeStatus" class="sv-status">✅ Saved</div>
             </div>
 
             <div class="sv-card" style="border-top:3px solid var(--accent-red);">
@@ -376,6 +426,85 @@ export default class SettingsView {
                 btn.textContent = '↺ Restaurar default';
                 btn.disabled = false;
             }
+        });
+
+        // ALPHA-STRIPE-001 sprint A · validació clau pública en temps real
+        const pkInput = document.getElementById('svStripePk');
+        const pkStatus = document.getElementById('svStripePkStatus');
+        const updatePkStatus = () => {
+            if (!pkInput || !pkStatus) return;
+            const v = pkInput.value.trim();
+            if (!v) { pkStatus.textContent = ''; return; }
+            const t = detectKeyType(v);
+            if (t === 'publishable') {
+                pkStatus.style.color = 'var(--accent-green)';
+                pkStatus.textContent = '✓ Publishable Key vàlida (pk_)';
+            } else if (t === 'secret' || t === 'restricted') {
+                pkStatus.style.color = 'var(--accent-red)';
+                pkStatus.textContent = '⚠️ ' + t.toUpperCase() + ' KEY · NO USIS AQUÍ · revoca-la i fes "Roll key" al dashboard Stripe';
+            } else {
+                pkStatus.style.color = '#fbbf24';
+                pkStatus.textContent = 'format invàlid · ha de començar amb pk_test_ o pk_live_';
+            }
+        };
+        pkInput?.addEventListener('input', updatePkStatus);
+        updatePkStatus();
+
+        // Save config Stripe
+        document.getElementById('svStripeSave')?.addEventListener('click', async () => {
+            const pk = pkInput?.value?.trim() || '';
+            const links = {};
+            for (const amount of DEFAULT_TOPUP_AMOUNTS) {
+                const v = document.getElementById('svStripeLink' + amount)?.value?.trim() || '';
+                if (v) links[String(amount)] = v;
+            }
+            // Validate before save
+            if (pk && !validatePublishableKey(pk)) {
+                alert('Clau Stripe inválida · ha de ser pk_test_/pk_live_ (NO sk_/rk_)');
+                return;
+            }
+            for (const [amount, url] of Object.entries(links)) {
+                if (!validatePaymentLinkUrl(url)) {
+                    alert('Payment Link invàlid per ' + amount + '€ · ha de ser https://buy.stripe.com/...');
+                    return;
+                }
+            }
+            try {
+                await saveStripeConfig(KB, { publishableKey: pk || null, paymentLinks: links });
+                const status = document.getElementById('svStripeStatus');
+                if (status) {
+                    status.style.display = 'block';
+                    status.textContent = '✅ Config Stripe guardada · ' + Object.keys(links).length + ' Payment Links · ' + (pk ? 'pk OK' : 'pk buit');
+                    setTimeout(() => { if (status) status.style.display = 'none'; }, 2200);
+                }
+            } catch (err) {
+                alert('Error guardant config Stripe: ' + (err?.message || err));
+            }
+        });
+
+        // Apply plan
+        document.getElementById('svPlanSave')?.addEventListener('click', async () => {
+            const planId = document.getElementById('svPlan')?.value;
+            if (!planId) return;
+            try {
+                await setCurrentPlan(KB, { planId });
+                if (window.navigateTo) window.navigateTo('/settings');
+            } catch (err) {
+                alert('Error aplicant pla: ' + (err?.message || err));
+            }
+        });
+
+        // Topup buttons (Payment Link · obre nova tab)
+        document.querySelectorAll('[data-topup]').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const amount = parseInt(btn.getAttribute('data-topup'), 10);
+                try {
+                    await openTopupPaymentLink({ kb: KB, amountEur: amount });
+                } catch (err) {
+                    alert(err?.message || 'No hi ha Payment Link configurat per a ' + amount + '€ · pega la URL del Stripe Dashboard al input i guarda primer.');
+                }
+            });
         });
 
         document.getElementById('svPurge')?.addEventListener('click', () => {
