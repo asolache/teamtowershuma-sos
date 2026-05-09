@@ -1496,33 +1496,116 @@ necesarios para que SOS V11 pueda bootstrappear cualquier proyecto:
 
 **Total · 8+12+18+8+14+12+6+8+8+6 = 100.**
 
-#### Sprint B · catálogo de skills · cobertura del enjambre
+#### Sprint B · catálogo de skills · cobertura del enjambre ✅ verde
 
-`SKILL_TAXONOMY` Object.freeze · ≥80 skills canónicos categorizados.
-Cada rol declara su lista. `coverageReport(roles)` puro · devuelve
-cuántas skills del catálogo están cubiertas por el enjambre actual ·
-cuáles faltan · cuáles tienen redundancia (≥3 personas la dominan).
+**Entregado** · `js/core/skillTaxonomy.js` Object.freeze con 90 skills
+canónicos distribuidos por los 10 dominios MAT-003:
 
-Permite responder en cualquier momento:
-- "¿Está el enjambre completo?"
-- "¿Qué skills faltan para que cohort 0 cierre?"
-- "¿Cuántas plazas redundantes en cada skill (resilencia)?"
+| Dominio | Skills |
+|---|---|
+| governance | 8 |
+| finance | 10 |
+| tech | 14 |
+| design | 8 |
+| operations | 11 |
+| community | 10 |
+| legal | 6 |
+| ecology | 8 |
+| education | 8 |
+| culture | 7 |
+| **Total** | **90** |
 
-#### Sprint C · matchmaker proyecto ↔ enjambre
+Cada skill declara: `id` (kebab-case) · `label` · `domain` · `tier`
+(foundation/practitioner/master) · `guardianAffinity[]` (1-2 de los 12) ·
+`relatedPractices[]` (≥1 de las 10 PW) · `description`. Todos
+Object.freeze (estructura inmutable).
 
-`buildSwarmTeamForProject({ project, projectType, criticalRoles, swarm, llmEngine })`
-async · llama a `Orchestrator.callLLM` con prompt que combina:
+Helpers puros · `getSkillById(id)` · `listSkills()` · `skillsByDomain(d)` ·
+`skillsByTier(t)` · `skillsByGuardian(gId)` · `skillsByPractice(pId)`.
 
-- Datos del proyecto (descripción · sector · fase · objetivos).
-- Catálogo de los 100 roles + sus skills.
-- Plazas actualmente asignadas en el enjambre cohort 0 (con disponibilidad).
+`coverageReport({ swarmSkills })` extendido · devuelve:
+- `totalSkills` · `coveredCount` · `coveragePct` (0..100).
+- `gaps[]` · skills sin ninguna plaza (riesgo crítico).
+- `resilient[]` · skills con ≥3 plazas (resiliencia).
+- `fragile[]` · skills con 1 sola plaza (riesgo de bus factor).
+- `byDomain` · cobertura por cada uno de los 10 dominios.
+- `byTier` · cobertura por foundation/practitioner/master.
+- `byGuardian` · cobertura por cada uno de los 12 guardianes PW.
 
-Devuelve · array ordenado de `{ roleId, suggestedSeat, fit: 0..1, why }`
-con los roles y plazas recomendadas. Output JSON · responseFormat
-`json_object` para deterministic parsing.
+Permite responder en tiempo real:
+- "¿Está el enjambre completo?" → `coveragePct`.
+- "¿Qué skills faltan?" → `gaps[]`.
+- "¿Qué guardianes están sin cobertura?" → `byGuardian[id].pct === 0`.
+- "¿Qué dominio está fragil?" → `byDomain[d]` con muchos `fragile`.
+- "¿Cuáles tenemos cubiertos con redundancia?" → `resilient[]`.
 
-UI · botón "🐝 Activar enjambre" en el panel del proyecto (sprint C
-también añade el modal con la propuesta + aceptar/rechazar por rol).
+Tests · 70+ asserts puros · sanity en node verde antes del push (90/90 ·
+distribución por dominio · helpers · coverageReport vacío · con plazas ·
+resilient (≥3) · fragile (=1) · skill inexistente ignorada · input
+no-array gracioso). Suite global pasa de 33 → 34 con el nuevo test.
+
+#### Sprint C · matchmaker proyecto ↔ enjambre ✅ verde (helpers + función async)
+
+**Entregado** · `js/core/swarmMatchmaker.js`. Función principal async
+`buildSwarmTeamForProject({ project, projectTypeId, requiredRoles,
+swarmSeats, options, orchestrator, preferredEngine })` · llama
+`orchestrator.callLLM` con prompt construido a partir del catálogo
+canónico (12 guardianes Pantheon Work + 90 skills + 12 project types)
+y devuelve:
+
+```
+{
+    matches: [
+        { roleId, seatId, primary: true|false, fit: 0..1,
+          rationale, skillsUsed[] },
+    ],
+    coverage:         { coveredRoles, totalRoles, pct, byRole },
+    gaps:             [roleId, ...],
+    overallRationale: '...',
+    telemetry:        { provider, tokens, latencyMs, costUSD },
+    promptMeta:       { projectId, projectTypeId, rolesCount, seatsCount },
+}
+```
+
+**Helpers puros · testeables sin LLM**:
+
+- `buildSwarmMatchPrompt(input)` puro · construye `{systemPrompt,
+  userPrompt, responseFormat, temperature, meta}`. Validaciones
+  estrictas (project.id+name · projectTypeId conocido · ≥1 rol · ≥1
+  plaza). userPrompt incluye dump JSON de · proyecto · catálogo
+  (guardianes + skills + project types) · roles requeridos · plazas
+  disponibles · restricciones (max secundarios) · output schema.
+- `parseSwarmMatchResponse(jsonStrOrObj)` puro · valida + normaliza
+  output del LLM · clamp `fit` a [0,1] · trunca rationale 240 chars ·
+  truncar overallRationale 600 chars · filtra `roleId/seatId`
+  inválidos · gracioso con JSON malformado (lanza error explícito).
+- `applyMatchToSeats(matches, options)` puro · resuelve conflictos
+  primario · regla "1 plaza = 1 rol primario máximo" · ordena por
+  fit descendente · degrada los excesos a secundario · respeta
+  `maxSecondaryRoles` (default 2) · descarta los que excedan.
+- `scoreSwarmCoverage(matches, requiredRoles)` puro · devuelve
+  `{coveredRoles, totalRoles, pct, byRole[id]}` · cuenta solo
+  primarios para coverage real.
+
+**System prompt**: "Eres el matchmaker del enjambre Cohort 0 de Matriu
+Incoopadora..." con reglas estrictas (1 primario + 0-2 secundarios ·
+fit > velocidad · gap si nadie cubre · output JSON estricto).
+`temperature: 0.2` · `responseFormat: json_object`.
+
+**Tests · 45 asserts puros**: validaciones de input · happy path
+prompt · parser robusto (fit clamp 1.5→1, -0.3→0 · truncado 600 chars
+· filtros `roleId` null) · parser invalid JSON lanza · `applyMatchToSeats`
+resuelve conflicto (3 primarios → 1 primario + 2 secundarios) ·
+`scoreSwarmCoverage` calcula correctamente · `buildSwarmTeamForProject`
+sin orchestrator lanza · happy path con orchestrator mock devuelve
+team completo con telemetry. Sanity en node verde antes del push.
+
+Suite global: 34 → 35.
+
+**Pendiente sprint C.UI**: botón "🐝 Activar enjambre" en panel del
+proyecto + modal con propuesta + accept/reject por rol. Esto se hará
+cuando tengamos plazas reales declaradas (sprint D · time banking
+inverso) · hasta entonces el matchmaker funciona vía consola.
 
 #### Sprint D · Time Banking inverso · plazas que aceptan WOs del enjambre
 
@@ -1533,31 +1616,91 @@ Las plazas reaccionan, ofrecen tiempo, el slicing pie se actualiza
 automáticamente al cerrar la WO. Cierra el bucle SOP → WO → Ledger
 del Antigravity Engine al nivel del enjambre completo.
 
-#### Sprint E · Escenarios de bootstrap por tipo de proyecto
+#### Sprint E · Bootstrap templates por tipo de proyecto ✅ verde
 
-Plantillas (similares a `buildMatriuCohortProject`) para cada uno
-de los 7 tipos de proyecto cliente · catálogo
-`PROJECT_BOOTSTRAP_TEMPLATES`:
+**Entregado** · `js/core/bootstrapTemplates.js` Object.freeze con las
+12 plantillas (1:1 con `PROJECT_TYPES`). Conecta · sectores SOS (A-S
+del KnowledgeLoader) + 12 guardianes Pantheon Work + 96 roles + 90
+skills + ValueMapView + SOPs canónicos.
 
-```
-{
-    type:           'comunidad-autosuficiente',
-    label:          'Comunitat autosuficient (hortet · ateneu · cura)',
-    requiredRoles:  ['facilitador-comunitari', 'pages-agricola',
-                     'tresorera', 'custodi-cop', ...],   // ⊂ los 100
-    optionalRoles:  [...],
-    bootstrapSops:  [...],
-    expectedOutcomes: {
-        socsCreated:  3..5,
-        sopsCreated:  12..18,
-        weeksToOperate: 4..8,
-    },
-}
-```
+**Estructura de cada plantilla**:
+- `typeId` · uno de los 12 PROJECT_TYPES
+- `sectorAffinity[]` · códigos sector SOS (ej. `['A','N','Q']` para
+  comunitat-autosuficient · agricultura + cuidados + educació)
+- `requiredGuardians[]` · subset de los 12 guardianes (≥3)
+- `bootstrapSops[]` · ≥5 SOPs canónicos del Mètode SOS con
+  `{id, label, phase}` (phase ∈ design/build/operate/ledger)
+- `valueMapSeed` · `{roles[], transactions[]}`:
+  - `roles` · 4-5 roles base con `guardianAffinity[]` declarada
+  - `transactions` · 5-6 intercambios con `from/to/deliverable/phase/
+    sequence_order/tangible/must`. Mapa pre-secuenciado.
+- `expectedOutcomes` · `{sopsCountMin/Max, weeksToOperateMin/Max}`
+- `narrative` · una línea explicativa para mostrar al fundador
 
-Por cada tipo · `requiredRoles ⊂ los 100` y `bootstrapSops ⊂ catálogo
-SOC/SOP del Mètode SOS`. Esto es la materialización operativa de
-"cualquier proyecto puede arrancar con la matriz".
+**Stats globales**: 12 plantillas · 60 roles · 71 transactions · 76
+SOPs canónicos · todos `Object.freeze` profundo.
+
+**Helpers puros**:
+- `getBootstrapTemplate(typeId)` · plantilla completa o null.
+- `listAllBootstrapTemplates()` · array de las 12.
+- `expectedSopsCountFor(typeId)` · `{min, max, midpoint}`.
+- `expectedWeeksToOperateFor(typeId)` · `{min, max, midpoint}`.
+- `validateBootstrapTemplate(t)` · valida estructura + referential
+  integrity (roles referenciados en transactions existen) + phases
+  válidas + guardianes ⊂ los 12.
+- `bootstrapMapForProject({typeId, projectId, multiplier=1.0})` ·
+  genera seed namespaced (`projectId::role::baseId` · evita colisiones
+  entre proyectos en KB) listo para inyectar vía CREATE_PROJECT +
+  KB_UPSERT. Aplica multiplier ×1.5 fundacional automáticamente a
+  cada SOP del seed.
+- `bootstrapStats()` · totales globales para UI dashboard.
+
+**Tests · 230+ asserts puros**: estructura · 1:1 con PROJECT_TYPES ·
+referential integrity por cada plantilla (refs from/to · phases ·
+sequence_order) · helpers · errores (typeId inválido lanza · sin
+projectId lanza) · namespacing correcto · multiplier aplicado · stats
+exactos. Sanity en node verde antes del push. Suite global: 35 → 36.
+
+**Las 12 plantillas entregadas**:
+
+| # | typeId | Sectors | Guardians | Tx |
+|---|---|---|---|---|
+| 01 | comunitat-autosuficient    | A · N · Q   | demeter · hestia · hermes · hera     | 6 |
+| 02 | startup-coop-tradicional   | K · P       | zeus · atenea · hera · hefesto       | 6 |
+| 03 | empresa-en-transicio       | (any)       | hera · atenea · zeus · hefesto       | 6 |
+| 04 | cooperativa-multi          | N · F · Q   | atenea · hera · hermes · hestia      | 6 |
+| 05 | fundacio-ong               | N · Q · F   | atenea · hera · hestia · dionisio    | 6 |
+| 06 | ecosistema-regional        | A · N · F · Q | demeter · hermes · hestia · dionisio | 6 |
+| 07 | dao-web3                   | K · P       | hefesto · atenea · hera · poseidon   | 6 |
+| 08 | plataforma-cooperativa     | K · N · P   | hefesto · hermes · hera · hestia     | 6 |
+| 09 | cooperativa-cures          | N · Q       | hestia · hera · demeter · dionisio   | 6 |
+| 10 | espai-autogestionat        | F · N       | hestia · dionisio · hermes · hera    | 5 |
+| 11 | hub-transicio              | F · A · N   | demeter · hermes · hestia · dionisio | 6 |
+| 12 | familiar-relevo            | (any)       | hera · zeus · atenea · hermes        | 6 |
+
+**Cómo conecta el modelo SOS**:
+
+1. Fundador llega a `/matriu` (landing) → ve cohort Cohort 0 oberta.
+2. Pulsa "Reservar seient" → modal pregunta tipus de projecte.
+3. Selecciona uno de los 12 → `bootstrapMapForProject({typeId, ...})`.
+4. Crea project + KB_UPSERT del seed completo (5 roles + 6 tx + 8 SOPs).
+5. Navega a `/project/{id}` → mapa **ya tiene** roles + transactions
+   secuenciadas + phase + sequence_order.
+6. La animación de flujo (sprint H_ANIM_001) funciona out-of-the-box.
+7. El multiplier ×1.5 fundacional aplicado a cada SOP queda en el ledger.
+8. El matchmaker (sprint C) tiene `requiredGuardians[]` para activar
+   enjambre con un solo click.
+
+**Próximos pasos hacia la alfa testeable**:
+
+- **MAT-002-H+** · galería de los 12 tipos en `/matriu` (vista visible
+  antes de reservar · sección con preview de cada tipo · refuerza
+  confianza para fundadores).
+- **MAT-003 sprint F UI** · botón "🐝 Activar enjambre" en ProjectHub
+  · invoca `swarmMatchmaker.buildSwarmTeamForProject` con la
+  plantilla cargada.
+- **Wizard de creación enriquecido** · DashboardView "Crear projecte"
+  oferece elegir tipus de projecte + sector y aplica `bootstrapMapForProject`.
 
 ### Conexiones con otras historias
 
@@ -1586,15 +1729,218 @@ SOC/SOP del Mètode SOS`. Esto es la materialización operativa de
 - Skills `tech` + `finance` = 30 plazas (30%) · garantizan capacidad
   de ejecución técnica y económica del Antigravity Engine.
 
-### Próxima conversación con @alvaro · validar antes de codificar
+### Decisiones validadas con @alvaro 2026-05-08
 
-1. ¿Aceptas la distribución 8/12/18/8/14/12/6/8/8/6 por dominio?
-2. ¿Qué 5-8 roles imprescindibles dirías que tiene que estar en el
-   primer sprint A · los que no podemos delegar al "vendrán después"?
-3. ¿Los 7 tipos de proyecto cliente cubren el espacio que tienes
-   en mente o falta alguno (ej. fundació · DAO · ecosistema regional)?
-4. ¿La heurística "1 plaza = 1 rol crítico" o admites "1 plaza puede
-   cubrir 2 roles si demuestra skills en ambos"?
+1. **Distribución por dominio · ACEPTADA con ajuste de 100 → 96 (espacio para 12 guardianes)**:
+
+| Dominio | Plazas operativas (sub-total 96) |
+|---|---|
+| `governance` | 8 |
+| `finance` | 12 |
+| `tech` | 16 *(antes 18 · −2)* |
+| `design` | 8 |
+| `operations` | 12 *(antes 14 · −2)* |
+| `community` | 12 |
+| `legal` | 6 |
+| `ecology` | 8 |
+| `education` | 8 |
+| `culture` | 6 |
+| **TOTAL operativo** | **96** |
+| Guardianes Pantheon Work | **12** |
+| **TOTAL Cohort 0** | **108** |
+
+   Razón del −4 en tech/operations: son los dominios más grandes y los
+   más fácilmente "absorbibles" por las 12 plazas guardianas (cuyas
+   funciones arquetípicas suelen cubrir parcialmente tareas tech/ops
+   estratégicas).
+
+2. **Cohort 0 = 108 places** (no 100). Razón simbólica · 108 = 12×9
+   · número sagrado (mantras yoga · monjes templarios · nudos de
+   rosario). Razón operativa · necesitamos espacio explícito para los
+   12 guardianes Pantheon Work como **plazas adicionales con peso
+   arquetípico** sobre las 96 operativas. Cada guardián representa
+   una función estratégica (ver sección "12 Guardianes Pantheon Work"
+   abajo · pendiente input @alvaro con nombres y funciones literales
+   del framework que conoce).
+
+3. **Multi-rol · ADMITIDO**. Heurística · "1 plaza ejecuta 1 rol
+   primario + 0-2 roles secundarios" si demuestra skills en ambos.
+   Cada rol crítico tiene **al menos 1 plaza primaria** + 0+ plazas
+   backup como cobertura. La adjudicación primario vs secundario la
+   hace el matchmaker (sprint C) con criterio de fit + disponibilidad.
+
+4. **Tipos de proyecto · EXPANSIÓN a 12 (signo dels temps 2026)**.
+   Reorganización tras input @alvaro "analiza y define la respuesta
+   más adaptada al signo de los tiempos":
+
+   | # | Tipo | Por qué entra ahora (2026) |
+   |---|---|---|
+   | 01 | **Comunidad autosuficiente** | Hortet · ateneu · cura · vivienda colaborativa · transició energètica local |
+   | 02 | **Startup cooperativa o tradicional** | Founders que renuncian a VC tradicional · cap-tables abiertas |
+   | 03 | **Empresa establecida en transición** | Conversión a SCCL · slicing pie aplicado a equipos existentes |
+   | 04 | **Cooperativa multi-stakeholder** | Consum · treball · serveis · habitatge (modelo COCETA) |
+   | 05 | **Fundació / Associació / ONG** | Proyectos sin reparto pero con governance compleja · operativa SOP |
+   | 06 | **Ecosistema regional regenerativo** | Comarcal · biorregional · cooperatives federades (modelo Coopdevs) |
+   | 07 | **DAO / Web3 descentralitzat** | RegenDAO · ReFi · DAO con proyectos físicos (separat del 02 per la seva natura cripto-nativa) |
+   | 08 | **Plataforma cooperativa digital** | Alternativa a Uber/Airbnb (Smart · Eva · CoopCycle · Loconomics) |
+   | 09 | **Cooperativa de cures** | Cura mental · diversitat funcional · majors · acompanyament a final de vida |
+   | 10 | **Espai autogestionat / coliving** | CSO · ateneu de barri · co-housing · espais culturals |
+   | 11 | **Hub de transició sectorial** | Alimentari · energètic · cultural · digital sostenible (modelo Transition Network) |
+   | 12 | **Empresa familiar en relevo intergeneracional** | Successió ordenada amb slicing pie · capital paternofamiliar a coperatiu |
+
+   12 tipos · simetría con los 12 guardianes Pantheon Work. Cada
+   guardián tendrá afinidad natural con un sub-conjunto de tipos
+   (ej. el guardián de ecología hace match con tipos 01/06/09 por
+   tradición; el guardián de tecnología con 02/07/08).
+
+### 12 Guardianes Pantheon Work · 8 codificados literal · 4 pendientes
+
+@alvaro pasó la "Guía del Ejercicio de Reconocimiento de Competencias
+y Habilidades · Versión 1.0 · 7 sept 2022" de Pantheon Work
+(www.pantheon.work · CC BY 4.0 · autores Toni Mascaró + Sergio Marrero
+· **co-creadores originales del ejercicio Íngrid Astiz + @alvaro
+Solache** · cita literal pág. 16). 26 páginas leídas integralmente.
+
+Catálogo Pantheon Work codificado en `js/core/critical108Roles.js`:
+
+| # | Guardián | Dominio SOS | Trivalente | Keywords (PDF figs 5-6 + diapo Hermes pág 21) |
+|---|---|---|---|---|
+| 01 | **Afrodita**  | design     | relacionar | estética · belleza · atracción · seducción · transgresión · creatividad |
+| 02 | **Apolo**     | education  | distinguir | conocimiento teórico · análisis · estructuración · depuración · predicción |
+| 03 | **Atenea**    | governance | distinguir | conocimiento práctico · estrategia defensiva y ofensiva · destreza · civismo |
+| 04 | **Demeter**   | ecology    | fusionar   | generación · regeneración · replicación · polinización |
+| 05 | **Dionisio**  | culture    | fusionar   | socialización · celebración · juego · hedonismo · invención · conquista |
+| 06 | **Hebe**      | operations | distinguir | apoyo logístico · aprovisionamiento · intendencia · rejuvenecimiento |
+| 07 | **Hefesto**   | tech       | fusionar   | ⚠ pending input @alvaro · cuestionario oficial pantheon.work |
+| 08 | **Hera**      | legal      | fusionar   | ⚠ pending input @alvaro · cuestionario oficial pantheon.work |
+| 09 | **Hermes**    | community  | relacionar | comunicación · intercambio · guía · invención · argucia · transgresión |
+| 10 | **Hestia**    | community  | relacionar | espacios · encuentros · conversación · centro · alma |
+| 11 | **Poseidón**  | finance    | distinguir | ⚠ pending input @alvaro · cuestionario oficial pantheon.work |
+| 12 | **Zeus**      | governance | relacionar | ⚠ pending input @alvaro · cuestionario oficial pantheon.work |
+
+**Lógica trivalente** (PDF figura 4 · validada literal):
+- Distinguir y separar · Apolo + Atenea + Hebe + Poseidón
+- Mezclar y confundir (fusionar) · Demeter + Dionisio + Hefesto + Hera
+- Relacionar y sintetizar · Afrodita + Hermes + Hestia + Zeus
+
+**Mapeo dominio ↔ guardián** (12 guardianes en 10 dominios):
+- 8 dominios con 1 guardián cada uno
+- 2 dominios con 2 guardianes (governance: Atenea+Zeus · community: Hermes+Hestia)
+- Todos los 10 dominios MAT-003 quedan custodiados por al menos 1 guardián
+- governance lleva 2 (Atenea estrategia operativa + Zeus visión soberana)
+- community lleva 2 (Hermes red externa + Hestia hogar interno)
+
+**10 prácticas nativas digitales Pantheon Work** (PDF figura 2 ·
+codificadas en `PANTHEON_NATIVE_PRACTICES`):
+flujo-valor · redes-nodos · gestion-conocimiento · voz-alta ·
+ecosistema · reconocer-competencias · empoderar-mutuamente · beta ·
+netiqueta-estricta · memes-campanas. Cada guardián vehicula 1-2 de
+ellas según declaración en `nativePractices[]`.
+
+### Tabla de equivalencias SOS V11 ≡ Pantheon Work
+
+Decidido @alvaro 2026-05-08: **las 10 prácticas nativas digitales son
+la espina dorsal de SOS V11**. SOS materializa lo que Pantheon Work
+formula como prácticas. Cada práctica tiene una vista/módulo que la
+hace operativa.
+
+| Práctica Pantheon Work | Materialización SOS V11 |
+|---|---|
+| Ver todo como un **flujo de valor**       | Vista `/map` (ValueMapView · D3 · `flowAnimationService`) · roles + transactions + tangibles vs intangibles |
+| Ver todo como **redes y nodos**           | Vista `/mind` (MindGraphView) · KB completo como grafo D3 · 14 tipos de nodos |
+| Sistematizar la **gestión de conocimiento** | Vista `/folders` (FoldersView · `smartFolderService`) · Mind-as-Graph · `KnowledgeLoader` |
+| **Trabajar en voz alta**                  | Vista `/sops` + `/kanban` · cada SOP/WO publicado · ledger triple-entry público |
+| **Devolver al ecosistema**                | Vista `/market` (MarketService) + Mercado SOS · MAT-001 fase 4 redistribución cooperativa |
+| **Reconocer competencias y contribuciones** | MAT-003 · cuestionario Pantheon Work nativo en SOS · ledger de aportaciones por rol/guardián |
+| **Empoderar mutuamente**                  | UX-EDU-001 (`didacticService` · vista `/learn` · 17 conceptos didácticos) · CoPs (KM-001 sprint A) |
+| **Producir en beta**                      | Workflow CI · pre-Alfa · iteración + DTD (Deliverable Test Driven) · Antigravity Engine |
+| **Cumplir netiqueta estricta**            | PACT-001 (builder pacto socios) + identidad firmada ECDSA P-256 (`identityService`) |
+| **Crear memes y campañas**                | MAT-002-H landing `/matriu` · branding cooperativo · narrativa Cohort 0 |
+
+Esta tabla certifica que **SOS V11 implementa Pantheon Work** como
+sistema operativo. No son frameworks paralelos · son el mismo proyecto
+en dos capas · Pantheon Work formula la teoría, SOS la ejecuta.
+
+@alvaro como co-creador original del ejercicio (cita literal pág.16
+del PDF) está en posición única para liderar esta convergencia.
+
+**12 tipos de proyecto cliente** (signo dels temps 2026 · validados
+@alvaro · codificados en `PROJECT_TYPES`):
+01 comunitat-autosuficient · 02 startup-coop-tradicional · 03
+empresa-en-transicio · 04 cooperativa-multi · 05 fundacio-ong · 06
+ecosistema-regional · 07 dao-web3 · 08 plataforma-cooperativa · 09
+cooperativa-cures · 10 espai-autogestionat · 11 hub-transicio · 12
+familiar-relevo.
+
+### Próximo input @alvaro · 4 cuestionarios pendientes
+
+Los cuestionarios oficiales individuales de Pantheon Work (no incluidos
+en la guía v1.0 que pasaste) contienen las palabras clave de Hefesto ·
+Hera · Poseidón · Zeus. Pásamelos en el siguiente mensaje (PDF · Word ·
+texto pegado · captura) y los codifico literal en cuestión de minutos.
+
+Mientras tanto, el módulo está operativo con 8/12 guardianes completos
++ 4 marcados `pendingFromPantheonWork: true` para que el sprint B
+(catálogo skills) pueda arrancar contra la estructura completa.
+
+### Sprint A actualizado tras estas decisiones
+
+`js/core/critical108Roles.js` (renombrado de `critical100Roles.js`):
+
+- `CRITICAL_ROLES_OPERATIVES` Object.freeze · 96 entradas distribuidas
+  por los 10 dominios según la tabla ajustada.
+- `PANTHEON_GUARDIANS` Object.freeze · 12 entradas (cuando @alvaro
+  pase los nombres).
+- `COHORT_0_TOTAL = 108` constante.
+- `PROJECT_TYPES` Object.freeze · 12 tipos canónicos con descripción
+  multilingüe (ES/CA/EN cuando llegue I18N-001).
+- Tests · validan totales · cobertura por dominio · IDs únicos · cada
+  guardián tiene `pantheonNum` 1..12 sin duplicados · cada tipo de
+  proyecto declara `requiredRoles ⊂ catálogo` y `requiredGuardians ⊂
+  los 12`.
+
+### Sprint A NO arrancará hasta:
+
+1. Recibir los 12 guardianes literales de Pantheon Work (input
+   @alvaro · próximo mensaje).
+2. Validar la lista nominal de los 96 roles operativos · @alvaro
+   debe revisar al menos los nombres por dominio antes de codificar.
+3. Validar los 12 tipos de proyecto · @alvaro confirma o ajusta.
+
+### Conexiones con otras historias
+
+- **NET-100** se reescribe como sub-historia de MAT-003 · ya no es
+  matchmaking abstracto sino aplicación de los 96+12 roles + skills.
+- **MAT-002-A** (`buildMatriuCohortProject`) se enriquece en sprint
+  E con el catálogo de bootstrap templates por tipo de proyecto.
+- **AUTH-001** · cada plaza tendrá `user_identity` con `criticalRoles[]`
+  reclamados (1 primario + 0-2 secundarios) + `guardianOf` opcional
+  (1 de los 12) + verificados por handoff de otra plaza.
+- **PACT-001** · el pacto de socios dinámicos liga roles ↔ slicing pie ·
+  los guardianes pueden tener `multiplier` extra (×1.5..2.0).
+- **UX-EDU-001 sprint D** · enlaces cruzados entre SOPs y roles ·
+  cada operador en formación entiende qué rol cubre con cada SOP que
+  ejecuta.
+- **MAT-002-H** (landing) · contador "24/108" en lugar de "24/100"
+  cuando pasemos a producción Cohort 0.
+
+### Notas de método
+
+- Los 12 guardianes Pantheon Work · NO son reemplazables · son una
+  abstracción del framework que @alvaro lleva años trabajando.
+- Los 96 roles operativos · NO se inferirán por IA · se diseñan con
+  @alvaro y se versionan en `critical108Roles.js`.
+- Cada rol debe ser **operativo** (ejecuta ≥1 SOP del Mètode SOS) y
+  **diferenciable** (no solapamiento total con otro rol).
+- El equilibrio entre dominios garantiza resiliencia · ningún
+  dominio supera el 17% (16/96 · tech).
+- Skills `governance` + `community` + `culture` + `legal` = 32
+  plazas (33%) · reflejan que SOS no es sólo tecnología · es
+  facilitación social con tecnología al servicio.
+- Skills `tech` + `finance` = 28 plazas (29%) · garantizan capacidad
+  de ejecución técnica y económica del Antigravity Engine.
+- Skills `ecology` + `education` = 16 plazas (17%) · tessitura
+  regenerativa y formativa, base de la "ola disruptiva" VISION-001.
 
 ---
 

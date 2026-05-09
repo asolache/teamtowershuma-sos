@@ -2691,6 +2691,478 @@ async function testDidacticService() {
     assert(htmlMd.includes('sos-edu-size-md'),                            'render · size md class');
 }
 
+// ─── MAT-003 sprint A · critical108Roles + Pantheon Work ──────────
+async function testCritical108Roles() {
+    const mod = await import('../core/critical108Roles.js?v=' + Date.now());
+    const {
+        COHORT_0_TOTAL, OPERATIVE_SEATS, GUARDIAN_SEATS,
+        OPERATIVE_DOMAIN_DISTRIBUTION,
+        PANTHEON_TRIVALENT_LOGIC, PANTHEON_NATIVE_PRACTICES,
+        PANTHEON_GUARDIANS, PROJECT_TYPES,
+        getGuardianById, getGuardiansByDomain, getGuardiansByTrivalentLogic,
+        getProjectTypeById,
+        guardiansPendingKeywords, guardiansWithKeywords, coverageReport,
+    } = mod;
+
+    // Constantes Cohort 0
+    assert(COHORT_0_TOTAL === 108,                                     'COHORT_0_TOTAL = 108');
+    assert(OPERATIVE_SEATS === 96,                                     'OPERATIVE_SEATS = 96');
+    assert(GUARDIAN_SEATS === 12,                                      'GUARDIAN_SEATS = 12');
+    assert(OPERATIVE_SEATS + GUARDIAN_SEATS === COHORT_0_TOTAL,        '96 + 12 = 108');
+
+    // Distribución por dominio · suma 96
+    const sum = Object.values(OPERATIVE_DOMAIN_DISTRIBUTION).reduce((a, b) => a + b, 0);
+    assert(sum === 96,                                                 'distribución por dominio suma 96 · got=' + sum);
+    assert(OPERATIVE_DOMAIN_DISTRIBUTION.governance === 8,             'governance · 8');
+    assert(OPERATIVE_DOMAIN_DISTRIBUTION.finance === 12,               'finance · 12');
+    assert(OPERATIVE_DOMAIN_DISTRIBUTION.tech === 16,                  'tech · 16 (ajustado de 18)');
+    assert(OPERATIVE_DOMAIN_DISTRIBUTION.operations === 12,            'operations · 12 (ajustado de 14)');
+
+    // 10 prácticas nativas digitales
+    assert(Object.isFrozen(PANTHEON_NATIVE_PRACTICES),                 'PANTHEON_NATIVE_PRACTICES frozen');
+    assert(PANTHEON_NATIVE_PRACTICES.length === 10,                    '10 prácticas nativas digitales');
+    assert(PANTHEON_NATIVE_PRACTICES.find(p => p.id === 'flujo-valor'),       'práctica flujo-valor');
+    assert(PANTHEON_NATIVE_PRACTICES.find(p => p.id === 'reconocer-competencias'), 'práctica reconocer-competencias');
+
+    // Lógica trivalente
+    assert(Object.isFrozen(PANTHEON_TRIVALENT_LOGIC),                  'PANTHEON_TRIVALENT_LOGIC frozen');
+    ['distinguir', 'fusionar', 'relacionar'].forEach(k => {
+        assert(PANTHEON_TRIVALENT_LOGIC[k]?.id === k,                  'trivalente · ' + k);
+    });
+
+    // 12 Guardianes · estructura
+    assert(Object.isFrozen(PANTHEON_GUARDIANS),                        'PANTHEON_GUARDIANS frozen');
+    assert(PANTHEON_GUARDIANS.length === 12,                           '12 guardianes');
+    const ids = PANTHEON_GUARDIANS.map(g => g.id);
+    assert(new Set(ids).size === 12,                                   'IDs únicos');
+    const nums = PANTHEON_GUARDIANS.map(g => g.pantheonNum).sort((a, b) => a - b);
+    assert(JSON.stringify(nums) === JSON.stringify([1,2,3,4,5,6,7,8,9,10,11,12]), 'pantheonNum 1..12');
+
+    // 12 nombres canónicos · sin género asumido (cualquiera puede ser cualquier guardián)
+    ['afrodita', 'apolo', 'atenea', 'demeter', 'dionisio', 'hebe',
+     'hefesto', 'hera', 'hermes', 'hestia', 'poseidon', 'zeus'
+    ].forEach(id => {
+        assert(PANTHEON_GUARDIANS.find(g => g.id === id),              'guardián canónico ' + id);
+    });
+
+    // 12/12 con keywords (8 oficiales del PDF + 4 borradores interpretativos)
+    assert(guardiansWithKeywords().length === 12,                      '12 guardianes con keywords');
+    const { guardiansWithOfficialKeywords, guardiansWithDraftKeywords } = mod;
+    assert(guardiansWithOfficialKeywords().length === 8,               '8 guardianes con keywords oficiales (PDF)');
+    assert(guardiansWithDraftKeywords().length === 4,                  '4 guardianes con keywords __draft');
+    assert(guardiansPendingKeywords().length === 4,                    '4 guardianes pending cuestionario oficial');
+    const draftIds = guardiansWithDraftKeywords().map(g => g.id).sort();
+    assert(JSON.stringify(draftIds) === JSON.stringify(['hefesto','hera','poseidon','zeus']),
+                                                                       '__draft = hefesto/hera/poseidon/zeus');
+
+    // Keywords literales del PDF · spot-check
+    const afrodita = getGuardianById('afrodita');
+    assert(afrodita.keywords.includes('estética'),                     'Afrodita · estética');
+    assert(afrodita.keywords.includes('seducción'),                    'Afrodita · seducción');
+    const apolo = getGuardianById('apolo');
+    assert(apolo.keywords.includes('conocimiento teórico'),            'Apolo · conocimiento teórico');
+    assert(apolo.keywords.includes('predicción'),                      'Apolo · predicción');
+    const atenea = getGuardianById('atenea');
+    assert(atenea.keywords.includes('estrategia defensiva y ofensiva'), 'Atenea · estrategia');
+    assert(atenea.keywords.includes('civismo'),                        'Atenea · civismo');
+    const hestia = getGuardianById('hestia');
+    assert(hestia.keywords.includes('alma'),                           'Hestia · alma');
+    assert(hestia.keywords.includes('centro'),                         'Hestia · centro');
+    const hermes = getGuardianById('hermes');
+    assert(hermes.keywords.includes('argucia'),                        'Hermes · argucia');
+    assert(hermes.keywords.includes('intercambio'),                    'Hermes · intercambio');
+
+    // Lógica trivalente del PDF (figura 4)
+    const distLogic = getGuardiansByTrivalentLogic('distinguir').map(g => g.id).sort();
+    assert(JSON.stringify(distLogic) === JSON.stringify(['apolo','atenea','hebe','poseidon']),
+                                                                       'distinguir = apolo,atenea,hebe,poseidon (PDF fig.4)');
+    const fusLogic = getGuardiansByTrivalentLogic('fusionar').map(g => g.id).sort();
+    assert(JSON.stringify(fusLogic) === JSON.stringify(['demeter','dionisio','hefesto','hera']),
+                                                                       'fusionar = demeter,dionisio,hefesto,hera (PDF fig.4)');
+    const relLogic = getGuardiansByTrivalentLogic('relacionar').map(g => g.id).sort();
+    assert(JSON.stringify(relLogic) === JSON.stringify(['afrodita','hermes','hestia','zeus']),
+                                                                       'relacionar = afrodita,hermes,hestia,zeus (PDF fig.4)');
+
+    // Guardianes por dominio
+    assert(getGuardiansByDomain('governance').length === 2,            'governance · 2 guardianes (atenea + zeus)');
+    assert(getGuardiansByDomain('community').length === 2,             'community · 2 guardianes (hermes + hestia)');
+    assert(getGuardiansByDomain('finance').length === 1,               'finance · 1 guardián (poseidon)');
+    assert(getGuardiansByDomain('tech').length === 1,                  'tech · 1 guardián (hefesto)');
+    assert(getGuardiansByDomain('inexistente').length === 0,           'dominio inexistente · []');
+
+    // Cada guardián tiene domain en la lista canónica
+    const validDomains = Object.keys(OPERATIVE_DOMAIN_DISTRIBUTION);
+    PANTHEON_GUARDIANS.forEach(g => {
+        assert(validDomains.includes(g.domain),                        g.id + ' · domain canónico (' + g.domain + ')');
+    });
+
+    // 12 tipos de proyecto
+    assert(Object.isFrozen(PROJECT_TYPES),                             'PROJECT_TYPES frozen');
+    assert(PROJECT_TYPES.length === 12,                                '12 tipos de proyecto');
+    const projectIds = PROJECT_TYPES.map(t => t.id);
+    assert(new Set(projectIds).size === 12,                            'IDs únicos en PROJECT_TYPES');
+    assert(getProjectTypeById('comunitat-autosuficient'),              'comunitat-autosuficient encontrado');
+    assert(getProjectTypeById('dao-web3'),                             'dao-web3 encontrado');
+    assert(getProjectTypeById('cooperativa-cures'),                    'cooperativa-cures encontrado');
+    assert(getProjectTypeById('inexistente') === null,                 'tipo inexistente · null');
+
+    // Coverage report agregado
+    const rep = coverageReport();
+    assert(rep.cohort0Total === 108,                                   'report · cohort0Total 108');
+    assert(rep.operativeSeats === 96,                                  'report · operativeSeats 96');
+    assert(rep.guardianSeats === 12,                                   'report · guardianSeats 12');
+    assert(rep.operativeDomainSum === 96,                              'report · suma de dominios = 96');
+    assert(rep.guardiansPending.length === 4,                          'report · 4 pending');
+    assert(rep.guardiansReady.length === 8,                            'report · 8 ready');
+    assert(rep.projectTypes === 12,                                    'report · 12 project types');
+    assert(rep.domainCoverage.governance.guardians.length === 2,       'report · governance 2 guardianes');
+}
+
+// ─── MAT-003 sprint B · skillTaxonomy + coverageReport ────────────
+async function testSkillTaxonomy() {
+    const mod = await import('../core/skillTaxonomy.js?v=' + Date.now());
+    const {
+        SKILL_TAXONOMY, SKILL_TIERS,
+        getSkillById, listSkills, skillsByDomain, skillsByTier, skillsByGuardian, skillsByPractice,
+        coverageReport,
+    } = mod;
+
+    // Estructura
+    assert(Object.isFrozen(SKILL_TAXONOMY),                                'SKILL_TAXONOMY frozen');
+    assert(SKILL_TAXONOMY.length === 90,                                   '90 skills · ' + SKILL_TAXONOMY.length);
+    assert(Object.isFrozen(SKILL_TIERS) && SKILL_TIERS.length === 3,       'SKILL_TIERS · 3 tiers');
+
+    // Cada skill bien formado
+    SKILL_TAXONOMY.forEach(s => {
+        assert(typeof s.id === 'string' && /^[a-z][a-z0-9-]+$/.test(s.id),  s.id + ' · id kebab');
+        assert(typeof s.label === 'string' && s.label.length > 0,           s.id + ' · label');
+        assert(typeof s.domain === 'string',                                 s.id + ' · domain');
+        assert(SKILL_TIERS.includes(s.tier),                                 s.id + ' · tier válido');
+        assert(Array.isArray(s.guardianAffinity) && s.guardianAffinity.length >= 1, s.id + ' · ≥1 guardian');
+        assert(Array.isArray(s.relatedPractices) && s.relatedPractices.length >= 1, s.id + ' · ≥1 práctica');
+        assert(Object.isFrozen(s),                                            s.id + ' · frozen');
+    });
+
+    // IDs únicos
+    const ids = SKILL_TAXONOMY.map(s => s.id);
+    assert(new Set(ids).size === ids.length,                              'IDs únicos');
+
+    // Distribución por dominio
+    assert(skillsByDomain('governance').length === 8,                     'governance · 8');
+    assert(skillsByDomain('finance').length    === 10,                    'finance · 10');
+    assert(skillsByDomain('tech').length       === 14,                    'tech · 14');
+    assert(skillsByDomain('design').length     === 8,                     'design · 8');
+    assert(skillsByDomain('operations').length === 11,                    'operations · 11');
+    assert(skillsByDomain('community').length  === 10,                    'community · 10');
+    assert(skillsByDomain('legal').length      === 6,                     'legal · 6');
+    assert(skillsByDomain('ecology').length    === 8,                     'ecology · 8');
+    assert(skillsByDomain('education').length  === 8,                     'education · 8');
+    assert(skillsByDomain('culture').length    === 7,                     'culture · 7');
+
+    // Helpers
+    assert(getSkillById('vision-strategic')?.domain === 'governance',     'getSkillById · vision');
+    assert(getSkillById('no-existe') === null,                            'getSkillById · null miss');
+    assert(getSkillById(null) === null,                                    'getSkillById · null input');
+    assert(listSkills().length === 90,                                     'listSkills · 90');
+    assert(skillsByTier('master').length >= 10,                            'master tier ≥10');
+    assert(skillsByTier('foundation').length >= 5,                         'foundation tier ≥5');
+    assert(skillsByGuardian('zeus').length >= 1,                           'zeus skills ≥1');
+    assert(skillsByGuardian('demeter').length >= 1,                        'demeter skills ≥1');
+    assert(skillsByPractice('flujo-valor').length >= 1,                    'flujo-valor skills ≥1');
+    assert(skillsByPractice('memes-campanas').length >= 1,                 'memes-campanas skills ≥1');
+
+    // coverageReport · vacío
+    const r0 = coverageReport();
+    assert(r0.totalSkills === 90,                                          'report · totalSkills=90');
+    assert(r0.coveredCount === 0,                                           'report · 0 cubiertos vacío');
+    assert(r0.coveragePct === 0,                                            'report · pct=0 vacío');
+    assert(r0.gaps.length === 90,                                           'report · 90 gaps vacío');
+    assert(r0.resilient.length === 0,                                       'report · 0 resilient vacío');
+    assert(r0.fragile.length === 0,                                         'report · 0 fragile vacío');
+
+    // coverageReport · con plazas (incluye ID inexistente · debe ignorarse)
+    const swarmSkills = [
+        { skillId: 'vision-strategic', seatId: 's1' },
+        { skillId: 'vision-strategic', seatId: 's2' },
+        { skillId: 'vision-strategic', seatId: 's3' },  // ≥3 → resilient
+        { skillId: 'slicing-pie',      seatId: 's4' },  // 1 → fragile
+        { skillId: 'system-architecture', seatId: 's5' },
+        { skillId: 'system-architecture', seatId: 's6' }, // 2 (no fragile, no resilient)
+        { skillId: 'no-existe',        seatId: 's99' },  // ignorar
+    ];
+    const r1 = coverageReport({ swarmSkills });
+    assert(r1.coveredCount === 3,                                          'report · 3 cubiertos');
+    assert(r1.resilient.includes('vision-strategic'),                      'report · vision resilient');
+    assert(r1.fragile.includes('slicing-pie'),                             'report · slicing-pie fragile');
+    assert(!r1.fragile.includes('system-architecture'),                    'report · 2 plazas no fragile');
+    assert(!r1.resilient.includes('system-architecture'),                  'report · 2 plazas no resilient');
+    assert(r1.gaps.length === 87,                                          'report · 87 gaps restantes');
+    assert(r1.byDomain.governance.covered === 1,                           'governance · 1 cubierto');
+    assert(r1.byDomain.tech.covered === 1,                                 'tech · 1 cubierto');
+    assert(r1.byDomain.governance.gaps.length === 7,                       'governance · 7 gaps');
+    assert(typeof r1.byTier.master.pct === 'number',                       'byTier.master.pct');
+    assert(typeof r1.byGuardian.zeus.pct === 'number',                     'byGuardian.zeus.pct');
+
+    // Robustez · input inválido
+    const r2 = coverageReport({ swarmSkills: 'not an array' });
+    assert(r2.coveredCount === 0,                                           'input no-array · graceful');
+}
+
+// ─── MAT-003 sprint C · swarmMatchmaker ────────────────────────────
+async function testSwarmMatchmaker() {
+    const mod = await import('../core/swarmMatchmaker.js?v=' + Date.now());
+    const { buildSwarmMatchPrompt, parseSwarmMatchResponse, applyMatchToSeats, scoreSwarmCoverage, buildSwarmTeamForProject } = mod;
+
+    // Errores de input
+    let threw = false;
+    try { buildSwarmMatchPrompt(); } catch (_) { threw = true; }
+    assert(threw, 'prompt sin input lanza');
+
+    threw = false;
+    try { buildSwarmMatchPrompt({ project: {}, projectTypeId: 'comunitat-autosuficient', requiredRoles: [{id:'r1',label:'R1',domain:'tech'}], swarmSeats:[{id:'s1'}] }); } catch (_) { threw = true; }
+    assert(threw, 'sin project.id+name lanza');
+
+    threw = false;
+    try { buildSwarmMatchPrompt({ project: { id:'p1', name:'P1' }, projectTypeId: 'inexistente', requiredRoles:[{id:'r1',label:'R1',domain:'tech'}], swarmSeats:[{id:'s1'}] }); } catch (_) { threw = true; }
+    assert(threw, 'projectTypeId inválido lanza');
+
+    threw = false;
+    try { buildSwarmMatchPrompt({ project: { id:'p1', name:'P1' }, projectTypeId:'comunitat-autosuficient', requiredRoles:[], swarmSeats:[{id:'s1'}] }); } catch (_) { threw = true; }
+    assert(threw, 'requiredRoles vacío lanza');
+
+    threw = false;
+    try { buildSwarmMatchPrompt({ project: { id:'p1', name:'P1' }, projectTypeId:'comunitat-autosuficient', requiredRoles:[{id:'r1',label:'R1',domain:'tech'}], swarmSeats:[] }); } catch (_) { threw = true; }
+    assert(threw, 'swarmSeats vacío lanza');
+
+    // Happy path · prompt
+    const built = buildSwarmMatchPrompt({
+        project: { id: 'proj-1', name: 'Hortet de la Vall', description: 'Coop de productores', sector: 'A', phase: 'design' },
+        projectTypeId: 'comunitat-autosuficient',
+        requiredRoles: [
+            { id: 'pages-agricola',     label: 'Pagès',     domain: 'ecology' },
+            { id: 'tresorera',          label: 'Tresorera', domain: 'finance' },
+            { id: 'facilitador-comu',   label: 'Facilita',  domain: 'community' },
+        ],
+        swarmSeats: [
+            { id: 'seat-1', displayName: 'Aitana R.', skillsDeclared: ['regenerative-agriculture','seed-banking'], guardianOf: 'demeter' },
+            { id: 'seat-2', displayName: 'Núria B.',  skillsDeclared: ['triple-entry-accounting','treasury-management'], guardianOf: 'poseidon' },
+            { id: 'seat-3', displayName: 'Jordi T.',  skillsDeclared: ['facilitation','meeting-design'], guardianOf: 'hermes' },
+        ],
+    });
+    assert(built.systemPrompt.includes('Cohort 0 de Matriu'),                'systemPrompt menciona cohort 0');
+    assert(built.userPrompt.includes('Hortet de la Vall'),                    'userPrompt · proyecto');
+    assert(built.userPrompt.includes('demeter'),                              'userPrompt · catálogo guardianes');
+    assert(built.userPrompt.includes('regenerative-agriculture'),             'userPrompt · catálogo skills');
+    assert(built.userPrompt.includes('Aitana R.'),                            'userPrompt · plazas');
+    assert(built.responseFormat === 'json_object',                            'responseFormat json_object');
+    assert(built.temperature === 0.2,                                          'temperature baja');
+    assert(built.meta.projectId === 'proj-1',                                  'meta.projectId');
+    assert(built.meta.rolesCount === 3 && built.meta.seatsCount === 3,         'meta counts');
+
+    // Parser · happy
+    const sample = JSON.stringify({
+        matches: [
+            { roleId: 'pages-agricola',   seatId: 'seat-1', primary: true,  fit: 0.95, rationale: 'Demeter', skillsUsed: ['regenerative-agriculture'] },
+            { roleId: 'tresorera',        seatId: 'seat-2', primary: true,  fit: 0.88, rationale: 'Treasury', skillsUsed: ['treasury-management'] },
+            { roleId: 'facilitador-comu', seatId: 'seat-3', primary: true,  fit: 0.91, rationale: 'Hermes', skillsUsed: ['facilitation'] },
+            { roleId: 'pages-agricola',   seatId: 'seat-3', primary: false, fit: 0.5,  rationale: 'backup', skillsUsed: [] },
+        ],
+        gaps: [],
+        overallRationale: 'Cobertura completa 3/3.',
+    });
+    const parsed = parseSwarmMatchResponse(sample);
+    assert(parsed.matches.length === 4,                                       '4 matches parseados');
+    assert(parsed.gaps.length === 0,                                          'gaps vacío');
+    assert(parsed.overallRationale.length > 0,                                'overallRationale presente');
+
+    // Parser robusto · campos malos
+    const messy = parseSwarmMatchResponse({
+        matches: [
+            { roleId: 'r1', seatId: 's1', primary: true, fit: 0.5 },
+            { roleId: null, seatId: 's2' },                                   // inválido
+            { roleId: 'r3', seatId: 's3', fit: 1.5 },                         // clamp 1
+            { roleId: 'r4', seatId: 's4', fit: -0.3 },                        // clamp 0
+        ],
+        gaps: ['r5', null, 'r6'],
+        overallRationale: 'x'.repeat(800),
+    });
+    assert(messy.matches.length === 3,                                        'parser · roleId null filtrado');
+    assert(messy.matches.find(x => x.roleId === 'r3').fit === 1,              'fit clamp 1.5 → 1');
+    assert(messy.matches.find(x => x.roleId === 'r4').fit === 0,              'fit clamp -0.3 → 0');
+    assert(messy.gaps.length === 2,                                            'gaps · null filtrado');
+    assert(messy.overallRationale.length === 600,                              'overallRationale 600 chars max');
+
+    let parseThrew = false;
+    try { parseSwarmMatchResponse('not json'); } catch (_) { parseThrew = true; }
+    assert(parseThrew,                                                         'parser · invalid JSON lanza');
+
+    // applyMatchToSeats · resuelve conflicto primario
+    const conflict = [
+        { roleId: 'r1', seatId: 'sX', primary: true, fit: 0.9 },
+        { roleId: 'r2', seatId: 'sX', primary: true, fit: 0.95 },
+        { roleId: 'r3', seatId: 'sX', primary: true, fit: 0.7 },
+        { roleId: 'r4', seatId: 'sX', primary: false, fit: 0.6 },
+        { roleId: 'r5', seatId: 'sX', primary: false, fit: 0.5 },
+        { roleId: 'r6', seatId: 'sX', primary: false, fit: 0.4 },
+    ];
+    const reconciled = applyMatchToSeats(conflict, { maxSecondaryRoles: 2 });
+    const primaries = reconciled.filter(x => x.seatId === 'sX' && x.primary);
+    assert(primaries.length === 1,                                             '1 solo primario por seat');
+    assert(primaries[0].roleId === 'r2',                                       'primario es el de fit más alto');
+    const secondaries = reconciled.filter(x => x.seatId === 'sX' && !x.primary);
+    assert(secondaries.length === 2,                                            'max 2 secundarios');
+
+    // scoreSwarmCoverage
+    const required = [
+        { id: 'pages-agricola',   label:'p', domain:'ecology' },
+        { id: 'tresorera',        label:'t', domain:'finance' },
+        { id: 'facilitador-comu', label:'f', domain:'community' },
+        { id: 'huerfano',         label:'h', domain:'culture' },
+    ];
+    const scored = scoreSwarmCoverage(parsed.matches, required);
+    assert(scored.coveredRoles === 3 && scored.totalRoles === 4 && scored.pct === 75, 'cobertura 3/4 · 75%');
+    assert(scored.byRole['huerfano'].primary === 0,                            'huerfano sin primary');
+    const empty = scoreSwarmCoverage([], []);
+    assert(empty.pct === 0 && empty.totalRoles === 0,                          'score vacío gracioso');
+
+    // buildSwarmTeamForProject · mock orchestrator
+    let mainThrew = false;
+    try { await buildSwarmTeamForProject({}); } catch (_) { mainThrew = true; }
+    assert(mainThrew, 'buildSwarmTeamForProject sin orchestrator lanza');
+
+    const mockOrch = {
+        callLLM: async () => ({
+            text: JSON.stringify({
+                matches: [
+                    { roleId: 'pages-agricola',   seatId: 'seat-1', primary: true, fit: 0.95, rationale: 'Demeter', skillsUsed: ['regenerative-agriculture'] },
+                    { roleId: 'tresorera',        seatId: 'seat-2', primary: true, fit: 0.90, rationale: 'Poseidon', skillsUsed: ['treasury-management'] },
+                    { roleId: 'facilitador-comu', seatId: 'seat-3', primary: true, fit: 0.88, rationale: 'Hermes', skillsUsed: ['facilitation'] },
+                ],
+                gaps: [],
+                overallRationale: 'Cobertura completa.',
+            }),
+            provider: 'anthropic',
+            usage: { totalTokens: 1440 },
+            costUSD: 0.012,
+        }),
+    };
+    const team = await buildSwarmTeamForProject({
+        project: { id: 'proj-1', name: 'Hortet' },
+        projectTypeId: 'comunitat-autosuficient',
+        requiredRoles: [
+            { id: 'pages-agricola',   label:'p', domain:'ecology' },
+            { id: 'tresorera',        label:'t', domain:'finance' },
+            { id: 'facilitador-comu', label:'f', domain:'community' },
+        ],
+        swarmSeats: [
+            { id: 'seat-1', skillsDeclared: ['regenerative-agriculture'] },
+            { id: 'seat-2', skillsDeclared: ['treasury-management'] },
+            { id: 'seat-3', skillsDeclared: ['facilitation'] },
+        ],
+        orchestrator: mockOrch,
+    });
+    assert(team.matches.length === 3,                                          'team · 3 matches');
+    assert(team.coverage.pct === 100,                                          'team · 100%');
+    assert(team.telemetry.provider === 'anthropic',                            'team · provider tracked');
+    assert(team.telemetry.tokens.totalTokens === 1440,                          'team · tokens tracked');
+    assert(typeof team.telemetry.latencyMs === 'number',                       'team · latency tracked');
+    assert(team.promptMeta.projectId === 'proj-1',                              'team · promptMeta');
+}
+
+// ─── MAT-003 sprint E · bootstrapTemplates · 12 plantillas con seed ──
+async function testBootstrapTemplates() {
+    const m = await import('../core/bootstrapTemplates.js?v=' + Date.now());
+    const c = await import('../core/critical108Roles.js?v=' + Date.now());
+    const {
+        PROJECT_BOOTSTRAP_TEMPLATES, PHASES,
+        getBootstrapTemplate, listAllBootstrapTemplates,
+        expectedSopsCountFor, expectedWeeksToOperateFor,
+        validateBootstrapTemplate, bootstrapMapForProject, bootstrapStats,
+    } = m;
+
+    // Estructura
+    assert(Object.isFrozen(PROJECT_BOOTSTRAP_TEMPLATES),                   'TEMPLATES frozen');
+    assert(PROJECT_BOOTSTRAP_TEMPLATES.length === 12,                      '12 templates');
+    assert(Object.isFrozen(PHASES) && PHASES.length === 4,                 '4 PHASES frozen');
+    ['design','build','operate','ledger'].forEach(p => assert(PHASES.includes(p), 'phase ' + p));
+
+    // 1:1 con PROJECT_TYPES
+    const ptIds  = c.PROJECT_TYPES.map(pt => pt.id).sort();
+    const tplIds = PROJECT_BOOTSTRAP_TEMPLATES.map(t => t.typeId).sort();
+    assert(JSON.stringify(ptIds) === JSON.stringify(tplIds),               '12 templates 1:1 con PROJECT_TYPES');
+
+    // Cada plantilla bien estructurada
+    for (const t of PROJECT_BOOTSTRAP_TEMPLATES) {
+        assert(validateBootstrapTemplate(t),                                t.typeId + ' · valid');
+        assert(t.valueMapSeed.roles.length >= 4,                            t.typeId + ' · ≥4 roles');
+        assert(t.valueMapSeed.transactions.length >= 5,                     t.typeId + ' · ≥5 tx');
+        assert(t.bootstrapSops.length >= 5,                                  t.typeId + ' · ≥5 SOPs');
+        assert(t.requiredGuardians.length >= 3,                              t.typeId + ' · ≥3 guardians');
+        assert(typeof t.narrative === 'string' && t.narrative.length > 30,   t.typeId + ' · narrative');
+        // Referential integrity
+        const roleIds = new Set(t.valueMapSeed.roles.map(r => r.id));
+        for (const tr of t.valueMapSeed.transactions) {
+            assert(roleIds.has(tr.from) && roleIds.has(tr.to),               t.typeId + '·' + tr.id + ' refs');
+            assert(PHASES.includes(tr.phase),                                t.typeId + '·' + tr.id + ' phase');
+            assert(typeof tr.sequence_order === 'number',                    t.typeId + '·' + tr.id + ' seq_order');
+        }
+        // Phases en SOPs válidas
+        for (const sop of t.bootstrapSops) {
+            assert(PHASES.includes(sop.phase),                                t.typeId + '·' + sop.id + ' sop phase');
+        }
+    }
+
+    // Helpers
+    assert(getBootstrapTemplate('comunitat-autosuficient')?.typeId === 'comunitat-autosuficient', 'getBootstrap happy');
+    assert(getBootstrapTemplate('xxx') === null,                            'getBootstrap miss → null');
+    assert(getBootstrapTemplate(null) === null,                              'getBootstrap null input');
+    assert(listAllBootstrapTemplates().length === 12,                       'listAll · 12');
+
+    const expSops = expectedSopsCountFor('comunitat-autosuficient');
+    assert(expSops.min === 8 && expSops.max === 12 && expSops.midpoint === 10, 'expSops 8-12 mid 10');
+    const expWks = expectedWeeksToOperateFor('comunitat-autosuficient');
+    assert(expWks.min === 4 && expWks.max === 8,                             'expWeeks 4-8');
+    assert(expectedSopsCountFor('xxx') === null,                             'expSops · null miss');
+
+    // bootstrapMapForProject · errors
+    let threwBoot = false;
+    try { bootstrapMapForProject({ typeId: 'xxx', projectId: 'p1' }); } catch (_) { threwBoot = true; }
+    assert(threwBoot,                                                        'boot · type inválido lanza');
+    threwBoot = false;
+    try { bootstrapMapForProject({ typeId: 'comunitat-autosuficient' }); } catch (_) { threwBoot = true; }
+    assert(threwBoot,                                                        'boot · sin projectId lanza');
+
+    // bootstrapMapForProject · happy path
+    const seed = bootstrapMapForProject({ typeId: 'comunitat-autosuficient', projectId: 'proj-test', multiplier: 1.5 });
+    assert(seed.roles.length === 5,                                          'seed · 5 roles');
+    assert(seed.transactions.length === 6,                                   'seed · 6 tx');
+    assert(seed.sopsBootstrap.length === 8,                                  'seed · 8 sops');
+    assert(seed.requiredGuardians.length === 4,                              'seed · 4 guardians');
+    assert(seed.sectorAffinity.length === 3,                                 'seed · 3 sectors');
+    assert(seed.roles[0].id.startsWith('proj-test::role::'),                 'seed · roles namespaced');
+    assert(seed.roles[0].baseId === 'pages',                                  'seed · baseId conservado');
+    assert(seed.roles[0].projectId === 'proj-test',                           'seed · projectId en role');
+    assert(seed.transactions[0].id.startsWith('proj-test::tx::'),            'seed · tx namespaced');
+    assert(seed.transactions[0].from.startsWith('proj-test::role::'),         'seed · from remap');
+    assert(seed.transactions[0].to.startsWith('proj-test::role::'),           'seed · to remap');
+    assert(seed.sopsBootstrap[0].id.startsWith('proj-test::sop::'),           'seed · sop namespaced');
+    assert(seed.sopsBootstrap[0].multiplier === 1.5,                          'seed · multiplier ×1.5 aplicado');
+    assert(typeof seed.narrative === 'string',                                'seed · narrative presente');
+
+    // validateBootstrapTemplate · falsy
+    assert(validateBootstrapTemplate(null) === false,                         'validate null');
+    assert(validateBootstrapTemplate({}) === false,                           'validate empty');
+    assert(validateBootstrapTemplate({ typeId: 'xxx' }) === false,            'validate type miss');
+
+    // bootstrapStats
+    const stats = bootstrapStats();
+    assert(stats.totalTemplates === 12,                                       'stats · 12');
+    assert(stats.totalSeedRoles >= 50,                                        'stats · roles >= 50');
+    assert(stats.totalSeedTransactions >= 60,                                  'stats · tx >= 60');
+    assert(stats.totalBootstrapSops >= 60,                                     'stats · sops >= 60');
+    assert(stats.coveredProjectTypes.length === 12,                            'stats · cobertura 12 types');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -2725,7 +3197,11 @@ const SUITE = [
     { name: 'H_ANIM_001 sprint A · flowAnimationService puro',    fn: testFlowAnimationService },
     { name: 'MAT-002-A · matriuTemplate puro',                    fn: testMatriuTemplate },
     { name: 'MAT-002-G fase A · sosManifesto puro + KB mock',     fn: testSosManifesto },
-    { name: 'UX-EDU-001 sprint A · didacticService puro',         fn: testDidacticService }
+    { name: 'UX-EDU-001 sprint A · didacticService puro',         fn: testDidacticService },
+    { name: 'MAT-003 sprint A · critical108Roles + Pantheon Work', fn: testCritical108Roles },
+    { name: 'MAT-003 sprint B · skillTaxonomy + coverageReport',  fn: testSkillTaxonomy },
+    { name: 'MAT-003 sprint C · swarmMatchmaker (matchmaker IA)', fn: testSwarmMatchmaker },
+    { name: 'MAT-003 sprint E · bootstrapTemplates (12 plantillas)', fn: testBootstrapTemplates }
 ];
 
 export async function runTests() {

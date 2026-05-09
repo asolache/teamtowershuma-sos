@@ -21,7 +21,28 @@ import {
     MATRIU_FAIR_FRACTAL_RULES,
     MATRIU_VALUE_KINDS,
 } from '../core/matriuTemplate.js';
+import { PROJECT_TYPES } from '../core/critical108Roles.js';
+import {
+    PROJECT_BOOTSTRAP_TEMPLATES, getBootstrapTemplate,
+    expectedSopsCountFor, expectedWeeksToOperateFor,
+} from '../core/bootstrapTemplates.js';
 import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
+
+// Iconos para los 12 tipus de projecte (paralelos a PROJECT_TYPES)
+const PROJECT_TYPE_ICONS = Object.freeze({
+    'comunitat-autosuficient':   '🌾',
+    'startup-coop-tradicional':  '🚀',
+    'empresa-en-transicio':      '🏢',
+    'cooperativa-multi':         '🤝',
+    'fundacio-ong':              '🤲',
+    'ecosistema-regional':       '🌍',
+    'dao-web3':                  '⛓',
+    'plataforma-cooperativa':    '📱',
+    'cooperativa-cures':         '💗',
+    'espai-autogestionat':       '🏛',
+    'hub-transicio':             '🔄',
+    'familiar-relevo':           '🌳',
+});
 
 // 4 ejemplos de transacciones del Value Mapping Engine (estáticos · UI)
 const VME_EXAMPLES = Object.freeze([
@@ -176,6 +197,24 @@ export default class MatriuLandingView {
             .mt-exit-rule-h { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 19px; color: var(--mt-dark); line-height: 1.2; margin-bottom: 6px; }
             .mt-exit-rule-b { font-size: 13px; color: var(--mt-dark); opacity: 0.78; line-height: 1.55; }
 
+            /* ── Tipus de projecte (12 cards) ───────────────────────── */
+            .mt-types-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--mt-rule); border: 1px solid var(--mt-rule); }
+            .mt-type-card { background: var(--mt-cream); padding: 22px 24px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; transition: background 0.15s, transform 0.15s; min-height: 220px; }
+            .mt-type-card:hover, .mt-type-card:focus { background: rgba(194,90,58,0.06); outline: none; transform: translateY(-1px); }
+            .mt-type-head { display: flex; align-items: center; gap: 10px; }
+            .mt-type-icon { font-size: 22px; }
+            .mt-type-label { font-size: 19px; line-height: 1.2; color: var(--mt-dark); }
+            .mt-type-narrative { font-size: 13px; line-height: 1.55; color: var(--mt-dark); opacity: 0.78; flex: 1; }
+            .mt-type-stats { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--mt-line); font-family: ui-monospace, monospace; font-size: 11px; color: var(--mt-dark); opacity: 0.75; }
+            .mt-type-stats strong { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 16px; opacity: 1; color: var(--mt-tcotta); margin-right: 2px; }
+            .mt-type-meta { display: flex; flex-direction: column; gap: 4px; font-family: ui-monospace, monospace; font-size: 10px; opacity: 0.6; }
+            .mt-type-meta strong { color: var(--mt-dark); opacity: 0.8; }
+            .mt-type-cta { margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--mt-tcotta); opacity: 0; transition: opacity 0.15s; }
+            .mt-type-card:hover .mt-type-cta, .mt-type-card:focus .mt-type-cta { opacity: 1; }
+
+            @media (max-width: 880px) { .mt-types-grid { grid-template-columns: 1fr; } }
+            @media (min-width: 881px) and (max-width: 1100px) { .mt-types-grid { grid-template-columns: repeat(2, 1fr); } }
+
             /* ── Cohort 0 perks (6) ──────────────────────────────────── */
             .mt-cohort-head { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 16px; margin-bottom: 32px; }
             .mt-cohort-counter { background: var(--mt-tcotta); color: white; padding: 10px 18px; border-radius: 999px; font-family: ui-monospace, monospace; font-size: 13px; font-weight: 700; }
@@ -262,6 +301,7 @@ export default class MatriuLandingView {
                     <a href="#tokenomic">Tokenomic</a>
                     <a href="#engine">Engine</a>
                     <a href="#exit">Exit model</a>
+                    <a href="#types">Tipus</a>
                     <a href="#cohort">Cohort 0</a>
                 </nav>
                 <a href="#cohort" class="mt-cta-mini" id="mtCtaTop">Sumar-me al nucli →</a>
@@ -416,6 +456,49 @@ export default class MatriuLandingView {
                 </div>
             </section>
 
+            <!-- TIPUS DE PROJECTE · 12 plantilles -->
+            <section class="mt-section" id="types">
+                <div class="mt-container">
+                    <div class="mt-section-tag">Tipus de projecte · 12 plantilles ${renderExplainerBadge('vna', { size: 'xs' })}</div>
+                    <h2 class="mt-italic">Per qualsevol projecte:<br><strong>el motor ja està fet</strong>.</h2>
+                    <p class="mt-section-lead">
+                        Cada tipus de projecte arriba amb una matriu de valor pre-configurada ·
+                        roles + transaccions seqüenciades + SOPs canònics + guardians objectiu.
+                        No comences en blanc: comences amb el coneixement de la xarxa Matriu.
+                    </p>
+                    <div class="mt-types-grid">
+                        ${PROJECT_TYPES.map(pt => {
+                            const tpl = getBootstrapTemplate(pt.id);
+                            const sops = expectedSopsCountFor(pt.id);
+                            const wks  = expectedWeeksToOperateFor(pt.id);
+                            const icon = PROJECT_TYPE_ICONS[pt.id] || '✦';
+                            const sectorsList = (tpl?.sectorAffinity || []).join(' · ') || '—';
+                            const guardiansList = (tpl?.requiredGuardians || []).slice(0, 4).join(' · ');
+                            return `
+                                <div class="mt-type-card" data-type-id="${escapeHtml(pt.id)}" tabindex="0" role="button">
+                                    <div class="mt-type-head">
+                                        <span class="mt-type-icon">${icon}</span>
+                                        <span class="mt-type-label mt-italic">${escapeHtml(pt.label)}</span>
+                                    </div>
+                                    <p class="mt-type-narrative">${escapeHtml(tpl?.narrative || pt.whyNow || '')}</p>
+                                    <div class="mt-type-stats">
+                                        <span class="mt-type-stat"><strong>${tpl?.valueMapSeed?.roles?.length || 0}</strong> rols</span>
+                                        <span class="mt-type-stat"><strong>${tpl?.valueMapSeed?.transactions?.length || 0}</strong> tx</span>
+                                        <span class="mt-type-stat"><strong>${sops?.midpoint || '?'}</strong> SOPs</span>
+                                        <span class="mt-type-stat"><strong>${wks?.midpoint || '?'}</strong> setm.</span>
+                                    </div>
+                                    <div class="mt-type-meta">
+                                        <span><strong>Sectors</strong> · ${escapeHtml(sectorsList)}</span>
+                                        <span><strong>Guardians</strong> · ${escapeHtml(guardiansList)}</span>
+                                    </div>
+                                    <div class="mt-type-cta">Reservar amb aquest tipus →</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </section>
+
             <!-- COHORT 0 · 6 PERKS -->
             <section class="mt-section" id="cohort">
                 <div class="mt-container">
@@ -503,10 +586,10 @@ export default class MatriuLandingView {
         <div class="mt-modal" id="mtModal" role="dialog" aria-labelledby="mtModalTitle" aria-modal="true">
             <div class="mt-modal-card">
                 <h3 id="mtModalTitle">Reservar el teu seient</h3>
-                <p>
+                <p id="mtModalIntro">
                     Entres a la cohort 0 fundacional. Sense KYC ni wallet ara mateix · només
-                    el teu nom i una idea de projecte · els crèdits es minten quan tanqui la
-                    cohort.
+                    el teu nom, una idea de projecte i el tipus de projecte que vols arrencar.
+                    Els crèdits es minten quan tanqui la cohort.
                 </p>
                 <div class="mt-input-row">
                     <label for="mtName">Nom</label>
@@ -519,6 +602,14 @@ export default class MatriuLandingView {
                 <div class="mt-input-row">
                     <label for="mtIdea">La teva idea de projecte</label>
                     <input type="text" id="mtIdea" class="mt-input" placeholder="ex. Hortet de la Vall · cooperativa de productores">
+                </div>
+                <div class="mt-input-row">
+                    <label for="mtType">Tipus de projecte</label>
+                    <select id="mtType" class="mt-input">
+                        <option value="">— Tria un tipus (opcional · arrencaràs amb mapa pre-configurat) —</option>
+                        ${PROJECT_TYPES.map(pt => `<option value="${escapeHtml(pt.id)}">${PROJECT_TYPE_ICONS[pt.id] || '✦'} ${escapeHtml(pt.label)}</option>`).join('')}
+                    </select>
+                    <small id="mtTypeHint" style="font-size:11px;opacity:0.6;margin-top:4px;">Si tries tipus, el projecte arrencarà amb la matriu de valor pre-configurada (rols + transaccions + SOPs).</small>
                 </div>
                 <div class="mt-modal-actions">
                     <button class="mt-modal-cancel" id="mtModalCancel">Cancel·lar</button>
@@ -548,31 +639,49 @@ export default class MatriuLandingView {
 
         // CTAs · abrir modal de reserva
         const modal = document.getElementById('mtModal');
-        const openModal = (e) => {
+        const openModal = (e, presetTypeId = null) => {
             if (e) e.preventDefault();
             if (modal) {
                 modal.classList.add('is-open');
+                if (presetTypeId) {
+                    const sel = document.getElementById('mtType');
+                    if (sel) sel.value = presetTypeId;
+                }
                 setTimeout(() => document.getElementById('mtName')?.focus(), 80);
             }
         };
         const closeModal = () => modal?.classList.remove('is-open');
 
-        document.getElementById('mtCtaFinal')?.addEventListener('click', openModal);
+        document.getElementById('mtCtaFinal')?.addEventListener('click', (e) => openModal(e));
         document.getElementById('mtModalCancel')?.addEventListener('click', closeModal);
         modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
-        // Confirm · usa el builder existente buildMatriuCohortProject + acciones store/KB
+        // MAT-002-H+ · click en card de tipus → abre modal con tipo preseleccionado
+        document.querySelectorAll('.mt-type-card').forEach(card => {
+            const typeId = card.getAttribute('data-type-id');
+            card.addEventListener('click', (e) => openModal(e, typeId));
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openModal(e, typeId);
+                }
+            });
+        });
+
+        // Confirm · usa buildMatriuCohortProject (cohort 0 base) + bootstrapMapForProject (si hay tipo)
         document.getElementById('mtModalConfirm')?.addEventListener('click', async () => {
             const name   = document.getElementById('mtName')?.value?.trim() || '';
             const handle = document.getElementById('mtHandle')?.value?.trim() || '';
             const idea   = document.getElementById('mtIdea')?.value?.trim() || '';
+            const typeId = document.getElementById('mtType')?.value || '';
             if (!name) { alert('Cal el teu nom per reservar.'); return; }
             if (!idea) { alert('Cal una idea de projecte.'); return; }
             const btn = document.getElementById('mtModalConfirm');
             if (btn) { btn.disabled = true; btn.textContent = '⏳ Reservant…'; }
             try {
-                const { buildMatriuCohortProject } = await import('../core/matriuTemplate.js?v=' + Date.now());
+                const { buildMatriuCohortProject, MATRIU_COHORT_0 } = await import('../core/matriuTemplate.js?v=' + Date.now());
+                const { bootstrapMapForProject } = await import('../core/bootstrapTemplates.js?v=' + Date.now());
                 const { store } = await import('../core/store.js?v=' + Date.now());
                 const { KB }    = await import('../core/kb.js?v=' + Date.now());
                 const out = buildMatriuCohortProject({ operatorName: name, operatorHandle: handle, projectIdea: idea });
@@ -581,6 +690,56 @@ export default class MatriuLandingView {
                 store.dispatch({ type: 'CREATE_PROJECT', payload: out.project });
                 for (const node of out.kbNodes) {
                     store.dispatch({ type: 'KB_UPSERT', payload: node });
+                }
+                // Si el operador eligió un tipus de projecte · aplica el seed bootstrap
+                if (typeId) {
+                    try {
+                        const seed = bootstrapMapForProject({
+                            typeId,
+                            projectId: out.project.id,
+                            multiplier: MATRIU_COHORT_0.multiplier || 1.5,
+                        });
+                        // Roles · KB_UPSERT por cada rol como nodo type='role'
+                        for (const r of seed.roles) {
+                            store.dispatch({ type: 'KB_UPSERT', payload: {
+                                id: r.id, type: 'role', projectId: out.project.id,
+                                content: { baseId: r.baseId, label: r.label, guardianAffinity: r.guardianAffinity, kind: 'bootstrap-role' },
+                                keywords: ['type:role', 'kind:bootstrap-role', 'project:' + out.project.id],
+                            }});
+                        }
+                        // Transactions · KB_UPSERT
+                        for (const tr of seed.transactions) {
+                            store.dispatch({ type: 'KB_UPSERT', payload: {
+                                id: tr.id, type: 'transaction', projectId: out.project.id,
+                                content: { baseId: tr.baseId, from: tr.from, to: tr.to, deliverable: tr.deliverable, phase: tr.phase, sequence_order: tr.sequence_order, tangible: tr.tangible, must: tr.must, kind: 'bootstrap-tx' },
+                                keywords: ['type:transaction', 'kind:bootstrap-tx', 'phase:' + tr.phase, 'project:' + out.project.id],
+                            }});
+                        }
+                        // SOPs adicionales del tipo · KB_UPSERT
+                        for (const sop of seed.sopsBootstrap) {
+                            store.dispatch({ type: 'KB_UPSERT', payload: {
+                                id: sop.id, type: 'sop', projectId: out.project.id,
+                                content: { baseId: sop.baseId, title: sop.label, label: sop.label, phase: sop.phase, multiplier: sop.multiplier, kind: 'bootstrap-sop' },
+                                keywords: ['type:sop', 'kind:bootstrap-sop', 'phase:' + sop.phase, 'project:' + out.project.id],
+                            }});
+                        }
+                        // Etiquetar el project con el typeId + sectorAffinity en KB
+                        store.dispatch({ type: 'KB_UPSERT', payload: {
+                            id: out.project.id + '::bootstrap-meta',
+                            type: 'project_bootstrap',
+                            projectId: out.project.id,
+                            content: {
+                                typeId,
+                                sectorAffinity:    seed.sectorAffinity,
+                                requiredGuardians: seed.requiredGuardians,
+                                expectedOutcomes:  seed.expectedOutcomes,
+                                narrative:         seed.narrative,
+                            },
+                            keywords: ['type:project_bootstrap', 'projectType:' + typeId, 'project:' + out.project.id],
+                        }});
+                    } catch (seedErr) {
+                        console.warn('[MAT-002-H+] bootstrap seed falló (continuo sin):', seedErr);
+                    }
                 }
                 if (window.navigateTo) window.navigateTo(out.navigateTo);
                 else window.location.assign(out.navigateTo);
