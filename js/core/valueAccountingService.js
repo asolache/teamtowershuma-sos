@@ -58,6 +58,29 @@ export const DEFAULT_PIES_BY_PROJECT_TYPE = Object.freeze({
     'familiar-relevo':            Object.freeze(['founders', 'team']),
 });
 
+// VAL-001 sprint A.5 · KIS · cada pie tiene un % objetivo del total del
+// proyecto. La suma de pieTargets = 100. Dentro de cada pie, los
+// miembros se reparten ese % proporcional a sus slices.
+//
+// Defaults sensatos por tipo de proyecto (FairShares aplicado al
+// signo dels temps 2026 · founders/team con peso fundacional · users
+// con voz creciente · investors solo donde hace falta capital
+// líquido · community con voz testimonial).
+export const DEFAULT_PIE_TARGETS_BY_PROJECT_TYPE = Object.freeze({
+    'comunitat-autosuficient':    Object.freeze({ founders: 35, team: 35, users: 20, community: 10 }),
+    'startup-coop-tradicional':   Object.freeze({ founders: 50, team: 35, investors: 15 }),
+    'empresa-en-transicio':       Object.freeze({ founders: 45, team: 40, investors: 15 }),
+    'cooperativa-multi':          Object.freeze({ founders: 25, team: 35, users: 25, community: 15 }),
+    'fundacio-ong':               Object.freeze({ founders: 30, team: 50, community: 20 }),
+    'ecosistema-regional':        Object.freeze({ founders: 25, team: 40, community: 35 }),
+    'dao-web3':                   Object.freeze({ founders: 35, team: 30, investors: 25, community: 10 }),
+    'plataforma-cooperativa':     Object.freeze({ founders: 30, team: 40, users: 30 }),
+    'cooperativa-cures':          Object.freeze({ founders: 25, team: 50, users: 15, community: 10 }),
+    'espai-autogestionat':        Object.freeze({ founders: 25, team: 40, community: 35 }),
+    'hub-transicio':              Object.freeze({ founders: 30, team: 35, community: 35 }),
+    'familiar-relevo':            Object.freeze({ founders: 60, team: 40 }),
+});
+
 // Hours per year · default for time contribution fair value calculation
 // (2000h = 50 weeks × 40h/week)
 export const DEFAULT_HOURS_PER_YEAR = 2000;
@@ -272,4 +295,149 @@ export function activePiesForProject({ projectTypeId, overridePies = null } = {}
         return DEFAULT_PIES_BY_PROJECT_TYPE[projectTypeId].slice();
     }
     return ['founders', 'team'];   // mínimo viable por defecto
+}
+
+// ── VAL-001 sprint A.5 · KIS · pies con target % del proyecto total ──
+//
+// Filosofía · una sola tarta del proyecto = 100%. Se divide en pies
+// según `pieTargets` (objeto { founders: 40, team: 30, ... } que suma
+// 100). Cada miembro del pie gana su % final del proyecto =
+// (slicesEnPie / totalSlicesPie) × pieTarget.
+
+// validatePieTargets · puro · suma debe ser 100 (±0.5 tolerancia
+// para redondeos). Cada key debe ser un pie type válido.
+export function validatePieTargets(pieTargets) {
+    if (!pieTargets || typeof pieTargets !== 'object') return false;
+    const keys = Object.keys(pieTargets);
+    if (keys.length === 0) return false;
+    let sum = 0;
+    for (const k of keys) {
+        if (!FAIRSHARES_PIE_TYPES.includes(k)) return false;
+        const v = pieTargets[k];
+        if (typeof v !== 'number' || !isFinite(v) || v < 0) return false;
+        sum += v;
+    }
+    return Math.abs(sum - 100) <= 0.5;
+}
+
+// pieTargetsForProject · resuelve qué % por pie según projectTypeId +
+// override del operador. Devuelve siempre un objeto válido (validateable).
+export function pieTargetsForProject({ projectTypeId, overrideTargets = null } = {}) {
+    if (overrideTargets && validatePieTargets(overrideTargets)) {
+        return { ...overrideTargets };
+    }
+    if (projectTypeId && DEFAULT_PIE_TARGETS_BY_PROJECT_TYPE[projectTypeId]) {
+        return { ...DEFAULT_PIE_TARGETS_BY_PROJECT_TYPE[projectTypeId] };
+    }
+    // mínimo viable · 60/40
+    return { founders: 60, team: 40 };
+}
+
+// calculateProjectPie · puro · KIS · devuelve la tarta completa del
+// proyecto con cada miembro y su % FINAL en el proyecto (no del pie).
+//
+// Input:
+//   contributions   · array de contributions (cada una con partyId · slices)
+//   partyTypeMap    · { partyId: pieType }    classifica cada party
+//   pieTargets      · { pieType: pct }        suma 100
+//   options:
+//     - includeEmpty: bool · si true devuelve también pies sin
+//       contribuciones (con todoSlicesPct disponible para asignar)
+//
+// Output:
+//   {
+//     pieTargets,       // echo del input
+//     totalSlices,      // suma global de slices
+//     piesActive: [...], // pies que tienen ≥1 contribución
+//     parties: [        // ordenado desc por sharePctInProject
+//       { partyId, pieType, slicesInPie, totalSlicesInPie,
+//         sharePctInPie, sharePctInProject }
+//     ],
+//     piesEmpty: [...],  // pies activos en pieTargets pero sin contribuciones
+//                        // (su % está disponible · NO se distribuye automá-
+//                        // ticamente a otros)
+//   }
+export function calculateProjectPie({
+    contributions = [],
+    partyTypeMap = {},
+    pieTargets = null,
+} = {}) {
+    if (!validatePieTargets(pieTargets)) {
+        throw new Error('calculateProjectPie · pieTargets inválido (debe sumar 100 con keys válidas)');
+    }
+    const targets = pieTargets;
+    const map = partyTypeMap || {};
+
+    // 1) Agrupar contributions por pie type
+    const byPie = {};
+    for (const c of (contributions || [])) {
+        if (!c || typeof c.partyId !== 'string' || typeof c.slices !== 'number') continue;
+        if (c.slices < 0 || !isFinite(c.slices)) continue;
+        const pieType = map[c.partyId];
+        // Si el party no está clasificado o su pie no está en targets · ignorar
+        if (!pieType || !(pieType in targets)) continue;
+        if (!byPie[pieType]) byPie[pieType] = [];
+        byPie[pieType].push(c);
+    }
+
+    // 2) Para cada pie · agregar slices por party + total del pie
+    const parties = [];
+    const piesActive = [];
+    const piesEmpty = [];
+    for (const pieType of Object.keys(targets)) {
+        const contribs = byPie[pieType] || [];
+        if (contribs.length === 0) {
+            piesEmpty.push(pieType);
+            continue;
+        }
+        piesActive.push(pieType);
+        const slicesByParty = calculateSlices(contribs);
+        const totalSlicesInPie = Object.values(slicesByParty).reduce((a, b) => a + b, 0);
+        if (totalSlicesInPie <= 0) { piesEmpty.push(pieType); continue; }
+        const pieTargetPct = targets[pieType];
+        for (const partyId of Object.keys(slicesByParty)) {
+            const slicesInPie = slicesByParty[partyId];
+            const sharePctInPie = (slicesInPie / totalSlicesInPie) * 100;
+            const sharePctInProject = (slicesInPie / totalSlicesInPie) * pieTargetPct;
+            parties.push({
+                partyId,
+                pieType,
+                slicesInPie,
+                totalSlicesInPie,
+                sharePctInPie:    Math.round(sharePctInPie * 100) / 100,
+                sharePctInProject: Math.round(sharePctInProject * 100) / 100,
+            });
+        }
+    }
+
+    parties.sort((a, b) => b.sharePctInProject - a.sharePctInProject);
+
+    const totalSlices = parties.reduce((acc, p) => acc + p.slicesInPie, 0);
+
+    return {
+        pieTargets: { ...targets },
+        totalSlices,
+        piesActive,
+        piesEmpty,
+        parties,
+    };
+}
+
+// summarizeProjectPie · resumen ejecutivo para UI cards
+export function summarizeProjectPie(projectPie) {
+    if (!projectPie || !Array.isArray(projectPie.parties)) {
+        return { totalParties: 0, totalSlices: 0, leader: null, leaderPct: 0, allocatedPct: 0, unallocatedPct: 100 };
+    }
+    const allocated = projectPie.parties.reduce((acc, p) => acc + p.sharePctInProject, 0);
+    const leader = projectPie.parties[0] || null;
+    return {
+        totalParties:    projectPie.parties.length,
+        totalSlices:     projectPie.totalSlices,
+        leader:          leader ? leader.partyId : null,
+        leaderPct:       leader ? leader.sharePctInProject : 0,
+        allocatedPct:    Math.round(allocated * 100) / 100,
+        unallocatedPct:  Math.round((100 - allocated) * 100) / 100,
+        piesActiveCount: (projectPie.piesActive || []).length,
+        piesEmptyCount:  (projectPie.piesEmpty || []).length,
+    };
 }

@@ -2089,6 +2089,50 @@ Los 12 PROJECT_TYPES de MAT-003 declaran qué pies son obligatorios:
 | `cooperativa-cures` | founders + team + users + community |
 | (resto) | founders + team (por defecto · expandir per projecte) |
 
+### Reframe KIS @alvaro 2026-05-09 · una tarta · varios pies acotados
+
+> "Cada grupo tiene un total de la tarta del proyecto y este total se
+> puede acotar. KIS · keep it simple."
+
+Modelo definitivo:
+
+```
+Proyecto = 100% (una sola tarta)
+   ├─ Founders pie (target % del proyecto · ej. 50%)
+   │     └─ Miembros founders se reparten proporcional a sus slices
+   ├─ Team pie (target % · ej. 30%)
+   │     └─ Miembros team se reparten proporcional a sus slices
+   ├─ Users pie (target % · ej. 15%)
+   ├─ Investors pie (target % · ej. 5%)
+   └─ (Community pie · opcional)
+```
+
+Cada miembro recibe `sharePctInProject = (slicesEnPie /
+totalSlicesPie) × pieTarget`. Si un pie está sin contribuciones,
+su % queda **unallocated** (no se distribuye automáticamente · es
+una alerta visible para el operador).
+
+`pieTargets` por defecto según los 12 PROJECT_TYPES de MAT-003:
+
+| Project type | Founders | Team | Users | Investors | Community |
+|---|---|---|---|---|---|
+| comunitat-autosuficient | 35 | 35 | 20 | — | 10 |
+| startup-coop-tradicional | 50 | 35 | — | 15 | — |
+| empresa-en-transicio | 45 | 40 | — | 15 | — |
+| cooperativa-multi | 25 | 35 | 25 | — | 15 |
+| fundacio-ong | 30 | 50 | — | — | 20 |
+| ecosistema-regional | 25 | 40 | — | — | 35 |
+| dao-web3 | 35 | 30 | — | 25 | 10 |
+| plataforma-cooperativa | 30 | 40 | 30 | — | — |
+| cooperativa-cures | 25 | 50 | 15 | — | 10 |
+| espai-autogestionat | 25 | 40 | — | — | 35 |
+| hub-transicio | 30 | 35 | — | — | 35 |
+| familiar-relevo | 60 | 40 | — | — | — |
+
+Suma siempre 100. El operador puede sobrescribir vía `overrideTargets`
+y SOS valida (`validatePieTargets`) antes de aceptar (suma = 100 ±
+0.5 tolerancia · keys ⊂ FAIRSHARES_PIE_TYPES · valores ≥ 0).
+
 ### Sprint A · valueAccountingService puro
 
 `js/core/valueAccountingService.js` Object.freeze:

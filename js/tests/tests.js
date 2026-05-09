@@ -3444,6 +3444,86 @@ async function testValueAccounting() {
     assert(activePiesForProject({projectTypeId: 'inexistente'}).length === 2,                       'activePies · default 2');
     assert(activePiesForProject({overridePies: ['founders', 'team', 'community']}).length === 3,    'activePies · override');
     assert(activePiesForProject({overridePies: ['founders', 'invalid']}).length === 1,              'activePies · override filtra');
+
+    // ── VAL-001 sprint A.5 · KIS · pieTargets + calculateProjectPie ──
+    const {
+        DEFAULT_PIE_TARGETS_BY_PROJECT_TYPE,
+        validatePieTargets, pieTargetsForProject,
+        calculateProjectPie, summarizeProjectPie,
+    } = m;
+
+    // Constantes
+    assert(Object.isFrozen(DEFAULT_PIE_TARGETS_BY_PROJECT_TYPE),                'DEFAULT_PIE_TARGETS frozen');
+    for (const [typeId, targets] of Object.entries(DEFAULT_PIE_TARGETS_BY_PROJECT_TYPE)) {
+        const sum = Object.values(targets).reduce((a, b) => a + b, 0);
+        assert(sum === 100,                                                      typeId + ' · suma 100');
+        assert(validatePieTargets(targets),                                       typeId + ' · validate ok');
+    }
+
+    // validatePieTargets
+    assert(validatePieTargets({founders: 50, team: 50}) === true,                'valid 50/50');
+    assert(validatePieTargets({founders: 50, team: 30}) === false,               'invalid sum 80');
+    assert(validatePieTargets({founders: 50, invalid: 50}) === false,            'invalid pie type');
+    assert(validatePieTargets({}) === false,                                      'invalid vacío');
+    assert(validatePieTargets(null) === false,                                    'invalid null');
+
+    // pieTargetsForProject
+    const pt1 = pieTargetsForProject({projectTypeId: 'comunitat-autosuficient'});
+    assert(pt1.founders === 35 && pt1.community === 10,                          'targets comunitat 35/35/20/10');
+    const pt2 = pieTargetsForProject({projectTypeId: 'inexistente'});
+    assert(pt2.founders === 60 && pt2.team === 40,                                'targets default 60/40');
+    const pt3 = pieTargetsForProject({overrideTargets: {founders: 70, team: 30}});
+    assert(pt3.founders === 70,                                                    'targets override válido');
+    const pt4 = pieTargetsForProject({overrideTargets: {founders: 70, team: 50}});
+    assert(pt4.founders === 60,                                                    'targets override inválido → default');
+
+    // calculateProjectPie · errores
+    let threwP = false;
+    try { calculateProjectPie({contributions: [], partyTypeMap: {}, pieTargets: null}); } catch(_) { threwP = true; }
+    assert(threwP,                                                                 'calculateProjectPie · pieTargets null lanza');
+
+    // calculateProjectPie · KIS happy path
+    const kisContribs = [
+        buildContribution({partyId: 'alvaro', type: 'cash', fairValueEur: 1000}),
+        buildContribution({partyId: 'alvaro', type: 'time', fairValueEur: 500}),
+        buildContribution({partyId: 'ingrid', type: 'time', fairValueEur: 1000}),
+        buildContribution({partyId: 'marc',   type: 'ideas', fairValueEur: 600}),
+    ];
+    const kisMap = {alvaro: 'founders', ingrid: 'founders', marc: 'team'};
+    const kisTargets = {founders: 50, team: 30, users: 20};
+
+    const projPie = calculateProjectPie({contributions: kisContribs, partyTypeMap: kisMap, pieTargets: kisTargets});
+    assert(projPie.parties.length === 3,                                           'projPie · 3 parties');
+    assert(projPie.piesActive.includes('founders'),                                 'projPie · founders active');
+    assert(projPie.piesEmpty.includes('users'),                                     'projPie · users empty');
+
+    const aPart = projPie.parties.find(p => p.partyId === 'alvaro');
+    const iPart = projPie.parties.find(p => p.partyId === 'ingrid');
+    const mPart = projPie.parties.find(p => p.partyId === 'marc');
+
+    // alvaro · 5000/7000 × 50 ≈ 35.71% del proyecto
+    assert(Math.abs(aPart.sharePctInProject - 35.71) < 0.05,                       'alvaro · 35.71% project · ' + aPart.sharePctInProject);
+    assert(Math.abs(iPart.sharePctInProject - 14.29) < 0.05,                       'ingrid · 14.29% project · ' + iPart.sharePctInProject);
+    assert(mPart.sharePctInProject === 30,                                         'marc · 30% project (sólo team)');
+    assert(projPie.parties[0].partyId === 'alvaro',                                 'projPie · alvaro líder');
+
+    // summarizeProjectPie
+    const psum = summarizeProjectPie(projPie);
+    assert(psum.totalParties === 3,                                                'psum · 3 parties');
+    assert(psum.leader === 'alvaro',                                               'psum · leader alvaro');
+    assert(Math.abs(psum.allocatedPct - 80) < 0.1,                                 'psum · 80% allocated');
+    assert(Math.abs(psum.unallocatedPct - 20) < 0.1,                               'psum · 20% unallocated (users)');
+    assert(psum.piesActiveCount === 2,                                              'psum · 2 pies active');
+    assert(psum.piesEmptyCount === 1,                                               'psum · 1 pie empty');
+    assert(summarizeProjectPie(null).unallocatedPct === 100,                       'psum null · 100% unallocated');
+
+    // edge case · party con pieType no en targets se ignora
+    const projPie2 = calculateProjectPie({
+        contributions: [...kisContribs, buildContribution({partyId: 'inv', type: 'cash', fairValueEur: 500})],
+        partyTypeMap: {...kisMap, inv: 'investors'},   // investors NO en targets
+        pieTargets: kisTargets,
+    });
+    assert(projPie2.parties.find(p => p.partyId === 'inv') === undefined,          'party con pieType no-en-targets ignorada');
 }
 
 // ─── Runner ──────────────────────────────────────────────────────
