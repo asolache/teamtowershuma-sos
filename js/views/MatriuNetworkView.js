@@ -89,7 +89,7 @@ export default class MatriuNetworkView {
                 <a href="/matriu" data-link class="mn-logo">✦ Matriu</a>
                 <span class="mn-title">🌐 Xarxa de membres ${renderExplainerBadge('cohort-0', { size: 'xs' })} ${renderExplainerBadge('vna', { size: 'xs' })}</span>
                 <div class="mn-spacer"></div>
-                <a href="/matriu" data-link class="mn-link">← Landing Matriu</a>
+                <a href="/matriu" data-link class="mn-link" style="background:rgba(42,58,42,0.08);font-weight:600;">📜 Veure el manifest →</a>
                 ${renderNavGroupedHtml({ active: '', className: 'mn-link' })}
             </div>
 

@@ -314,7 +314,10 @@ export default class MatriuLandingView {
             <!-- HERO -->
             <section class="mt-hero">
                 <div class="mt-container">
-                    <span class="mt-pill">Nucli fundacional obert · ${seatsTaken}/${seatsTotal} places</span>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <span class="mt-pill">Nucli fundacional obert · ${seatsTaken}/${seatsTotal} places</span>
+                        <a href="/matriu/network" data-link style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:transparent;border:1px solid var(--mt-rule, rgba(42,58,42,0.18));border-radius:999px;font-size:12px;color:var(--mt-dark, #2a3a2a);text-decoration:none;font-family:ui-monospace, monospace;transition:background 0.15s;">🌐 Veure els membres del nucli →</a>
+                    </div>
                     <div class="mt-hero-grid" style="margin-top: 28px;">
                         <div>
                             <h1>
