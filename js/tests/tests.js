@@ -1441,14 +1441,14 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 15,                          '15 destinos canónicos (+ learn UX-EDU-001 + matriu MAT-002-H)');
+    assert(NAV_DESTINATIONS.length === 16,                          '16 destinos canónicos (+ value VAL-001)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 13,                                'sin projectId · 13 links (sin sops y sin wallet · 15-2)');
+    assert(linksGlobal.length === 13,                                'sin projectId · 13 links (sin sops · wallet · value · 16-3)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
@@ -3235,6 +3235,297 @@ async function testCohortSeatService() {
     assert(threwA,                                                           'buildSwarmAssignmentNode sin args lanza');
 }
 
+// ─── PACT-001 sprint A · pactService · primer contrato ─────────────
+async function testPactService() {
+    const m = await import('../core/pactService.js?v=' + Date.now());
+    const {
+        DEFAULT_PACT_CLAUSES, validateClauses, validatePact,
+        mergeClauses, buildPactDraft, addSignature, pactSummary, renderPactMarkdown,
+    } = m;
+
+    // Defaults
+    assert(Object.isFrozen(DEFAULT_PACT_CLAUSES),                          'DEFAULT_PACT_CLAUSES frozen');
+    assert(validateClauses(DEFAULT_PACT_CLAUSES),                          'defaults válidos');
+
+    // mergeClauses
+    const merged = mergeClauses(DEFAULT_PACT_CLAUSES, { object: 'Hortet de barri.', vesting: { months: 12 } });
+    assert(merged.object === 'Hortet de barri.',                            'mergeClauses · override object');
+    assert(merged.vesting.months === 12,                                    'mergeClauses · vesting.months override');
+    assert(merged.vesting.cliffMonths === 6,                                'mergeClauses · vesting.cliff preservado');
+    assert(merged.participation === 'slicing-pie',                          'mergeClauses · participation default');
+
+    // buildPactDraft errors
+    let threw = false;
+    try { buildPactDraft(); } catch (_) { threw = true; }
+    assert(threw,                                                            'buildPactDraft · sin args lanza');
+    threw = false;
+    try { buildPactDraft({ projectId: 'p1', parties: [] }); } catch (_) { threw = true; }
+    assert(threw,                                                            'buildPactDraft · sin parties lanza');
+    threw = false;
+    try { buildPactDraft({ projectId: 'p1', parties: [{ }] }); } catch (_) { threw = true; }
+    assert(threw,                                                            'buildPactDraft · party inválida lanza');
+
+    // buildPactDraft happy
+    const parties = [
+        { identityId: 'did:sos:abc', displayName: 'Alvaro', role: 'CEO', contributionType: 'time-and-vision', initialShare: 0.4, multiplier: 1.5 },
+        { identityId: 'did:sos:def', displayName: 'Ingrid', role: 'CTO', contributionType: 'code-and-time', initialShare: 0.4 },
+    ];
+    const draft = buildPactDraft({ projectId: 'proj-X', parties, projectTypeId: 'startup-coop-tradicional' });
+    assert(draft.id === 'proj-X::pact::sos-v1',                             'draft · id namespaced');
+    assert(draft.type === 'pact',                                           'draft · type=pact');
+    assert(draft.content.status === 'draft',                                'draft · status=draft');
+    assert(draft.content.parties.length === 2,                              'draft · 2 parties');
+    assert(draft.keywords.includes('type:pact'),                            'draft · keywords pact');
+    assert(draft.keywords.includes('projectType:startup-coop-tradicional'), 'draft · keywords projectType');
+    assert(validatePact(draft),                                              'validatePact · draft válido');
+
+    // sum > 1.0 → validatePact rechaza
+    const overShared = buildPactDraft({ projectId: 'p1', parties: [
+        { identityId: 'a', displayName: 'A', role: 'r', contributionType: 't', initialShare: 0.6 },
+        { identityId: 'b', displayName: 'B', role: 'r', contributionType: 't', initialShare: 0.6 },
+    ]});
+    assert(validatePact(overShared) === false,                              'validatePact · sum>1 falla');
+
+    // addSignature
+    const sig1 = addSignature(draft, { identityId: 'did:sos:abc', signature: 'sig-A', hashSnapshot: 'h-1' });
+    assert(sig1.content.signatures.length === 1,                            'addSignature · 1 firma');
+    assert(sig1.content.status === 'draft',                                 'addSignature · sigue draft (1/2)');
+
+    const sig2 = addSignature(sig1, { identityId: 'did:sos:def', signature: 'sig-B', hashSnapshot: 'h-2' });
+    assert(sig2.content.signatures.length === 2,                            'addSignature · 2 firmas');
+    assert(sig2.content.status === 'signed',                                'addSignature · status=signed (todas)');
+    assert(sig2.keywords.includes('status:signed'),                         'addSignature · keyword updated');
+    assert(!sig2.keywords.includes('status:draft'),                         'addSignature · keyword draft removed');
+
+    // idempotent
+    const sig2b = addSignature(sig2, { identityId: 'did:sos:abc', signature: 'sig-A', hashSnapshot: 'h-1' });
+    assert(sig2b.content.signatures.length === 2,                           'addSignature · idempotent');
+
+    // errors
+    let threwSig = false;
+    try { addSignature(null, { identityId: 'x', signature: 'y', hashSnapshot: 'z' }); } catch (_) { threwSig = true; }
+    assert(threwSig,                                                        'addSignature · pact inválido lanza');
+    threwSig = false;
+    try { addSignature(draft, { identityId: 'x' }); } catch (_) { threwSig = true; }
+    assert(threwSig,                                                        'addSignature · sin sig/hash lanza');
+
+    // pactSummary
+    const summary = pactSummary(sig2);
+    assert(summary.partiesCount === 2,                                       'summary · 2 parties');
+    assert(summary.signaturesCount === 2,                                    'summary · 2 sigs');
+    assert(summary.signedAll === true,                                       'summary · signedAll');
+    assert(summary.initialSharePct === 80,                                    'summary · 80% inicial');
+    assert(summary.slicingPiePct === 20,                                      'summary · 20% slicing pie');
+    assert(summary.quorumPct === 66,                                          'summary · 66% quorum');
+    assert(pactSummary({}) === null,                                          'summary · null en inválido');
+
+    // renderPactMarkdown
+    const md = renderPactMarkdown(sig2);
+    assert(typeof md === 'string' && md.length > 200,                        'markdown · render');
+    assert(md.includes('# Pacte de socis dinàmic'),                          'markdown · header');
+    assert(md.includes('Alvaro') && md.includes('Ingrid'),                   'markdown · parties');
+    assert(md.includes('startup-coop-tradicional'),                          'markdown · projectType');
+    assert(renderPactMarkdown({}).includes('inválido'),                       'markdown · placeholder en inválido');
+}
+
+// ─── VAL-001 sprint A · valueAccountingService · Slicing Pie + FairShares ─────────
+async function testValueAccounting() {
+    const m = await import('../core/valueAccountingService.js?v=' + Date.now());
+    const {
+        SLICING_PIE_MULTIPLIERS, FAIRSHARES_PIE_TYPES, DEFAULT_PIES_BY_PROJECT_TYPE,
+        VALID_CONTRIBUTION_TYPES,
+        buildContribution, fairValueForTime,
+        calculateSlices, calculatePieDistribution, calculateStakeholderPies,
+        summarizePieDistribution, pieGiniCoefficient,
+        buildValueContributionNode, extractContributionsFromKb, activePiesForProject,
+    } = m;
+
+    // Constantes
+    assert(Object.isFrozen(SLICING_PIE_MULTIPLIERS),                         'multipliers frozen');
+    assert(SLICING_PIE_MULTIPLIERS.cash === 4,                                'cash ×4');
+    assert(SLICING_PIE_MULTIPLIERS.time === 2,                                'time ×2');
+    assert(SLICING_PIE_MULTIPLIERS.assets === 2,                              'assets ×2');
+    assert(SLICING_PIE_MULTIPLIERS.ideas === 1,                               'ideas ×1');
+    assert(Object.isFrozen(FAIRSHARES_PIE_TYPES) && FAIRSHARES_PIE_TYPES.length === 5, '5 pie types');
+    assert(Object.isFrozen(DEFAULT_PIES_BY_PROJECT_TYPE),                     'default pies frozen');
+
+    // buildContribution errors
+    let threw = false;
+    try { buildContribution(); } catch(_) { threw = true; }
+    assert(threw, 'buildContribution sin args lanza');
+    threw = false;
+    try { buildContribution({partyId: 'p1', type: 'invalid', fairValueEur: 100}); } catch(_) { threw = true; }
+    assert(threw, 'type inválido lanza');
+    threw = false;
+    try { buildContribution({partyId: 'p1', type: 'cash', fairValueEur: -50}); } catch(_) { threw = true; }
+    assert(threw, 'fairValue negativo lanza');
+
+    // buildContribution happy
+    const c1 = buildContribution({partyId: 'alvaro', type: 'cash', fairValueEur: 1000});
+    assert(c1.slices === 4000,                                                'cash 1000€ × 4 = 4000');
+    assert(c1.riskMultiplier === 4,                                            'risk ×4 catálogo');
+    const c2 = buildContribution({partyId: 'ingrid', type: 'time', fairValueEur: 500});
+    assert(c2.slices === 1000,                                                 'time 500€ × 2 = 1000');
+    const cOver = buildContribution({partyId: 'a', type: 'cash', fairValueEur: 100, riskMultiplierOverride: 6});
+    assert(cOver.slices === 600,                                               'override ×6');
+
+    // fairValueForTime
+    assert(fairValueForTime({hours: 100, annualSalaryEur: 30000}) === 3000,   'fairValueForTime · 100h·30k€ = 3000');
+    assert(fairValueForTime({hours: 0, annualSalaryEur: 30000}) === 0,         'fairValueForTime · 0h = 0');
+
+    // calculateSlices · agrupa
+    const contribs = [
+        buildContribution({partyId: 'alvaro', type: 'cash', fairValueEur: 1000}),
+        buildContribution({partyId: 'alvaro', type: 'time', fairValueEur: 500}),
+        buildContribution({partyId: 'ingrid', type: 'time', fairValueEur: 1000}),
+        buildContribution({partyId: 'marc',   type: 'ideas', fairValueEur: 600}),
+    ];
+    const slices = calculateSlices(contribs);
+    assert(slices.alvaro === 5000,                                             'alvaro · 4000+1000');
+    assert(slices.ingrid === 2000,                                             'ingrid · 2000');
+    assert(slices.marc === 600,                                                'marc · 600');
+    assert(JSON.stringify(calculateSlices(null)) === '{}',                      'calculateSlices(null) {}');
+
+    // calculatePieDistribution
+    const dist = calculatePieDistribution({slices});
+    assert(dist.length === 3,                                                  'distribution · 3 entries');
+    assert(dist[0].partyId === 'alvaro',                                       'distribution · alvaro top');
+    assert(Math.abs(dist[0].sharePct + dist[1].sharePct + dist[2].sharePct - 100) < 0.5, 'shares ≈100');
+    assert(calculatePieDistribution({slices: {}}).length === 0,                'distribution vacía');
+
+    // calculateStakeholderPies
+    const partyTypeMap = {alvaro: 'founders', ingrid: 'founders', marc: 'team'};
+    const pies = calculateStakeholderPies({contributions: contribs, partyTypeMap});
+    assert(pies.founders.totalSlices === 7000,                                 'founders · 7000');
+    assert(pies.team.totalSlices === 600,                                      'team · 600');
+    assert(pies.users.totalSlices === 0,                                       'users · vacío');
+    const piesSubset = calculateStakeholderPies({contributions: contribs, partyTypeMap, activePies: ['founders']});
+    assert(piesSubset.founders.totalSlices === 7000,                           'subset · founders');
+    assert(piesSubset.team === undefined,                                       'subset · team excluido');
+    const piesDefault = calculateStakeholderPies({contributions: [buildContribution({partyId: 'huerf', type: 'cash', fairValueEur: 100})], partyTypeMap: {}});
+    assert(piesDefault.team.totalSlices === 400,                                'huérfano default → team');
+
+    // summarizePieDistribution
+    const sum = summarizePieDistribution(slices);
+    assert(sum.totalParties === 3,                                              'summary · 3');
+    assert(sum.leader === 'alvaro',                                             'summary · leader');
+    assert(sum.totalSlices === 7600,                                            'summary · 7600 total');
+    assert(summarizePieDistribution({}).totalParties === 0,                     'summary vacío');
+
+    // pieGiniCoefficient (fixed formula)
+    assert(pieGiniCoefficient({a: 100, b: 100, c: 100}) === 0,                 'gini igualitario · 0');
+    assert(pieGiniCoefficient({a: 0, b: 0, c: 1000}) > 0.5,                    'gini monopolio > 0.5');
+    assert(pieGiniCoefficient({}) === 0,                                        'gini vacío · 0');
+    assert(pieGiniCoefficient(null) === 0,                                      'gini null · 0');
+
+    // buildValueContributionNode
+    const node = buildValueContributionNode({projectId: 'proj-X', contribution: c1});
+    assert(node.type === 'value_contribution',                                  'node type');
+    assert(node.content.slices === 4000,                                         'node slices');
+    assert(node.keywords.includes('type:value_contribution'),                    'node keyword type');
+    assert(node.keywords.includes('party:alvaro'),                               'node keyword party');
+
+    let threwN = false;
+    try { buildValueContributionNode(); } catch(_) { threwN = true; }
+    assert(threwN,                                                                'buildNode sin args lanza');
+
+    // extractContributionsFromKb
+    const kbNodes = [
+        node,
+        {type: 'sop', projectId: 'proj-X'},
+        {type: 'value_contribution', projectId: 'proj-Y', content: {partyId: 'x', slices: 100, contribType: 'time'}},
+    ];
+    assert(extractContributionsFromKb({kbNodes, projectId: 'proj-X'}).length === 1,        'extract · filtra proj');
+    assert(extractContributionsFromKb({kbNodes}).length === 2,                              'extract · sin filtro · 2');
+
+    // activePiesForProject
+    assert(activePiesForProject({projectTypeId: 'comunitat-autosuficient'}).includes('community'), 'activePies · comunitat→community');
+    assert(activePiesForProject({projectTypeId: 'startup-coop-tradicional'}).includes('investors'), 'activePies · startup→investors');
+    assert(activePiesForProject({projectTypeId: 'inexistente'}).length === 2,                       'activePies · default 2');
+    assert(activePiesForProject({overridePies: ['founders', 'team', 'community']}).length === 3,    'activePies · override');
+    assert(activePiesForProject({overridePies: ['founders', 'invalid']}).length === 1,              'activePies · override filtra');
+
+    // ── VAL-001 sprint A.5 · KIS · pieTargets + calculateProjectPie ──
+    const {
+        DEFAULT_PIE_TARGETS_BY_PROJECT_TYPE,
+        validatePieTargets, pieTargetsForProject,
+        calculateProjectPie, summarizeProjectPie,
+    } = m;
+
+    // Constantes
+    assert(Object.isFrozen(DEFAULT_PIE_TARGETS_BY_PROJECT_TYPE),                'DEFAULT_PIE_TARGETS frozen');
+    for (const [typeId, targets] of Object.entries(DEFAULT_PIE_TARGETS_BY_PROJECT_TYPE)) {
+        const sum = Object.values(targets).reduce((a, b) => a + b, 0);
+        assert(sum === 100,                                                      typeId + ' · suma 100');
+        assert(validatePieTargets(targets),                                       typeId + ' · validate ok');
+    }
+
+    // validatePieTargets
+    assert(validatePieTargets({founders: 50, team: 50}) === true,                'valid 50/50');
+    assert(validatePieTargets({founders: 50, team: 30}) === false,               'invalid sum 80');
+    assert(validatePieTargets({founders: 50, invalid: 50}) === false,            'invalid pie type');
+    assert(validatePieTargets({}) === false,                                      'invalid vacío');
+    assert(validatePieTargets(null) === false,                                    'invalid null');
+
+    // pieTargetsForProject
+    const pt1 = pieTargetsForProject({projectTypeId: 'comunitat-autosuficient'});
+    assert(pt1.founders === 35 && pt1.community === 10,                          'targets comunitat 35/35/20/10');
+    const pt2 = pieTargetsForProject({projectTypeId: 'inexistente'});
+    assert(pt2.founders === 60 && pt2.team === 40,                                'targets default 60/40');
+    const pt3 = pieTargetsForProject({overrideTargets: {founders: 70, team: 30}});
+    assert(pt3.founders === 70,                                                    'targets override válido');
+    const pt4 = pieTargetsForProject({overrideTargets: {founders: 70, team: 50}});
+    assert(pt4.founders === 60,                                                    'targets override inválido → default');
+
+    // calculateProjectPie · errores
+    let threwP = false;
+    try { calculateProjectPie({contributions: [], partyTypeMap: {}, pieTargets: null}); } catch(_) { threwP = true; }
+    assert(threwP,                                                                 'calculateProjectPie · pieTargets null lanza');
+
+    // calculateProjectPie · KIS happy path
+    const kisContribs = [
+        buildContribution({partyId: 'alvaro', type: 'cash', fairValueEur: 1000}),
+        buildContribution({partyId: 'alvaro', type: 'time', fairValueEur: 500}),
+        buildContribution({partyId: 'ingrid', type: 'time', fairValueEur: 1000}),
+        buildContribution({partyId: 'marc',   type: 'ideas', fairValueEur: 600}),
+    ];
+    const kisMap = {alvaro: 'founders', ingrid: 'founders', marc: 'team'};
+    const kisTargets = {founders: 50, team: 30, users: 20};
+
+    const projPie = calculateProjectPie({contributions: kisContribs, partyTypeMap: kisMap, pieTargets: kisTargets});
+    assert(projPie.parties.length === 3,                                           'projPie · 3 parties');
+    assert(projPie.piesActive.includes('founders'),                                 'projPie · founders active');
+    assert(projPie.piesEmpty.includes('users'),                                     'projPie · users empty');
+
+    const aPart = projPie.parties.find(p => p.partyId === 'alvaro');
+    const iPart = projPie.parties.find(p => p.partyId === 'ingrid');
+    const mPart = projPie.parties.find(p => p.partyId === 'marc');
+
+    // alvaro · 5000/7000 × 50 ≈ 35.71% del proyecto
+    assert(Math.abs(aPart.sharePctInProject - 35.71) < 0.05,                       'alvaro · 35.71% project · ' + aPart.sharePctInProject);
+    assert(Math.abs(iPart.sharePctInProject - 14.29) < 0.05,                       'ingrid · 14.29% project · ' + iPart.sharePctInProject);
+    assert(mPart.sharePctInProject === 30,                                         'marc · 30% project (sólo team)');
+    assert(projPie.parties[0].partyId === 'alvaro',                                 'projPie · alvaro líder');
+
+    // summarizeProjectPie
+    const psum = summarizeProjectPie(projPie);
+    assert(psum.totalParties === 3,                                                'psum · 3 parties');
+    assert(psum.leader === 'alvaro',                                               'psum · leader alvaro');
+    assert(Math.abs(psum.allocatedPct - 80) < 0.1,                                 'psum · 80% allocated');
+    assert(Math.abs(psum.unallocatedPct - 20) < 0.1,                               'psum · 20% unallocated (users)');
+    assert(psum.piesActiveCount === 2,                                              'psum · 2 pies active');
+    assert(psum.piesEmptyCount === 1,                                               'psum · 1 pie empty');
+    assert(summarizeProjectPie(null).unallocatedPct === 100,                       'psum null · 100% unallocated');
+
+    // edge case · party con pieType no en targets se ignora
+    const projPie2 = calculateProjectPie({
+        contributions: [...kisContribs, buildContribution({partyId: 'inv', type: 'cash', fairValueEur: 500})],
+        partyTypeMap: {...kisMap, inv: 'investors'},   // investors NO en targets
+        pieTargets: kisTargets,
+    });
+    assert(projPie2.parties.find(p => p.partyId === 'inv') === undefined,          'party con pieType no-en-targets ignorada');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -3274,7 +3565,9 @@ const SUITE = [
     { name: 'MAT-003 sprint B · skillTaxonomy + coverageReport',  fn: testSkillTaxonomy },
     { name: 'MAT-003 sprint C · swarmMatchmaker (matchmaker IA)', fn: testSwarmMatchmaker },
     { name: 'MAT-003 sprint E · bootstrapTemplates (12 plantillas)', fn: testBootstrapTemplates },
-    { name: 'MAT-003 sprint F · cohortSeatService (CRUD + extract)', fn: testCohortSeatService }
+    { name: 'MAT-003 sprint F · cohortSeatService (CRUD + extract)', fn: testCohortSeatService },
+    { name: 'PACT-001 sprint A · pactService (primer contrato)',  fn: testPactService },
+    { name: 'VAL-001 sprint A · valueAccountingService (Slicing Pie + FairShares)', fn: testValueAccounting }
 ];
 
 export async function runTests() {

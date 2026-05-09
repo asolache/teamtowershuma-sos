@@ -42,6 +42,8 @@ const ROUTES = [
     { path: '/matriu',    view: () => import('./views/MatriuLandingView.js') },
     // UX-EDU-001 sprint C · vista /learn glosario navegable + progreso "ya leído"
     { path: '/learn',     view: () => import('./views/LearnView.js') },
+    // VAL-001 sprint B · vista /value-accounting · tarta del proyecto (Slicing Pie + FairShares)
+    { path: '/value-accounting', view: () => import('./views/ValueAccountingView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 

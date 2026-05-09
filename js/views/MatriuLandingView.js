@@ -91,7 +91,7 @@ function escapeHtml(s) {
 
 export default class MatriuLandingView {
     constructor() {
-        document.title = 'Matriu Incoopadora · Cohort 0 oberta · 24/100';
+        document.title = 'Matriu · Nucli fundacional obert · 24/108';
     }
 
     async getHtml() {
@@ -246,21 +246,25 @@ export default class MatriuLandingView {
             .mt-footer-col a:hover { opacity: 1; text-decoration: underline; }
             .mt-footer-bottom { border-top: 1px solid var(--mt-line); padding: 24px clamp(20px, 4vw, 48px); display: flex; justify-content: space-between; font-family: ui-monospace, monospace; font-size: 11px; opacity: 0.55; letter-spacing: 0.05em; flex-wrap: wrap; gap: 12px; }
 
-            /* ── Reservar seient form (modal) ────────────────────────── */
-            .mt-modal { position: fixed; inset: 0; background: rgba(26,31,26,0.6); display: none; align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(6px); }
+            /* ── Reservar seient form (modal) · todos los valores hardcodeados como fallback de las vars locales ── */
+            .mt-modal { position: fixed; inset: 0; background: rgba(26,31,26,0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(6px); }
             .mt-modal.is-open { display: flex; animation: mtFade 0.2s ease-out; }
             @keyframes mtFade { from { opacity: 0; } to { opacity: 1; } }
-            .mt-modal-card { background: var(--mt-cream); border-radius: 16px; padding: clamp(28px, 4vw, 44px); max-width: 480px; width: calc(100% - 32px); max-height: 92vh; overflow-y: auto; }
-            .mt-modal-card h3 { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 32px; color: var(--mt-dark); margin-bottom: 8px; }
-            .mt-modal-card p  { font-size: 14px; line-height: 1.55; color: var(--mt-dark); opacity: 0.8; margin-bottom: 20px; }
+            .mt-modal-card { background: #f1ebde; border-radius: 16px; padding: clamp(28px, 4vw, 44px); max-width: 520px; width: calc(100% - 32px); max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.45); }
+            .mt-modal-card h3 { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 32px; color: #2a3a2a; margin-bottom: 12px; line-height: 1.1; }
+            .mt-modal-card p  { font-size: 14px; line-height: 1.6; color: #3a4a3a; margin-bottom: 22px; }
+            .mt-modal-card p strong { color: #c25a3a; font-weight: 600; }
             .mt-input-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-            .mt-input-row label { font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.6; }
-            .mt-input { width: 100%; padding: 12px 14px; border: 1px solid var(--mt-rule); border-radius: 8px; background: white; font-size: 14px; font-family: inherit; color: var(--mt-dark); outline: none; transition: border-color 0.15s; }
-            .mt-input:focus { border-color: var(--mt-tcotta); }
-            .mt-modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; }
-            .mt-modal-cancel { background: transparent; border: 0; color: var(--mt-dark); opacity: 0.6; cursor: pointer; font-size: 14px; padding: 8px 12px; }
-            .mt-modal-confirm { background: var(--mt-ink); color: var(--mt-cream); border: 0; padding: 14px 24px; border-radius: 999px; font-weight: 600; font-size: 14px; cursor: pointer; transition: transform 0.15s; }
-            .mt-modal-confirm:hover { transform: translateY(-1px); }
+            .mt-input-row label { font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5a6e4f; font-weight: 600; }
+            .mt-input { width: 100%; padding: 12px 14px; border: 1px solid rgba(42,58,42,0.25); border-radius: 8px; background: #ffffff; font-size: 14px; font-family: 'Inter Tight', 'Inter', sans-serif; color: #1a1f1a; outline: none; transition: border-color 0.15s, box-shadow 0.15s; box-sizing: border-box; }
+            .mt-input::placeholder { color: rgba(42,58,42,0.4); }
+            .mt-input:focus { border-color: #c25a3a; box-shadow: 0 0 0 3px rgba(194,90,58,0.12); }
+            .mt-modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; }
+            .mt-modal-cancel { background: transparent; border: 1px solid rgba(42,58,42,0.2); color: #2a3a2a; cursor: pointer; font-size: 14px; padding: 12px 22px; border-radius: 999px; font-weight: 600; transition: background 0.15s; font-family: 'Inter Tight', 'Inter', sans-serif; }
+            .mt-modal-cancel:hover { background: rgba(42,58,42,0.06); }
+            .mt-modal-confirm { background: #1a1f1a; color: #f1ebde; border: 0; padding: 14px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; font-family: 'Inter Tight', 'Inter', sans-serif; box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
+            .mt-modal-confirm:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(26,31,26,0.35); }
+            .mt-modal-confirm:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
             /* ── Responsive ───────────────────────────────────────────── */
             @media (max-width: 880px) {
@@ -310,7 +314,7 @@ export default class MatriuLandingView {
             <!-- HERO -->
             <section class="mt-hero">
                 <div class="mt-container">
-                    <span class="mt-pill">Cohort 0 oberta · ${seatsTaken}/${seatsTotal} places</span>
+                    <span class="mt-pill">Nucli fundacional obert · ${seatsTaken}/${seatsTotal} places</span>
                     <div class="mt-hero-grid" style="margin-top: 28px;">
                         <div>
                             <h1>
@@ -502,7 +506,7 @@ export default class MatriuLandingView {
             <!-- COHORT 0 · 6 PERKS -->
             <section class="mt-section" id="cohort">
                 <div class="mt-container">
-                    <div class="mt-section-tag">Cohort 0 · ${seatsTotal} places ${renderExplainerBadge('cohort-0', { size: 'xs' })}</div>
+                    <div class="mt-section-tag">Nucli fundacional · ${seatsTotal} places ${renderExplainerBadge('cohort-0', { size: 'xs' })}</div>
                     <div class="mt-cohort-head">
                         <h2 class="mt-italic" style="margin: 0;">Què<br><strong>t'emportes</strong><br>per ser-hi.</h2>
                         <div class="mt-cohort-counter">${seatsTaken}/${seatsTotal}<span>· queden ${seatsLeft} seients</span></div>
@@ -540,7 +544,7 @@ export default class MatriuLandingView {
                         <a href="https://matriu.coop" target="_blank" rel="noopener noreferrer" class="mt-cta-second">Llegir el whitepaper</a>
                     </div>
                     <div class="mt-disclaimer">
-                        No requereix KYC ni wallet per reservar · Escrow de llinatge fins a la cohort
+                        No requereix KYC ni wallet per reservar · Escrow de llinatge fins que tanqui el nucli
                     </div>
                 </div>
             </section>
@@ -563,7 +567,7 @@ export default class MatriuLandingView {
                     <div class="mt-footer-col">
                         <h5>Comunitat</h5>
                         <a href="/folders" data-link>CoPs obertes</a>
-                        <a href="#cohort">Cohort 0</a>
+                        <a href="#cohort">Nucli fundacional</a>
                         <a href="#engine">Esdeveniments</a>
                         <a href="#tokenomic">Manifest</a>
                     </div>
@@ -577,46 +581,48 @@ export default class MatriuLandingView {
                 </div>
                 <div class="mt-footer-bottom">
                     <div>© ${new Date().getFullYear()} · Matriu Incoopadora SCCL</div>
-                    <div>v0.1 · cohort 0 · open source</div>
+                    <div>v0.1 · nucli fundacional · open source</div>
                 </div>
             </footer>
-        </div>
 
-        <!-- RESERVAR SEIENT MODAL -->
-        <div class="mt-modal" id="mtModal" role="dialog" aria-labelledby="mtModalTitle" aria-modal="true">
-            <div class="mt-modal-card">
-                <h3 id="mtModalTitle">Reservar el teu seient</h3>
-                <p id="mtModalIntro">
-                    Entres a la cohort 0 fundacional. Sense KYC ni wallet ara mateix · només
-                    el teu nom, una idea de projecte i el tipus de projecte que vols arrencar.
-                    Els crèdits es minten quan tanqui la cohort.
-                </p>
-                <div class="mt-input-row">
-                    <label for="mtName">Nom</label>
-                    <input type="text" id="mtName" class="mt-input" placeholder="ex. Alvaro Solache" autocomplete="name">
-                </div>
-                <div class="mt-input-row">
-                    <label for="mtHandle">Handle (opcional)</label>
-                    <input type="text" id="mtHandle" class="mt-input" placeholder="@alvaro">
-                </div>
-                <div class="mt-input-row">
-                    <label for="mtIdea">La teva idea de projecte</label>
-                    <input type="text" id="mtIdea" class="mt-input" placeholder="ex. Hortet de la Vall · cooperativa de productores">
-                </div>
-                <div class="mt-input-row">
-                    <label for="mtType">Tipus de projecte</label>
-                    <select id="mtType" class="mt-input">
-                        <option value="">— Tria un tipus (opcional · arrencaràs amb mapa pre-configurat) —</option>
-                        ${PROJECT_TYPES.map(pt => `<option value="${escapeHtml(pt.id)}">${PROJECT_TYPE_ICONS[pt.id] || '✦'} ${escapeHtml(pt.label)}</option>`).join('')}
-                    </select>
-                    <small id="mtTypeHint" style="font-size:11px;opacity:0.6;margin-top:4px;">Si tries tipus, el projecte arrencarà amb la matriu de valor pre-configurada (rols + transaccions + SOPs).</small>
-                </div>
-                <div class="mt-modal-actions">
-                    <button class="mt-modal-cancel" id="mtModalCancel">Cancel·lar</button>
-                    <button class="mt-modal-confirm" id="mtModalConfirm">Reservar seient · 0 € →</button>
+            <!-- RESERVAR SEIENT MODAL · dentro del .mt-shell para heredar vars -->
+            <div class="mt-modal" id="mtModal" role="dialog" aria-labelledby="mtModalTitle" aria-modal="true">
+                <div class="mt-modal-card">
+                    <h3 id="mtModalTitle">Reservar el teu seient</h3>
+                    <p id="mtModalIntro">
+                        Entres al <strong>nucli fundacional</strong> dels 108 primers. Sense KYC ni wallet ara mateix · només
+                        el teu nom, una idea de projecte i el tipus de projecte que vols arrencar.
+                        Els crèdits es minten quan tanqui el grup.
+                    </p>
+                    <div class="mt-input-row">
+                        <label for="mtName">Nom</label>
+                        <input type="text" id="mtName" class="mt-input" placeholder="ex. Alvaro Solache" autocomplete="name">
+                    </div>
+                    <div class="mt-input-row">
+                        <label for="mtHandle">Handle (opcional)</label>
+                        <input type="text" id="mtHandle" class="mt-input" placeholder="@alvaro">
+                    </div>
+                    <div class="mt-input-row">
+                        <label for="mtIdea">La teva idea de projecte</label>
+                        <input type="text" id="mtIdea" class="mt-input" placeholder="ex. Hortet de la Vall · cooperativa de productores">
+                    </div>
+                    <div class="mt-input-row">
+                        <label for="mtType">Tipus de projecte</label>
+                        <select id="mtType" class="mt-input">
+                            <option value="">— Tria un tipus (opcional · arrencaràs amb mapa pre-configurat) —</option>
+                            ${PROJECT_TYPES.map(pt => `<option value="${escapeHtml(pt.id)}">${PROJECT_TYPE_ICONS[pt.id] || '✦'} ${escapeHtml(pt.label)}</option>`).join('')}
+                        </select>
+                        <small id="mtTypeHint" style="font-size:11px;color:#5a6e4f;opacity:0.85;margin-top:4px;">Si tries tipus, el projecte arrencarà amb la matriu de valor pre-configurada (rols + transaccions + SOPs).</small>
+                    </div>
+                    <div class="mt-modal-actions">
+                        <button class="mt-modal-cancel" id="mtModalCancel">Cancel·lar</button>
+                        <button class="mt-modal-confirm" id="mtModalConfirm">Reservar seient · 0 € →</button>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- (modal mogut a dins del .mt-shell · vars Matriu hereden correctament) -->
         `;
     }
 

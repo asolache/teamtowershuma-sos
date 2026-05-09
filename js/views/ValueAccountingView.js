@@ -1,0 +1,650 @@
+// TEAMTOWERS SOS V11 — VALUE ACCOUNTING VIEW (VAL-001 sprint B)
+//
+// Ruta: /value-accounting?project={projectId}
+// Visualiza la tarta del proyecto KIS · una sola tarta dividida en
+// pies con targets fijos, cada miembro con su % final del proyecto.
+//
+// UI:
+//   - Hero · skin Matriu · "Tarta del projecte · {nombre}"
+//   - 4 stat-cards · Total slices · Líder · Allocated% · Unallocated%
+//   - Pie chart D3 (color por pie type) · centro con projectId
+//   - Tabla de pies · target% · used% · slices · status (active/empty)
+//   - Tabla de parties · party · pieType · slices · sharePctInPie · sharePctInProject
+//   - Form añadir contribution (party + type + fairValueEur)
+//   - Editor pieTargets (4-5 sliders que suman 100)
+
+import { store } from '../core/store.js';
+import { KB }    from '../core/kb.js';
+import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import {
+    SLICING_PIE_MULTIPLIERS, FAIRSHARES_PIE_TYPES,
+    DEFAULT_PIE_TARGETS_BY_PROJECT_TYPE,
+    buildContribution, fairValueForTime,
+    calculateProjectPie, summarizeProjectPie,
+    pieTargetsForProject, validatePieTargets,
+    buildValueContributionNode, extractContributionsFromKb,
+} from '../core/valueAccountingService.js';
+import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
+
+// Color por pie type (consistente con landing Matriu)
+const PIE_COLORS = Object.freeze({
+    founders:  '#c25a3a',   // terracota
+    team:      '#5a6e4f',   // verd olivo
+    users:     '#2c4a7a',   // azul profund
+    investors: '#fbbf24',   // ambre
+    community: '#a855f7',   // morado · comunidad
+});
+
+function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+export default class ValueAccountingView {
+    constructor() {
+        document.title = 'Comptabilitat de valor · SOS V11';
+        this.projectId = null;
+        this.project = null;
+        this.contributions = [];
+        this.partyTypeMap = {};      // { partyId: pieType }
+        this.pieTargets = null;      // { founders: 50, team: 30, ... }
+        this.projectPie = null;      // resultado de calculateProjectPie
+    }
+
+    async getHtml() {
+        await store.init();
+        await KB.init();
+        const params = new URLSearchParams(window.location.search);
+        this.projectId = params.get('project');
+        if (!this.projectId) return this._htmlNoProject();
+
+        const projects = (store.getState().projects || []);
+        this.project = projects.find(p => p.id === this.projectId);
+        if (!this.project) return this._htmlError('Projecte no trobat: ' + this.projectId);
+
+        // Cargar contributions del KB
+        const allNodes = await KB.getAllNodes();
+        this.contributions = extractContributionsFromKb({ kbNodes: allNodes, projectId: this.projectId });
+
+        // Cargar partyTypeMap del KB (si existe nodo `value_party_map`)
+        const mapNode = allNodes.find(n => n.id === this.projectId + '::value-party-map' && n.type === 'value_party_map');
+        this.partyTypeMap = mapNode?.content?.map || {};
+
+        // Cargar pieTargets del KB o defaults según projectType
+        const targetsNode = allNodes.find(n => n.id === this.projectId + '::value-pie-targets' && n.type === 'value_pie_targets');
+        const projectTypeId = this.project.matriuProjectType || null;
+        this.pieTargets = targetsNode?.content?.targets || pieTargetsForProject({ projectTypeId });
+
+        // Calcular tarta
+        try {
+            this.projectPie = calculateProjectPie({
+                contributions: this.contributions,
+                partyTypeMap:  this.partyTypeMap,
+                pieTargets:    this.pieTargets,
+            });
+        } catch (e) {
+            console.warn('[VAL-001 B] calculateProjectPie falló:', e);
+            this.projectPie = { pieTargets: this.pieTargets, totalSlices: 0, piesActive: [], piesEmpty: Object.keys(this.pieTargets), parties: [] };
+        }
+
+        return this._renderShell();
+    }
+
+    _htmlNoProject() {
+        return `
+        <div class="va-shell">
+            <div class="va-empty">
+                <div style="font-size:2.4rem;margin-bottom:0.6rem;">📊</div>
+                <h2 class="mat-hero-h1">Falta el projecte a la <strong>URL</strong></h2>
+                <p style="color:#888;font-size:0.9rem;">Aquesta vista necessita <code>?project={id}</code>.</p>
+                <a href="/dashboard" data-link style="color:#c084fc;font-size:0.85rem;">← Dashboard</a>
+            </div>
+        </div>
+        ${this._renderStyle()}
+        `;
+    }
+
+    _htmlError(msg) {
+        return `
+        <div class="va-shell">
+            <div class="va-empty">
+                <div style="font-size:2.4rem;color:#fca5a5;">✘</div>
+                <h2 class="mat-hero-h1">${escapeHtml(msg)}</h2>
+                <a href="/dashboard" data-link style="color:#c084fc;font-size:0.85rem;">← Dashboard</a>
+            </div>
+        </div>
+        ${this._renderStyle()}
+        `;
+    }
+
+    _renderShell() {
+        const p = this.project;
+        const summary = summarizeProjectPie(this.projectPie);
+        const piesActive = this.projectPie.piesActive || [];
+        const piesEmpty = this.projectPie.piesEmpty || [];
+
+        return `
+        ${this._renderStyle()}
+        <div class="va-shell">
+            <div class="va-topbar">
+                <a href="/" data-link class="va-logo">🗼 Team<span>Towers</span></a>
+                <span class="va-title">📊 Contabilitat de valor ${renderExplainerBadge('triple-entry-accounting', { size: 'xs' })} ${renderExplainerBadge('slicing-pie', { size: 'xs' })} ${renderExplainerBadge('fair-fractal-tokenomics', { size: 'xs' })}</span>
+                <div class="va-spacer"></div>
+                <a href="/project/${encodeURIComponent(p.id)}" data-link class="va-link">🎛 Panel projecte</a>
+                ${renderNavGroupedHtml({ active: '', projectId: p.id, className: 'va-link' })}
+            </div>
+
+            <div class="va-main">
+                <div class="va-hero">
+                    <h1 class="mat-hero-h1">📊 Tarta del <strong>projecte</strong> · ${escapeHtml(p.nombre || p.name || p.id)}</h1>
+                    <p class="va-hero-sub">Slicing Pie + FairShares · una sola tarta dividida en pies amb target % acotats. Cada membre rep el seu % del projecte segons les seves aportacions.</p>
+
+                    <div class="va-stats-row">
+                        <div class="va-stat" style="--va-c:${PIE_COLORS.founders};">
+                            <div class="va-stat-label">Membres</div>
+                            <div class="va-stat-value">${summary.totalParties}</div>
+                        </div>
+                        <div class="va-stat" style="--va-c:#c084fc;">
+                            <div class="va-stat-label">Slices total</div>
+                            <div class="va-stat-value">${summary.totalSlices.toLocaleString('ca-ES')}</div>
+                        </div>
+                        <div class="va-stat" style="--va-c:${summary.allocatedPct >= 95 ? '#22c55e' : '#fbbf24'};">
+                            <div class="va-stat-label">Assignat</div>
+                            <div class="va-stat-value">${summary.allocatedPct}%</div>
+                        </div>
+                        <div class="va-stat" style="--va-c:${summary.unallocatedPct === 0 ? '#22c55e' : '#fca5a5'};">
+                            <div class="va-stat-label">Sense assignar</div>
+                            <div class="va-stat-value">${summary.unallocatedPct}%</div>
+                            ${summary.unallocatedPct > 0 ? `<div class="va-stat-sub">${summary.piesEmptyCount} pie${summary.piesEmptyCount !== 1 ? 's' : ''} buit${summary.piesEmptyCount !== 1 ? 's' : ''}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="va-grid">
+                    <div class="va-section">
+                        <h2>🥧 Tarta del projecte</h2>
+                        <div id="vaPieChart" class="va-pie-chart"></div>
+                        <div class="va-legend" id="vaLegend"></div>
+                    </div>
+
+                    <div class="va-section">
+                        <h2>🍰 Pies (target % del projecte)</h2>
+                        <div class="va-pies-list" id="vaPiesList"></div>
+                        <button class="va-btn-secondary" id="vaEditTargets">Editar targets ↗</button>
+                    </div>
+                </div>
+
+                <div class="va-section">
+                    <h2>👥 Membres · % del projecte</h2>
+                    ${this._renderPartiesTable()}
+                </div>
+
+                <div class="va-section">
+                    <h2>➕ Afegir aportació</h2>
+                    ${this._renderContributionForm()}
+                </div>
+
+                <div class="va-section va-section-explain">
+                    <h2>Com funciona</h2>
+                    <p><strong class="mat-accent">1. Aportes valor</strong> · cash, hores, idees, actius, contactes. Cada tipus té un multiplicador de risc (cash ×4 · time ×2 · ideas ×1).</p>
+                    <p><strong class="mat-accent">2. Generes slices</strong> · slices = fairValueEur × multiplier. Les teves slices van al pie del teu stakeholder type (founders/team/users/investors/community).</p>
+                    <p><strong class="mat-accent">3. Reps el teu %</strong> · sharePctInProject = (slicesTeves / totalSlicesTuPie) × pieTarget. Si el teu pie té 50% del projecte i tu tens la meitat de slices del pie · reps 25% del projecte.</p>
+                    <p><strong class="mat-accent">4. Pies sense aportacions</strong> · queden sense assignar (alerta visible). NO es redistribueixen automàticament · el pacte ha de decidir.</p>
+                </div>
+            </div>
+        </div>
+        `;
+    }
+
+    _renderStyle() {
+        return `
+        <style>
+            .va-shell { background: #050507; color: #e6e6e6; min-height: 100%; font-family: var(--font-base, sans-serif); display: flex; flex-direction: column; }
+            .va-topbar { display: flex; align-items: center; gap: 1rem; padding: 14px 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap; flex-shrink: 0; }
+            .va-logo { font-family: monospace; color: #888; text-decoration: none; font-size: 0.78rem; }
+            .va-logo span { color: #6366f1; font-weight: 700; }
+            .va-title { color: #aaa; font-size: 0.86rem; display: inline-flex; align-items: center; gap: 6px; }
+            .va-spacer { flex: 1; }
+            .va-link { color: #888; text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; transition: background 0.15s; }
+            .va-link:hover { background: rgba(255,255,255,0.06); color: #fff; }
+
+            .va-main { flex: 1; padding: clamp(20px, 4vw, 36px); max-width: 1240px; margin: 0 auto; width: 100%; box-sizing: border-box; overflow-y: auto; }
+            .va-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; gap: 0.6rem; padding: 2rem; }
+
+            .va-hero { margin-bottom: 24px; padding: 24px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+            .va-hero h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); color: #fff; line-height: 1.05; margin-bottom: 6px; }
+            .va-hero-sub { color: #aaa; font-size: 0.92rem; max-width: 720px; line-height: 1.55; margin-bottom: 18px; }
+
+            .va-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+            .va-stat { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid var(--va-c, #888); border-radius: 8px; padding: 14px 16px; }
+            .va-stat-label { font-family: monospace; font-size: 0.7rem; color: #888; letter-spacing: 0.06em; text-transform: uppercase; }
+            .va-stat-value { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.8rem; color: #fff; line-height: 1; margin-top: 6px; }
+            .va-stat-sub { font-family: monospace; font-size: 0.7rem; color: var(--va-c); margin-top: 4px; }
+
+            .va-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0; }
+            @media (max-width: 880px) { .va-grid { grid-template-columns: 1fr; } }
+
+            .va-section { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+            .va-section h2 { color: #fff; font-size: 1.05rem; margin-bottom: 14px; font-weight: 600; }
+
+            .va-pie-chart { width: 100%; height: 320px; display: flex; align-items: center; justify-content: center; }
+            .va-pie-chart svg { width: 100%; height: 100%; }
+
+            .va-legend { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; max-height: 200px; overflow-y: auto; }
+            .va-legend-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: 0.82rem; }
+            .va-legend-item:hover { background: rgba(255,255,255,0.04); }
+            .va-legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+            .va-legend-name { flex: 1; color: #ddd; }
+            .va-legend-pct { font-family: monospace; color: #c084fc; font-weight: 700; }
+
+            .va-pies-list { display: flex; flex-direction: column; gap: 10px; }
+            .va-pie-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; background: rgba(255,255,255,0.02); }
+            .va-pie-row.is-empty { opacity: 0.55; border-style: dashed; }
+            .va-pie-dot { width: 14px; height: 14px; border-radius: 50%; }
+            .va-pie-name { font-weight: 600; color: #fff; text-transform: capitalize; }
+            .va-pie-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; margin-top: 4px; }
+            .va-pie-bar-fill { height: 100%; border-radius: 99px; }
+            .va-pie-target { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.2rem; color: #fff; }
+            .va-pie-status { font-family: monospace; font-size: 0.7rem; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+            .va-pie-status.is-active { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
+            .va-pie-status.is-empty { background: rgba(252,165,165,0.12); color: #fca5a5; border: 1px solid rgba(252,165,165,0.3); }
+
+            .va-table { width: 100%; border-collapse: collapse; }
+            .va-table thead th { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.12); text-align: left; font-family: monospace; font-size: 0.72rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+            .va-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+            .va-table tbody td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.88rem; color: #ddd; }
+            .va-table tbody td.va-td-pie { font-weight: 600; text-transform: capitalize; }
+            .va-table tbody td.va-td-pct { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.15rem; color: #c084fc; text-align: right; }
+            .va-table tbody td.va-td-share-pie { font-family: monospace; color: #888; text-align: right; font-size: 0.82rem; }
+            .va-table-empty { color: #666; font-style: italic; padding: 14px; text-align: center; }
+
+            .va-form { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: end; }
+            .va-form label { display: flex; flex-direction: column; gap: 4px; font-family: monospace; font-size: 0.7rem; color: #888; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; }
+            .va-input { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 10px 12px; border-radius: 6px; font-size: 0.88rem; outline: none; transition: border-color 0.15s; font-family: inherit; }
+            .va-input:focus { border-color: #c084fc; }
+            .va-btn { background: linear-gradient(135deg, #c084fc, #6366f1); color: #fff; border: 0; padding: 10px 18px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: transform 0.15s; font-size: 0.85rem; }
+            .va-btn:hover { transform: translateY(-1px); }
+            .va-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+            .va-btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #c084fc; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; margin-top: 12px; }
+            .va-btn-secondary:hover { border-color: #c084fc; }
+
+            .va-section-explain p { color: #bbb; font-size: 0.88rem; line-height: 1.65; margin-bottom: 10px; }
+
+            @media (max-width: 720px) {
+                .va-form { grid-template-columns: 1fr; }
+            }
+
+            .va-edit-targets { background: rgba(192,132,252,0.06); border: 1px solid rgba(192,132,252,0.3); border-radius: 8px; padding: 14px; margin-top: 12px; display: none; }
+            .va-edit-targets.is-open { display: block; }
+            .va-target-slider { display: grid; grid-template-columns: 110px 1fr 60px; gap: 10px; align-items: center; padding: 6px 0; }
+            .va-target-slider input[type=range] { accent-color: #c084fc; }
+            .va-target-slider input[type=number] { width: 60px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.4); color: #fff; border-radius: 4px; font-size: 0.85rem; text-align: right; }
+            .va-target-sum { display: flex; justify-content: space-between; padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 0.85rem; }
+            .va-target-sum.is-valid { color: #4ade80; }
+            .va-target-sum.is-invalid { color: #fca5a5; }
+        </style>
+        `;
+    }
+
+    _renderPartiesTable() {
+        const parties = this.projectPie.parties || [];
+        if (parties.length === 0) {
+            return '<div class="va-table-empty">Encara no hi ha cap aportació · afegeix la primera al formulari de sota.</div>';
+        }
+        const rows = parties.map(p => {
+            const color = PIE_COLORS[p.pieType] || '#888';
+            return `
+                <tr>
+                    <td>${escapeHtml(p.partyId)}</td>
+                    <td class="va-td-pie" style="color:${color};">${escapeHtml(p.pieType)}</td>
+                    <td class="va-td-share-pie">${p.slicesInPie.toLocaleString('ca-ES')}</td>
+                    <td class="va-td-share-pie">${p.sharePctInPie}%</td>
+                    <td class="va-td-pct">${p.sharePctInProject}%</td>
+                </tr>
+            `;
+        }).join('');
+        return `
+            <table class="va-table">
+                <thead>
+                    <tr>
+                        <th>Membre</th>
+                        <th>Pie</th>
+                        <th style="text-align:right;">Slices al pie</th>
+                        <th style="text-align:right;">% al pie</th>
+                        <th style="text-align:right;">% al projecte</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+    }
+
+    _renderContributionForm() {
+        const knownParties = Array.from(new Set([
+            ...Object.keys(this.partyTypeMap),
+            ...this.contributions.map(c => c.partyId),
+        ])).sort();
+        const partyOptions = knownParties.length === 0
+            ? ''
+            : knownParties.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+
+        const typeOptions = Object.keys(SLICING_PIE_MULTIPLIERS).map(t =>
+            `<option value="${t}">${t} · ×${SLICING_PIE_MULTIPLIERS[t]}</option>`
+        ).join('');
+        const pieOptions = FAIRSHARES_PIE_TYPES.map(p =>
+            `<option value="${p}">${p}</option>`
+        ).join('');
+
+        return `
+            <form class="va-form" id="vaContribForm">
+                <label>Membre (party)
+                    <input type="text" id="vaPartyId" class="va-input" list="vaPartiesList" placeholder="ex. did:sos:abc · @alvaro · alvaro" required>
+                    <datalist id="vaPartiesList">${partyOptions}</datalist>
+                </label>
+                <label>Pie
+                    <select id="vaPartyPie" class="va-input">${pieOptions}</select>
+                </label>
+                <label>Tipus aportació
+                    <select id="vaContribType" class="va-input">${typeOptions}</select>
+                </label>
+                <label>Valor (€)
+                    <input type="number" id="vaFairValue" class="va-input" step="0.01" min="0" placeholder="100" required>
+                </label>
+                <button type="submit" class="va-btn">+ Afegir</button>
+            </form>
+            <p style="color:#666;font-size:0.75rem;margin-top:8px;font-family:monospace;">
+                Pista · per a hores de feina, valor = 2 × salari_anual / 2000 × hores. SOS calcula slices = valor × multiplicador automàticament.
+            </p>
+        `;
+    }
+
+    async afterRender() {
+        ensureExplainerStyle();
+        bindExplainerBadges(document);
+
+        if (!this.projectPie) return;
+        this._renderPieChart();
+        this._renderLegend();
+        this._renderPiesList();
+        this._bindForm();
+        this._bindEditTargets();
+    }
+
+    _renderPieChart() {
+        const el = document.getElementById('vaPieChart');
+        if (!el) return;
+        if (typeof window.d3 === 'undefined') {
+            el.innerHTML = '<p style="color:#888;font-size:0.85rem;">D3 no carregat encara · ves a /map per a forçar la càrrega.</p>';
+            return;
+        }
+        const d3 = window.d3;
+        el.innerHTML = '';
+
+        const parties = this.projectPie.parties || [];
+        const piesEmpty = this.projectPie.piesEmpty || [];
+        const targets = this.projectPie.pieTargets || {};
+
+        // Datos · cada party + un sector "unallocated" por cada pie vacío
+        const data = parties.map(p => ({
+            label:    p.partyId,
+            value:    p.sharePctInProject,
+            color:    PIE_COLORS[p.pieType] || '#888',
+            pieType:  p.pieType,
+            isEmpty:  false,
+        }));
+        for (const pieType of piesEmpty) {
+            const pct = targets[pieType] || 0;
+            if (pct > 0) {
+                data.push({
+                    label:    pieType + ' (sense assignar)',
+                    value:    pct,
+                    color:    PIE_COLORS[pieType] || '#444',
+                    pieType,
+                    isEmpty:  true,
+                });
+            }
+        }
+        // Si no llega a 100, añadir un sector "unallocated" gris
+        const sumValue = data.reduce((acc, d) => acc + d.value, 0);
+        if (sumValue < 99.5) {
+            data.push({
+                label: '(sense assignar)',
+                value: 100 - sumValue,
+                color: '#2a2a32',
+                isEmpty: true,
+            });
+        }
+
+        if (data.length === 0 || sumValue === 0) {
+            el.innerHTML = '<p style="color:#888;font-size:0.85rem;text-align:center;padding:2rem;">Encara no hi ha aportacions · afegeix la primera per veure la tarta.</p>';
+            return;
+        }
+
+        const width = el.clientWidth || 480;
+        const height = 320;
+        const radius = Math.min(width, height) / 2 - 20;
+
+        const svg = d3.select(el).append('svg')
+            .attr('viewBox', `${-width/2} ${-height/2} ${width} ${height}`)
+            .style('overflow', 'visible');
+
+        const pie = d3.pie().value(d => d.value).sort(null);
+        const arc = d3.arc().innerRadius(radius * 0.55).outerRadius(radius);
+
+        const arcs = svg.selectAll('path')
+            .data(pie(data))
+            .enter().append('path')
+            .attr('d', arc)
+            .attr('fill', d => d.data.color)
+            .attr('stroke', '#050507')
+            .attr('stroke-width', 2)
+            .style('opacity', d => d.data.isEmpty ? 0.4 : 1)
+            .style('cursor', 'pointer');
+
+        arcs.append('title').text(d => `${d.data.label} · ${d.data.value.toFixed(2)}%`);
+
+        // Center text
+        svg.append('text')
+            .attr('text-anchor', 'middle')
+            .attr('dy', '-0.2em')
+            .style('font-family', "'Instrument Serif', Georgia, serif")
+            .style('font-style', 'italic')
+            .style('font-size', '2.2rem')
+            .style('fill', '#fff')
+            .text('100%');
+        svg.append('text')
+            .attr('text-anchor', 'middle')
+            .attr('dy', '1.3em')
+            .style('font-family', 'monospace')
+            .style('font-size', '0.7rem')
+            .style('fill', '#888')
+            .text('TARTA DEL PROJECTE');
+    }
+
+    _renderLegend() {
+        const el = document.getElementById('vaLegend');
+        if (!el) return;
+        const parties = this.projectPie.parties || [];
+        if (parties.length === 0) { el.innerHTML = ''; return; }
+        el.innerHTML = parties.map(p => `
+            <div class="va-legend-item">
+                <span class="va-legend-dot" style="background:${PIE_COLORS[p.pieType] || '#888'};"></span>
+                <span class="va-legend-name">${escapeHtml(p.partyId)} <span style="color:#666;font-size:0.78rem;">· ${escapeHtml(p.pieType)}</span></span>
+                <span class="va-legend-pct">${p.sharePctInProject}%</span>
+            </div>
+        `).join('');
+    }
+
+    _renderPiesList() {
+        const el = document.getElementById('vaPiesList');
+        if (!el) return;
+        const targets = this.pieTargets;
+        const piesActive = this.projectPie.piesActive || [];
+        const parties = this.projectPie.parties || [];
+
+        const usedByPie = {};
+        for (const p of parties) {
+            usedByPie[p.pieType] = (usedByPie[p.pieType] || 0) + p.sharePctInProject;
+        }
+
+        el.innerHTML = Object.entries(targets).map(([pieType, target]) => {
+            const used = usedByPie[pieType] || 0;
+            const isActive = piesActive.includes(pieType);
+            const color = PIE_COLORS[pieType] || '#888';
+            const pct = target > 0 ? Math.min(100, (used / target) * 100) : 0;
+            return `
+                <div class="va-pie-row ${isActive ? '' : 'is-empty'}">
+                    <span class="va-pie-dot" style="background:${color};"></span>
+                    <div>
+                        <div class="va-pie-name" style="color:${color};">${pieType}</div>
+                        <div class="va-pie-bar"><div class="va-pie-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+                    </div>
+                    <span class="va-pie-target">${target}%</span>
+                    <span class="va-pie-status ${isActive ? 'is-active' : 'is-empty'}">${isActive ? '✓ actiu · ' + used.toFixed(1) + '% del projecte' : '— buit'}</span>
+                </div>
+            `;
+        }).join('');
+
+        // Editor de targets (oculto inicialmente)
+        el.insertAdjacentHTML('afterend', this._renderTargetsEditor());
+    }
+
+    _renderTargetsEditor() {
+        const targets = this.pieTargets;
+        const sliders = FAIRSHARES_PIE_TYPES.map(pieType => {
+            const v = targets[pieType] || 0;
+            const color = PIE_COLORS[pieType];
+            return `
+                <div class="va-target-slider">
+                    <span style="color:${color};font-weight:600;text-transform:capitalize;">${pieType}</span>
+                    <input type="range" min="0" max="100" step="5" value="${v}" data-pie="${pieType}" id="vaTargetRange-${pieType}">
+                    <input type="number" min="0" max="100" step="5" value="${v}" data-pie="${pieType}" id="vaTargetNum-${pieType}">
+                </div>
+            `;
+        }).join('');
+        return `
+            <div class="va-edit-targets" id="vaTargetsEditor">
+                <p style="color:#aaa;font-size:0.85rem;margin-bottom:12px;">Ajusta el % de cada pie · la suma ha de ser <strong>100</strong>.</p>
+                ${sliders}
+                <div class="va-target-sum" id="vaTargetSum"><span>Total</span><span id="vaTargetSumValue">100%</span></div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button class="va-btn-secondary" id="vaCancelTargets">Cancel·lar</button>
+                    <button class="va-btn" id="vaSaveTargets" disabled>💾 Guardar targets</button>
+                </div>
+            </div>
+        `;
+    }
+
+    _bindEditTargets() {
+        const editor = document.getElementById('vaTargetsEditor');
+        const editBtn = document.getElementById('vaEditTargets');
+        if (!editor || !editBtn) return;
+
+        editBtn.addEventListener('click', () => {
+            editor.classList.toggle('is-open');
+            this._updateTargetSum();
+        });
+
+        document.getElementById('vaCancelTargets')?.addEventListener('click', () => {
+            editor.classList.remove('is-open');
+        });
+
+        FAIRSHARES_PIE_TYPES.forEach(pieType => {
+            const range = document.getElementById('vaTargetRange-' + pieType);
+            const num = document.getElementById('vaTargetNum-' + pieType);
+            const sync = (val) => {
+                if (range) range.value = val;
+                if (num) num.value = val;
+                this._updateTargetSum();
+            };
+            range?.addEventListener('input', (e) => sync(e.target.value));
+            num?.addEventListener('input', (e) => sync(e.target.value));
+        });
+
+        document.getElementById('vaSaveTargets')?.addEventListener('click', () => this._saveTargets());
+    }
+
+    _readEditedTargets() {
+        const targets = {};
+        FAIRSHARES_PIE_TYPES.forEach(pieType => {
+            const num = document.getElementById('vaTargetNum-' + pieType);
+            const v = num ? parseFloat(num.value) : 0;
+            if (v > 0) targets[pieType] = v;
+        });
+        return targets;
+    }
+
+    _updateTargetSum() {
+        const targets = this._readEditedTargets();
+        const sum = Object.values(targets).reduce((a, b) => a + b, 0);
+        const sumEl = document.getElementById('vaTargetSum');
+        const sumValueEl = document.getElementById('vaTargetSumValue');
+        const saveBtn = document.getElementById('vaSaveTargets');
+        if (sumValueEl) sumValueEl.textContent = sum + '%';
+        const valid = Math.abs(sum - 100) <= 0.5 && validatePieTargets(targets);
+        if (sumEl) {
+            sumEl.classList.toggle('is-valid', valid);
+            sumEl.classList.toggle('is-invalid', !valid);
+        }
+        if (saveBtn) saveBtn.disabled = !valid;
+    }
+
+    async _saveTargets() {
+        const targets = this._readEditedTargets();
+        if (!validatePieTargets(targets)) {
+            alert('Targets invàlids · suma ha de ser 100.');
+            return;
+        }
+        try {
+            await KB.upsert({
+                id:   this.projectId + '::value-pie-targets',
+                type: 'value_pie_targets',
+                projectId: this.projectId,
+                content: { kind: 'pie-targets', targets },
+                keywords: ['type:value_pie_targets', 'project:' + this.projectId],
+            });
+            if (window.navigateTo) window.navigateTo(window.location.pathname + window.location.search);
+        } catch (err) {
+            console.error('[VAL-001 B] saveTargets falló:', err);
+            alert('Error guardant: ' + (err?.message || err));
+        }
+    }
+
+    _bindForm() {
+        const form = document.getElementById('vaContribForm');
+        if (!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const partyId = document.getElementById('vaPartyId')?.value?.trim();
+            const partyPie = document.getElementById('vaPartyPie')?.value;
+            const type = document.getElementById('vaContribType')?.value;
+            const fairValueEur = parseFloat(document.getElementById('vaFairValue')?.value || '0');
+            if (!partyId || !partyPie || !type || !fairValueEur) {
+                alert('Tots els camps són obligatoris.');
+                return;
+            }
+            try {
+                // 1) Update partyTypeMap (KB)
+                const newMap = { ...this.partyTypeMap, [partyId]: partyPie };
+                await KB.upsert({
+                    id:   this.projectId + '::value-party-map',
+                    type: 'value_party_map',
+                    projectId: this.projectId,
+                    content: { kind: 'party-map', map: newMap },
+                    keywords: ['type:value_party_map', 'project:' + this.projectId],
+                });
+                // 2) Build + save contribution
+                const contrib = buildContribution({ partyId, type, fairValueEur });
+                const node = buildValueContributionNode({ projectId: this.projectId, contribution: contrib });
+                await KB.upsert(node);
+                // 3) Reload vista
+                if (window.navigateTo) window.navigateTo(window.location.pathname + window.location.search);
+            } catch (err) {
+                console.error('[VAL-001 B] addContribution falló:', err);
+                alert('Error: ' + (err?.message || err));
+            }
+        });
+    }
+
+    destroy() { /* nothing */ }
+}
