@@ -3328,6 +3328,124 @@ async function testPactService() {
     assert(renderPactMarkdown({}).includes('inválido'),                       'markdown · placeholder en inválido');
 }
 
+// ─── VAL-001 sprint A · valueAccountingService · Slicing Pie + FairShares ─────────
+async function testValueAccounting() {
+    const m = await import('../core/valueAccountingService.js?v=' + Date.now());
+    const {
+        SLICING_PIE_MULTIPLIERS, FAIRSHARES_PIE_TYPES, DEFAULT_PIES_BY_PROJECT_TYPE,
+        VALID_CONTRIBUTION_TYPES,
+        buildContribution, fairValueForTime,
+        calculateSlices, calculatePieDistribution, calculateStakeholderPies,
+        summarizePieDistribution, pieGiniCoefficient,
+        buildValueContributionNode, extractContributionsFromKb, activePiesForProject,
+    } = m;
+
+    // Constantes
+    assert(Object.isFrozen(SLICING_PIE_MULTIPLIERS),                         'multipliers frozen');
+    assert(SLICING_PIE_MULTIPLIERS.cash === 4,                                'cash ×4');
+    assert(SLICING_PIE_MULTIPLIERS.time === 2,                                'time ×2');
+    assert(SLICING_PIE_MULTIPLIERS.assets === 2,                              'assets ×2');
+    assert(SLICING_PIE_MULTIPLIERS.ideas === 1,                               'ideas ×1');
+    assert(Object.isFrozen(FAIRSHARES_PIE_TYPES) && FAIRSHARES_PIE_TYPES.length === 5, '5 pie types');
+    assert(Object.isFrozen(DEFAULT_PIES_BY_PROJECT_TYPE),                     'default pies frozen');
+
+    // buildContribution errors
+    let threw = false;
+    try { buildContribution(); } catch(_) { threw = true; }
+    assert(threw, 'buildContribution sin args lanza');
+    threw = false;
+    try { buildContribution({partyId: 'p1', type: 'invalid', fairValueEur: 100}); } catch(_) { threw = true; }
+    assert(threw, 'type inválido lanza');
+    threw = false;
+    try { buildContribution({partyId: 'p1', type: 'cash', fairValueEur: -50}); } catch(_) { threw = true; }
+    assert(threw, 'fairValue negativo lanza');
+
+    // buildContribution happy
+    const c1 = buildContribution({partyId: 'alvaro', type: 'cash', fairValueEur: 1000});
+    assert(c1.slices === 4000,                                                'cash 1000€ × 4 = 4000');
+    assert(c1.riskMultiplier === 4,                                            'risk ×4 catálogo');
+    const c2 = buildContribution({partyId: 'ingrid', type: 'time', fairValueEur: 500});
+    assert(c2.slices === 1000,                                                 'time 500€ × 2 = 1000');
+    const cOver = buildContribution({partyId: 'a', type: 'cash', fairValueEur: 100, riskMultiplierOverride: 6});
+    assert(cOver.slices === 600,                                               'override ×6');
+
+    // fairValueForTime
+    assert(fairValueForTime({hours: 100, annualSalaryEur: 30000}) === 3000,   'fairValueForTime · 100h·30k€ = 3000');
+    assert(fairValueForTime({hours: 0, annualSalaryEur: 30000}) === 0,         'fairValueForTime · 0h = 0');
+
+    // calculateSlices · agrupa
+    const contribs = [
+        buildContribution({partyId: 'alvaro', type: 'cash', fairValueEur: 1000}),
+        buildContribution({partyId: 'alvaro', type: 'time', fairValueEur: 500}),
+        buildContribution({partyId: 'ingrid', type: 'time', fairValueEur: 1000}),
+        buildContribution({partyId: 'marc',   type: 'ideas', fairValueEur: 600}),
+    ];
+    const slices = calculateSlices(contribs);
+    assert(slices.alvaro === 5000,                                             'alvaro · 4000+1000');
+    assert(slices.ingrid === 2000,                                             'ingrid · 2000');
+    assert(slices.marc === 600,                                                'marc · 600');
+    assert(JSON.stringify(calculateSlices(null)) === '{}',                      'calculateSlices(null) {}');
+
+    // calculatePieDistribution
+    const dist = calculatePieDistribution({slices});
+    assert(dist.length === 3,                                                  'distribution · 3 entries');
+    assert(dist[0].partyId === 'alvaro',                                       'distribution · alvaro top');
+    assert(Math.abs(dist[0].sharePct + dist[1].sharePct + dist[2].sharePct - 100) < 0.5, 'shares ≈100');
+    assert(calculatePieDistribution({slices: {}}).length === 0,                'distribution vacía');
+
+    // calculateStakeholderPies
+    const partyTypeMap = {alvaro: 'founders', ingrid: 'founders', marc: 'team'};
+    const pies = calculateStakeholderPies({contributions: contribs, partyTypeMap});
+    assert(pies.founders.totalSlices === 7000,                                 'founders · 7000');
+    assert(pies.team.totalSlices === 600,                                      'team · 600');
+    assert(pies.users.totalSlices === 0,                                       'users · vacío');
+    const piesSubset = calculateStakeholderPies({contributions: contribs, partyTypeMap, activePies: ['founders']});
+    assert(piesSubset.founders.totalSlices === 7000,                           'subset · founders');
+    assert(piesSubset.team === undefined,                                       'subset · team excluido');
+    const piesDefault = calculateStakeholderPies({contributions: [buildContribution({partyId: 'huerf', type: 'cash', fairValueEur: 100})], partyTypeMap: {}});
+    assert(piesDefault.team.totalSlices === 400,                                'huérfano default → team');
+
+    // summarizePieDistribution
+    const sum = summarizePieDistribution(slices);
+    assert(sum.totalParties === 3,                                              'summary · 3');
+    assert(sum.leader === 'alvaro',                                             'summary · leader');
+    assert(sum.totalSlices === 7600,                                            'summary · 7600 total');
+    assert(summarizePieDistribution({}).totalParties === 0,                     'summary vacío');
+
+    // pieGiniCoefficient (fixed formula)
+    assert(pieGiniCoefficient({a: 100, b: 100, c: 100}) === 0,                 'gini igualitario · 0');
+    assert(pieGiniCoefficient({a: 0, b: 0, c: 1000}) > 0.5,                    'gini monopolio > 0.5');
+    assert(pieGiniCoefficient({}) === 0,                                        'gini vacío · 0');
+    assert(pieGiniCoefficient(null) === 0,                                      'gini null · 0');
+
+    // buildValueContributionNode
+    const node = buildValueContributionNode({projectId: 'proj-X', contribution: c1});
+    assert(node.type === 'value_contribution',                                  'node type');
+    assert(node.content.slices === 4000,                                         'node slices');
+    assert(node.keywords.includes('type:value_contribution'),                    'node keyword type');
+    assert(node.keywords.includes('party:alvaro'),                               'node keyword party');
+
+    let threwN = false;
+    try { buildValueContributionNode(); } catch(_) { threwN = true; }
+    assert(threwN,                                                                'buildNode sin args lanza');
+
+    // extractContributionsFromKb
+    const kbNodes = [
+        node,
+        {type: 'sop', projectId: 'proj-X'},
+        {type: 'value_contribution', projectId: 'proj-Y', content: {partyId: 'x', slices: 100, contribType: 'time'}},
+    ];
+    assert(extractContributionsFromKb({kbNodes, projectId: 'proj-X'}).length === 1,        'extract · filtra proj');
+    assert(extractContributionsFromKb({kbNodes}).length === 2,                              'extract · sin filtro · 2');
+
+    // activePiesForProject
+    assert(activePiesForProject({projectTypeId: 'comunitat-autosuficient'}).includes('community'), 'activePies · comunitat→community');
+    assert(activePiesForProject({projectTypeId: 'startup-coop-tradicional'}).includes('investors'), 'activePies · startup→investors');
+    assert(activePiesForProject({projectTypeId: 'inexistente'}).length === 2,                       'activePies · default 2');
+    assert(activePiesForProject({overridePies: ['founders', 'team', 'community']}).length === 3,    'activePies · override');
+    assert(activePiesForProject({overridePies: ['founders', 'invalid']}).length === 1,              'activePies · override filtra');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -3368,7 +3486,8 @@ const SUITE = [
     { name: 'MAT-003 sprint C · swarmMatchmaker (matchmaker IA)', fn: testSwarmMatchmaker },
     { name: 'MAT-003 sprint E · bootstrapTemplates (12 plantillas)', fn: testBootstrapTemplates },
     { name: 'MAT-003 sprint F · cohortSeatService (CRUD + extract)', fn: testCohortSeatService },
-    { name: 'PACT-001 sprint A · pactService (primer contrato)',  fn: testPactService }
+    { name: 'PACT-001 sprint A · pactService (primer contrato)',  fn: testPactService },
+    { name: 'VAL-001 sprint A · valueAccountingService (Slicing Pie + FairShares)', fn: testValueAccounting }
 ];
 
 export async function runTests() {

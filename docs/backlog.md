@@ -105,7 +105,10 @@
 | **MAT-002-G** | **System prompt SOS canónico · manifesto persistido + UI editable (NO inyección automática en callLLM)** — input @alvaro 2026-05-08 reframe: la visión VISION-001 vive en la memoria del desarrollador y en el documento maestro · NO debe inflar tokens en cada llamada LLM porque eso degrada calidad/coste, que son valores añadidos centrales de SOS. Decisión arquitectónica: persistir el manifesto como nodo KB `type='system_prompt' kind='canonical-manifesto' id='sos-system-prompt-canonical'` · UI editable en `/settings → System Prompt SOS` (read/edit/restaurar default) · **ZERO impacto en `Orchestrator.callLLM` por defecto**. El manifesto es referencia consultable · no premisa inyectada. Sprints derivados: A · persistencia + UI editable. B (opt-in muy específico) · si el operador activa expresamente "Inyectar manifesto en LLM" en `/settings`, los flujos de cloning de sector / generación de SOC pueden incluirlo · jamás los flujos críticos de generación de SOPs ni woAssistant donde el coste por token es crítico. C · audit cuantificado pre-merge · medir delta tokens/coste con muestra real antes de habilitar B en producción. | 🟡 fase A próxima |
 | **UX-EDU-001** | **Capas UX didácticas · aprender haciendo VNA + contabilidad valor + triple-entry + smart contracts + econom-IA** — input @alvaro 2026-05-08: "el programa Matriu se aprenderá haciendo · cada vista de SOS debe incorporar capas didácticas que enseñen los conceptos teóricos sin que el operador tenga que leer un libro". `js/core/didacticService.js` puro: catálogo `EDU_CONCEPTS` Object.freeze con 17 conceptos canónicos · `renderExplainerBadge` accesible · `bindExplainerBadges` con hover/focus/click + Escape + click-outside · `ensureExplainerStyle` CSS único. Sprint A · service + integración /map (vna) /savings (triple-entry). Sprint B · 6 vistas restantes (/kanban antigravity · /wallet econom-ia · /folders folksonomy+taxonomy · /identity did+sbt · /efficiency context-pruning · /market slicing-pie). Sprint C · vista `/learn` glosario navegable con sidebar concepts + búsqueda + progress bar (✓ ya leído persistente en KB `type='didactic_seen'`) + back-references a vistas donde aparece cada concepto. Sprint D · enlaces cruzados a SOPs/SOCs reales del proyecto activo. ZERO consumo tokens. | 🟢 A+B+C verde · D 🟡 |
 | **MAT-002-H** | **Landing pública Matriu Incoopadora en `/matriu`** — input @alvaro 2026-05-08 con `Matriu_Landing_standalone.html` adjunto: la página de venta de Matriu vive dentro de SOS, no en una página estática externa · refleja la "incubadora cooperativa que reparteix valor en temps real" en catalán fiel al HTML adjunto. `js/views/MatriuLandingView.js` reusa `MATRIU_COHORT_0`, `MATRIU_PERKS`, `MATRIU_FAIR_FRACTAL_RULES`, `MATRIU_VALUE_KINDS` de `matriuTemplate.js` (single source of truth). Secciones · hero "Sigues / dels primers / en el nucli" + pill "Cohort 0 oberta · 24/100" + CTA "Reservar el teu seient" · stats row (100/24/∞/0s) · "Per què ara" 4 cards (multiplicador ×1.5 · governança ECO · crèdits · llinatge) · "Tokenomic Fair Fractal" 4 reglas FF · "Value mapping engine" 4 ejemplos JT/NB/AR/ML · "Exit model" 4 fases (trigger · snapshot · càlcul · liquidació) + 3 invariantes · "Cohort 0 · 100 places" 6 perks completos · footer CTA "Reservar seient · 0 €" + whitepaper · footer cooperativa con enlaces (Producte · Comunitat · Recursos). Skin Matriu: `#f1ebde` crema · `#2a3a2a` verd fosc · `#c25a3a` terracota · Instrument Serif italic + Inter. Modal de reserva integrado · usa `buildMatriuCohortProject` + CREATE_PROJECT + KB_UPSERT · navega a `/project/{id}` tras reservar. Badges UX-EDU-001 inline (fair-fractal-tokenomics · vna · triple-entry · smart-contract · cohort-0) · refuerzo didáctico durante la lectura. Ruta `/matriu` registrada en router · destino global en navService categoría `home`. | ✅ verde |
-| **MAT-003** | **Matriz inicial multidisciplinar · 100 roles críticos para el enjambre Cohort 0** — input @alvaro 2026-05-08: "los 100 asientos deben ser reales y desarrollar un modelo de que esas 100 personas deben poder ejecutar los 100 roles críticos para una matriz inicial multidisciplinar y multiskills que asegure la potencialidad de los conocimientos del enjambre que junto al agente inteligente SOS ayuden al desarrollo de proyectos de comunidades autosuficientes, startups, empresas, huertos o lo que sea". Concepto: la cohort 0 NO es 100 personas aleatorias · es una matriz cuidadosamente seleccionada donde **cada plaza ejecuta ≥1 rol crítico** y **el conjunto cubre el 100% de las skills necesarias para arrancar cualquier proyecto SOS** (comunidades autosuficientes · startups · empresas · huertos · cooperativas · fundaciones). El "enjambre" + el agente IA SOS forman una "matriz cognitiva fundacional" capaz de bootstrappear proyectos arbitrarios. Sprints definidos abajo en bloque dedicado. | 🟡 sprint A próximo |
+| **MAT-003** | **Matriz inicial multidisciplinar · 108 plazas (96 op + 12 guardians) Cohort 0** — sprints A/B/C/E/F entregats. Sprint D pendent (time banking inverso). | 🟢 5 sprints verde |
+| **VAL-001** | **Contabilidad de valor · Slicing Pie + FairShares 4 pies de stakeholders** — input @alvaro 2026-05-09: "el primer contrato debe alimentarse de la contabilidad de valor · falta una vista por proyecto donde se vea la tarta de cómo se reparte entre el equipo de personas/stakeholders · esta vista no la tenemos en V11". Es el **cimiento operativo del slicing pie** que SOS V11 promete pero hasta ahora no materializa formalmente. Concepto: cada proyecto tiene una **contabilidad de valor viva** que mide aportaciones reales (tiempo, dinero, ideas, activos, relaciones) con multiplicadores de riesgo · genera "slices" · y los reparte en 4 pies separados (founders, team, users, investors) según el modelo FairShares + un pie opcional de comunidad. Sprints · A `valueAccountingService` puro (multiplicadores · calculateSlices · calculatePieDistribution · 4 pies stakeholders · tests) · B vista nueva `/value-accounting?project={id}` con D3 pie chart · C integración con WOs ledgered (cada hora trabajada genera slices automáticamente) · D conexión con PACT-001 (el pacto firmado define los multiplicadores y el pie target del proyecto). Ver bloque dedicado abajo. | 🟡 sprint A próximo |
+| **MAT-002-I** | **Matriu reframe · personas, no proyectos** — input @alvaro 2026-05-09: "la Matriu son las personas que tienen o no proyectos · y que tienen un perfil de roles y skills". Evolución conceptual del modelo: actualmente `/matriu` muestra plazas como "seats" abstractas y los proyectos como entidades separadas. La realidad debe ser · **la Matriu = la red de las 108 personas** con sus perfiles (rols · skills · disponibilitat · llinatge fundacional) · cada persona puede tener 0+ proyectos donde participa con un rol específico. La página `/matriu` en algún momento debe mutar de "landing pública" a **directorio de la red Matriu** con cards de personas, sus skills, sus proyectos asociados, su guardianAffinity. Sprints · A unificar `cohort_seat` + `user_identity` en un único nodo `matriu_member` con perfil completo · B vista `/matriu/network` con cards de los 108 miembros (filtro por skill/guardian/disponibilitat/projecte) · C cada projecte mostra els seus miembros amb fit · D backwards-compat amb /matriu landing actual (toggle public/network). | 🟡 |
+| **WO-ASSIGN-001** | **Asignación de WOs a plazas Matriu** — input @alvaro 2026-05-09: "en el Kanban de WO se debería poder asignar a una persona de la Matriu en la que estamos". Conecta el Antigravity Engine (SOPs → WOs → Ledger) con el enjambre Cohort 0 (cohort_seats / matriu_members). Cada Work Order tiene un nuevo campo `assignedToSeatId` que apunta a un nodo `cohort_seat` o `matriu_member`. UI · selector en KanbanView card del WO · auto-sugerencia basada en `swarmMatchmaker` · feedback visual con foto/icon del miembro asignado. Cierre automático · cuando WO pasa a `ledgered`, las horas trabajadas alimentan VAL-001 (genera slices al pie del miembro vía `valueAccountingService`). Sprint A · campo + UI selector básico · sprint B · auto-sugerencia IA · sprint C · feedback visual + foto miembro. | 🟡 |
 | **I18N-001** | **Trilingüe ES · CA · EN real · SOS ENTERO (no solo Matriu)** — input @alvaro 2026-04-30 + clarificación 2026-05-09: "cuando hablo de trilingüe hablo de SOS y no solo de la Matriu". Cobertura · TODAS las vistas (Dashboard · Map · Sops · Kanban · Wallet · Savings · Settings · Identity · Folders · Mind · Efficiency · Market · Tags · Workshops · ProjectHub · NodeView · LearnView · MatriuLandingView). i18next con detect navigator + override en /settings → idioma. Nodos KB con campos `name_en/ca/es` cuando aplique. Sprints · A: i18next setup + extractor de strings + selector visible · B: 3-4 vistas más usadas (Dashboard · ProjectHub · Settings · Map) · C: resto de vistas + nodos KB · D: bilingüe en LLM prompts (system prompt en idioma del operador). Catalán estratégico · base del fondo descentralizado catalán VISION-001 · pero EN crítico para ampliar red de fundadores fuera de Catalunya. | 🟡 |
 | **PACT-001** | **Pacto de socios dinámicos · primer contrato del Mètode SOS** — input @alvaro 2026-04-30 + 2026-05-09: "fem el primer contrato". Sprint A entregat · `js/core/pactService.js` puro + schema canònic JSON. 7 cláusulas estructurades: objeto · capital (Fair Fractal) · participació (slicing-pie/fixed/hybrid) · vesting (months · cliff · type) · decisions (consensus/majority/multisig + quorum) · exit (trigger · snapshot · formula · payoutWindow) · conflict (mediation → arbitration) · sunset (auto-trigger metric + grace period). DEFAULT_PACT_CLAUSES alineades amb Matriu Fair Fractal. Helpers · `buildPactDraft({projectId, parties, clauses, projectTypeId})` puro · `validateClauses` · `validatePact` (suma initialShare ≤ 1.0 · resto va a slicing pie dinámic) · `mergeClauses` shallow · `addSignature` puro idempotent (cuando todas firman → status='signed' auto) · `pactSummary` para UI · `renderPactMarkdown` per export legible. ID namespaced `${projectId}::pact::sos-v1`. Tests · 47 asserts puros · suite 37 → 38. Sprint B pendent · UI builder paso a paso (vista `/pact` o modal en ProjectHubView). Sprint C pendent · firma ECDSA real connectada amb projectIO/identityService. Sprint D pendent · export PDF + JSON canònic per a Pact.sol (MAT-001 fase 4 · EIP-712). | 🟢 sprint A verde · B/C/D 🟡 |
 | **CONTR-001** | **Contratos de plataforma · suscripción + saldo acumulable** — input @alvaro 2026-04-30: "planes de subscripción con saldo acumulable para uso de APIs y registros". Tipos de plan: free (local-first · no APIs IA propias · API key del usuario) · pro (saldo prepago Stripe · descuento automático MKT-001 sprint C3 ✅) · cooperative (saldo USDC en Gnosis vía MAT-001 fase 4) · enterprise (custom). Onboarding de plan en `/settings → Plan`. Tests del builder. | 🟡 |
@@ -2027,6 +2030,127 @@ Mientras tanto, el módulo está operativo con 8/12 guardianes completos
   de ejecución técnica y económica del Antigravity Engine.
 - Skills `ecology` + `education` = 16 plazas (17%) · tessitura
   regenerativa y formativa, base de la "ola disruptiva" VISION-001.
+
+---
+
+## VAL-001 · Contabilidad de valor + Slicing Pie + FairShares (input @alvaro 2026-05-09)
+
+### Por qué ahora
+
+@alvaro detectó un hueco arquitectónico: **SOS V11 habla constantemente
+de slicing pie pero NO tiene una vista donde el operador pueda ver la
+tarta repartida en su proyecto**. PACT-001 (primer contrato) referencia
+`participation: 'slicing-pie'` pero no hay motor que lo calcule.
+VAL-001 cierra el bucle.
+
+### Modelos integrados
+
+#### A) Slicing Pie (Mike Moyer · TimeFounder)
+
+Multiplicadores de riesgo por tipo de aportación:
+
+| Tipo aportación | Multiplicador | Razón |
+|---|---|---|
+| **Cash** (dinero líquido aportado) | **×4** | Riesgo máximo · pérdida total posible |
+| **Time** (horas humanas) | **×2** | Coste de oportunidad de salario no cobrado |
+| **Assets** (equipos · facilities · vehículos) | **×2** | Riesgo de depreciación · inmovilizado |
+| **Ideas / IP** | **×1** | Apreciación independiente · subjetiva |
+| **Vendor / supply** (proveedor sin pago) | **×1** | Crédito comercial diferido |
+| **Relationships** (cliente clave · contacto) | **×1** | Difícil de objetivar |
+
+Fórmula canónica:
+```
+slices = (fair_market_value × risk_multiplier)
+```
+Donde `fair_market_value` es el valor justo de mercado de la
+aportación (ej. para tiempo · `2 × salario_anual_mercado / 2000h`).
+
+#### B) FairShares (Rory Ridley-Duff · 4 pies de stakeholders)
+
+| Pie | Stakeholder | Naturaleza |
+|---|---|---|
+| **Founders** | Fundadores | Capital fundacional + visión + liderazgo inicial |
+| **Team** | Equipo | Aportaciones operativas continuadas |
+| **Users** | Clientes/usuarios | Generan ingresos · co-crean producto |
+| **Investors** | Inversores externos | Capital líquido posterior · sin trabajo operativo |
+| (opt) **Community** | Comunidad/territorio | Impacto social · ecosistema regenerativo |
+
+Cada pie tiene su propia regla de distribución y derechos de voto
+diferenciados. Un proyecto puede activar 2-5 pies según su tipus.
+Los 12 PROJECT_TYPES de MAT-003 declaran qué pies son obligatorios:
+
+| Project type | Pies activos por defecto |
+|---|---|
+| `comunitat-autosuficient` | founders + team + users + community |
+| `startup-coop-tradicional` | founders + team + investors |
+| `cooperativa-multi` | founders + team + users + community |
+| `fundacio-ong` | founders + team + community |
+| `dao-web3` | founders + team + investors + community |
+| `cooperativa-cures` | founders + team + users + community |
+| (resto) | founders + team (por defecto · expandir per projecte) |
+
+### Sprint A · valueAccountingService puro
+
+`js/core/valueAccountingService.js` Object.freeze:
+
+- `SLICING_PIE_MULTIPLIERS` · `{cash:4, time:2, assets:2, ideas:1, vendor:1, relationships:1}`
+- `FAIRSHARES_PIE_TYPES` · `['founders', 'team', 'users', 'investors', 'community']`
+- `DEFAULT_PIES_BY_PROJECT_TYPE` · mapping arriba
+- `calculateSlices(contributions)` puro · suma slices por partyId
+- `calculatePieDistribution({slices})` puro · `[{partyId, slices, sharePct}]`
+- `calculateStakeholderPies({contributions, partyTypeMap, activePies})` puro · 4-5 pies separados
+- `buildContribution({partyId, type, fairValueEur, riskMultiplierOverride?, evidenceRef?})` puro
+- `summarizePieDistribution(slices)` para UI
+- `valueAccountingNode({projectId, contributions, pies})` genera nodo KB
+  `type='value_accounting'` listo para upsert
+
+Tests · 50+ asserts puros · multiplicadores aplicados correctamente ·
+sums coherentes · 4 pies separados con stakeholders correctamente
+clasificados · edge cases (ningún slice · party inexistente · etc).
+
+### Sprint B · vista `/value-accounting`
+
+Vista nueva con · header proyecto · seleccor de pie (founders/team/
+users/investors/community) o "todos" · D3 pie chart con segmentos
+proporcionales a slices · tabla de aportaciones (party · type ·
+fairValue · multiplier · slices · share%) · CTA "Recalcular desde KB"
+que escanea WOs ledgered + ledger entries y propone nuevas
+contribuciones automáticamente.
+
+### Sprint C · integración con WOs
+
+Cada WO en estado `ledgered` con `assignedToSeatId` (de WO-ASSIGN-001)
++ `actualHoursWorked` genera automáticamente una contribution
+`type='time'` para esa party. El operador puede ajustar el
+fairValueEur (default · `2 × salary / 2000`) en el panel del proyecto.
+
+### Sprint D · integración con PACT-001
+
+Cuando un pacto firmado declara `participation: 'slicing-pie'`, SOS
+puede aplicar automáticamente las reglas del pacto al contribution
+(multiplicadores específicos negociados · vesting que retiene slices ·
+exit window que congela el snapshot). El pacto define el "cómo" · el
+valueAccountingService ejecuta el "cuánto" en tiempo real.
+
+### Conexiones con otras historias
+
+- **MAT-003** · cada plaza Cohort 0 puede aparecer como party en
+  cualquier proyecto del enjambre · aporta tiempo + skills.
+- **WO-ASSIGN-001** · vincula WOs con plazas · genera contributions
+  automáticas.
+- **MAT-002-I** · cuando Matriu = personas, cada miembro tiene perfil
+  con su slice agregado en todos sus proyectos (vista de patrimonio).
+- **PACT-001** · pacto firmado vive en KB · valueAccountingService
+  consulta sus reglas para aplicar multiplicadores.
+- **MKT-001 sprint D · savings** · ahorro acumulado por proyecto se
+  cruza con slices fundacionales para ver "valor real generado".
+
+### Filosofía operativa (input @alvaro)
+
+> "El primer contrato debe alimentarse de la contabilidad de valor.
+> No es un contrato de notaría · es un acuerdo vivo donde cada hora,
+> cada euro, cada idea queda registrado y reparte tarta automáticamente.
+> SOS es el sistema operativo que hace esto posible sin abogados."
 
 ---
 
