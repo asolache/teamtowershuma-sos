@@ -2340,4 +2340,35 @@ valueAccountingService ejecuta el "cuánto" en tiempo real.
 
 ---
 
+---
+
+## UX-AUDIT-001 · Revisió integral UX/colors/textos (input @alvaro 2026-05-09)
+
+> "fes una revisió de tota la UX i colors per millorar la UX un 100% ·
+> millora textos · integració SOS · millora del flux de treball · auditoria
+> de creació de projecte amb sector + preselecció de subtipus per millorar
+> la petició a la IA · revisa per què no va l'animació de seqüència ·
+> millora el dashboard per què l'enfoque matriu sigui més integrat al
+> flux · revisa que es vegin bé tots els textos dels menús · fes que SOS
+> pugui veure's en blanc o en negre · prepara't per al multidioma · revisa
+> els textos que ara surten en 3 idiomes."
+
+### Sprint A entregat 2026-05-09
+
+| Fix | Detall |
+|---|---|
+| **Bug seq order auto-save** | `_inferFlowOrderIA` modal "✓ Aplicar i guardar" ara crida `await this._saveMap()` automàticament + re-render del SVG · toast verd no-blocking en lloc d'`alert`. Solucionava: l'usuari aplicava l'ordre però havia d'anar manualment al "💾 Guardar" del topbar (gairebé invisible). |
+| **Light/Dark theme toggle** | `js/core/themeService.js` puro · KB nodo `sos-ui-theme` · `body.theme-light` class · `applyThemeToDocument` idempotent · `bootTheme` cridat des del router cada navegació (abans del primer render). Tokens `body.theme-light { --bg-dark: #f8f8fb · --text-main: #1a1a22 · etc }`. UI a `/settings → 🎨 Aspecte` · 2 botons "🌙 Fosc / ☀️ Clar". Aplica globalment · vistes amb skin propi (Matriu landing · network) mantenen el seu skin. |
+
+### Sprints B/C/D pendents (per a següents iteracions)
+
+| Sprint | Detall |
+|---|---|
+| **UX-AUDIT-001 sprint B · Wizard creació projecte enriquit** | Modal "+ Nou projecte" · obligatori sector A-S del KnowledgeLoader · selector secundari de subtipus dins del sector (ex. K → "K-startup" · "K-platform" · "K-DAO") · selector de PROJECT_TYPE (12 Matriu) · checkbox "Aplicar bootstrap seed". Millora petició IA · prompt amb sector + subtipus + projectType context-rich. Sub-tipus dataset nou (10-20 per cada un dels 19 sectors) com a `js/core/sectorSubtypes.js`. |
+| **UX-AUDIT-001 sprint C · Dashboard Matriu integrat** | El strip MAT-002-F passa a ser ara una secció més visible · cards d'acció centrals · "El meu perfil membre" amb editor inline (skills · sectors · disponibilitat) · "Els meus projectes" amb filter per phase (DESIGN/BUILD/OPERATE/LEDGER) · "El meu impacte" amb stats agregats de slices generats. Reframe · Dashboard com a panell del membre, no del codi tècnic SOS. |
+| **UX-AUDIT-001 sprint D · Multidioma real i18n** | Auditoria completa textos · ara hi ha barreja castellà/català/anglès. Setup i18next + selector idioma a `/settings → 🌐 Idioma`. 3 idiomes: ES (default actual) · CA (Matriu cohort 0) · EN (red ampliada). Marcar ALL strings amb `t('key')` · extraure a `js/i18n/{locale}.json`. Sprint llarg · 2-4 olas per a cobrir totes les 17 vistes. |
+| **UX-AUDIT-001 sprint E · Revisió tipográfica menús** | Auditoria textos dropdowns nav (ara els labels truncats o mal alineats en algunes vistes) · tooltips coherents · iconografia unificada · contrast WCAG AA verificat per tot SOS. |
+
+---
+
 *Documento vivo · actualizar al cierre de cada Ola.*

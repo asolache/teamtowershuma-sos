@@ -9,6 +9,7 @@ import {
     ensureNavGroupStyle, bindNavGroupDropdowns,
     paintBreadcrumb,
 } from './core/navService.js';
+import { bootTheme } from './core/themeService.js';
 
 const ROUTES = [
     { path: '/',          view: () => import('./views/DashboardView.js') },
@@ -71,6 +72,8 @@ async function router() {
 
     try {
         await store.init();
+        // UX-AUDIT-001 · aplica el tema persistit (light/dark) abans del primer render
+        try { await bootTheme(); } catch (_) { /* non-blocking */ }
         // Destruir vista anterior (detener simulaciones D3, etc.)
         if (window.__currentView && typeof window.__currentView.destroy === 'function') {
             window.__currentView.destroy();

@@ -98,3 +98,22 @@
     --z-toast:    2000;
     --z-boot:     99999;
 }
+
+/* ── UX-AUDIT-001 sprint A · Tema light (opt-in via body.theme-light) ──
+   El default segueix sent fosc (SOS V11 tècnic). El light invertix els
+   tokens base mantenint els accents idèntics. Toggle a /settings → Aspecte. */
+body.theme-light {
+    --bg-dark:       #f8f8fb;
+    --bg-panel:      #ffffff;
+    --bg-elevated:   #f1f1f5;
+
+    --glass-border:  rgba(0,0,0,0.10);
+    --glass-surface: rgba(0,0,0,0.02);
+    --glass-hover:   rgba(0,0,0,0.06);
+    --shadow-lux:    0 20px 50px rgba(0,0,0,0.10);
+    --shadow-indigo: 0 8px 30px rgba(99,102,241,0.18);
+
+    --text-main:      #1a1a22;
+    --text-secondary: #44444f;
+    --text-muted:     #888896;
+}

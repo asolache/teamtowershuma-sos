@@ -2956,7 +2956,7 @@ ${ctxResult.systemPrompt}`;
             </div>`;
         document.getElementById('vmapOrderCancel')?.addEventListener('click', close);
         document.getElementById('vmapOrderInfBg')?.addEventListener('click', e => { if (e.target.id === 'vmapOrderInfBg') close(); });
-        document.getElementById('vmapOrderApply')?.addEventListener('click', () => {
+        document.getElementById('vmapOrderApply')?.addEventListener('click', async () => {
             this._state.transactions = result.applied;
             close();
             // Re-render del inspector si la transaction seleccionada está en applied
@@ -2964,12 +2964,26 @@ ${ctxResult.systemPrompt}`;
                 const tx = this._state.transactions.find(t => t.id === this._state.selectedId);
                 if (tx) this._renderTxInspector(tx);
             }
+            // Re-render del mapa per mostrar els nous sequence_order labels
+            try { this._renderMap(); } catch (_) { /* fallback · només re-render inspector */ }
             // Si el flujo está animando · reiniciar para usar el nuevo orden
             if (this._state.flowAnim) {
                 this._stopFlowAnim();
                 setTimeout(() => this._startFlowAnim(), 100);
             }
-            alert('✓ Aplicado · pulsa "💾 Guardar" en el topbar para persistir el cambio.');
+            // UX FIX 2026-05-09 · auto-save en lloc de fer click manual al "💾 Guardar"
+            try {
+                await this._saveMap();
+                // Toast no-blocking en lloc d'alert
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 18px;border-radius:8px;font-weight:700;font-size:0.9rem;z-index:9999;box-shadow:0 4px 12px rgba(34,197,94,0.4);';
+                toast.textContent = '✓ Ordre aplicat i desat · ' + result.applied.length + ' transactions';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2200);
+            } catch (saveErr) {
+                console.error('[H_ANIM_001/inferOrder] auto-save falló:', saveErr);
+                alert('✓ Aplicat al mapa · però hi ha hagut un error al desar · prem "💾 Guardar" al topbar manualment.');
+            }
         });
     }
 

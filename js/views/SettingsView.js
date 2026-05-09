@@ -6,6 +6,7 @@ import { t, langSelectorHtml }  from '../i18n.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 import { loadManifesto, saveManifesto, restoreDefaultManifesto, isDefaultManifesto, SOS_MANIFESTO } from '../core/sosManifesto.js';
 import { SOS_PLANS, VALID_PLAN_IDS, DEFAULT_TOPUP_AMOUNTS, validatePublishableKey, detectKeyType, validatePaymentLinkUrl, loadStripeConfig, saveStripeConfig, loadCurrentPlan, setCurrentPlan, openTopupPaymentLink } from '../core/stripeService.js';
+import { loadCurrentTheme, saveTheme, applyThemeToDocument } from '../core/themeService.js';
 
 function escapeForTextarea(s) {
     if (typeof s !== 'string') return '';
@@ -20,6 +21,7 @@ export default class SettingsView {
         await KB.init();
         const stripeCfg  = await loadStripeConfig(KB);
         const currentPlan = await loadCurrentPlan(KB) || { planId: 'free', walletBalanceEur: 0 };
+        const currentTheme = await loadCurrentTheme(KB);
         const provider = await Orchestrator.getDefaultProvider();
         const keyAnt   = await Orchestrator.getApiKey('anthropic') || '';
         const keyOai   = await Orchestrator.getApiKey('openai')    || '';
@@ -190,6 +192,19 @@ export default class SettingsView {
                     <button id="svManifestoRestore" class="sv-btn-test">↺ Restaurar default</button>
                 </div>
                 <div id="svManifestoStatus" class="sv-test-result"></div>
+            </div>
+
+            <div class="sv-card" style="border-top:3px solid #fbbf24;">
+                <h3 style="color:#fbbf24;margin-top:0;">🎨 Aspecte · tema visual</h3>
+                <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.6;margin-top:0;">
+                    SOS es pot veure en <strong>fosc</strong> (default · tècnic) o <strong>clar</strong>
+                    (Matriu-friendly · més suau). El tema s'aplica globalment · les vistes
+                    individuals (mapa · landing /matriu) mantenen el seu skin propi.
+                </p>
+                <div style="display:flex;gap:8px;margin-top:14px;">
+                    <button class="sv-btn sv-theme-btn ${currentTheme === 'dark'  ? 'is-active' : ''}" data-theme="dark"  style="flex:1;background:${currentTheme === 'dark'  ? 'linear-gradient(135deg,#0a0a0f,#1a1a22)' : 'transparent'};color:${currentTheme === 'dark'  ? '#fff' : 'var(--text-muted)'};border:1px solid ${currentTheme === 'dark'  ? '#444' : 'var(--glass-border)'};">🌙 Fosc</button>
+                    <button class="sv-btn sv-theme-btn ${currentTheme === 'light' ? 'is-active' : ''}" data-theme="light" style="flex:1;background:${currentTheme === 'light' ? 'linear-gradient(135deg,#f8f8fb,#ffffff)' : 'transparent'};color:${currentTheme === 'light' ? '#1a1a22' : 'var(--text-muted)'};border:1px solid ${currentTheme === 'light' ? '#aaa' : 'var(--glass-border)'};">☀️ Clar</button>
+                </div>
             </div>
 
             <div class="sv-card" style="border-top:3px solid #635bff;">
@@ -426,6 +441,20 @@ export default class SettingsView {
                 btn.textContent = '↺ Restaurar default';
                 btn.disabled = false;
             }
+        });
+
+        // UX-AUDIT-001 · toggle tema light/dark
+        document.querySelectorAll('[data-theme]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const t = btn.getAttribute('data-theme');
+                try {
+                    await saveTheme(KB, t);
+                    applyThemeToDocument(t);
+                    if (window.navigateTo) window.navigateTo('/settings');
+                } catch (err) {
+                    alert('Error canviant tema: ' + (err?.message || err));
+                }
+            });
         });
 
         // ALPHA-STRIPE-001 sprint A · validació clau pública en temps real
