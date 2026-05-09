@@ -509,7 +509,10 @@ export default class MatriuLandingView {
                     <div class="mt-section-tag">Nucli fundacional · ${seatsTotal} places ${renderExplainerBadge('cohort-0', { size: 'xs' })}</div>
                     <div class="mt-cohort-head">
                         <h2 class="mt-italic" style="margin: 0;">Què<br><strong>t'emportes</strong><br>per ser-hi.</h2>
-                        <div class="mt-cohort-counter">${seatsTaken}/${seatsTotal}<span>· queden ${seatsLeft} seients</span></div>
+                        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+                            <div class="mt-cohort-counter">${seatsTaken}/${seatsTotal}<span>· queden ${seatsLeft} seients</span></div>
+                            <a href="/matriu/network" data-link style="font-family:ui-monospace,monospace;font-size:11px;color:#5a6e4f;text-decoration:underline;">🌐 Veure els membres del nucli →</a>
+                        </div>
                     </div>
                     <p class="mt-section-lead">
                         Els primers ${seatsTotal} sou els que escriviu la regla. Cobreu coeficient

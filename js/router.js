@@ -40,6 +40,8 @@ const ROUTES = [
     { path: '/savings',   view: () => import('./views/SavingsView.js')   },
     // MAT-002-H · landing pública Matriu Incoopadora
     { path: '/matriu',    view: () => import('./views/MatriuLandingView.js') },
+    // MAT-002-I sprint A · vista /matriu/network · directori de les 108 places
+    { path: '/matriu/network', view: () => import('./views/MatriuNetworkView.js') },
     // UX-EDU-001 sprint C · vista /learn glosario navegable + progreso "ya leído"
     { path: '/learn',     view: () => import('./views/LearnView.js') },
     // VAL-001 sprint B · vista /value-accounting · tarta del proyecto (Slicing Pie + FairShares)
