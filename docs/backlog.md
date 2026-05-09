@@ -2152,14 +2152,64 @@ Tests · 50+ asserts puros · multiplicadores aplicados correctamente ·
 sums coherentes · 4 pies separados con stakeholders correctamente
 clasificados · edge cases (ningún slice · party inexistente · etc).
 
-### Sprint B · vista `/value-accounting`
+### Sprint B · vista `/value-accounting` ✅ verde
 
-Vista nueva con · header proyecto · seleccor de pie (founders/team/
-users/investors/community) o "todos" · D3 pie chart con segmentos
-proporcionales a slices · tabla de aportaciones (party · type ·
-fairValue · multiplier · slices · share%) · CTA "Recalcular desde KB"
-que escanea WOs ledgered + ledger entries y propone nuevas
-contribuciones automáticamente.
+Entregat · `js/views/ValueAccountingView.js` registrat al router amb
+ruta `/value-accounting?project={id}` + nou destí nav `🥧 Tarta`
+(category market · global=false · requereix projectId).
+
+Estructura:
+- **Hero** skin Matriu · `mat-hero-h1` "Tarta del **projecte** · {nom}"
+  · subtitle explicatiu · 4 stat-cards (Membres · Slices total ·
+  Assignat % · Sense assignar %) amb color condicional verd/groc/
+  vermell segons llindar.
+- **Grid 2 col** ·
+  - Esquerra · "🥧 Tarta del projecte" · D3 donut chart 320px ·
+    cada party amb el seu color de pie · sectors `unallocated` en
+    gris translúcid per a pies buits o gap visual del 100% · text
+    central `100%` italic + `TARTA DEL PROJECTE` mono. Llegenda
+    sota amb dot color + nom party + pieType + sharePctInProject.
+  - Dreta · "🍰 Pies (target % del projecte)" · llista de tots els
+    `FAIRSHARES_PIE_TYPES` actius · barra de progress (used / target)
+    · target italic gran · status pill "✓ actiu · X% del projecte"
+    o "— buit" en groc dashed.
+- **Editor de targets** · botó "Editar targets ↗" desplega un editor
+  amb sliders + inputs numèrics per a cada pie (founders / team /
+  users / investors / community) · contador de suma en temps real
+  amb estat valid/invalid (=100 ±0.5) · botó "💾 Guardar targets"
+  només actiu si validatePieTargets passa · persisteix com a nodo
+  KB `value_pie_targets`.
+- **Taula de membres** · party · pie (color) · slices al pie · % al
+  pie · % al projecte (italic gran terracota). Empty state si no hi
+  ha cap aportació encara.
+- **Form afegir aportació** · party + pie + tipus (×4 cash · ×2 time
+  · etc.) + valor (€) · "+ Afegir" persisteix com a nodo KB
+  `value_contribution` + actualitza `value_party_map`. Hint
+  metodològic sota explicant càlcul slices.
+- **Secció didàctica** · 4 punts numerats explicant el flux Slicing
+  Pie + FairShares (aportes valor → generes slices → reps el teu %
+  · pies sense aportacions queden sense assignar).
+
+Tot consumeix VAL-001 sprint A.5 · `calculateProjectPie` ·
+`summarizeProjectPie` · `buildContribution` · `validatePieTargets` ·
+`buildValueContributionNode` · `extractContributionsFromKb`.
+
+Persistència en KB:
+- `value_contribution` · una per aportació amb id namespaced
+- `value_party_map` · `{projectId}::value-party-map` · classifica
+  cada party com pieType
+- `value_pie_targets` · `{projectId}::value-pie-targets` · override
+  dels targets default per projectType
+
+D3 reutilitza la càrrega de ValueMapView (CDN). Si l'usuari arriba a
+`/value-accounting` sense haver passat per `/map`, mostra fallback
+amb missatge informatiu.
+
+Sense tests específics (UI · validar manualment al navegador). Tests
+del backend (calculateProjectPie etc.) ja en VAL-001 sprint A.5.
+
+Suite global · 39 tests sense canvi · navService updated 15→16
+destinos amb 2 asserts ajustats (linksGlobal sigue 13 · value es no-global).
 
 ### Sprint C · integración con WOs
 
