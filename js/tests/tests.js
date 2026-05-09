@@ -1441,14 +1441,14 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 16,                          '16 destinos canónicos (+ value VAL-001)');
+    assert(NAV_DESTINATIONS.length === 17,                          '17 destinos canónicos (+ pact PACT-001)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 13,                                'sin projectId · 13 links (sin sops · wallet · value · 16-3)');
+    assert(linksGlobal.length === 13,                                'sin projectId · 13 links (sin sops · wallet · value · pact · 17-4)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
@@ -3526,6 +3526,63 @@ async function testValueAccounting() {
     assert(projPie2.parties.find(p => p.partyId === 'inv') === undefined,          'party con pieType no-en-targets ignorada');
 }
 
+// ─── VAL-001 sprint C · woContributionService · WO ledgered → contribution ──
+async function testWoContributionService() {
+    const m = await import('../core/woContributionService.js?v=' + Date.now());
+    const { partyIdForWo, woHasContributableLedger, woFairValueEur, woToContribution, importWosToContributions, importStats } = m;
+
+    // partyIdForWo
+    assert(partyIdForWo(null) === null,                                          'partyId · null');
+    assert(partyIdForWo({}) === null,                                            'partyId · empty');
+    assert(partyIdForWo({content: {assignee: {id: 'pending'}}}) === null,        'partyId · pending → null');
+    assert(partyIdForWo({content: {assignee: {id: 'agente_anthropic'}}}) === null, 'partyId · agente IA → null');
+    assert(partyIdForWo({content: {assignee: {id: 'did:sos:abc'}}}) === 'did:sos:abc', 'partyId · DID válido');
+    assert(partyIdForWo({content: {assignee: {id: 'pending'}, assignedToSeatId: 'seat-1'}}) === 'seat-1', 'partyId · seatId override');
+
+    // woHasContributableLedger
+    const woGood = {id: 'wo-1', content: {status: 'ledgered', actualHours: 5, assignedToSeatId: 'seat-1'}};
+    assert(woHasContributableLedger(woGood) === true,                            'contributable · OK');
+    assert(woHasContributableLedger({content: {status: 'doing', actualHours: 5, assignedToSeatId: 'seat-1'}}) === false, 'no contributable · doing');
+    assert(woHasContributableLedger({content: {status: 'ledgered', actualHours: 0, assignedToSeatId: 'seat-1'}}) === false, 'no contributable · 0h');
+    assert(woHasContributableLedger({content: {status: 'ledgered', actualHours: 5, assignee: {id: 'pending'}}}) === false, 'no contributable · pending');
+
+    // woFairValueEur
+    assert(woFairValueEur({content: {actualHours: 10, fmvPerHour: 25}}) === 250,  'fmvPerHour usado · 25×10');
+    assert(woFairValueEur({content: {actualHours: 10}}) === 360,                  'default 36k€/año · 36 × 10 = 360');
+    assert(woFairValueEur({content: {actualHours: 10}}, {defaultAnnualSalaryEur: 24000}) === 240, 'salary override · 24 × 10');
+
+    // woToContribution
+    const c1 = woToContribution(woGood);
+    assert(c1 !== null && c1.partyId === 'seat-1' && c1.type === 'time' && c1.slices > 0, 'WO → contribution time válida');
+    assert(c1.evidenceRef === 'wo-1',                                              'evidenceRef = wo.id');
+    assert(woToContribution({content: {status: 'doing'}}) === null,                'WO no ledgered → null');
+
+    // importWosToContributions
+    const wos = [
+        {id: 'wo-1', projectId: 'p1', content: {status: 'ledgered', actualHours: 4, assignedToSeatId: 'seat-aitana', title: 'Sembrar'}},
+        {id: 'wo-2', projectId: 'p1', content: {status: 'ledgered', actualHours: 2, assignee: {id: 'pending'}}},
+        {id: 'wo-3', projectId: 'p1', content: {status: 'doing',    actualHours: 3, assignedToSeatId: 'seat-1'}},
+        {id: 'wo-4', projectId: 'p2', content: {status: 'ledgered', actualHours: 5, assignedToSeatId: 'seat-1'}},
+        {id: 'wo-5', projectId: 'p1', content: {status: 'ledgered', actualHours: 6, assignee: {id: 'did:sos:jordi'}}},
+    ];
+    const r = importWosToContributions({wos, projectId: 'p1'});
+    assert(r.contributions.length === 2,                                           'import filtered · 2 contributions');
+    assert(r.skipped.length === 2,                                                 'import · 2 skipped (wo-2 + wo-3)');
+    assert(r.partyTypeMapInferred['seat-aitana'] === 'team',                       'inferred · default team');
+
+    const rAll = importWosToContributions({wos});
+    assert(rAll.contributions.length === 3,                                        'sin filter proj · 3 contribs');
+
+    // importStats
+    const stats = importStats(r);
+    assert(stats.importedCount === 2,                                              'stats · imported');
+    assert(stats.skippedCount === 2,                                               'stats · skipped');
+    assert(stats.partiesCount === 2,                                               'stats · 2 parties');
+    assert(stats.totalSlices > 0,                                                  'stats · slices');
+    assert(typeof stats.totalEur === 'number',                                     'stats · totalEur number');
+    assert(stats.skippedReasons['not-contributable'] === 2,                        'stats · skipped reasons');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -3567,7 +3624,8 @@ const SUITE = [
     { name: 'MAT-003 sprint E · bootstrapTemplates (12 plantillas)', fn: testBootstrapTemplates },
     { name: 'MAT-003 sprint F · cohortSeatService (CRUD + extract)', fn: testCohortSeatService },
     { name: 'PACT-001 sprint A · pactService (primer contrato)',  fn: testPactService },
-    { name: 'VAL-001 sprint A · valueAccountingService (Slicing Pie + FairShares)', fn: testValueAccounting }
+    { name: 'VAL-001 sprint A · valueAccountingService (Slicing Pie + FairShares)', fn: testValueAccounting },
+    { name: 'VAL-001 sprint C · woContributionService (WO ledgered → contrib)', fn: testWoContributionService }
 ];
 
 export async function runTests() {

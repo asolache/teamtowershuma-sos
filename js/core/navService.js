@@ -38,6 +38,7 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'efficiency',icon: '⚡', label: 'Eficiencia', href: '/efficiency', global: true,  category: 'market',     hint: 'KM-001 · tokens/coste/pruning · ROI IA' },
     { id: 'savings',   icon: '📊', label: 'Ahorro',    href: '/savings',    global: true,  category: 'market',     hint: 'Cuadro comparativo de ahorro vs convencional · global o por proyecto' },
     { id: 'value',     icon: '🥧', label: 'Tarta',     href: '/value-accounting', global: false, category: 'market', hint: 'Contabilidad de valor · Slicing Pie + FairShares · tarta del proyecto' },
+    { id: 'pact',      icon: '📜', label: 'Pacte',     href: '/pact',       global: false, category: 'operations', hint: 'Pacte de socis dinàmic · primer contrato del Mètode SOS' },
     { id: 'learn',     icon: '🎓', label: 'Aprendre',  href: '/learn',      global: true,  category: 'knowledge',  hint: 'UX-EDU-001 · glosario navegable · aprendre fent' },
     { id: 'matriu',    icon: '✦',  label: 'Matriu',    href: '/matriu',     global: true,  category: 'home',       hint: 'Landing pública Matriu Incoopadora · Cohort 0 oberta' },
     { id: 'identity',  icon: '👤', label: 'Identidad', href: '/identity',   global: true,  category: 'identity',   hint: 'Tu perfil · DID local-first · wallet' },

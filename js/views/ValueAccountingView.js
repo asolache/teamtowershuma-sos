@@ -24,6 +24,7 @@ import {
     pieTargetsForProject, validatePieTargets,
     buildValueContributionNode, extractContributionsFromKb,
 } from '../core/valueAccountingService.js';
+import { importWosToContributions, importStats } from '../core/woContributionService.js';
 import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 // Color por pie type (consistente con landing Matriu)
@@ -180,7 +181,17 @@ export default class ValueAccountingView {
                 </div>
 
                 <div class="va-section">
-                    <h2>➕ Afegir aportació</h2>
+                    <h2>🔄 Importar des de WOs ledgered <span style="color:#888;font-weight:400;font-size:0.78rem;">· VAL-001 sprint C · Antigravity Engine</span></h2>
+                    <p style="color:#aaa;font-size:0.88rem;line-height:1.6;margin-bottom:14px;">
+                        Cada Work Order amb status='ledgered' + actualHours + party assignat es converteix automàticament en una <strong class="mat-accent">aportació de tipus time</strong>. Si el WO declara <code>fmvPerHour</code>, s'aplica directe; si no, fórmula default <code>2 × salari_anual / 2000h × hores</code>.
+                    </p>
+                    <div id="vaImportPreview" style="margin-bottom:12px;"></div>
+                    <button class="va-btn" id="vaBtnImportWos">🔄 Escanejar WOs i importar</button>
+                </div>
+
+                <div class="va-section">
+                    <h2>➕ Afegir aportació manual</h2>
+                    <p style="color:#aaa;font-size:0.86rem;margin-bottom:10px;">Per a aportacions que <strong>NO</strong> vénen del Kanban · cash · actius · idees · contactes. Les hores treballades es generen automàticament des dels WOs ledgered.</p>
                     ${this._renderContributionForm()}
                 </div>
 
@@ -368,6 +379,66 @@ export default class ValueAccountingView {
         this._renderPiesList();
         this._bindForm();
         this._bindEditTargets();
+        this._bindImportWos();
+    }
+
+    _bindImportWos() {
+        const btn = document.getElementById('vaBtnImportWos');
+        const preview = document.getElementById('vaImportPreview');
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.textContent = '⏳ Escanejant…';
+            try {
+                const wos = await KB.query({ type: 'work_order', projectId: this.projectId });
+                const result = importWosToContributions({ wos: wos || [], projectId: this.projectId });
+                const stats = importStats(result);
+                if (result.contributions.length === 0) {
+                    if (preview) preview.innerHTML = `
+                        <div style="background:rgba(252,165,165,0.06);border:1px solid rgba(252,165,165,0.3);border-radius:6px;padding:12px;color:#fca5a5;font-size:0.88rem;">
+                            Cap WO contributable trobat. Revisa que els WOs estiguin <code>status='ledgered'</code> + <code>actualHours > 0</code> + tinguin party assignat (assignedToSeatId o assignee.id ≠ pending).
+                            ${stats.skippedCount > 0 ? '<br>· ' + stats.skippedCount + ' WOs descartats per: ' + Object.entries(stats.skippedReasons).map(([k,v])=>k+'×'+v).join(' · ') : ''}
+                        </div>
+                    `;
+                    btn.disabled = false;
+                    btn.textContent = '🔄 Escanejar WOs i importar';
+                    return;
+                }
+                // Confirmación
+                if (!confirm(`Importar ${stats.importedCount} WOs com a aportacions?\n\n· ${stats.partiesCount} membres distints\n· ${stats.totalEur.toFixed(2)} € valor total\n· ${stats.totalSlices.toLocaleString('ca-ES')} slices\n\n${stats.skippedCount > 0 ? stats.skippedCount + ' WOs descartats.' : ''}`)) {
+                    btn.disabled = false;
+                    btn.textContent = '🔄 Escanejar WOs i importar';
+                    return;
+                }
+                // Persistir contributions
+                for (const contrib of result.contributions) {
+                    const node = buildValueContributionNode({ projectId: this.projectId, contribution: contrib });
+                    await KB.upsert(node);
+                }
+                // Actualitzar partyTypeMap fusionant inferred amb el actual
+                const newMap = { ...result.partyTypeMapInferred, ...this.partyTypeMap };   // existent prevaleix
+                await KB.upsert({
+                    id:   this.projectId + '::value-party-map',
+                    type: 'value_party_map',
+                    projectId: this.projectId,
+                    content: { kind: 'party-map', map: newMap },
+                    keywords: ['type:value_party_map', 'project:' + this.projectId],
+                });
+                if (preview) preview.innerHTML = `
+                    <div style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.4);border-radius:6px;padding:12px;color:#4ade80;font-size:0.88rem;">
+                        ✓ ${stats.importedCount} aportacions importades · ${stats.partiesCount} membres · ${stats.totalEur.toFixed(2)} €
+                    </div>
+                `;
+                setTimeout(() => {
+                    if (window.navigateTo) window.navigateTo(window.location.pathname + window.location.search);
+                }, 1200);
+            } catch (err) {
+                console.error('[VAL-001 C] importWos failed:', err);
+                if (preview) preview.innerHTML = `<div style="color:#fca5a5;font-size:0.88rem;">✘ Error: ${escapeHtml(err?.message || String(err))}</div>`;
+                btn.disabled = false;
+                btn.textContent = '🔄 Escanejar WOs i importar';
+            }
+        });
     }
 
     _renderPieChart() {

@@ -110,7 +110,7 @@
 | **MAT-002-I** | **Matriu reframe · personas, no proyectos** — input @alvaro 2026-05-09: "la Matriu son las personas que tienen o no proyectos · y que tienen un perfil de roles y skills". Evolución conceptual del modelo: actualmente `/matriu` muestra plazas como "seats" abstractas y los proyectos como entidades separadas. La realidad debe ser · **la Matriu = la red de las 108 personas** con sus perfiles (rols · skills · disponibilitat · llinatge fundacional) · cada persona puede tener 0+ proyectos donde participa con un rol específico. La página `/matriu` en algún momento debe mutar de "landing pública" a **directorio de la red Matriu** con cards de personas, sus skills, sus proyectos asociados, su guardianAffinity. Sprints · A unificar `cohort_seat` + `user_identity` en un único nodo `matriu_member` con perfil completo · B vista `/matriu/network` con cards de los 108 miembros (filtro por skill/guardian/disponibilitat/projecte) · C cada projecte mostra els seus miembros amb fit · D backwards-compat amb /matriu landing actual (toggle public/network). | 🟡 |
 | **WO-ASSIGN-001** | **Asignación de WOs a plazas Matriu** — input @alvaro 2026-05-09: "en el Kanban de WO se debería poder asignar a una persona de la Matriu en la que estamos". Conecta el Antigravity Engine (SOPs → WOs → Ledger) con el enjambre Cohort 0 (cohort_seats / matriu_members). Cada Work Order tiene un nuevo campo `assignedToSeatId` que apunta a un nodo `cohort_seat` o `matriu_member`. UI · selector en KanbanView card del WO · auto-sugerencia basada en `swarmMatchmaker` · feedback visual con foto/icon del miembro asignado. Cierre automático · cuando WO pasa a `ledgered`, las horas trabajadas alimentan VAL-001 (genera slices al pie del miembro vía `valueAccountingService`). Sprint A · campo + UI selector básico · sprint B · auto-sugerencia IA · sprint C · feedback visual + foto miembro. | 🟡 |
 | **I18N-001** | **Trilingüe ES · CA · EN real · SOS ENTERO (no solo Matriu)** — input @alvaro 2026-04-30 + clarificación 2026-05-09: "cuando hablo de trilingüe hablo de SOS y no solo de la Matriu". Cobertura · TODAS las vistas (Dashboard · Map · Sops · Kanban · Wallet · Savings · Settings · Identity · Folders · Mind · Efficiency · Market · Tags · Workshops · ProjectHub · NodeView · LearnView · MatriuLandingView). i18next con detect navigator + override en /settings → idioma. Nodos KB con campos `name_en/ca/es` cuando aplique. Sprints · A: i18next setup + extractor de strings + selector visible · B: 3-4 vistas más usadas (Dashboard · ProjectHub · Settings · Map) · C: resto de vistas + nodos KB · D: bilingüe en LLM prompts (system prompt en idioma del operador). Catalán estratégico · base del fondo descentralizado catalán VISION-001 · pero EN crítico para ampliar red de fundadores fuera de Catalunya. | 🟡 |
-| **PACT-001** | **Pacto de socios dinámicos · primer contrato del Mètode SOS** — input @alvaro 2026-04-30 + 2026-05-09: "fem el primer contrato". Sprint A entregat · `js/core/pactService.js` puro + schema canònic JSON. 7 cláusulas estructurades: objeto · capital (Fair Fractal) · participació (slicing-pie/fixed/hybrid) · vesting (months · cliff · type) · decisions (consensus/majority/multisig + quorum) · exit (trigger · snapshot · formula · payoutWindow) · conflict (mediation → arbitration) · sunset (auto-trigger metric + grace period). DEFAULT_PACT_CLAUSES alineades amb Matriu Fair Fractal. Helpers · `buildPactDraft({projectId, parties, clauses, projectTypeId})` puro · `validateClauses` · `validatePact` (suma initialShare ≤ 1.0 · resto va a slicing pie dinámic) · `mergeClauses` shallow · `addSignature` puro idempotent (cuando todas firman → status='signed' auto) · `pactSummary` para UI · `renderPactMarkdown` per export legible. ID namespaced `${projectId}::pact::sos-v1`. Tests · 47 asserts puros · suite 37 → 38. Sprint B pendent · UI builder paso a paso (vista `/pact` o modal en ProjectHubView). Sprint C pendent · firma ECDSA real connectada amb projectIO/identityService. Sprint D pendent · export PDF + JSON canònic per a Pact.sol (MAT-001 fase 4 · EIP-712). | 🟢 sprint A verde · B/C/D 🟡 |
+| **PACT-001** | **Pacto de socios dinámicos · primer contrato del Mètode SOS** — sprints A+B verdes. Sprint A · `pactService.js` puro · schema canònic + 7 cláusulas + helpers (buildPactDraft · validatePact · addSignature · pactSummary · renderPactMarkdown). Sprint B · `PactBuilderView.js` ruta `/pact?project={id}` · 7 seccions editables (objet · participació · capital · vesting · decisions · exit · conflict) + taula socis con add/remove + signatura simbólica per cada party (sprint C connectarà ECDSA real) + markdown preview + copiar al clipboard. Init form si no hi ha pacte (nom + DID + rol del primer soci). status='signed' automàtic quan totes les parties han signat (de l'addSignature). Persistència KB nodo `${projectId}::pact::sos-v1`. Sprint C pendent · firma ECDSA real connectada amb projectIO/identityService. Sprint D pendent · export PDF + JSON canònic per a Pact.sol (MAT-001 fase 4 · EIP-712). | 🟢 A+B verde · C/D 🟡 |
 | **CONTR-001** | **Contratos de plataforma · suscripción + saldo acumulable** — input @alvaro 2026-04-30: "planes de subscripción con saldo acumulable para uso de APIs y registros". Tipos de plan: free (local-first · no APIs IA propias · API key del usuario) · pro (saldo prepago Stripe · descuento automático MKT-001 sprint C3 ✅) · cooperative (saldo USDC en Gnosis vía MAT-001 fase 4) · enterprise (custom). Onboarding de plan en `/settings → Plan`. Tests del builder. | 🟡 |
 | **NET-100** | **Red de 100 personas dunbar-friendly · matchmaking** — input @alvaro 2026-04-30: "como psicólogo comunitario me interesa facilitar el proceso de crear redes de unas 100 personas preparadas para trabajar con este modelo". Cohort = 100 plazas (Matriu C0 ya). Matchmaking entre miembros por skills · folksonomy · sectores · MATRIU_VALUE_KINDS · WO open-call broadcast a la red · slicing pie automático al participar. Necesita MAT-001 fase 1 (SBT identidad) para identificar miembros entre dispositivos. | 🟡 |
 | H1.9 | Completar sectores borderline F · Q · R hasta umbral 'ready' | 🟡 |
@@ -2211,12 +2211,61 @@ del backend (calculateProjectPie etc.) ja en VAL-001 sprint A.5.
 Suite global · 39 tests sense canvi · navService updated 15→16
 destinos amb 2 asserts ajustats (linksGlobal sigue 13 · value es no-global).
 
-### Sprint C · integración con WOs
+### Sprint C · integración con WOs ✅ verde
 
-Cada WO en estado `ledgered` con `assignedToSeatId` (de WO-ASSIGN-001)
-+ `actualHoursWorked` genera automáticamente una contribution
-`type='time'` para esa party. El operador puede ajustar el
-fairValueEur (default · `2 × salary / 2000`) en el panel del proyecto.
+Entregat · `js/core/woContributionService.js` puro · cierra el bucle
+SOP → WO → Ledger → Slice del Antigravity Engine.
+
+Filosofía @alvaro 2026-05-09: "las contributions deberían ser las
+WOs contabilizadas". Implementación literal · cada WO en
+`status='ledgered'` con `actualHours > 0` + party identificado
+(via `assignedToSeatId` u `assignee.id` ≠ pending/agente_*) genera
+automáticamente una `value_contribution` type='time'.
+
+Helpers puros:
+- `partyIdForWo(wo)` · resuelve party con priority order
+  · `assignedToSeatId` (futuro WO-ASSIGN-001) → `assignee.id` válido
+  → null. Blacklist · pending · unknown · agente_anthropic ·
+  agente_openai · etc.
+- `woHasContributableLedger(wo)` · 3 condiciones · ledgered + horas
+  + party. Retorna bool.
+- `woFairValueEur(wo, options)` · si WO declara `fmvPerHour`, prevalece;
+  si no, fórmula Slicing Pie default `2 × annualSalary / 2000h × hours`.
+  `DEFAULT_ANNUAL_SALARY_EUR = 36000` (≈ 18 €/h · ajustable per
+  party con `salaryByPartyId`).
+- `woToContribution(wo, options)` · genera contribution válida via
+  `valueAccountingService.buildContribution` · `evidenceRef = wo.id`
+  · description = "WO ledgered · {title} · {hours}h" · timestamp
+  del `wo.updatedAt`.
+- `importWosToContributions({wos, projectId, options})` · filtra
+  WOs por proyecto + bulk transform · devuelve `{contributions[],
+  skipped[] (con motivos), partyTypeMapInferred}`. Heurística ·
+  todos los parties WO-derived van por defecto a 'team' (operador
+  ajusta luego).
+- `importStats({contributions, skipped})` · resumen para UI ·
+  imported · skipped · parties · totalSlices · totalEur · razones.
+
+UI · botón "🔄 Escanejar WOs i importar" en `/value-accounting` ·
+sección antes del form manual:
+1. Click → KB.query work_order del proyecto
+2. importWosToContributions filtra y transforma
+3. Si 0 contribs · mostrar diagnóstico con razones de skip
+4. Si ≥1 · `confirm(...)` con stats (X membres · Y € · Z slices)
+5. Persistir cada contribution + actualizar `value_party_map`
+   (preservando overrides existentes del operador)
+6. Reload vista → tarta actualizada
+
+Tests · 32 asserts puros · partyId resolution con todos los edge
+cases (pending · agente IA · DID · seat ID · override) · contributable
+con todos los estados · fairValue con/sin fmvPerHour · import bulk
+con filter projeto · stats. Sanity en node verde.
+
+Suite global · 39 → 40.
+
+División clara · contributions tipo `time` vienen del Kanban · todo
+el resto (cash, assets, ideas, vendor, relationships) sigue en form
+manual. Aclarado en UI · sub-texto del form `+ Afegir aportació
+manual` · "per a aportacions que NO vénen del Kanban".
 
 ### Sprint D · integración con PACT-001
 
