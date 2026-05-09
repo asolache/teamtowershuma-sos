@@ -44,6 +44,8 @@ const ROUTES = [
     { path: '/matriu/network', view: () => import('./views/MatriuNetworkView.js') },
     // UX-EDU-001 sprint C · vista /learn glosario navegable + progreso "ya leído"
     { path: '/learn',     view: () => import('./views/LearnView.js') },
+    // SKILL-TAX-002 sprint B · vista /skills · directori 90 skills amb filtres
+    { path: '/skills',    view: () => import('./views/SkillsExplorerView.js') },
     // VAL-001 sprint B · vista /value-accounting · tarta del proyecto (Slicing Pie + FairShares)
     { path: '/value-accounting', view: () => import('./views/ValueAccountingView.js') },
     // PACT-001 sprint B · UI builder del primer contrato (pacto socios)

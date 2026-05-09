@@ -40,6 +40,7 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'value',     icon: '🥧', label: 'Tarta',     href: '/value-accounting', global: false, category: 'market', hint: 'Contabilidad de valor · Slicing Pie + FairShares · tarta del proyecto' },
     { id: 'pact',      icon: '📜', label: 'Pacte',     href: '/pact',       global: false, category: 'operations', hint: 'Pacte de socis dinàmic · primer contrato del Mètode SOS' },
     { id: 'learn',     icon: '🎓', label: 'Aprendre',  href: '/learn',      global: true,  category: 'knowledge',  hint: 'UX-EDU-001 · glosario navegable · aprendre fent' },
+    { id: 'skills',    icon: '🧠', label: 'Skills',    href: '/skills',     global: true,  category: 'knowledge',  hint: 'SKILL-TAX-002 · 90 skills · 5 categories · 5 audiències · 12 tipus de projecte' },
     { id: 'matriu',    icon: '✦',  label: 'Matriu',    href: '/matriu',     global: true,  category: 'home',       hint: 'Landing pública Matriu Incoopadora · Cohort 0 oberta' },
     { id: 'identity',  icon: '👤', label: 'Identidad', href: '/identity',   global: true,  category: 'identity',   hint: 'Tu perfil · DID local-first · wallet' },
     { id: 'settings',  icon: '⚙',  label: 'Settings',  href: '/settings',   global: true,  category: 'identity',   hint: 'Claves API · IA · purga' },
