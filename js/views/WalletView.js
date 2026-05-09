@@ -162,7 +162,7 @@ export default class WalletView {
 
         main.innerHTML = `
             <div class="w-hero">
-                <h1>💶 Wallet del proyecto</h1>
+                <h1 class="mat-hero-h1">💶 Wallet <strong>del projecte</strong></h1>
                 <div class="pname">${this._esc(projName)} · <code style="color:#666;">${this._esc(this.projectId)}</code></div>
                 <div class="w-balance">
                     <span class="amount">${stats.balance.toFixed(2)}</span>

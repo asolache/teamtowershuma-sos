@@ -153,7 +153,7 @@ export default class SavingsView {
 
         main.innerHTML = `
             <div class="sa-hero">
-                <h1>📊 Ahorro acumulado · ${this._esc(this.project.nombre || this.project.id)}</h1>
+                <h1 class="mat-hero-h1">📊 Ahorro <strong>acumulat</strong> · ${this._esc(this.project.nombre || this.project.id)}</h1>
                 <div class="meta">Coste real SOS = IA (descontada del wallet o estimada de logs) + horas humanas (Kanban actualHours × FMV). Comparado contra los 4 rangos convencionales editables (sprint D2 los hará ajustables en /settings).</div>
                 <div class="sa-stats">
                     <div class="sa-stat" style="--sa-c:#7dd3fc;">
@@ -217,7 +217,7 @@ export default class SavingsView {
         if (!acc.projectsCount) {
             main.innerHTML = `
                 <div class="sa-hero">
-                    <h1>📊 Ahorro acumulado · global</h1>
+                    <h1 class="mat-hero-h1">📊 Ahorro <strong>acumulat</strong> · global</h1>
                     <div class="meta">Aún no hay proyectos. Crea uno desde <a href="/dashboard" data-link class="sa-link">el dashboard</a> y vuelve.</div>
                 </div>
                 <div class="sa-empty"><p>Sin proyectos.</p></div>`;
@@ -240,7 +240,7 @@ export default class SavingsView {
 
         main.innerHTML = `
             <div class="sa-hero">
-                <h1>📊 Ahorro acumulado · global</h1>
+                <h1 class="mat-hero-h1">📊 Ahorro <strong>acumulat</strong> · global</h1>
                 <div class="meta">Suma de todos los proyectos activos · IA real + humano real comparado contra rangos convencionales (notaría · contable · PM · consultoría).</div>
                 <div class="sa-stats">
                     <div class="sa-stat" style="--sa-c:#a5b4fc;">

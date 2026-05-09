@@ -106,7 +106,7 @@ export default class EfficiencyView {
         if (!this.logs.length) {
             main.innerHTML = `
                 <div class="ef-hero">
-                    <h1>🧠 Eficiencia IA</h1>
+                    <h1 class="mat-hero-h1">🧠 Eficiència <strong>IA</strong></h1>
                     <div class="meta">Aún no hay registros · activa <strong>Context pruning</strong> en <a href="/settings" data-link class="ef-link">/settings</a> y haz una llamada IA (ej. generar un SOP) para ver el primer log.</div>
                 </div>
                 <div class="ef-empty">
@@ -148,7 +148,7 @@ export default class EfficiencyView {
 
         main.innerHTML = `
             <div class="ef-hero">
-                <h1>🧠 Eficiencia IA · ${this.logs.length} llamada${this.logs.length === 1 ? '' : 's'} con pruning</h1>
+                <h1 class="mat-hero-h1">🧠 Eficiència <strong>IA</strong> · ${this.logs.length} crida${this.logs.length === 1 ? '' : 'des'} amb pruning</h1>
                 <div class="meta">Cada vez que el pruner selecciona contexto, el sistema mide <strong>cuántos nodos quedaron fuera</strong> (skipped) y <strong>cuántos tokens netos costó el prompt</strong> tras añadir el contexto. Activa o desactiva en <a href="/settings" data-link class="ef-link">/settings</a>.</div>
                 <div class="ef-kpis">
                     <div class="ef-kpi" style="--ef-c:#86efac;">

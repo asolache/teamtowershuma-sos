@@ -110,7 +110,7 @@ export default class ProjectHubView {
 
             <div class="ph-main">
                 <div class="ph-hero">
-                    <h1>${this._esc(p.nombre || p.name || p.id)}</h1>
+                    <h1 class="mat-hero-h1">${this._esc(p.nombre || p.name || p.id)}</h1>
                     <div class="meta">
                         <span class="ph-badge status">● ${this._esc(p.cloneStatus || 'active')}</span>
                         ${sectorBadge}
