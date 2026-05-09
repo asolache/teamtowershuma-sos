@@ -643,7 +643,11 @@ export default class MatriuLandingView {
                         <div class="mt-input-row">
                             <label for="mtSkills">Les teves skills (separades per coma · 3-7)</label>
                             <input type="text" id="mtSkills" class="mt-input" placeholder="ex. regenerative-agriculture, seed-banking, food-systems">
-                            <small style="font-size:11px;color:#5a6e4f;opacity:0.85;margin-top:4px;">Veure el catàleg de 90 skills a <a href="/learn" data-link style="color:#c25a3a;">/learn</a> · escriu-les en kebab-case · taxonomia universal pendent (SKILL-TAX-002)</small>
+                            <small style="font-size:11px;color:#5a6e4f;opacity:0.85;margin-top:4px;">Veure el catàleg de 90 skills a <a href="/learn" data-link style="color:#c25a3a;">/learn</a> · escriu-les en kebab-case · taxonomia universal SKILL-TAX-002 (5 categories · 5 audiències)</small>
+                            <div id="mtSkillsSuggested" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(194,90,58,0.06);border:1px dashed rgba(194,90,58,0.35);border-radius:6px;font-size:12px;color:#2a3a2a;">
+                                <span style="font-family:ui-monospace,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:#5a6e4f;">Suggerides per al teu guardian:</span>
+                                <div id="mtSkillsSuggestedList" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
+                            </div>
                         </div>
                         <div class="mt-input-row">
                             <label for="mtSectors">Sectors on tens experiència (multi-selecció)</label>
@@ -751,6 +755,43 @@ export default class MatriuLandingView {
         const closeModal = () => modal?.classList.remove('is-open');
 
         document.getElementById('mtCtaFinal')?.addEventListener('click', (e) => openModal(e));
+
+        // SKILL-TAX-002 sprint A · suggested skills al canviar guardian
+        document.getElementById('mtGuardian')?.addEventListener('change', async (e) => {
+            const guardianId = e.target.value;
+            const box  = document.getElementById('mtSkillsSuggested');
+            const list = document.getElementById('mtSkillsSuggestedList');
+            if (!box || !list) return;
+            if (!guardianId) { box.style.display = 'none'; return; }
+            try {
+                const ext = await import('../core/skillTaxonomyExtension.js?v=' + Date.now());
+                const top = ext.topSkillsForGuardian(guardianId, 5);
+                const intang = ext.intangibleValueOfGuardian(guardianId);
+                if (top.length === 0) { box.style.display = 'none'; return; }
+                list.innerHTML = top.map(s => `<button type="button" class="mt-skill-suggest" data-skill="${s.id}" style="background:#fff;border:1px solid rgba(42,58,42,0.2);color:#2a3a2a;padding:3px 9px;border-radius:99px;font-size:11px;font-family:ui-monospace,monospace;cursor:pointer;">+ ${s.id}</button>`).join('');
+                if (intang) {
+                    const valueLine = document.createElement('div');
+                    valueLine.style.cssText = 'margin-top:8px;font-style:italic;color:#5a6e4f;font-size:11px;line-height:1.4;';
+                    valueLine.textContent = `🪶 ${intang.primary} · ${(intang.secondary || []).join(' · ')}`;
+                    list.appendChild(valueLine);
+                }
+                box.style.display = 'block';
+                // Click suggestion → afegeix al input
+                box.querySelectorAll('.mt-skill-suggest').forEach(b => {
+                    b.addEventListener('click', (ev) => {
+                        ev.preventDefault();
+                        const skillId = b.getAttribute('data-skill');
+                        const input = document.getElementById('mtSkills');
+                        if (!input) return;
+                        const current = (input.value || '').trim();
+                        const arr = current.split(',').map(x => x.trim()).filter(Boolean);
+                        if (!arr.includes(skillId)) arr.push(skillId);
+                        input.value = arr.join(', ');
+                        b.style.opacity = '0.4';
+                    });
+                });
+            } catch (err) { /* non-blocking */ }
+        });
         document.getElementById('mtModalCancel')?.addEventListener('click', closeModal);
         modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
