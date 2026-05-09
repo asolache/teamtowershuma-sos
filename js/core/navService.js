@@ -129,6 +129,13 @@ export function renderNavGroupedHtml({
 // Bind helper opcional · activa el toggle de los dropdowns en runtime.
 // El consumidor llama esto tras renderizar los grupos en el DOM.
 // Cierra al click fuera y al pulsar Escape.
+//
+// IDEMPOTENT (fix UX 2026-05-09 · bug "dropdowns no funcionen a /mind"):
+// - Cada botón se marca amb `data-nav-bound="1"` un cop bound · evita
+//   acumular handlers a cada navegació SPA.
+// - El listener global click/keydown del document es registra UN SOL
+//   COP via flag de mòdul · evita acumulació cross-navigation.
+let _navGlobalListenersBound = false;
 export function bindNavGroupDropdowns(rootEl) {
     if (!rootEl || typeof rootEl.querySelectorAll !== 'function') return;
     const groups = rootEl.querySelectorAll('[data-nav-group]');
@@ -136,28 +143,33 @@ export function bindNavGroupDropdowns(rootEl) {
         const btn  = g.querySelector('button');
         const menu = g.querySelector('[role="menu"]');
         if (!btn || !menu) return;
+        if (btn.getAttribute('data-nav-bound') === '1') return;   // ja bound · skip
+        btn.setAttribute('data-nav-bound', '1');
         const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
         const open  = () => { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            // Cierra otros groups primero
-            rootEl.querySelectorAll('[data-nav-group] [role="menu"]').forEach(m => { if (m !== menu) m.hidden = true; });
-            rootEl.querySelectorAll('[data-nav-group] button').forEach(b => { if (b !== btn) b.setAttribute('aria-expanded', 'false'); });
+            // Cierra otros groups primero (en TODO el DOM, no solo rootEl ·
+            // múltiples vistas pueden tener nav groups simultáneos)
+            document.querySelectorAll('[data-nav-group] [role="menu"]').forEach(m => { if (m !== menu) m.hidden = true; });
+            document.querySelectorAll('[data-nav-group] button').forEach(b => { if (b !== btn) b.setAttribute('aria-expanded', 'false'); });
             if (menu.hidden) open(); else close();
         });
         // Click en cualquier item · cerrar después de la navegación SPA
         menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setTimeout(close, 50)));
     });
-    // Click fuera · cerrar todos
+    if (_navGlobalListenersBound) return;
+    _navGlobalListenersBound = true;
+    // Click fuera · cerrar todos (1 sol cop registrat)
     document.addEventListener('click', () => {
-        rootEl.querySelectorAll('[data-nav-group] [role="menu"]').forEach(m => { m.hidden = true; });
-        rootEl.querySelectorAll('[data-nav-group] button').forEach(b => b.setAttribute('aria-expanded', 'false'));
-    }, { once: false });
-    // Escape · cerrar todos
+        document.querySelectorAll('[data-nav-group] [role="menu"]').forEach(m => { m.hidden = true; });
+        document.querySelectorAll('[data-nav-group] button').forEach(b => b.setAttribute('aria-expanded', 'false'));
+    });
+    // Escape · cerrar todos (1 sol cop registrat)
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            rootEl.querySelectorAll('[data-nav-group] [role="menu"]').forEach(m => { m.hidden = true; });
-            rootEl.querySelectorAll('[data-nav-group] button').forEach(b => b.setAttribute('aria-expanded', 'false'));
+            document.querySelectorAll('[data-nav-group] [role="menu"]').forEach(m => { m.hidden = true; });
+            document.querySelectorAll('[data-nav-group] button').forEach(b => b.setAttribute('aria-expanded', 'false'));
         }
     });
 }
