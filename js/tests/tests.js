@@ -3163,6 +3163,78 @@ async function testBootstrapTemplates() {
     assert(stats.coveredProjectTypes.length === 12,                            'stats · cobertura 12 types');
 }
 
+// ─── MAT-003 sprint F · cohortSeatService · puro ──────────────────
+async function testCohortSeatService() {
+    const m = await import('../core/cohortSeatService.js?v=' + Date.now());
+    const { buildSeedSeats, buildSeatNode, extractSwarmInput, buildSwarmAssignmentNode } = m;
+
+    // buildSeedSeats
+    assert(buildSeedSeats(3).length === 3,                                'buildSeedSeats · 3');
+    assert(buildSeedSeats(5).length === 5,                                'buildSeedSeats · 5');
+    assert(buildSeedSeats(99).length === 5,                               'buildSeedSeats · clamp 5');
+    assert(buildSeedSeats(0).length === 0,                                'buildSeedSeats · 0');
+    assert(buildSeedSeats(-3).length === 0,                                'buildSeedSeats · negativo → 0');
+
+    // buildSeatNode
+    const seat = buildSeedSeats(5)[0];
+    const node = buildSeatNode(seat);
+    assert(node.id === seat.id,                                            'buildSeatNode · id');
+    assert(node.type === 'cohort_seat',                                     'buildSeatNode · type');
+    assert(node.content.kind === 'cohort-seat',                             'buildSeatNode · kind');
+    assert(node.content.guardianOf === 'demeter',                           'buildSeatNode · guardianOf');
+    assert(node.keywords.includes('type:cohort_seat'),                      'keywords · type');
+    assert(node.keywords.includes('guardianOf:demeter'),                    'keywords · guardianOf');
+    assert(node.keywords.some(k => k.startsWith('skill:')),                 'keywords · skills');
+
+    let threw = false;
+    try { buildSeatNode({}); } catch(_) { threw = true; }
+    assert(threw,                                                          'buildSeatNode · sin id lanza');
+
+    // extractSwarmInput
+    const projectNodes = [
+        { id: 'p1::bootstrap-meta', type: 'project_bootstrap', content: { typeId: 'comunitat-autosuficient', sectorAffinity: ['A','N','Q'] } },
+        { id: 'p1::role::pages',    type: 'role', content: { kind: 'bootstrap-role', label: 'Pagès', guardianAffinity: ['demeter'] } },
+        { id: 'p1::role::tresorera',type: 'role', content: { kind: 'bootstrap-role', label: 'Tresorera', guardianAffinity: ['poseidon'] } },
+        { id: 'p1::sop::xxx',       type: 'sop', content: { kind: 'bootstrap-sop' } },
+    ];
+    const seatNodes = [
+        { id: 's1', type: 'cohort_seat', content: { displayName: 'A', skillsDeclared: ['x'], status: 'available' } },
+        { id: 's2', type: 'cohort_seat', content: { displayName: 'B', skillsDeclared: ['y'], status: 'busy' } },
+    ];
+    const swarm = extractSwarmInput({ projectNodes, seatNodes });
+    assert(swarm.requiredRoles.length === 2,                                'extractSwarmInput · 2 roles');
+    assert(swarm.swarmSeats.length === 1,                                   'extractSwarmInput · 1 seat (busy filtrado)');
+    assert(swarm.bootstrapMeta?.typeId === 'comunitat-autosuficient',       'extractSwarmInput · meta typeId');
+    assert(swarm.projectTypeId === 'comunitat-autosuficient',               'extractSwarmInput · projectTypeId');
+    assert(swarm.requiredRoles[0].domain === 'ecology',                     'inferDomain · demeter → ecology');
+    assert(swarm.requiredRoles[1].domain === 'finance',                     'inferDomain · poseidon → finance');
+
+    const empty = extractSwarmInput();
+    assert(empty.requiredRoles.length === 0 && empty.swarmSeats.length === 0, 'extractSwarmInput vacío');
+
+    // buildSwarmAssignmentNode
+    const an = buildSwarmAssignmentNode({
+        projectId: 'p1',
+        match: { roleId: 'r1', seatId: 's1', primary: true, fit: 0.9, rationale: 'why', skillsUsed: ['k'] },
+    });
+    assert(an.type === 'swarm_assignment',                                  'assignment type');
+    assert(an.id.includes('::P'),                                            'assignment primary suffix');
+    assert(an.content.primary === true,                                     'assignment primary flag');
+    assert(an.keywords.includes('rank:primary'),                             'rank:primary keyword');
+    assert(an.keywords.includes('role:r1'),                                  'role keyword');
+
+    const asec = buildSwarmAssignmentNode({
+        projectId: 'p1',
+        match: { roleId: 'r2', seatId: 's2', primary: false, fit: 0.5 },
+    });
+    assert(asec.id.includes('::S'),                                          'assignment secondary suffix');
+    assert(asec.keywords.includes('rank:secondary'),                         'rank:secondary keyword');
+
+    let threwA = false;
+    try { buildSwarmAssignmentNode({}); } catch(_) { threwA = true; }
+    assert(threwA,                                                           'buildSwarmAssignmentNode sin args lanza');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -3201,7 +3273,8 @@ const SUITE = [
     { name: 'MAT-003 sprint A · critical108Roles + Pantheon Work', fn: testCritical108Roles },
     { name: 'MAT-003 sprint B · skillTaxonomy + coverageReport',  fn: testSkillTaxonomy },
     { name: 'MAT-003 sprint C · swarmMatchmaker (matchmaker IA)', fn: testSwarmMatchmaker },
-    { name: 'MAT-003 sprint E · bootstrapTemplates (12 plantillas)', fn: testBootstrapTemplates }
+    { name: 'MAT-003 sprint E · bootstrapTemplates (12 plantillas)', fn: testBootstrapTemplates },
+    { name: 'MAT-003 sprint F · cohortSeatService (CRUD + extract)', fn: testCohortSeatService }
 ];
 
 export async function runTests() {

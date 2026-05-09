@@ -1602,10 +1602,74 @@ team completo con telemetry. Sanity en node verde antes del push.
 
 Suite global: 34 → 35.
 
-**Pendiente sprint C.UI**: botón "🐝 Activar enjambre" en panel del
-proyecto + modal con propuesta + accept/reject por rol. Esto se hará
-cuando tengamos plazas reales declaradas (sprint D · time banking
-inverso) · hasta entonces el matchmaker funciona vía consola.
+**Pendiente sprint C.UI**: ver sprint F abajo · UI completa entregada.
+
+#### Sprint F UI · "🐝 Activar enjambre" en ProjectHubView ✅ verde
+
+**Entregado** · `js/core/cohortSeatService.js` + extensión de
+`js/views/ProjectHubView.js` con sección "🐝 Enjambre Cohort 0".
+
+`cohortSeatService.js` · helpers puros + KB-bound:
+- `buildSeedSeats(count=5)` puro · genera array de plaças sintéticas
+  realistas (Aitana R · Núria B · Jordi T · Marc L · Laia P) cada una
+  con perfil distinto (5-skills declaradas + guardianOf + bio breve).
+  Cada plaça arquetípica cubre un guardián diferente · demeter,
+  hefesto, hermes, poseidon, hestia. Cobertura suficiente para que
+  el matchmaker tenga matches potentes en el demo.
+- `buildSeatNode(seat)` puro · genera nodo KB type='cohort_seat'.
+- `extractSwarmInput({projectNodes, seatNodes})` puro · de los nodos
+  del KB extrae los roles del bootstrap (kind='bootstrap-role') y las
+  plaças disponibles. Heurística `inferDomainFromGuardians` mapea
+  guardian→domain para enriquecer `requiredRoles[].domain`.
+- `buildSwarmAssignmentNode({projectId, match})` puro · genera nodo
+  `type='swarm_assignment'` con id namespaced
+  `${projectId}::assignment::${roleId}::${seatId}::P|S`.
+- KB-bound async · `listSeats` · `listAvailableSeats` ·
+  `seedDemoSeatsToKb(KB, count)` · `persistAssignments({KB, projectId,
+  matches})` · `listProjectAssignments(KB, projectId)`.
+
+`ProjectHubView` extendido:
+- Lee `swarmInput` + `assignments` en `getHtml` (siempre).
+- Sección nueva "🐝 Enjambre Cohort 0" entre Hero y Vistas operativas
+  · muestra · projectType label · sectorAffinity · guardians como
+  badges · weeks estimadas · 3 stat-cards (rolesRequired · totalSeats
+  · assignmentsCount).
+- Botón principal "🐝 Activar enjambre IA" · abre modal y corre
+  `swarmMatchmaker.buildSwarmTeamForProject` con `Orchestrator` real.
+- Botón secundario "⚡ Seed 5 plaçes demo" visible cuando totalSeats=0.
+- Modal full-screen con · loading state → match results → tabla
+  (Rol · Plaça · Tipus PRIMARY/secondary · Fit con color · Per què) ·
+  3 stat-cards (Cobertura % · Matches count · Provider+latency) ·
+  rationale del LLM en italic · gaps[] como pill rojo si los hay.
+- Botón "✓ Aplicar matching · persistir al KB" · llama
+  `persistAssignments` · feedback verde + reload de la vista.
+- Robusto · si no hay seats avisa generar demo · si no hay
+  requiredRoles avisa reservar des de /matriu con tipus · errores LLM
+  muestran apuntar a /settings (API key).
+
+**Tests · 30+ asserts puros**: buildSeedSeats (clamp · count) ·
+buildSeatNode (id · type · keywords) · extractSwarmInput (roles +
+seats + meta + projectTypeId · busy filtrado · vacío gracioso) ·
+buildSwarmAssignmentNode (primary · secondary · keywords · sin args
+lanza). Sanity en node verde antes del push. Suite global 36 → 37.
+
+**Demo end-to-end completo ahora**:
+
+1. Fundador en `/matriu` → ve los 12 tipus · click en card → modal con
+   tipus preseleccionado → reserva.
+2. CREATE_PROJECT + bootstrapMapForProject persiste 5 roles + 6 tx +
+   8 SOPs + meta en KB.
+3. Navega a `/project/{id}` → sección "🐝 Enjambre" muestra el
+   bootstrap meta + 0 plaçes inicialmente.
+4. Click "⚡ Seed 5 plaçes demo" → 5 plaças cohort_seat persistidas.
+5. Click "🐝 Activar enjambre IA" → matchmaker LLM corre con
+   bootstrap.requiredGuardians + plaças disponibles.
+6. Modal muestra propuesta · cobertura % · matches por rol · fit ·
+   rationale.
+7. Click "✓ Aplicar matching" → persistAssignments al KB ·
+   `type='swarm_assignment'` queryable después.
+
+Esto es el **demo seductor** para los 100 fundadores @alvaro de la red.
 
 #### Sprint D · Time Banking inverso · plazas que aceptan WOs del enjambre
 
