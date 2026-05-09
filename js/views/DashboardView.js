@@ -909,6 +909,7 @@ export default class DashboardView {
             +   '<div class="dash-matriu-seats">' + seatCards + '</div>'
             +   '<div class="dash-matriu-actions">'
             +     '<a href="/matriu" data-link class="dash-matriu-cta">Tornar a Matriu →</a>'
+            +     '<a href="/matriu/network" data-link class="dash-matriu-cta-secondary">🌐 Xarxa de membres</a>'
             +     '<a href="/learn" data-link class="dash-matriu-cta-secondary">Aprendre més ↗</a>'
             +   '</div>'
             + '</div>';

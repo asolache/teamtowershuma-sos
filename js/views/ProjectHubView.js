@@ -44,10 +44,30 @@ export default class ProjectHubView {
         // MAT-003 sprint F · datos del enjambre + bootstrap meta
         const projectNodes = allNodes.filter(n => n.projectId === this.projectId);
         const seatNodes    = allNodes.filter(n => n?.type === 'cohort_seat');
+        const memberNodes  = allNodes.filter(n => n?.type === 'matriu_member');
         const assignNodes  = allNodes.filter(n => n?.type === 'swarm_assignment' && n.projectId === this.projectId);
         this.swarmInput    = extractSwarmInput({ projectNodes, seatNodes });
         this.assignments   = assignNodes;
-        this.totalSeats    = seatNodes.length;
+        this.totalSeats    = seatNodes.length + memberNodes.length;
+        // MAT-002-I sprint C · resolver members del projecte (assigned via swarm_assignment + WO assignedToSeatId)
+        const woNodes = allNodes.filter(n => n?.type === 'work_order' && n.projectId === this.projectId);
+        const memberIdsInProject = new Set();
+        for (const a of assignNodes) {
+            if (a?.content?.seatId) memberIdsInProject.add(a.content.seatId);
+        }
+        for (const w of woNodes) {
+            if (w?.content?.assignedToSeatId) memberIdsInProject.add(w.content.assignedToSeatId);
+        }
+        // Lookup index · accept seats and members
+        const seatById = new Map([...seatNodes, ...memberNodes].map(n => [n.id, n]));
+        this.projectMembers = Array.from(memberIdsInProject)
+            .map(id => seatById.get(id))
+            .filter(Boolean);
+        // Si el projecte té ownerMemberId, incloure el owner aunque no tingui WO/assignment
+        const ownerId = this.project?.ownerMemberId;
+        if (ownerId && seatById.has(ownerId) && !this.projectMembers.find(m => m.id === ownerId)) {
+            this.projectMembers.unshift(seatById.get(ownerId));
+        }
 
         const p = this.project;
         const s = this.stats;
@@ -80,6 +100,8 @@ export default class ProjectHubView {
             .ph-stat .sub   { color:#aaa; font-size:0.7rem; margin-top:0.15rem; }
 
             .ph-section h2 { margin:0 0 0.7rem 0; color:#fff; font-size:1rem; letter-spacing:0.02em; }
+            .ph-member-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:14px; transition:transform 0.15s, border-color 0.15s; }
+            .ph-member-card:hover { transform:translateY(-2px); border-color:rgba(192,132,252,0.4); }
             .ph-section { margin-top:1.6rem; }
 
             .ph-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:0.7rem; }
@@ -147,6 +169,8 @@ export default class ProjectHubView {
                         </div>
                     </div>
                 </div>
+
+                ${this._renderProjectMembersSection()}
 
                 ${this._renderSwarmSection()}
 
@@ -232,6 +256,63 @@ export default class ProjectHubView {
     }
 
     // ── MAT-003 sprint F UI · Enjambre Cohort 0 ────────────────────
+
+    // MAT-002-I sprint C · membres del projecte (matriu_member + cohort_seat amb fit)
+    _renderProjectMembersSection() {
+        const members = this.projectMembers || [];
+        const owner = this.project?.ownerMemberId;
+        return `
+        <div class="ph-section ph-members">
+            <h2>👥 Membres del projecte <span style="color:#888;font-weight:400;font-size:0.85rem;">· nucli humà</span>
+                <a href="/matriu/network" data-link class="ph-link" style="float:right;font-size:0.78rem;">🌐 Veure tota la xarxa →</a>
+            </h2>
+            ${members.length === 0 ? `
+                <div style="background:rgba(255,255,255,0.04);border:1px dashed rgba(255,255,255,0.15);border-radius:8px;padding:1rem 1.2rem;color:#888;font-size:0.85rem;">
+                    Encara no hi ha membres assignats. Activa l'enjambre IA (sota) o assigna manualment plaçes als WOs del Kanban.
+                </div>
+            ` : `
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">
+                    ${members.map(m => this._renderMemberCard(m, m.id === owner)).join('')}
+                </div>
+            `}
+        </div>
+        `;
+    }
+
+    _renderMemberCard(member, isOwner = false) {
+        const c = member.content || {};
+        const guardianColor = {
+            afrodita:'#c25a3a', apolo:'#fbbf24', atenea:'#5a6e4f', demeter:'#8b9a3a',
+            dionisio:'#a855f7', hebe:'#ec4899', hefesto:'#9c5a2c', hera:'#2c4a7a',
+            hermes:'#22c55e', hestia:'#d4a853', poseidon:'#0e7490', zeus:'#dc2626',
+        }[c.guardianOf] || '#888';
+        const initials = (c.displayName || member.id).split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+        const skills = (c.skillsDeclared || []).slice(0, 4);
+        const woCount = 0;   // simplificat · sprint C complet podria comptar WOs assignats
+        const projectAssigns = this.assignments.filter(a => a?.content?.seatId === member.id);
+        const fitMax = projectAssigns.reduce((max, a) => Math.max(max, a?.content?.fit || 0), 0);
+        return `
+            <div class="ph-member-card">
+                <header style="display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;padding-bottom:6px;border-bottom:2px solid ${guardianColor}55;">
+                    <div style="width:42px;height:42px;border-radius:50%;background:${guardianColor};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.95rem;">${this._esc(initials)}</div>
+                    <div style="min-width:0;">
+                        <div style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:1.05rem;color:#fff;line-height:1.2;">${this._esc(c.displayName || member.id)}</div>
+                        <div style="font-family:monospace;font-size:0.7rem;color:#888;margin-top:2px;">${this._esc(c.handle || member.id.slice(-12))}</div>
+                    </div>
+                    ${isOwner ? '<span class="ph-badge" style="background:rgba(192,132,252,0.18);color:#c084fc;border:1px solid rgba(192,132,252,0.4);">★ owner</span>' : ''}
+                </header>
+                ${c.guardianOf ? `<div style="font-family:monospace;font-size:0.72rem;color:${guardianColor};margin-top:8px;text-transform:uppercase;letter-spacing:0.05em;">⚡ ${this._esc(c.guardianOf)}</div>` : ''}
+                ${c.bio ? `<p style="font-size:0.82rem;color:#aaa;line-height:1.5;margin:8px 0;">${this._esc(c.bio)}</p>` : ''}
+                ${skills.length > 0 ? `
+                    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">
+                        ${skills.map(sk => `<span style="background:rgba(255,255,255,0.06);color:#bbb;padding:2px 8px;border-radius:99px;font-family:monospace;font-size:0.7rem;">${this._esc(sk)}</span>`).join('')}
+                        ${(c.skillsDeclared || []).length > 4 ? `<span style="background:rgba(192,132,252,0.12);color:#c084fc;padding:2px 8px;border-radius:99px;font-family:monospace;font-size:0.7rem;">+${(c.skillsDeclared || []).length - 4}</span>` : ''}
+                    </div>
+                ` : ''}
+                ${fitMax > 0 ? `<div style="margin-top:8px;font-family:monospace;font-size:0.72rem;color:#fbbf24;">fit ${(fitMax * 100).toFixed(0)}% · ${projectAssigns.length} role${projectAssigns.length !== 1 ? 's' : ''}</div>` : ''}
+            </div>
+        `;
+    }
 
     _renderSwarmSection() {
         const meta = this.swarmInput?.bootstrapMeta;

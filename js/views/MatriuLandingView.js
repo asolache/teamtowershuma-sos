@@ -314,7 +314,10 @@ export default class MatriuLandingView {
             <!-- HERO -->
             <section class="mt-hero">
                 <div class="mt-container">
-                    <span class="mt-pill">Nucli fundacional obert · ${seatsTaken}/${seatsTotal} places</span>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <span class="mt-pill">Nucli fundacional obert · ${seatsTaken}/${seatsTotal} places</span>
+                        <a href="/matriu/network" data-link style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:transparent;border:1px solid var(--mt-rule, rgba(42,58,42,0.18));border-radius:999px;font-size:12px;color:var(--mt-dark, #2a3a2a);text-decoration:none;font-family:ui-monospace, monospace;transition:background 0.15s;">🌐 Veure els membres del nucli →</a>
+                    </div>
                     <div class="mt-hero-grid" style="margin-top: 28px;">
                         <div>
                             <h1>
@@ -509,7 +512,10 @@ export default class MatriuLandingView {
                     <div class="mt-section-tag">Nucli fundacional · ${seatsTotal} places ${renderExplainerBadge('cohort-0', { size: 'xs' })}</div>
                     <div class="mt-cohort-head">
                         <h2 class="mt-italic" style="margin: 0;">Què<br><strong>t'emportes</strong><br>per ser-hi.</h2>
-                        <div class="mt-cohort-counter">${seatsTaken}/${seatsTotal}<span>· queden ${seatsLeft} seients</span></div>
+                        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+                            <div class="mt-cohort-counter">${seatsTaken}/${seatsTotal}<span>· queden ${seatsLeft} seients</span></div>
+                            <a href="/matriu/network" data-link style="font-family:ui-monospace,monospace;font-size:11px;color:#5a6e4f;text-decoration:underline;">🌐 Veure els membres del nucli →</a>
+                        </div>
                     </div>
                     <p class="mt-section-lead">
                         Els primers ${seatsTotal} sou els que escriviu la regla. Cobreu coeficient
@@ -585,38 +591,88 @@ export default class MatriuLandingView {
                 </div>
             </footer>
 
-            <!-- RESERVAR SEIENT MODAL · dentro del .mt-shell para heredar vars -->
+            <!-- RESERVAR SEIENT MODAL · refactor 2-step · membre primer · projecte opcional -->
             <div class="mt-modal" id="mtModal" role="dialog" aria-labelledby="mtModalTitle" aria-modal="true">
                 <div class="mt-modal-card">
-                    <h3 id="mtModalTitle">Reservar el teu seient</h3>
-                    <p id="mtModalIntro">
-                        Entres al <strong>nucli fundacional</strong> dels 108 primers. Sense KYC ni wallet ara mateix · només
-                        el teu nom, una idea de projecte i el tipus de projecte que vols arrencar.
-                        Els crèdits es minten quan tanqui el grup.
-                    </p>
-                    <div class="mt-input-row">
-                        <label for="mtName">Nom</label>
-                        <input type="text" id="mtName" class="mt-input" placeholder="ex. Alvaro Solache" autocomplete="name">
+                    <div id="mtStepIndicator" style="display:flex;gap:6px;font-family:ui-monospace,monospace;font-size:11px;color:#5a6e4f;margin-bottom:10px;letter-spacing:0.05em;text-transform:uppercase;">
+                        <span class="mt-step-pill" id="mtStep1Pill">① El teu perfil</span>
+                        <span style="opacity:0.4;">›</span>
+                        <span class="mt-step-pill" id="mtStep2Pill" style="opacity:0.5;">② Projecte (opcional)</span>
                     </div>
-                    <div class="mt-input-row">
-                        <label for="mtHandle">Handle (opcional)</label>
-                        <input type="text" id="mtHandle" class="mt-input" placeholder="@alvaro">
+
+                    <!-- STEP 1 · membre · skills + guardian -->
+                    <div id="mtStep1">
+                        <h3 id="mtModalTitle">Sumar-me al <strong>nucli</strong></h3>
+                        <p>
+                            Primer entres tu com a <strong>membre del nucli</strong>. Et reserves la plaça
+                            amb el teu perfil de skills. Després pots crear el teu primer projecte (o no · com
+                            tu vulguis).
+                        </p>
+                        <div class="mt-input-row">
+                            <label for="mtName">El teu nom</label>
+                            <input type="text" id="mtName" class="mt-input" placeholder="ex. Alvaro Solache" autocomplete="name">
+                        </div>
+                        <div class="mt-input-row">
+                            <label for="mtHandle">Handle (opcional)</label>
+                            <input type="text" id="mtHandle" class="mt-input" placeholder="@alvaro">
+                        </div>
+                        <div class="mt-input-row">
+                            <label for="mtBio">Bio breu (opcional)</label>
+                            <input type="text" id="mtBio" class="mt-input" placeholder="ex. Pagesa regenerativa · 12 anys · banc de llavors">
+                        </div>
+                        <div class="mt-input-row">
+                            <label for="mtGuardian">El teu guardian Pantheon Work</label>
+                            <select id="mtGuardian" class="mt-input">
+                                <option value="">— Tria el guardian que millor et representa —</option>
+                                <option value="afrodita">Afrodita · disseny · cohesió emocional</option>
+                                <option value="apolo">Apolo · educació · claredat</option>
+                                <option value="atenea">Atenea · governança · estratègia</option>
+                                <option value="demeter">Demeter · ecologia · regeneració</option>
+                                <option value="dionisio">Dionisio · cultura · ritual · transformació</option>
+                                <option value="hebe">Hebe · operacions · onboarding · servei</option>
+                                <option value="hefesto">Hefesto · tecnologia · forja · eines</option>
+                                <option value="hera">Hera · pacte · alianza · compliance</option>
+                                <option value="hermes">Hermes · comunitat · xarxa · comunicació</option>
+                                <option value="hestia">Hestia · cures · hospitalitat · llar</option>
+                                <option value="poseidon">Poseidon · finances · capital · risc</option>
+                                <option value="zeus">Zeus · governança · visió fundacional</option>
+                            </select>
+                        </div>
+                        <div class="mt-input-row">
+                            <label for="mtSkills">Les teves skills (separades per coma · 3-7)</label>
+                            <input type="text" id="mtSkills" class="mt-input" placeholder="ex. regenerative-agriculture, seed-banking, food-systems">
+                            <small style="font-size:11px;color:#5a6e4f;opacity:0.85;margin-top:4px;">Veure el catàleg de 90 skills a <a href="/learn" data-link style="color:#c25a3a;">/learn</a> · escriu-les en kebab-case</small>
+                        </div>
+                        <div class="mt-modal-actions">
+                            <button class="mt-modal-cancel" id="mtModalCancel">Cancel·lar</button>
+                            <button class="mt-modal-confirm" id="mtStep1Next">Següent · 0 € →</button>
+                        </div>
                     </div>
-                    <div class="mt-input-row">
-                        <label for="mtIdea">La teva idea de projecte</label>
-                        <input type="text" id="mtIdea" class="mt-input" placeholder="ex. Hortet de la Vall · cooperativa de productores">
-                    </div>
-                    <div class="mt-input-row">
-                        <label for="mtType">Tipus de projecte</label>
-                        <select id="mtType" class="mt-input">
-                            <option value="">— Tria un tipus (opcional · arrencaràs amb mapa pre-configurat) —</option>
-                            ${PROJECT_TYPES.map(pt => `<option value="${escapeHtml(pt.id)}">${PROJECT_TYPE_ICONS[pt.id] || '✦'} ${escapeHtml(pt.label)}</option>`).join('')}
-                        </select>
-                        <small id="mtTypeHint" style="font-size:11px;color:#5a6e4f;opacity:0.85;margin-top:4px;">Si tries tipus, el projecte arrencarà amb la matriu de valor pre-configurada (rols + transaccions + SOPs).</small>
-                    </div>
-                    <div class="mt-modal-actions">
-                        <button class="mt-modal-cancel" id="mtModalCancel">Cancel·lar</button>
-                        <button class="mt-modal-confirm" id="mtModalConfirm">Reservar seient · 0 € →</button>
+
+                    <!-- STEP 2 · projecte opcional -->
+                    <div id="mtStep2" style="display:none;">
+                        <h3>Vols crear el teu <strong>primer projecte</strong>?</h3>
+                        <p>
+                            Pots crear-lo ara amb mapa de valor pre-configurat o saltar-ho per ara
+                            (sempre podràs crear-lo des del Dashboard). El projecte arrenca amb el
+                            multiplicador <strong>×1.5 fundacional</strong>.
+                        </p>
+                        <div class="mt-input-row">
+                            <label for="mtIdea">Idea de projecte</label>
+                            <input type="text" id="mtIdea" class="mt-input" placeholder="ex. Hortet de la Vall · cooperativa de productores">
+                        </div>
+                        <div class="mt-input-row">
+                            <label for="mtType">Tipus de projecte</label>
+                            <select id="mtType" class="mt-input">
+                                <option value="">— Tria un tipus (recomendat · mapa pre-configurat) —</option>
+                                ${PROJECT_TYPES.map(pt => `<option value="${escapeHtml(pt.id)}">${PROJECT_TYPE_ICONS[pt.id] || '✦'} ${escapeHtml(pt.label)}</option>`).join('')}
+                            </select>
+                            <small style="font-size:11px;color:#5a6e4f;opacity:0.85;margin-top:4px;">Amb tipus selecconat · 5 rols + 6 transactions + 8 SOPs precarregats.</small>
+                        </div>
+                        <div class="mt-modal-actions">
+                            <button class="mt-modal-cancel" id="mtStep2Skip">Saltar · només membre</button>
+                            <button class="mt-modal-confirm" id="mtStep2Confirm">Crear projecte →</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -649,6 +705,15 @@ export default class MatriuLandingView {
             if (e) e.preventDefault();
             if (modal) {
                 modal.classList.add('is-open');
+                // Reset al step 1 sempre que s'obre
+                const step1 = document.getElementById('mtStep1');
+                const step2 = document.getElementById('mtStep2');
+                if (step1) step1.style.display = '';
+                if (step2) step2.style.display = 'none';
+                const p1 = document.getElementById('mtStep1Pill');
+                const p2 = document.getElementById('mtStep2Pill');
+                if (p1) p1.style.opacity = '1';
+                if (p2) { p2.style.opacity = '0.5'; p2.style.color = ''; }
                 if (presetTypeId) {
                     const sel = document.getElementById('mtType');
                     if (sel) sel.value = presetTypeId;
@@ -675,85 +740,161 @@ export default class MatriuLandingView {
             });
         });
 
-        // Confirm · usa buildMatriuCohortProject (cohort 0 base) + bootstrapMapForProject (si hay tipo)
-        document.getElementById('mtModalConfirm')?.addEventListener('click', async () => {
-            const name   = document.getElementById('mtName')?.value?.trim() || '';
-            const handle = document.getElementById('mtHandle')?.value?.trim() || '';
+        // Refactor 2-step · STEP 1 · validar membre + crear matriu_member · saltar a step 2
+        let createdMember = null;
+        document.getElementById('mtStep1Next')?.addEventListener('click', async () => {
+            const name      = document.getElementById('mtName')?.value?.trim() || '';
+            const handle    = document.getElementById('mtHandle')?.value?.trim() || null;
+            const bio       = document.getElementById('mtBio')?.value?.trim() || '';
+            const guardian  = document.getElementById('mtGuardian')?.value || '';
+            const skillsRaw = document.getElementById('mtSkills')?.value?.trim() || '';
+            if (!name) { alert('Cal el teu nom · primer pas.'); return; }
+            if (!guardian) { alert('Tria el teu guardian (qui millor et representa).'); return; }
+            const skills = skillsRaw.split(',').map(s => s.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-')).filter(Boolean);
+            if (skills.length < 1) { alert('Almenys 1 skill cal · separada per comes.'); return; }
+            const btn = document.getElementById('mtStep1Next');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ Creant membre…'; }
+            try {
+                const { buildMatriuMember } = await import('../core/matriuMemberService.js?v=' + Date.now());
+                const { store } = await import('../core/store.js?v=' + Date.now());
+                const { KB }    = await import('../core/kb.js?v=' + Date.now());
+                await store.init();
+                await KB.init();
+                createdMember = buildMatriuMember({
+                    displayName:    name,
+                    handle:         handle,
+                    bio:            bio,
+                    guardianOf:     guardian,
+                    skillsDeclared: skills,
+                    availability:   'normal',
+                    cohortNumber:   0,
+                });
+                await KB.upsert(createdMember);
+                // Pasar a step 2
+                document.getElementById('mtStep1').style.display = 'none';
+                document.getElementById('mtStep2').style.display = '';
+                document.getElementById('mtStep1Pill').style.opacity = '0.5';
+                document.getElementById('mtStep2Pill').style.opacity = '1';
+                document.getElementById('mtStep2Pill').style.color = '#c25a3a';
+            } catch (err) {
+                console.error('[MAT-002-I] alta membre falló:', err);
+                alert('Error en l\'alta: ' + (err?.message || err));
+                if (btn) { btn.disabled = false; btn.textContent = 'Següent · 0 € →'; }
+            }
+        });
+
+        // STEP 2 · saltar (només membre) o crear projecte
+        const goToNetworkAfterMember = async () => {
+            const url = '/matriu/network';
+            await new Promise(resolve => setTimeout(resolve, 100));   // flush state
+            if (window.navigateTo) window.navigateTo(url);
+            else window.location.assign(url);
+        };
+
+        document.getElementById('mtStep2Skip')?.addEventListener('click', async () => {
+            await goToNetworkAfterMember();
+        });
+
+        document.getElementById('mtStep2Confirm')?.addEventListener('click', async () => {
+            if (!createdMember) { alert('Falta crear membre primer · torna al step 1.'); return; }
             const idea   = document.getElementById('mtIdea')?.value?.trim() || '';
             const typeId = document.getElementById('mtType')?.value || '';
-            if (!name) { alert('Cal el teu nom per reservar.'); return; }
-            if (!idea) { alert('Cal una idea de projecte.'); return; }
-            const btn = document.getElementById('mtModalConfirm');
-            if (btn) { btn.disabled = true; btn.textContent = '⏳ Reservant…'; }
+            if (!idea) { alert('Cal una idea de projecte (o "Saltar" per crear-lo després).'); return; }
+            const btn = document.getElementById('mtStep2Confirm');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ Creant projecte…'; }
             try {
                 const { buildMatriuCohortProject, MATRIU_COHORT_0 } = await import('../core/matriuTemplate.js?v=' + Date.now());
                 const { bootstrapMapForProject } = await import('../core/bootstrapTemplates.js?v=' + Date.now());
                 const { store } = await import('../core/store.js?v=' + Date.now());
                 const { KB }    = await import('../core/kb.js?v=' + Date.now());
-                const out = buildMatriuCohortProject({ operatorName: name, operatorHandle: handle, projectIdea: idea });
-                if (typeId) out.project.matriuProjectType = typeId;     // MAT-002-F · strip Dashboard lo lee
                 await store.init();
                 await KB.init();
-                store.dispatch({ type: 'CREATE_PROJECT', payload: out.project });
-                for (const node of out.kbNodes) {
-                    store.dispatch({ type: 'KB_UPSERT', payload: node });
-                }
-                // Si el operador eligió un tipus de projecte · aplica el seed bootstrap
+                const out = buildMatriuCohortProject({
+                    operatorName:   createdMember.content.displayName,
+                    operatorHandle: createdMember.content.handle || '',
+                    projectIdea:    idea,
+                });
+                if (typeId) out.project.matriuProjectType = typeId;
+                out.project.ownerMemberId = createdMember.id;     // lligat al membre
+
+                // Si hay typeId, pre-popula vna_roles[] y vna_transactions[] al project
+                // ANTES del CREATE_PROJECT (fix coherencia stats Dashboard).
+                let seed = null;
                 if (typeId) {
                     try {
-                        const seed = bootstrapMapForProject({
+                        seed = bootstrapMapForProject({
                             typeId,
                             projectId: out.project.id,
                             multiplier: MATRIU_COHORT_0.multiplier || 1.5,
                         });
-                        // Roles · KB_UPSERT por cada rol como nodo type='role'
-                        for (const r of seed.roles) {
-                            store.dispatch({ type: 'KB_UPSERT', payload: {
-                                id: r.id, type: 'role', projectId: out.project.id,
-                                content: { baseId: r.baseId, label: r.label, guardianAffinity: r.guardianAffinity, kind: 'bootstrap-role' },
-                                keywords: ['type:role', 'kind:bootstrap-role', 'project:' + out.project.id],
-                            }});
-                        }
-                        // Transactions · KB_UPSERT
-                        for (const tr of seed.transactions) {
-                            store.dispatch({ type: 'KB_UPSERT', payload: {
-                                id: tr.id, type: 'transaction', projectId: out.project.id,
-                                content: { baseId: tr.baseId, from: tr.from, to: tr.to, deliverable: tr.deliverable, phase: tr.phase, sequence_order: tr.sequence_order, tangible: tr.tangible, must: tr.must, kind: 'bootstrap-tx' },
-                                keywords: ['type:transaction', 'kind:bootstrap-tx', 'phase:' + tr.phase, 'project:' + out.project.id],
-                            }});
-                        }
-                        // SOPs adicionales del tipo · KB_UPSERT
-                        for (const sop of seed.sopsBootstrap) {
-                            store.dispatch({ type: 'KB_UPSERT', payload: {
-                                id: sop.id, type: 'sop', projectId: out.project.id,
-                                content: { baseId: sop.baseId, title: sop.label, label: sop.label, phase: sop.phase, multiplier: sop.multiplier, kind: 'bootstrap-sop' },
-                                keywords: ['type:sop', 'kind:bootstrap-sop', 'phase:' + sop.phase, 'project:' + out.project.id],
-                            }});
-                        }
-                        // Etiquetar el project con el typeId + sectorAffinity en KB
-                        store.dispatch({ type: 'KB_UPSERT', payload: {
-                            id: out.project.id + '::bootstrap-meta',
-                            type: 'project_bootstrap',
-                            projectId: out.project.id,
-                            content: {
-                                typeId,
-                                sectorAffinity:    seed.sectorAffinity,
-                                requiredGuardians: seed.requiredGuardians,
-                                expectedOutcomes:  seed.expectedOutcomes,
-                                narrative:         seed.narrative,
-                            },
-                            keywords: ['type:project_bootstrap', 'projectType:' + typeId, 'project:' + out.project.id],
-                        }});
+                        out.project.vna_roles = seed.roles.map(r => ({
+                            id: r.baseId, name: r.label, label: r.label,
+                            guardianAffinity: r.guardianAffinity || [],
+                            from_seed: true,
+                        }));
+                        out.project.vna_transactions = seed.transactions.map(tr => ({
+                            id: tr.baseId,
+                            from: tr.from.split('::').pop(), to: tr.to.split('::').pop(),
+                            deliverable: tr.deliverable, phase: tr.phase,
+                            sequence_order: tr.sequence_order,
+                            tangible: tr.tangible, must: tr.must,
+                            from_seed: true,
+                        }));
                     } catch (seedErr) {
-                        console.warn('[MAT-002-H+] bootstrap seed falló (continuo sin):', seedErr);
+                        console.warn('[MAT-002-H+] bootstrap seed falló:', seedErr);
                     }
                 }
+
+                // AWAIT cada dispatch · evitar race condition timing
+                await store.dispatch({ type: 'CREATE_PROJECT', payload: out.project });
+                for (const node of out.kbNodes) {
+                    await store.dispatch({ type: 'KB_UPSERT', payload: node });
+                }
+                if (seed) {
+                    for (const r of seed.roles) {
+                        await store.dispatch({ type: 'KB_UPSERT', payload: {
+                            id: r.id, type: 'role', projectId: out.project.id,
+                            content: { baseId: r.baseId, label: r.label, guardianAffinity: r.guardianAffinity, kind: 'bootstrap-role' },
+                            keywords: ['type:role', 'kind:bootstrap-role', 'project:' + out.project.id],
+                        }});
+                    }
+                    for (const tr of seed.transactions) {
+                        await store.dispatch({ type: 'KB_UPSERT', payload: {
+                            id: tr.id, type: 'transaction', projectId: out.project.id,
+                            content: { baseId: tr.baseId, from: tr.from, to: tr.to, deliverable: tr.deliverable, phase: tr.phase, sequence_order: tr.sequence_order, tangible: tr.tangible, must: tr.must, kind: 'bootstrap-tx' },
+                            keywords: ['type:transaction', 'kind:bootstrap-tx', 'phase:' + tr.phase, 'project:' + out.project.id],
+                        }});
+                    }
+                    for (const sop of seed.sopsBootstrap) {
+                        await store.dispatch({ type: 'KB_UPSERT', payload: {
+                            id: sop.id, type: 'sop', projectId: out.project.id,
+                            content: { baseId: sop.baseId, title: sop.label, label: sop.label, phase: sop.phase, multiplier: sop.multiplier, kind: 'bootstrap-sop' },
+                            keywords: ['type:sop', 'kind:bootstrap-sop', 'phase:' + sop.phase, 'project:' + out.project.id],
+                        }});
+                    }
+                    await store.dispatch({ type: 'KB_UPSERT', payload: {
+                        id: out.project.id + '::bootstrap-meta',
+                        type: 'project_bootstrap',
+                        projectId: out.project.id,
+                        content: {
+                            typeId,
+                            sectorAffinity:    seed.sectorAffinity,
+                            requiredGuardians: seed.requiredGuardians,
+                            expectedOutcomes:  seed.expectedOutcomes,
+                            narrative:         seed.narrative,
+                            ownerMemberId:     createdMember.id,
+                        },
+                        keywords: ['type:project_bootstrap', 'projectType:' + typeId, 'project:' + out.project.id, 'owner:' + createdMember.id],
+                    }});
+                }
+                // Pequeño delay extra para garantizar persistencia IndexedDB
+                await new Promise(resolve => setTimeout(resolve, 80));
                 if (window.navigateTo) window.navigateTo(out.navigateTo);
                 else window.location.assign(out.navigateTo);
             } catch (err) {
-                console.error('[MAT-002-H] reservar seient falló:', err);
-                alert('Error reservant: ' + (err?.message || err));
-                if (btn) { btn.disabled = false; btn.textContent = 'Reservar seient · 0 € →'; }
+                console.error('[MAT-002-H] crear projecte falló:', err);
+                alert('Error creant projecte: ' + (err?.message || err));
+                if (btn) { btn.disabled = false; btn.textContent = 'Crear projecte →'; }
             }
         });
     }
