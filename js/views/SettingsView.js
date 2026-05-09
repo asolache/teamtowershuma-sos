@@ -264,15 +264,21 @@ export default class SettingsView {
         const sel = document.getElementById('settLangSel');
         if (sel) sel.innerHTML = langSelectorHtml();
 
-        // Actualizar badge cuando cambia el provider
+        // UX-AUDIT-001 sprint A2 · al cambiar provider, guardar in-place SIN
+        // navegar. Antes esto disparaba navigateTo('/settings') aunque el
+        // usuario ya hubiera salido (race condition tras tabs muy rápidos).
         document.getElementById('svProvider')?.addEventListener('change', async () => {
-            // Guardar el provider inmediatamente antes de recargar
-            var sel = document.getElementById('svProvider');
-            var prov = sel ? sel.value : 'anthropic';
-            try { await Orchestrator.setDefaultProvider(prov); } catch(_) {}
-            // Recargar la vista SPA para refrescar el badge activo
-            if (window.navigateTo) window.navigateTo('/settings');
-            else window.location.replace('/settings');
+            const sel = document.getElementById('svProvider');
+            if (!sel) return;
+            const prov = sel.value || 'anthropic';
+            try { await Orchestrator.setDefaultProvider(prov); } catch (_) {}
+            // Pinta el "ACTIVE: ..." badge sin navegar (refresco mínimo del color
+            // del select y opcional badge superior). Sin race conditions.
+            sel.style.color = ({
+                anthropic: 'var(--accent-purple)', openai: 'var(--accent-green)',
+                deepseek: 'var(--accent-blue)', gemini: '#fbbc04',
+                minimax: '#ff6b9d', custom: 'var(--text-muted)',
+            })[prov] || 'var(--accent-purple)';
         });
 
         // Guardar todas las keys
@@ -294,14 +300,33 @@ export default class SettingsView {
             if (keyMm)  await Orchestrator.saveApiKey('minimax',   keyMm);
             btn.textContent = '✅ Saved';
             btn.disabled    = false;
-            document.getElementById('svStatus').style.display = 'block';
+            const status = document.getElementById('svStatus');
+            if (status) status.style.display = 'block';
+            // UX-AUDIT-001 sprint A2 · refresca badges in-place sin navegar.
+            // Antes navegaba a /settings tras 1.8s, lo que sacaba al usuario
+            // de cualquier vista a la que hubiera saltado en el intervalo.
+            const refreshKeyBadge = (id, val) => {
+                const wrap = document.getElementById(id)?.parentElement;
+                const badge = wrap?.querySelector('.sv-key-status');
+                if (!badge) return;
+                if (val) {
+                    badge.style.background = 'rgba(0,230,118,0.12)';
+                    badge.style.color = 'var(--accent-green)';
+                    badge.textContent = '✓ SET';
+                } else {
+                    badge.style.background = 'rgba(255,255,255,0.05)';
+                    badge.style.color = 'var(--text-muted)';
+                    badge.textContent = '— EMPTY';
+                }
+            };
+            refreshKeyBadge('svKeyAnt', keyAnt);
+            refreshKeyBadge('svKeyOai', keyOai);
+            refreshKeyBadge('svKeyDs',  keyDs);
+            refreshKeyBadge('svKeyGem', keyGem);
+            refreshKeyBadge('svKeyMm',  keyMm);
             setTimeout(() => {
-                var st = document.getElementById('svStatus');
-                if (st) st.style.display = 'none';
-                btn.textContent = '💾 Save to KB';
-                // Recargar vista SPA para refrescar badges sin hard reload
-                if (window.navigateTo) window.navigateTo('/settings');
-                else window.location.replace('/settings');
+                if (status) status.style.display = 'none';
+                if (btn.isConnected) btn.textContent = '💾 Save to KB';
             }, 1800);
         });
 
@@ -395,10 +420,11 @@ export default class SettingsView {
                 }
                 btn.textContent = '✅ Guardado';
                 setTimeout(() => {
-                    btn.textContent = '💾 Guardar manifesto';
-                    btn.disabled = false;
-                    if (status) status.textContent = '';
-                    if (window.navigateTo) window.navigateTo('/settings');
+                    if (btn.isConnected) {
+                        btn.textContent = '💾 Guardar manifesto';
+                        btn.disabled = false;
+                    }
+                    if (status?.isConnected) status.textContent = '';
                 }, 1500);
             } catch (err) {
                 console.error('[MAT-002-G] save manifesto falló:', err);
@@ -429,8 +455,7 @@ export default class SettingsView {
                 btn.textContent = '↺ Restaurar default';
                 btn.disabled = false;
                 setTimeout(() => {
-                    if (status) status.textContent = '';
-                    if (window.navigateTo) window.navigateTo('/settings');
+                    if (status?.isConnected) status.textContent = '';
                 }, 1200);
             } catch (err) {
                 console.error('[MAT-002-G] restore manifesto falló:', err);
@@ -443,14 +468,30 @@ export default class SettingsView {
             }
         });
 
-        // UX-AUDIT-001 · toggle tema light/dark
+        // UX-AUDIT-001 · toggle tema light/dark · in-place, sense navegar.
+        // El canvi és global: applyThemeToDocument toca <body> i tots els
+        // CSS vars cascade. Refresca el botó actiu visualment sense
+        // recarregar la vista (evita race conditions amb navigateTo).
         document.querySelectorAll('[data-theme]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const t = btn.getAttribute('data-theme');
                 try {
                     await saveTheme(KB, t);
                     applyThemeToDocument(t);
-                    if (window.navigateTo) window.navigateTo('/settings');
+                    // Refresca styling actiu dels dos botons sense navegar
+                    document.querySelectorAll('.sv-theme-btn').forEach(b => {
+                        const isMe = b.getAttribute('data-theme') === t;
+                        b.classList.toggle('is-active', isMe);
+                        if (b.getAttribute('data-theme') === 'dark') {
+                            b.style.background = isMe ? 'linear-gradient(135deg,#0a0a0f,#1a1a22)' : 'transparent';
+                            b.style.color      = isMe ? '#fff' : 'var(--text-muted)';
+                            b.style.borderColor = isMe ? '#444' : 'var(--glass-border)';
+                        } else {
+                            b.style.background = isMe ? 'linear-gradient(135deg,#f8f8fb,#ffffff)' : 'transparent';
+                            b.style.color      = isMe ? '#1a1a22' : 'var(--text-muted)';
+                            b.style.borderColor = isMe ? '#aaa' : 'var(--glass-border)';
+                        }
+                    });
                 } catch (err) {
                     alert('Error canviant tema: ' + (err?.message || err));
                 }
@@ -511,14 +552,23 @@ export default class SettingsView {
             }
         });
 
-        // Apply plan
+        // Apply plan · in-place feedback (no navegar)
         document.getElementById('svPlanSave')?.addEventListener('click', async () => {
             const planId = document.getElementById('svPlan')?.value;
-            if (!planId) return;
+            const btn = document.getElementById('svPlanSave');
+            if (!planId || !btn) return;
+            const orig = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Aplicant…';
             try {
                 await setCurrentPlan(KB, { planId });
-                if (window.navigateTo) window.navigateTo('/settings');
+                btn.textContent = '✅ Pla aplicat';
+                setTimeout(() => {
+                    if (btn.isConnected) { btn.textContent = orig; btn.disabled = false; }
+                }, 1600);
             } catch (err) {
+                btn.textContent = orig;
+                btn.disabled = false;
                 alert('Error aplicant pla: ' + (err?.message || err));
             }
         });

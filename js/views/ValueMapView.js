@@ -816,6 +816,7 @@ export default class ValueMapView {
                 </div>
                 <div class="vmap-topbar-actions">
                     ${this._state.projectId ? `<a href="/project/${this._state.projectId}" data-link class="vmap-btn" style="text-decoration:none;color:#86efac;border-color:rgba(34,197,94,0.4);" title="Panel del proyecto · stats + ofertas + herramientas">🎛 Panel</a>` : ''}
+                    ${this._state.projectId ? `<a href="/presentation?project=${encodeURIComponent(this._state.projectId)}" data-link class="vmap-btn" style="text-decoration:none;color:var(--accent-indigo);border-color:rgba(99,102,241,0.4);" title="Vista de presentació · landing read-only del projecte (rols + entregables + SOPs)">🎤 Presentació</a>` : ''}
                     ${renderNavGroupedHtml({ active: 'map', projectId: this._state.projectId, className: 'vmap-btn' })}
                     <button class="vmap-btn" style="border-color:var(--accent-purple);color:var(--accent-purple);" id="vmapBtnAI">${t('vmap.suggest')}</button>
                     <button class="vmap-btn" id="vmapBtnAnim" title="H_ANIM_001 · animar flujo de valor por sequence_order de las transactions">▶ Animar flujo</button>
@@ -2478,9 +2479,17 @@ export default class ValueMapView {
     async _runAISuggestion() {
         const apiKey = await Orchestrator.getApiKey('anthropic');
         if (!apiKey) {
-            document.getElementById('vmapAIStatus').textContent = t('ai.no.key');
-            document.getElementById('vmapAIStatus').style.color = 'var(--accent-red)';
-            setTimeout(() => { window.navigateTo('/settings'); }, 1800);
+            // UX-AUDIT-001 sprint A2 · ja no fem auto-navigateTo amb setTimeout ·
+            // mostrem un missatge inline + enllaç /settings que l'usuari pot
+            // pulsar quan vulgui (la navegació forçada amb retraso provocaba
+            // que si l'usuari saltava a un altre menú, després de 1.8s se'l
+            // tornava a /settings · "papallugues").
+            const st = document.getElementById('vmapAIStatus');
+            if (st) {
+                st.style.color = 'var(--accent-red)';
+                st.innerHTML = (t('ai.no.key') || 'Falta API key') +
+                    ' · <a href="/settings" data-link style="color:var(--accent-indigo);text-decoration:underline;">obrir Settings</a>';
+            }
             return;
         }
 

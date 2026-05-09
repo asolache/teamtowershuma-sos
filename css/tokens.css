@@ -117,3 +117,86 @@ body.theme-light {
     --text-secondary: #44444f;
     --text-muted:     #888896;
 }
+
+/* ── UX-AUDIT-001 sprint A2 · Theme light · cobertura agressiva ─────────
+   Moltes vistes hardcodean colors foscos (#050507, #08080c, #0a0a0f,
+   #06060a, #1a1a22, #0e0e14, #2a2a35) en estils inline en lloc d'usar
+   CSS vars. Refactoritzar-ho tot són hores · en lloc d'això sobreescrivim
+   amb selectors d'atribut amb !important sota body.theme-light · funciona
+   sobre style="" inline (que tenen especificitat baixa) i deixa el dark
+   intacte. */
+body.theme-light *[style*="background:#050507"],
+body.theme-light *[style*="background: #050507"],
+body.theme-light *[style*="background:#08080c"],
+body.theme-light *[style*="background: #08080c"],
+body.theme-light *[style*="background:#0a0a0f"],
+body.theme-light *[style*="background: #0a0a0f"],
+body.theme-light *[style*="background:#06060a"],
+body.theme-light *[style*="background: #06060a"],
+body.theme-light *[style*="background:#0e0e14"],
+body.theme-light *[style*="background: #0e0e14"] {
+    background: var(--bg-panel) !important;
+}
+body.theme-light *[style*="border:1px solid #1a1a22"],
+body.theme-light *[style*="border-bottom:1px solid #1a1a22"],
+body.theme-light *[style*="border-top:1px solid #1a1a22"],
+body.theme-light *[style*="border-bottom: 1px solid #1a1a22"],
+body.theme-light *[style*="border:1px solid #2a2a35"],
+body.theme-light *[style*="border:1px solid rgba(255,255,255,0.06)"] {
+    border-color: var(--glass-border) !important;
+}
+body.theme-light *[style*="color:#fff"],
+body.theme-light *[style*="color: #fff"] {
+    color: var(--text-main) !important;
+}
+/* Topbar · classes -topbar dels diferents views */
+body.theme-light .dash-topbar,
+body.theme-light .kb-topbar,
+body.theme-light .ph-topbar,
+body.theme-light .sv-topbar,
+body.theme-light .ef-topbar,
+body.theme-light .pb-topbar {
+    background: var(--bg-panel) !important;
+    border-bottom-color: var(--glass-border) !important;
+}
+body.theme-light .sv-card {
+    background: linear-gradient(145deg, var(--bg-elevated), var(--bg-panel)) !important;
+    border-color: var(--glass-border) !important;
+    color: var(--text-main);
+}
+body.theme-light .sv-input,
+body.theme-light .sv-select {
+    background: var(--bg-elevated) !important;
+    color: var(--text-main) !important;
+    border-color: var(--glass-border) !important;
+}
+body.theme-light .dash-shell,
+body.theme-light .dash-main,
+body.theme-light .dash-content {
+    background: var(--bg-dark);
+    color: var(--text-main);
+}
+body.theme-light .dash-area-tile,
+body.theme-light .dash-onboard-tile {
+    background: var(--bg-elevated) !important;
+    color: var(--text-main) !important;
+    border-color: var(--glass-border) !important;
+}
+body.theme-light .sos-breadcrumb {
+    background: var(--bg-elevated) !important;
+    border-bottom-color: var(--glass-border) !important;
+    color: var(--text-secondary) !important;
+}
+body.theme-light .sos-breadcrumb a { color: var(--accent-indigo) !important; }
+body.theme-light .sos-breadcrumb .sos-bc-current { color: var(--text-main) !important; }
+body.theme-light .sos-breadcrumb .sos-bc-sep { color: var(--text-muted) !important; }
+body.theme-light .sos-nav-group > [role="menu"] {
+    background: var(--bg-panel) !important;
+    border-color: var(--glass-border) !important;
+    color: var(--text-main);
+}
+body.theme-light .sos-nav-group > [role="menu"] > a { color: var(--text-main); }
+body.theme-light .sos-nav-group > [role="menu"] > a:hover { background: rgba(99,102,241,0.10); }
+/* Scrollbar · invertit en light */
+body.theme-light::-webkit-scrollbar-thumb,
+body.theme-light *::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); }

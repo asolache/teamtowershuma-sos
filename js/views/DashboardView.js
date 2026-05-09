@@ -496,7 +496,11 @@ export default class DashboardView {
                     <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
                     <input type="file" id="dashImportFile" accept=".json,application/json" style="display:none;">
                     <button class="dash-btn dash-btn-primary" id="dashBtnNew">＋ New Project</button>
-                    <button class="dash-btn" id="dashBtnMatriu" title="MAT-002-A · plantilla preconfigurada Matriu Cohort 0 (SOC + 6 SOPs perks + 2.000 crèdits seed)" style="background:rgba(241,235,222,0.08);color:#f1ebde;border-color:rgba(241,235,222,0.4);">🎓 Cohort 0 Matriu</button>
+                    <!-- UX-AUDIT-001 sprint A2 · botón "🎓 Cohort 0 Matriu" retirado ·
+                         el flujo Matriu ya está integrado en el wizard de New Project
+                         + en el menú "Matriu" del topbar (categoría home) y en
+                         /matriu/network. Mantenerlo aquí duplicaba acción y
+                         visualmente saturaba el topbar. -->
                     <div id="dashLangSelector"></div>
                 </div>
             </div>
@@ -924,9 +928,10 @@ export default class DashboardView {
         document.getElementById('dashBtnNew')?.addEventListener('click', openNewProjectModal);
         // UX-DASH-001 · "Paso 1" del onboarding abre el mismo wizard
         document.getElementById('dashStep1')?.addEventListener('click', openNewProjectModal);
-        // MAT-002-A · botón Cohort 0 Matriu abre wizard plantilla preconfigurada
+        // MAT-002-A · botón Cohort 0 Matriu retirado del topbar (UX-AUDIT-001 sprint A2).
+        // El método _openMatriuCohortModal sigue disponible y se invoca desde el
+        // wizard de New Project + desde la landing /matriu (CTA "Sumar-me a Cohort 0").
         const dashView = this;
-        document.getElementById('dashBtnMatriu')?.addEventListener('click', () => dashView._openMatriuCohortModal());
 
         document.getElementById('dashBtnKB')?.addEventListener('click', function() {
             const main = document.getElementById('dashMain');
