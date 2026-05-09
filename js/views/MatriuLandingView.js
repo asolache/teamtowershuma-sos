@@ -685,6 +685,7 @@ export default class MatriuLandingView {
                 const { store } = await import('../core/store.js?v=' + Date.now());
                 const { KB }    = await import('../core/kb.js?v=' + Date.now());
                 const out = buildMatriuCohortProject({ operatorName: name, operatorHandle: handle, projectIdea: idea });
+                if (typeId) out.project.matriuProjectType = typeId;     // MAT-002-F · strip Dashboard lo lee
                 await store.init();
                 await KB.init();
                 store.dispatch({ type: 'CREATE_PROJECT', payload: out.project });

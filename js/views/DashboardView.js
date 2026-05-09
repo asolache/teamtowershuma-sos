@@ -377,6 +377,29 @@ export default class DashboardView {
             .dash-card-demo { border-color: rgba(201,168,83,0.4) !important; }
             .dash-card-demo:hover { border-color: rgba(201,168,83,0.8) !important;
                 box-shadow: 0 8px 30px rgba(201,168,83,0.15) !important; }
+
+            /* MAT-002-F · Strip Matriu Cohort 0 (skin crema embebido) */
+            .dash-matriu-strip { background: linear-gradient(135deg, #f1ebde 0%, #ede5d2 100%); border-radius: var(--radius-xl); padding: 28px 32px; margin: 0 0 32px; color: #2a3a2a; position: relative; overflow: hidden; box-shadow: 0 8px 32px rgba(194,90,58,0.08); }
+            .dash-matriu-strip::before { content: ''; position: absolute; top: 0; right: 0; width: 220px; height: 220px; background: radial-gradient(circle, rgba(194,90,58,0.12) 0%, transparent 70%); pointer-events: none; }
+            .dash-matriu-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 18px; flex-wrap: wrap; }
+            .dash-matriu-title { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; font-size: 1.6rem; color: #2a3a2a; line-height: 1.1; margin: 0; }
+            .dash-matriu-title strong { color: #c25a3a; font-weight: 400; }
+            .dash-matriu-subtitle { font-size: 0.82rem; color: #5a6e4f; opacity: 0.9; margin-top: 6px; line-height: 1.5; max-width: 540px; }
+            .dash-matriu-counter { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: rgba(42,58,42,0.06); border: 1px solid rgba(42,58,42,0.18); border-radius: 999px; font-family: ui-monospace, monospace; font-size: 0.78rem; color: #2a3a2a; }
+            .dash-matriu-counter::before { content: '●'; color: #c25a3a; animation: pulse 2s infinite; }
+            .dash-matriu-seats { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 4px; }
+            .dash-matriu-seat { background: rgba(255,255,255,0.55); border: 1px solid rgba(42,58,42,0.12); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: transform 0.15s, border-color 0.15s, background 0.15s; text-decoration: none; color: inherit; }
+            .dash-matriu-seat:hover { transform: translateY(-2px); border-color: rgba(194,90,58,0.45); background: rgba(255,255,255,0.85); }
+            .dash-matriu-seat-name { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.15rem; color: #2a3a2a; line-height: 1.2; }
+            .dash-matriu-seat-meta { font-family: ui-monospace, monospace; font-size: 0.7rem; color: #5a6e4f; opacity: 0.85; letter-spacing: 0.04em; text-transform: uppercase; }
+            .dash-matriu-seat-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: auto; }
+            .dash-matriu-multiplier { display: inline-flex; align-items: center; padding: 2px 8px; background: rgba(194,90,58,0.12); border: 1px solid rgba(194,90,58,0.4); color: #c25a3a; border-radius: 999px; font-family: ui-monospace, monospace; font-size: 0.7rem; font-weight: 700; }
+            .dash-matriu-type-pill { display: inline-flex; align-items: center; padding: 2px 8px; background: rgba(42,58,42,0.06); border: 1px solid rgba(42,58,42,0.2); color: #2a3a2a; border-radius: 999px; font-family: ui-monospace, monospace; font-size: 0.7rem; }
+            .dash-matriu-actions { display: flex; gap: 8px; align-items: center; margin-top: 16px; flex-wrap: wrap; position: relative; z-index: 1; }
+            .dash-matriu-cta { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; background: #1a1f1a; color: #f1ebde; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 0.85rem; transition: transform 0.15s, box-shadow 0.15s; border: 0; cursor: pointer; }
+            .dash-matriu-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(26,31,26,0.25); }
+            .dash-matriu-cta-secondary { background: transparent; color: #2a3a2a; border: 1px solid rgba(42,58,42,0.25); padding: 10px 18px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
+            .dash-matriu-cta-secondary:hover { background: rgba(42,58,42,0.06); }
             .dash-card-demo-badge {
                 font-size: 8px; font-family: var(--font-mono); font-weight: 700;
                 letter-spacing: .1em; text-transform: uppercase;
@@ -503,6 +526,9 @@ export default class DashboardView {
                             <div class="dash-hero-tagline">Every organization has two structures. This maps the real one.</div>
                         </div>
                     </div>
+
+                    <!-- MAT-002-F · strip Matriu Cohort 0 (visible solo si hay proyectos cohort 0) -->
+                    <div id="dashMatriuStrip"></div>
 
                     <!-- UX-DASH-001 · ¿qué puedes hacer aquí? · 4 pasos del flujo SOS -->
                     <div class="dash-section-title">¿Cómo funciona SOS? · 4 pasos</div>
@@ -633,6 +659,9 @@ export default class DashboardView {
     async _renderProjects() {
         const state    = store.getState();
         const projects = (state.projects || []).filter(function(p) { return !p.isArchived; });
+
+        // MAT-002-F · strip Matriu Cohort 0 (visible solo si hay proyectos cohort 0)
+        this._renderMatriuStrip(projects);
 
         // Stats v2 con health global y barras
         const totalRoles = projects.reduce(function(acc, p) { return acc + (p.vna_roles || []).length; }, 0);
@@ -836,6 +865,51 @@ export default class DashboardView {
                 document.getElementById('newProjName').focus();
             });
         });
+    }
+
+    // ── MAT-002-F · Strip Matriu Cohort 0 ──────────────────────────────────────
+    _renderMatriuStrip(projects) {
+        const strip = document.getElementById('dashMatriuStrip');
+        if (!strip) return;
+        const cohort0 = (projects || []).filter(function(p) { return p && p.matriuCohort === 0; });
+        if (cohort0.length === 0) { strip.innerHTML = ''; return; }
+
+        const COHORT_TOTAL = 108;
+        const seatsTaken = cohort0.length;        // local · cuántas tiene este operador
+
+        // Lookup de bootstrap meta de cada proyecto cohort 0 si está en KB
+        // (lazy · no bloqueamos el render si KB no lo tiene)
+        const seatCards = cohort0.map(function(p) {
+            const typeLabel = p.matriuProjectType || 'Sin tipus';
+            const multiplier = p.matriuMultiplier || 1.5;
+            const idea = (p.projectIdea || p.description || p.nombre || p.id);
+            const ideaShort = String(idea).length > 56 ? String(idea).slice(0, 56) + '…' : String(idea);
+            return ''
+                + '<a class="dash-matriu-seat" href="/project/' + encodeURIComponent(p.id) + '" data-link>'
+                + '<span class="dash-matriu-seat-name">' + (p.nombre || p.name || p.id) + '</span>'
+                + '<span class="dash-matriu-seat-meta">' + ideaShort + '</span>'
+                + '<span class="dash-matriu-seat-foot">'
+                +   '<span class="dash-matriu-multiplier">×' + multiplier + ' fundacional</span>'
+                +   (typeLabel !== 'Sin tipus' ? '<span class="dash-matriu-type-pill">' + typeLabel + '</span>' : '')
+                + '</span>'
+                + '</a>';
+        }).join('');
+
+        strip.innerHTML = ''
+            + '<div class="dash-matriu-strip">'
+            +   '<div class="dash-matriu-head">'
+            +     '<div>'
+            +       '<h2 class="dash-matriu-title">El teu seient a <strong>Matriu</strong></h2>'
+            +       '<div class="dash-matriu-subtitle">Tens ' + seatsTaken + ' projecte' + (seatsTaken !== 1 ? 's' : '') + ' Cohort 0 actiu' + (seatsTaken !== 1 ? 's' : '') + '. Multiplicador ×1.5 fundacional aplicat. Cada projecte té el seu mapa de valor pre-configurat.</div>'
+            +     '</div>'
+            +     '<span class="dash-matriu-counter">' + seatsTaken + '/' + COHORT_TOTAL + ' places</span>'
+            +   '</div>'
+            +   '<div class="dash-matriu-seats">' + seatCards + '</div>'
+            +   '<div class="dash-matriu-actions">'
+            +     '<a href="/matriu" data-link class="dash-matriu-cta">Tornar a Matriu →</a>'
+            +     '<a href="/learn" data-link class="dash-matriu-cta-secondary">Aprendre més ↗</a>'
+            +   '</div>'
+            + '</div>';
     }
 
     // ── Topbar ────────────────────────────────────────────────────────────────
