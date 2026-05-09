@@ -1454,7 +1454,7 @@ async function testNavService() {
 
     // con projectId → todos + query ?project= en los aplicables
     const linksProject = buildNavLinks({ active: 'kanban', projectId: 'proj-x' });
-    assert(linksProject.length === 13,                              'con projectId · 13 links (incluye sops, wallet y savings)');
+    assert(linksProject.length === 17,                              'con projectId · 17 links (todos · incluye sops · wallet · savings · value VAL-001 · pact PACT-001)');
     assert(linksProject.find(l => l.id === 'wallet').href === '/wallet?project=proj-x', 'wallet con project query');
     assert(linksProject.find(l => l.id === 'savings').href === '/savings?project=proj-x', 'savings con project query');
     assert(linksProject.find(l => l.id === 'sops').href === '/sops?project=proj-x',     'sops con project query');
