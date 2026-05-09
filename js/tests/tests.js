@@ -3764,6 +3764,86 @@ async function testSkillTaxonomyExtension() {
     assert(r.intangibleValuesDefined === 12,                            '12 intangible values defined');
 }
 
+// ─── ALPHA-STRIPE-001 sprint A · stripeService ────────────────────
+async function testStripeService() {
+    const m = await import('../core/stripeService.js?v=' + Date.now());
+    const { SOS_PLANS, VALID_PLAN_IDS, validatePublishableKey, detectKeyType,
+            validatePaymentLinkUrl, buildPlanNode, buildConfigNode,
+            loadStripeConfig, saveStripeConfig, loadCurrentPlan, setCurrentPlan,
+            openTopupPaymentLink } = m;
+
+    assert(Object.isFrozen(SOS_PLANS),                                 'SOS_PLANS frozen');
+    assert(VALID_PLAN_IDS.length === 4,                                '4 plans');
+    assert(SOS_PLANS.pro.priceEurMonth === 9,                          'pro 9€/mes');
+
+    // Security · sk_/rk_ rejected
+    assert(validatePublishableKey('pk_test_' + 'a'.repeat(30)) === true,  'pk_test_ valid');
+    assert(validatePublishableKey('sk_test_' + 'a'.repeat(30)) === false, 'sk_ REJECTED');
+    assert(validatePublishableKey('rk_test_' + 'a'.repeat(30)) === false, 'rk_ REJECTED');
+    assert(validatePublishableKey('pk_test_short') === false,             'pk_ massa curt');
+    assert(validatePublishableKey(null) === false,                         'null invàlid');
+
+    assert(detectKeyType('pk_test_x') === 'publishable',                  'detect pk');
+    assert(detectKeyType('sk_test_x') === 'secret',                       'detect sk');
+    assert(detectKeyType('rk_test_x') === 'restricted',                   'detect rk');
+    assert(detectKeyType('foo') === 'invalid',                            'detect invalid');
+
+    assert(validatePaymentLinkUrl('https://buy.stripe.com/test_aBc') === true,  'valid link');
+    assert(validatePaymentLinkUrl('https://example.com/x') === false,            'reject not stripe');
+    assert(validatePaymentLinkUrl('http://buy.stripe.com/test_x') === false,     'reject http');
+
+    let threwPlan = false;
+    try { buildPlanNode({ planId: 'invalid' }); } catch(_) { threwPlan = true; }
+    assert(threwPlan,                                                        'planId invalid lanza');
+
+    const pn = buildPlanNode({ planId: 'pro', walletBalanceEur: 50 });
+    assert(pn.type === 'subscription_plan',                              'plan node type');
+    assert(pn.content.planId === 'pro',                                  'plan node planId');
+    assert(pn.keywords.includes('plan:pro'),                             'plan node keyword');
+
+    // buildConfigNode defensive · sk_ NOT persisted
+    const cn = buildConfigNode({ publishableKey: 'sk_test_' + 'x'.repeat(30) });
+    assert(cn.content.publishableKey === null,                           'sk_ not persisted');
+
+    const cn2 = buildConfigNode({
+        publishableKey: 'pk_test_' + 'x'.repeat(30),
+        paymentLinks: {
+            10:  'https://buy.stripe.com/test_link10',
+            999: 'http://malicious.com/x',
+        },
+    });
+    assert(cn2.content.publishableKey.startsWith('pk_test_'),            'pk persisted');
+    assert(Object.keys(cn2.content.paymentLinks).length === 1,           'malicious link rejected · only 1');
+
+    // KB mock
+    const mockKB = (() => {
+        const store = new Map();
+        return {
+            getNode: async (id) => store.has(id) ? store.get(id) : null,
+            upsert:  async (node) => { store.set(node.id, node); return node; },
+        };
+    })();
+    const cfg0 = await loadStripeConfig(mockKB);
+    assert(cfg0.publishableKey === null,                                  'no config initially');
+    await saveStripeConfig(mockKB, { publishableKey: 'pk_test_' + 'a'.repeat(30), paymentLinks: { 10: 'https://buy.stripe.com/test_AAA' } });
+    const cfg1 = await loadStripeConfig(mockKB);
+    assert(cfg1.exists === true,                                          'config saved');
+    assert(cfg1.publishableKey.startsWith('pk_test_'),                    'pk loaded');
+
+    const plan0 = await loadCurrentPlan(mockKB);
+    assert(plan0.planId === 'free' && plan0.fromDefault === true,         'default plan free');
+    await setCurrentPlan(mockKB, { planId: 'pro', walletBalanceEur: 50 });
+    const plan1 = await loadCurrentPlan(mockKB);
+    assert(plan1.planId === 'pro' && plan1.walletBalanceEur === 50,        'plan now pro · 50€');
+
+    let threwTopup = false;
+    try { await openTopupPaymentLink({ kb: mockKB, amountEur: -1 }); } catch(_) { threwTopup = true; }
+    assert(threwTopup,                                                     'topup amount invalid lanza');
+    let threwTopup2 = false;
+    try { await openTopupPaymentLink({ kb: mockKB, amountEur: 999 }); } catch(_) { threwTopup2 = true; }
+    assert(threwTopup2,                                                    'topup sense link configurat lanza');
+}
+
 // ─── Runner ──────────────────────────────────────────────────────
 const SUITE = [
     { name: 'H1.1 · KB Mind-as-Graph round-trip',                 fn: testKbMindAsGraph },
@@ -3808,7 +3888,8 @@ const SUITE = [
     { name: 'VAL-001 sprint A · valueAccountingService (Slicing Pie + FairShares)', fn: testValueAccounting },
     { name: 'VAL-001 sprint C · woContributionService (WO ledgered → contrib)', fn: testWoContributionService },
     { name: 'MAT-002-I sprint B · matriuMemberService (schema unificat)',     fn: testMatriuMemberService },
-    { name: 'SKILL-TAX-002 sprint A · skillTaxonomyExtension (audience+cat)', fn: testSkillTaxonomyExtension }
+    { name: 'SKILL-TAX-002 sprint A · skillTaxonomyExtension (audience+cat)', fn: testSkillTaxonomyExtension },
+    { name: 'ALPHA-STRIPE-001 sprint A · stripeService (Payment Links)',     fn: testStripeService }
 ];
 
 export async function runTests() {
