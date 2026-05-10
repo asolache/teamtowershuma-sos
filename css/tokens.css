@@ -1,45 +1,61 @@
 /* ==========================================================================
    TEAMTOWERS SOS V11 — DESIGN TOKENS
    Única fuente de verdad visual.
+   UX-AUDIT-001 sprint H (2026-05-10) · Linear/Vercel-style refactor ·
+   contrast WCAG AA · semantic surfaces · type scale ajustat.
    ========================================================================== */
 
 :root {
-    /* ── PALETA BASE ────────────────────────────────────────── */
-    --bg-dark:       #050507;
-    --bg-panel:      #0a0a0f;
-    --bg-elevated:   #111118;
+    /* ── PALETA BASE (dark default) ─────────────────────────── */
+    --bg-dark:       #08090b;   /* page background */
+    --bg-panel:      #0e0f13;   /* cards / panels */
+    --bg-elevated:   #161821;   /* inputs / elevated controls */
+    --bg-overlay:    rgba(0,0,0,0.6);
 
-    /* ── ACENTOS ────────────────────────────────────────────── */
+    /* Semantic surface aliases (Linear-style nomenclatura) */
+    --surface-1: var(--bg-dark);
+    --surface-2: var(--bg-panel);
+    --surface-3: var(--bg-elevated);
+
+    /* ── ACENTOS · paleta refinada més sòbria ───────────────── */
     --accent-indigo:  #6366f1;
-    --accent-blue:    #00b0ff;
-    --accent-purple:  #e040fb;
-    --accent-green:   #00e676;
-    --accent-orange:  #ff9100;
-    --accent-red:     #ff5252;
+    --accent-blue:    #3b82f6;
+    --accent-purple:  #a855f7;
+    --accent-green:   #10b981;
+    --accent-orange:  #f59e0b;
+    --accent-red:     #ef4444;
+    --accent-yellow:  #fbbf24;
     --accent-claude:  #d4a853;
+    --accent-warning: #f59e0b;
 
-    /* ── SUPERFICIES GLASS ──────────────────────────────────── */
-    --glass-border:  rgba(255,255,255,0.07);
-    --glass-surface: rgba(255,255,255,0.02);
-    --glass-hover:   rgba(255,255,255,0.05);
-    --shadow-lux:    0 20px 50px rgba(0,0,0,0.6);
-    --shadow-indigo: 0 8px 30px rgba(99,102,241,0.25);
+    /* ── BORDES semantics ───────────────────────────────────── */
+    --border-subtle:  rgba(255,255,255,0.06);
+    --border-default: rgba(255,255,255,0.10);
+    --border-strong:  rgba(255,255,255,0.18);
+    --glass-border:   var(--border-default);   /* backward compat */
+    --glass-surface:  rgba(255,255,255,0.02);
+    --glass-hover:    rgba(255,255,255,0.05);
+
+    /* ── SHADOWS escalades ──────────────────────────────────── */
+    --shadow-sm:     0 1px 2px rgba(0,0,0,0.30);
+    --shadow-md:     0 4px 12px rgba(0,0,0,0.40);
+    --shadow-lg:     0 12px 32px rgba(0,0,0,0.50);
+    --shadow-lux:    var(--shadow-lg);
+    --shadow-indigo: 0 8px 24px rgba(99,102,241,0.30);
+    --shadow-focus:  0 0 0 3px rgba(99,102,241,0.30);
 
     /* ── BLUR ───────────────────────────────────────────────── */
     --blur-sm: blur(8px);
     --blur-md: blur(16px);
 
-    /* ── TIPOGRAFÍA ─────────────────────────────────────────── */
-    --font-base: 'Space Grotesk', system-ui, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
-    /* MAT-002-B · Matriu skin · disponible para hero italic + landing */
-    --font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
-    --font-tight: 'Inter Tight', 'Inter', system-ui, sans-serif;
+    /* ── TIPOGRAFÍA · Linear/Vercel feel ────────────────────── */
+    --font-base:    'Inter Tight', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-display: 'Space Grotesk', 'Inter Tight', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --font-serif:   'Instrument Serif', Georgia, 'Times New Roman', serif;
+    --font-tight:   'Inter Tight', 'Inter', system-ui, sans-serif;
 
-    /* ── PALETA MATRIU (MAT-002-B) ───────────────────────────── */
-    /* Disponible globalmente · cualquier vista que quiera skin Matriu
-       las usa como variables en lugar de hardcodear hex codes.
-       Coherente con MatriuLandingView + DashboardView strip. */
+    /* ── PALETA MATRIU (MAT-002-B) ──────────────────────────── */
     --mat-cream:    #f1ebde;
     --mat-cream-2:  #ede5d2;
     --mat-dark:     #2a3a2a;
@@ -50,46 +66,61 @@
     --mat-rule:     rgba(42,58,42,0.18);
     --mat-line:     rgba(42,58,42,0.10);
 
-    --text-main:      #ffffff;
-    --text-secondary: #b0b0ba;
-    --text-muted:     #5c5c70;
+    /* ── TEXT colors · WCAG AA ──────────────────────────────── */
+    --text-main:      #f3f3f7;      /* 14.5:1 contrast on bg-dark */
+    --text-secondary: #c4c4ce;      /* 8.5:1 on bg-dark */
+    --text-muted:     #8a8a9a;      /* 4.7:1 on bg-dark · WCAG AA passes */
+    --text-disabled:  #5a5a68;
+    --text-inverse:   #0a0a12;
+    --text-link:      var(--accent-indigo);
 
-    --text-xs:   0.72rem;
-    --text-sm:   0.875rem;
-    --text-base: 1rem;
-    --text-lg:   1.25rem;
-    --text-xl:   1.5rem;
-    --text-2xl:  2rem;
-    --text-3xl:  3rem;
+    /* ── TYPE SCALE bumped (readability) ────────────────────── */
+    --text-xs:    0.8125rem;   /* 13px · badges, pills */
+    --text-sm:    0.9375rem;   /* 15px · forms, labels, secondary body */
+    --text-base:  1rem;        /* 16px · body default */
+    --text-md:    1.0625rem;   /* 17px · emphasized body */
+    --text-lg:    1.25rem;     /* 20px */
+    --text-xl:    1.5rem;      /* 24px */
+    --text-2xl:   2rem;        /* 32px */
+    --text-3xl:   2.5rem;      /* 40px · was 3rem · més compacte Linear */
+
+    /* ── LINE HEIGHTS ───────────────────────────────────────── */
+    --leading-tight:   1.25;
+    --leading-snug:    1.4;
+    --leading-normal:  1.55;
+    --leading-relaxed: 1.7;
 
     /* ── ESPACIADO (4px base) ───────────────────────────────── */
     --space-1:  0.25rem;
     --space-2:  0.5rem;
     --space-3:  0.75rem;
     --space-4:  1rem;
+    --space-5:  1.25rem;
     --space-6:  1.5rem;
     --space-8:  2rem;
+    --space-10: 2.5rem;
     --space-12: 3rem;
     --space-16: 4rem;
 
     /* ── RADIOS ─────────────────────────────────────────────── */
-    --radius-sm:   0.5rem;
-    --radius-md:   0.75rem;
-    --radius-lg:   1rem;
-    --radius-xl:   1.5rem;
+    --radius-sm:   0.375rem;   /* 6px · més tight */
+    --radius-md:   0.5rem;     /* 8px */
+    --radius-lg:   0.75rem;    /* 12px */
+    --radius-xl:   1rem;       /* 16px · era 1.5rem · Linear feel */
+    --radius-2xl:  1.5rem;
     --radius-full: 9999px;
 
     /* ── DIMENSIONES ────────────────────────────────────────── */
     --sidebar-width:     260px;
     --sidebar-collapsed: 72px;
-    --topbar-height:     64px;
+    --topbar-height:     56px;
 
     /* ── TRANSICIONES ───────────────────────────────────────── */
     --ease-out:    cubic-bezier(0.2,0.8,0.2,1);
     --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
-    --dur-fast:  150ms;
-    --dur-base:  250ms;
-    --dur-slow:  400ms;
+    --dur-fast:  120ms;
+    --dur-base:  200ms;
+    --dur-slow:  320ms;
 
     /* ── Z-INDEX ────────────────────────────────────────────── */
     --z-dropdown: 100;
@@ -99,117 +130,285 @@
     --z-boot:     99999;
 }
 
-/* ── UX-AUDIT-001 sprint A · Tema light (opt-in via body.theme-light) ──
-   El default segueix sent fosc (SOS V11 tècnic). El light invertix els
-   tokens base mantenint els accents idèntics. Toggle a /settings → Aspecte. */
+/* ==========================================================================
+   TEMA CLAR (opt-in via body.theme-light) · WCAG AA contrast
+   Refactor UX-AUDIT-001 sprint H · Linear-light-style ·
+   panel blanc clar sobre bg lleugerament tintat (no tot blanc).
+   ========================================================================== */
 body.theme-light {
-    --bg-dark:       #f8f8fb;
-    --bg-panel:      #ffffff;
-    --bg-elevated:   #f1f1f5;
+    --bg-dark:       #f6f7f9;   /* page · slate-50ish, off-white perceptible */
+    --bg-panel:      #ffffff;   /* cards */
+    --bg-elevated:   #f1f3f7;   /* inputs / subtle surfaces */
+    --bg-overlay:    rgba(15,23,42,0.40);
 
-    --glass-border:  rgba(0,0,0,0.10);
-    --glass-surface: rgba(0,0,0,0.02);
-    --glass-hover:   rgba(0,0,0,0.06);
-    --shadow-lux:    0 20px 50px rgba(0,0,0,0.10);
-    --shadow-indigo: 0 8px 30px rgba(99,102,241,0.18);
+    --border-subtle:  rgba(15,23,42,0.06);
+    --border-default: rgba(15,23,42,0.10);
+    --border-strong:  rgba(15,23,42,0.18);
+    --glass-border:   var(--border-default);
+    --glass-surface:  rgba(15,23,42,0.02);
+    --glass-hover:    rgba(15,23,42,0.05);
 
-    --text-main:      #1a1a22;
-    --text-secondary: #44444f;
-    --text-muted:     #888896;
+    --shadow-sm:     0 1px 2px rgba(15,23,42,0.05);
+    --shadow-md:     0 4px 12px rgba(15,23,42,0.08);
+    --shadow-lg:     0 12px 32px rgba(15,23,42,0.10);
+    --shadow-lux:    var(--shadow-lg);
+    --shadow-indigo: 0 8px 24px rgba(99,102,241,0.18);
+    --shadow-focus:  0 0 0 3px rgba(99,102,241,0.20);
+
+    /* Text colors WCAG AA on white bg */
+    --text-main:      #0f172a;      /* slate-900 · 17:1 contrast */
+    --text-secondary: #334155;      /* slate-700 · 9.5:1 */
+    --text-muted:     #64748b;      /* slate-500 · 5.0:1 · AA pass */
+    --text-disabled:  #94a3b8;
+    --text-inverse:   #ffffff;
 }
 
-/* ── UX-AUDIT-001 sprint A2 · Theme light · cobertura agressiva ─────────
-   Moltes vistes hardcodean colors foscos (#050507, #08080c, #0a0a0f,
-   #06060a, #1a1a22, #0e0e14, #2a2a35) en estils inline en lloc d'usar
-   CSS vars. Refactoritzar-ho tot són hores · en lloc d'això sobreescrivim
-   amb selectors d'atribut amb !important sota body.theme-light · funciona
-   sobre style="" inline (que tenen especificitat baixa) i deixa el dark
-   intacte. */
+/* ==========================================================================
+   THEME-LIGHT · cobertura agressiva de styles inline foscos
+   Moltes vistes hardcodean colors foscos en estil inline. Sobreescrivim
+   amb selectors d'atribut sota body.theme-light · zero refactor invasiu.
+   ========================================================================== */
+
+/* Background dark hex → panel surface */
 body.theme-light *[style*="background:#050507"],
 body.theme-light *[style*="background: #050507"],
-body.theme-light *[style*="background:#08080c"],
-body.theme-light *[style*="background: #08080c"],
-body.theme-light *[style*="background:#0a0a0f"],
-body.theme-light *[style*="background: #0a0a0f"],
 body.theme-light *[style*="background:#06060a"],
 body.theme-light *[style*="background: #06060a"],
+body.theme-light *[style*="background:#08080c"],
+body.theme-light *[style*="background: #08080c"],
+body.theme-light *[style*="background:#08090b"],
+body.theme-light *[style*="background: #08090b"],
+body.theme-light *[style*="background:#0a0a0f"],
+body.theme-light *[style*="background: #0a0a0f"],
 body.theme-light *[style*="background:#0e0e14"],
 body.theme-light *[style*="background: #0e0e14"],
+body.theme-light *[style*="background:#0e0f13"],
+body.theme-light *[style*="background: #0e0f13"],
 body.theme-light *[style*="background:#13131a"],
 body.theme-light *[style*="background: #13131a"],
+body.theme-light *[style*="background:#161821"],
+body.theme-light *[style*="background: #161821"],
 body.theme-light *[style*="background:#1a1a22"],
 body.theme-light *[style*="background: #1a1a22"],
 body.theme-light *[style*="background:#22222d"],
-body.theme-light *[style*="background: #22222d"] {
+body.theme-light *[style*="background: #22222d"],
+body.theme-light *[style*="background:#2a2a35"],
+body.theme-light *[style*="background: #2a2a35"] {
     background: var(--bg-panel) !important;
 }
-/* Text blanc explícit → text-main · cobertura adicional */
+
+/* rgba whites very low alpha (panel surfaces in dark) → elevated in light */
+body.theme-light *[style*="background:rgba(255,255,255,0.02)"],
+body.theme-light *[style*="background: rgba(255, 255, 255, 0.02)"],
+body.theme-light *[style*="background:rgba(255,255,255,0.03)"],
+body.theme-light *[style*="background:rgba(255,255,255,0.04)"],
+body.theme-light *[style*="background:rgba(255,255,255,0.05)"],
+body.theme-light *[style*="background: rgba(255, 255, 255, 0.05)"],
+body.theme-light *[style*="background:rgba(255,255,255,0.06)"],
+body.theme-light *[style*="background:rgba(255,255,255,0.08)"],
+body.theme-light *[style*="background:rgba(255,255,255,0.1)"],
+body.theme-light *[style*="background:rgba(255,255,255,0.12)"],
+body.theme-light *[style*="background:rgba(0,0,0,0.3)"],
+body.theme-light *[style*="background: rgba(0, 0, 0, 0.3)"],
+body.theme-light *[style*="background:rgba(0,0,0,0.4)"] {
+    background: var(--bg-elevated) !important;
+}
+
+/* Dark borders inline → border-default */
+body.theme-light *[style*="border:1px solid #1a1a22"],
+body.theme-light *[style*="border: 1px solid #1a1a22"],
+body.theme-light *[style*="border-bottom:1px solid #1a1a22"],
+body.theme-light *[style*="border-top:1px solid #1a1a22"],
+body.theme-light *[style*="border-bottom: 1px solid #1a1a22"],
+body.theme-light *[style*="border:1px solid #2a2a35"],
+body.theme-light *[style*="border: 1px solid #2a2a35"],
+body.theme-light *[style*="border:1px solid rgba(255,255,255,0.06)"],
+body.theme-light *[style*="border:1px solid rgba(255,255,255,0.08)"],
+body.theme-light *[style*="border:1px solid rgba(255,255,255,0.1)"],
+body.theme-light *[style*="border:1px solid rgba(255,255,255,0.12)"] {
+    border-color: var(--border-default) !important;
+}
+
+/* White / near-white text inline → text-main · contrast asegurat */
+body.theme-light *[style*="color:#fff"],
+body.theme-light *[style*="color: #fff"],
 body.theme-light *[style*="color:#ffffff"],
 body.theme-light *[style*="color: #ffffff"],
 body.theme-light *[style*="color:white"],
 body.theme-light *[style*="color: white"] {
     color: var(--text-main) !important;
 }
-body.theme-light *[style*="border:1px solid #1a1a22"],
-body.theme-light *[style*="border-bottom:1px solid #1a1a22"],
-body.theme-light *[style*="border-top:1px solid #1a1a22"],
-body.theme-light *[style*="border-bottom: 1px solid #1a1a22"],
-body.theme-light *[style*="border:1px solid #2a2a35"],
-body.theme-light *[style*="border:1px solid rgba(255,255,255,0.06)"] {
-    border-color: var(--glass-border) !important;
+
+/* Muted greys inline · pujar contrast a text-secondary o muted segons valor */
+body.theme-light *[style*="color:#b0b0ba"],
+body.theme-light *[style*="color: #b0b0ba"],
+body.theme-light *[style*="color:#c4c4ce"],
+body.theme-light *[style*="color:#a0a0aa"] {
+    color: var(--text-secondary) !important;
 }
-body.theme-light *[style*="color:#fff"],
-body.theme-light *[style*="color: #fff"] {
-    color: var(--text-main) !important;
+body.theme-light *[style*="color:#5c5c70"],
+body.theme-light *[style*="color: #5c5c70"],
+body.theme-light *[style*="color:#888"],
+body.theme-light *[style*="color: #888"],
+body.theme-light *[style*="color:#8a8a9a"],
+body.theme-light *[style*="color: #8a8a9a"] {
+    color: var(--text-muted) !important;
 }
-/* Topbar · classes -topbar dels diferents views */
+
+/* Linear-gradient panels foscos típics · els 3 patrons més usats */
+body.theme-light *[style*="linear-gradient(145deg,rgba(25,25,32"],
+body.theme-light *[style*="linear-gradient(145deg, rgba(25, 25, 32"],
+body.theme-light *[style*="linear-gradient(135deg,#0a0a0f,#1a1a22)"],
+body.theme-light *[style*="linear-gradient(135deg, #0a0a0f, #1a1a22)"],
+body.theme-light *[style*="linear-gradient(145deg,#0a0a0f,#13131a)"],
+body.theme-light *[style*="linear-gradient(135deg,#13131a,#22222d)"] {
+    background: linear-gradient(145deg, var(--bg-panel), var(--bg-elevated)) !important;
+    color: var(--text-main);
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   THEME-LIGHT · classes-based overrides (sense !important on no cal)
+   ────────────────────────────────────────────────────────────────── */
+
+/* Topbars de cada view */
 body.theme-light .dash-topbar,
 body.theme-light .kb-topbar,
 body.theme-light .ph-topbar,
 body.theme-light .sv-topbar,
 body.theme-light .ef-topbar,
-body.theme-light .pb-topbar {
+body.theme-light .pb-topbar,
+body.theme-light .vmap-topbar,
+body.theme-light .mk-topbar,
+body.theme-light .sa-topbar,
+body.theme-light .tg-topbar,
+body.theme-light .ws-topbar {
     background: var(--bg-panel) !important;
-    border-bottom-color: var(--glass-border) !important;
-}
-body.theme-light .sv-card {
-    background: linear-gradient(145deg, var(--bg-elevated), var(--bg-panel)) !important;
-    border-color: var(--glass-border) !important;
+    border-bottom: 1px solid var(--border-default) !important;
     color: var(--text-main);
 }
+
+/* Cards genèrics de SettingsView · refactor classes pures · sense gradients */
+body.theme-light .sv-card,
+body.theme-light .dash-card,
+body.theme-light .ph-card,
+body.theme-light .mk-card {
+    background: var(--bg-panel) !important;
+    border: 1px solid var(--border-default) !important;
+    color: var(--text-main);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Form inputs */
 body.theme-light .sv-input,
-body.theme-light .sv-select {
+body.theme-light .sv-select,
+body.theme-light .form-control,
+body.theme-light input[type="text"],
+body.theme-light input[type="number"],
+body.theme-light input[type="password"],
+body.theme-light input[type="email"],
+body.theme-light input[type="url"],
+body.theme-light textarea,
+body.theme-light select {
     background: var(--bg-elevated) !important;
     color: var(--text-main) !important;
-    border-color: var(--glass-border) !important;
+    border: 1px solid var(--border-default) !important;
 }
+body.theme-light .sv-input:focus,
+body.theme-light .sv-select:focus,
+body.theme-light .form-control:focus,
+body.theme-light input:focus,
+body.theme-light textarea:focus,
+body.theme-light select:focus {
+    border-color: var(--accent-indigo) !important;
+    box-shadow: var(--shadow-focus) !important;
+}
+
+/* Dashboard shell */
 body.theme-light .dash-shell,
 body.theme-light .dash-main,
 body.theme-light .dash-content {
     background: var(--bg-dark);
     color: var(--text-main);
 }
+
+/* Dashboard tiles */
 body.theme-light .dash-area-tile,
 body.theme-light .dash-onboard-tile {
-    background: var(--bg-elevated) !important;
+    background: var(--bg-panel) !important;
     color: var(--text-main) !important;
-    border-color: var(--glass-border) !important;
+    border: 1px solid var(--border-default) !important;
+    box-shadow: var(--shadow-sm);
 }
+body.theme-light .dash-area-tile:hover,
+body.theme-light .dash-onboard-tile:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+/* Breadcrumb */
 body.theme-light .sos-breadcrumb {
-    background: var(--bg-elevated) !important;
-    border-bottom-color: var(--glass-border) !important;
+    background: var(--bg-panel) !important;
+    border-bottom: 1px solid var(--border-default) !important;
     color: var(--text-secondary) !important;
 }
 body.theme-light .sos-breadcrumb a { color: var(--accent-indigo) !important; }
 body.theme-light .sos-breadcrumb .sos-bc-current { color: var(--text-main) !important; }
 body.theme-light .sos-breadcrumb .sos-bc-sep { color: var(--text-muted) !important; }
+
+/* Nav dropdowns */
 body.theme-light .sos-nav-group > [role="menu"] {
     background: var(--bg-panel) !important;
-    border-color: var(--glass-border) !important;
+    border: 1px solid var(--border-default) !important;
     color: var(--text-main);
+    box-shadow: var(--shadow-md);
 }
 body.theme-light .sos-nav-group > [role="menu"] > a { color: var(--text-main); }
 body.theme-light .sos-nav-group > [role="menu"] > a:hover { background: rgba(99,102,241,0.10); }
-/* Scrollbar · invertit en light */
+
+/* Glass panel global */
+body.theme-light .glass-panel {
+    background: var(--bg-panel) !important;
+    border: 1px solid var(--border-default) !important;
+    color: var(--text-main);
+    box-shadow: var(--shadow-md);
+    backdrop-filter: none;
+}
+
+/* Btn-outline */
+body.theme-light .btn-outline {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+}
+body.theme-light .btn-outline:hover:not(:disabled) {
+    background: var(--bg-elevated);
+    color: var(--text-main);
+    border-color: var(--border-strong);
+}
+
+/* Toast (light) */
+body.theme-light .toast {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-default);
+    color: var(--text-main);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Bottom nav mobile */
+body.theme-light .bottom-nav {
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border-default);
+}
+
+/* Scrollbar invertit en light */
 body.theme-light::-webkit-scrollbar-thumb,
-body.theme-light *::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); }
+body.theme-light *::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.18); }
+body.theme-light * { scrollbar-color: rgba(15,23,42,0.18) transparent; }
+
+/* Code · pre · kbd · accents més suaus en light */
+body.theme-light code,
+body.theme-light pre {
+    background: var(--bg-elevated);
+    color: var(--text-main);
+    border: 1px solid var(--border-subtle);
+}

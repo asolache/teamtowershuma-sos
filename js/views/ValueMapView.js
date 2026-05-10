@@ -121,14 +121,14 @@ export default class ValueMapView {
                 align-items: center;
                 gap: 12px;
                 padding: 0 16px;
-                border-bottom: 1px solid var(--glass-border);
-                background: rgba(10,10,15,0.95);
+                border-bottom: 1px solid var(--border-default);
+                background: var(--bg-panel);
                 z-index: 10;
             }
             .vmap-topbar-title {
-                font-weight: 900;
+                font-weight: 800;
                 font-size: var(--text-sm);
-                color: white;
+                color: var(--text-main);
                 display: flex;
                 align-items: center;
                 gap: 8px;
@@ -153,11 +153,11 @@ export default class ValueMapView {
                 transition: all var(--duration-fast);
                 font-family: var(--font-base);
             }
-            .vmap-btn:hover { border-color: var(--accent-indigo); color: white; }
+            .vmap-btn:hover { border-color: var(--accent-indigo); color: var(--text-main); }
             .vmap-btn-primary {
                 background: var(--accent-indigo);
                 border-color: var(--accent-indigo);
-                color: white;
+                color: var(--text-main);
             }
             .vmap-btn-primary:hover { filter: brightness(1.15); }
             .vmap-btn-save {
@@ -173,7 +173,7 @@ export default class ValueMapView {
                 border-right: 1px solid var(--glass-border);
                 overflow-y: auto;
                 padding: 12px;
-                background: rgba(10,10,14,0.8);
+                background: var(--bg-panel);
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
@@ -201,7 +201,7 @@ export default class ValueMapView {
                 line-height: 1;
                 transition: color var(--duration-fast);
             }
-            .vmap-add-btn:hover { color: white; }
+            .vmap-add-btn:hover { color: var(--text-main); }
             .vmap-role-item {
                 display: flex;
                 align-items: center;
@@ -283,7 +283,7 @@ export default class ValueMapView {
                 transform: translateX(-50%);
                 display: flex;
                 gap: 6px;
-                background: rgba(10,10,15,0.92);
+                background: var(--bg-panel);
                 border: 1px solid var(--glass-border);
                 border-radius: var(--radius-lg);
                 padding: 6px 10px;
@@ -300,7 +300,7 @@ export default class ValueMapView {
                 transition: all var(--duration-fast);
                 font-family: var(--font-mono);
             }
-            .vmap-tool-btn:hover { color: white; background: var(--glass-hover); }
+            .vmap-tool-btn:hover { color: var(--text-main); background: var(--glass-hover); }
 
             /* Empty state */
             .vmap-empty {
@@ -320,7 +320,7 @@ export default class ValueMapView {
             /* Tooltip */
             #vmap-tooltip {
                 position: absolute;
-                background: rgba(10,10,15,0.97);
+                background: var(--bg-panel);
                 border: 1px solid var(--glass-border);
                 border-radius: var(--radius-md);
                 padding: 8px 12px;
@@ -339,7 +339,7 @@ export default class ValueMapView {
                 border-left: 1px solid var(--glass-border);
                 overflow-y: auto;
                 padding: 12px;
-                background: rgba(10,10,14,0.8);
+                background: var(--bg-panel);
             }
             .vmap-inspector-empty {
                 color: var(--text-muted);
@@ -352,7 +352,7 @@ export default class ValueMapView {
             .vmap-inspector-title {
                 font-size: var(--text-sm);
                 font-weight: 900;
-                color: white;
+                color: var(--text-main);
                 margin-bottom: 12px;
             }
             .vmap-inspector-field {
@@ -397,7 +397,7 @@ export default class ValueMapView {
                 font-family: var(--font-base);
                 text-align: left;
             }
-            .vmap-inspector-btn:hover { background: var(--glass-hover); color: white; }
+            .vmap-inspector-btn:hover { background: var(--glass-hover); color: var(--text-main); }
             .vmap-inspector-btn.danger { border-color: rgba(255,82,82,0.4); color: var(--accent-red); }
             .vmap-inspector-btn.danger:hover { background: rgba(255,82,82,0.1); }
 
@@ -425,7 +425,7 @@ export default class ValueMapView {
                 font-size: var(--text-lg);
                 font-weight: 900;
                 margin: 0 0 4px;
-                color: white;
+                color: var(--text-main);
             }
             .vmap-modal-sub {
                 font-size: var(--text-xs);
@@ -447,7 +447,7 @@ export default class ValueMapView {
                 width: 100%;
                 background: rgba(0,0,0,0.4);
                 border: 1px solid var(--glass-border);
-                color: white;
+                color: var(--text-main);
                 padding: 10px 12px;
                 border-radius: var(--radius-md);
                 font-family: var(--font-base);
@@ -461,8 +461,8 @@ export default class ValueMapView {
             .vmap-form-textarea { min-height: 60px; resize: vertical; font-family: var(--font-base); }
             .vmap-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
             .vmap-modal-cancel { background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted); padding: 9px 18px; border-radius: var(--radius-md); cursor: pointer; font-weight: 700; font-size: var(--text-sm); font-family: var(--font-base); }
-            .vmap-modal-cancel:hover { color: white; }
-            .vmap-modal-confirm { background: var(--accent-indigo); border: none; color: white; padding: 9px 20px; border-radius: var(--radius-md); cursor: pointer; font-weight: 900; font-size: var(--text-sm); font-family: var(--font-base); }
+            .vmap-modal-cancel:hover { color: var(--text-main); }
+            .vmap-modal-confirm { background: var(--accent-indigo); border: none; color: var(--text-main); padding: 9px 20px; border-radius: var(--radius-md); cursor: pointer; font-weight: 900; font-size: var(--text-sm); font-family: var(--font-base); }
             .vmap-modal-confirm:hover { filter: brightness(1.1); }
 
             /* Indicador de inicio de mapa (selector modo) */
@@ -481,7 +481,7 @@ export default class ValueMapView {
             .vmap-mode-title {
                 font-size: var(--text-xl);
                 font-weight: 900;
-                color: white;
+                color: var(--text-main);
                 margin-bottom: 4px;
             }
             .vmap-mode-subtitle {
@@ -518,7 +518,7 @@ export default class ValueMapView {
                 box-shadow: var(--shadow-indigo);
             }
             .vmap-mode-card-icon { font-size: 2rem; margin-bottom: 8px; }
-            .vmap-mode-card-title { font-size: var(--text-sm); font-weight: 900; color: white; margin-bottom: 4px; }
+            .vmap-mode-card-title { font-size: var(--text-sm); font-weight: 900; color: var(--text-main); margin-bottom: 4px; }
             .vmap-mode-card-desc { font-size: var(--text-xs); color: var(--text-muted); line-height: 1.5; }
 
             /* Selector de sector — fila independiente bajo las cards */
@@ -542,9 +542,9 @@ export default class ValueMapView {
             }
             .vmap-sector-picker-select {
                 width: 100%;
-                background: rgba(10,10,15,0.95);
+                background: var(--bg-panel);
                 border: 1px solid var(--accent-indigo);
-                color: white;
+                color: var(--text-main);
                 padding: 10px 14px;
                 border-radius: var(--radius-md);
                 font-family: var(--font-base);
@@ -565,7 +565,7 @@ export default class ValueMapView {
             }
             .vmap-sector-picker-select option {
                 background: #111118;
-                color: white;
+                color: var(--text-main);
             }
             .vmap-sector-picker-actions {
                 display: flex;
@@ -585,7 +585,7 @@ export default class ValueMapView {
                 position: absolute;
                 top: 0; right: 0; bottom: 0;
                 width: 340px;
-                background: rgba(8,8,12,0.98);
+                background: var(--bg-panel);
                 border-left: 1px solid rgba(224,64,251,0.3);
                 z-index: 8;
                 display: flex;
@@ -621,7 +621,7 @@ export default class ValueMapView {
                 line-height: 1;
                 transition: color var(--duration-fast);
             }
-            .vmap-ai-panel-close:hover { color: white; }
+            .vmap-ai-panel-close:hover { color: var(--text-main); }
             .vmap-ai-panel-body {
                 flex: 1;
                 overflow-y: auto;
@@ -644,7 +644,7 @@ export default class ValueMapView {
                 background: rgba(0,0,0,0.5);
                 border: 1px solid rgba(224,64,251,0.25);
                 border-radius: var(--radius-md);
-                color: white;
+                color: var(--text-main);
                 font-family: var(--font-base);
                 font-size: var(--text-xs);
                 padding: 10px 12px;
@@ -683,7 +683,7 @@ export default class ValueMapView {
                 width: 100%;
                 background: linear-gradient(135deg, rgba(224,64,251,0.8), rgba(99,102,241,0.8));
                 border: none;
-                color: white;
+                color: var(--text-main);
                 padding: 11px;
                 border-radius: var(--radius-md);
                 font-weight: 900;
@@ -702,7 +702,7 @@ export default class ValueMapView {
             .vmap-ai-spinner {
                 width: 14px; height: 14px;
                 border: 2px solid rgba(255,255,255,0.3);
-                border-top-color: white;
+                border-top-color: var(--text-main);
                 border-radius: 50%;
                 animation: spin 0.8s linear infinite;
                 display: none;
@@ -736,7 +736,7 @@ export default class ValueMapView {
             .vmap-proposal-card-name {
                 font-size: var(--text-xs);
                 font-weight: 700;
-                color: white;
+                color: var(--text-main);
                 margin-bottom: 3px;
             }
             .vmap-proposal-card-desc {
@@ -1692,7 +1692,7 @@ export default class ValueMapView {
                        value="${role.name}"
                        data-field="name" data-role="${role.id}"
                        style="width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);
-                              color:white;padding:6px 8px;border-radius:var(--radius-sm);
+                              color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);
                               font-size:var(--text-xs);font-family:var(--font-base);outline:none;">
             </div>
 
@@ -1706,7 +1706,7 @@ export default class ValueMapView {
                 <select class="vmap-inline-input" id="inlRoleLevel"
                         data-field="castell_level" data-role="${role.id}"
                         style="width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);
-                               color:white;padding:6px 8px;border-radius:var(--radius-sm);
+                               color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);
                                font-size:var(--text-xs);font-family:var(--font-base);outline:none;">
                     <option value="pinya"       ${role.castell_level === 'pinya'       ? 'selected' : ''}>Base operativa</option>
                     <option value="tronc"       ${role.castell_level === 'tronc'       ? 'selected' : ''}>Núcleo de valor</option>
@@ -1721,7 +1721,7 @@ export default class ValueMapView {
                           data-field="description" data-role="${role.id}"
                           rows="2"
                           style="width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);
-                                 color:white;padding:6px 8px;border-radius:var(--radius-sm);
+                                 color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);
                                  font-size:var(--text-xs);font-family:var(--font-base);
                                  outline:none;resize:vertical;box-sizing:border-box;"
                           placeholder="¿Qué hace este rol en el flujo de valor?">${role.description || ''}</textarea>
@@ -1735,7 +1735,7 @@ export default class ValueMapView {
                        data-field="typical_actor" data-role="${role.id}"
                        placeholder="ej: director comercial, cliente"
                        style="width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);
-                              color:white;padding:6px 8px;border-radius:var(--radius-sm);
+                              color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);
                               font-size:var(--text-xs);font-family:var(--font-base);outline:none;">
             </div>
 
@@ -2140,13 +2140,13 @@ export default class ValueMapView {
                         value="${typeof tx.sequence_order === 'number' ? tx.sequence_order : ''}"
                         data-field="sequence_order" data-tx="${tx.id}"
                         placeholder="1, 2, 3…"
-                        style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);color:white;padding:6px 8px;border-radius:var(--radius-sm);font-size:var(--text-xs);font-family:monospace;outline:none;">
+                        style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);font-size:var(--text-xs);font-family:monospace;outline:none;">
                     <input class="vmap-inline-input" id="inlTxPhase"
                         type="text"
                         value="${tx.phase ? this._escHtml(tx.phase) : ''}"
                         data-field="phase" data-tx="${tx.id}"
                         placeholder="fase opcional · ej. cosecha"
-                        style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);color:white;padding:6px 8px;border-radius:var(--radius-sm);font-size:var(--text-xs);outline:none;">
+                        style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);font-size:var(--text-xs);outline:none;">
                 </div>
                 <div style="color:var(--text-muted);font-size:9px;margin-top:4px;font-family:monospace;">orden 1, 2, 3… para animar pulsos · phase agrupa pasos</div>
             </div>
