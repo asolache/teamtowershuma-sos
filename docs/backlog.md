@@ -2411,6 +2411,17 @@ valueAccountingService ejecuta el "cuánto" en tiempo real.
 
 Pendent Sprint H+: refinaments puntuals si apareixen regressions (Matriu skin views mantenen el seu skin propi · NO migrats per disseny).
 
+### Sprint C entregat 2026-05-10 · Dashboard com a panell del membre
+
+| Fix | Detall |
+|---|---|
+| **`js/core/memberPanelService.js` nou** | Helpers purs · `resolveCurrentMember(kbNodes, preferredHandle)` cerca el `matriu_member` node del operador (prioritza `content.handle === '@alvaro'`, fallback al primer membre del KB). `summarizeMemberIdentity(member)` extreu display-ready: displayName, handle, bio, availability, skillsCount, sectorsCount, guardianOf, cohortNumber. `computeMemberImpact({projects, kbNodes})` agrega: activeProjects, totalSlices (sumant `content.slices` de value_contribution), totalContributions, totalLedgerEntries, totalWorkOrders · només sobre projectes visibles (no test). `groupProjectsByPhase(projects, statsResolver)` agrupa per `detectProjectPhase` amb stats opcionals. `PHASE_ORDER` const · `AVAILABILITY_META` per UI badges. |
+| **DashboardView · panell del membre** | `_renderMemberPanel(projects)` async · renderitza `#dashMemberPanel` damunt del Matriu strip · avatar amb inicials + gradient indigo→purple · nom + handle + meta (disponibilitat amb badge color · guardian · cohort · skills count · sectors count) · 3 stat cards (Projectes / Slices / Contribucions) · 3 quick actions (Editar perfil · Xarxa Matriu · Catàleg skills). Si no hi ha member node → empty state amb CTA a `/identity`. |
+| **Phase filter chips** | Sota el panell del membre · 5 chips (Tots · 🎨 DESIGN · 🛠 BUILD · ⚙ OPERATE · 💶 LEDGER) amb count per fase. Click → re-render in-place del project list filtrat per fase. `this._phaseFilter` persisteix dins l'instància. Default = 'all'. Empty state per fase si no hi ha projectes en aquesta fase. Sector grouping es manté DINS la fase seleccionada (no se substitueix · es complementa). |
+| **Reframe enfoque** | Dashboard ara obre amb identitat → impacte → projectes (com a "panell del membre", no com a "lista de projectes técnica"). Coherent amb input @alvaro "la Matriu son las personas". |
+
+Pendents Sprint C2: editor inline de skills/sectors/availability directament al panell del membre (ara redirigeix a `/identity` per editar).
+
 
 ---
 

@@ -15,6 +15,8 @@ import { t, langSelectorHtml } from '../i18n.js';
 import { taxonomicTagsForProject, taxonomicTagsForRole, mergeTags, buildTag } from '../core/semanticTagger.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 import { isTestProject, visibleProjects, archivedProjects } from '../core/projectFilter.js';
+import { resolveCurrentMember, summarizeMemberIdentity, computeMemberImpact, groupProjectsByPhase, PHASE_ORDER, AVAILABILITY_META } from '../core/memberPanelService.js';
+import { PHASE_META } from '../core/navService.js';
 // UX-AUDIT-001 sprint B · subtipus de sector + PROJECT_TYPES Matriu per al wizard
 import { getSubtypesForSector, buildIaContextHint } from '../core/sectorSubtypes.js';
 import { PROJECT_TYPES } from '../core/critical108Roles.js';
@@ -484,6 +486,114 @@ export default class DashboardView {
                 .dash-main.kb-open { grid-template-columns: 1fr; }
                 .dash-main.kb-open .dash-kb-panel { display: none; }
             }
+
+            /* ── UX-AUDIT-001 sprint C · Panell del membre ── */
+            .dash-member-panel {
+                background: var(--bg-panel);
+                border: 1px solid var(--border-default);
+                border-radius: var(--radius-lg);
+                padding: 22px 26px;
+                margin-bottom: 28px;
+                box-shadow: var(--shadow-sm);
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 18px;
+                align-items: start;
+            }
+            .dash-member-head {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                flex-wrap: wrap;
+            }
+            .dash-member-avatar {
+                width: 56px; height: 56px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+                display: flex; align-items: center; justify-content: center;
+                color: #fff; font-size: 1.4rem; font-weight: 800;
+                flex-shrink: 0;
+                box-shadow: var(--shadow-indigo);
+            }
+            .dash-member-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+            .dash-member-name { font-size: var(--text-lg); font-weight: 700; color: var(--text-main); letter-spacing: -0.01em; }
+            .dash-member-handle { font-size: var(--text-sm); color: var(--text-muted); font-family: var(--font-mono); }
+            .dash-member-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; font-size: var(--text-xs); color: var(--text-secondary); }
+            .dash-member-meta span { display: inline-flex; align-items: center; gap: 4px; }
+            .dash-member-stats {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(110px, 1fr));
+                gap: 12px;
+                align-items: stretch;
+            }
+            .dash-member-stat {
+                background: var(--bg-elevated);
+                border: 1px solid var(--border-subtle);
+                border-radius: var(--radius-md);
+                padding: 10px 14px;
+                min-width: 100px;
+                text-align: right;
+            }
+            .dash-member-stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; font-family: var(--font-mono); }
+            .dash-member-stat-value { font-size: var(--text-lg); font-weight: 700; color: var(--text-main); font-family: var(--font-mono); margin-top: 4px; line-height: 1; }
+            .dash-member-actions { grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+            .dash-member-action {
+                font-size: var(--text-xs); font-weight: 600;
+                color: var(--text-secondary);
+                text-decoration: none;
+                padding: 6px 12px;
+                border: 1px solid var(--border-default);
+                border-radius: var(--radius-sm);
+                transition: all var(--dur-fast);
+                font-family: var(--font-base);
+            }
+            .dash-member-action:hover { color: var(--text-main); border-color: var(--accent-indigo); background: rgba(99,102,241,0.06); }
+            .dash-member-empty {
+                color: var(--text-muted);
+                font-size: var(--text-sm);
+                font-style: italic;
+            }
+
+            /* ── UX-AUDIT-001 sprint C · Phase filter chips ── */
+            .dash-phase-bar {
+                display: flex; gap: 8px; flex-wrap: wrap;
+                margin: 18px 0 20px;
+                align-items: center;
+            }
+            .dash-phase-chip {
+                display: inline-flex; align-items: center; gap: 6px;
+                padding: 6px 12px;
+                border-radius: var(--radius-full);
+                font-size: var(--text-xs); font-weight: 600;
+                cursor: pointer;
+                background: var(--bg-panel);
+                border: 1px solid var(--border-default);
+                color: var(--text-secondary);
+                transition: all var(--dur-fast);
+                font-family: var(--font-base);
+            }
+            .dash-phase-chip:hover { border-color: var(--accent-indigo); color: var(--text-main); }
+            .dash-phase-chip.is-active {
+                background: rgba(99,102,241,0.12);
+                border-color: var(--accent-indigo);
+                color: var(--accent-indigo);
+            }
+            .dash-phase-chip .count {
+                font-family: var(--font-mono);
+                opacity: 0.7;
+            }
+
+            /* ── Phase group header (substitueix sector-label) ── */
+            .dash-phase-group { margin-bottom: 28px; animation: slideUp 0.4s var(--ease-out); }
+            .dash-phase-label {
+                font-size: 11px; font-weight: 700; color: var(--text-muted);
+                text-transform: uppercase; letter-spacing: 0.14em;
+                font-family: var(--font-mono);
+                margin-bottom: 12px;
+                display: flex; align-items: center; gap: 8px;
+            }
+            .dash-phase-label::after { content: ''; flex: 1; height: 1px; background: var(--border-subtle); }
+            .dash-phase-label .icon { font-size: 1rem; line-height: 1; }
         </style>
 
         <div class="dash-shell">
@@ -537,6 +647,9 @@ export default class DashboardView {
                             <div class="dash-hero-tagline">Every organization has two structures. This maps the real one.</div>
                         </div>
                     </div>
+
+                    <!-- UX-AUDIT-001 sprint C · Panell del membre · perfil + impacte -->
+                    <div id="dashMemberPanel"></div>
 
                     <!-- MAT-002-F · strip Matriu Cohort 0 (visible solo si hay proyectos cohort 0) -->
                     <div id="dashMatriuStrip"></div>
@@ -690,6 +803,9 @@ export default class DashboardView {
         const state    = store.getState();
         const projects = visibleProjects(state.projects);
 
+        // UX-AUDIT-001 sprint C · Panell del membre · identitat + impacte
+        await this._renderMemberPanel(projects);
+
         // MAT-002-F · strip Matriu Cohort 0 (visible solo si hay proyectos cohort 0)
         this._renderMatriuStrip(projects);
 
@@ -728,9 +844,44 @@ export default class DashboardView {
             return;
         }
 
-        // Agrupar por sector
+        // UX-AUDIT-001 sprint C · Phase chips · counts per phase abans del filtre
+        const phaseGroups = groupProjectsByPhase(projects, function(p) {
+            return {
+                sopsCount:   (p.sops || []).length,
+                woBacklog:   ((p.workOrders || []).filter(function(w) { return w.status === 'backlog'; })).length,
+                woDoing:     ((p.workOrders || []).filter(function(w) { return w.status === 'doing'; })).length,
+                woLedgered:  (p.ledger || []).length,
+            };
+        });
+        const phaseCounts = {
+            design:  phaseGroups.design.length,
+            build:   phaseGroups.build.length,
+            operate: phaseGroups.operate.length,
+            ledger:  phaseGroups.ledger.length,
+        };
+        const activeFilter = this._phaseFilter || 'all';
+        const chipsHtml = '<div class="dash-phase-bar">'
+            + '<button class="dash-phase-chip ' + (activeFilter === 'all' ? 'is-active' : '') + '" data-phase="all">'
+            +   '<span>📋 Tots</span><span class="count">' + projects.length + '</span>'
+            + '</button>'
+            + PHASE_ORDER.map(function(ph) {
+                const m = PHASE_META[ph];
+                const c = phaseCounts[ph] || 0;
+                const cls = (activeFilter === ph ? ' is-active' : '');
+                return '<button class="dash-phase-chip' + cls + '" data-phase="' + ph + '" title="' + m.hint + '">'
+                    +   '<span>' + m.icon + ' ' + m.label + '</span><span class="count">' + c + '</span>'
+                    + '</button>';
+            }).join('')
+            + '</div>';
+
+        // Aplica filtre · 'all' deixa la llista sencera
+        const filteredProjects = activeFilter === 'all'
+            ? projects
+            : (phaseGroups[activeFilter] || []);
+
+        // Agrupar por sector (després del filtre per phase)
         const groups = {};
-        projects.forEach(function(p) {
+        filteredProjects.forEach(function(p) {
             const key = p.sector_id || 'general';
             if (!groups[key]) groups[key] = [];
             groups[key].push(p);
@@ -742,8 +893,20 @@ export default class DashboardView {
             return found ? found.name : (id === 'general' ? 'General' : id);
         };
 
-        let html = '';
+        let html = chipsHtml;
         var self = this;
+
+        if (filteredProjects.length === 0) {
+            html += '<div class="dash-empty-v2" style="margin-top:1rem;">'
+                +   '<div class="dash-empty-icon">📭</div>'
+                +   '<div class="dash-empty-title">Cap projecte en aquesta fase</div>'
+                +   '<div class="dash-empty-sub">Tria una altra fase als chips o crea un projecte nou.</div>'
+                + '</div>';
+            document.getElementById('dashProjectList').innerHTML = html;
+            this._bindPhaseChips();
+            return;
+        }
+
         Object.keys(groups).sort().forEach(function(sectorId) {
             const sProjects = groups[sectorId];
             const label     = sectorName(sectorId);
@@ -805,6 +968,9 @@ export default class DashboardView {
         });
 
         document.getElementById('dashProjectList').innerHTML = html;
+
+        // UX-AUDIT-001 sprint C · phase chips bind
+        this._bindPhaseChips();
 
         // ── Sección de archivados ────────────────────────────────────────────
         var archived = archivedProjects(state.projects);
@@ -894,6 +1060,85 @@ export default class DashboardView {
                 document.getElementById('dashModalNew').classList.add('open');
                 document.getElementById('newProjName').focus();
             });
+        });
+    }
+
+    // ── UX-AUDIT-001 sprint C · Phase chips binding ───────────────────────────
+    _bindPhaseChips() {
+        const self = this;
+        document.querySelectorAll('.dash-phase-chip').forEach(function(chip) {
+            chip.addEventListener('click', function() {
+                const phase = chip.getAttribute('data-phase');
+                self._phaseFilter = phase;
+                // Re-render in-place · zero navigateTo
+                self._renderProjects();
+            });
+        });
+    }
+
+    // ── UX-AUDIT-001 sprint C · Panell del membre ─────────────────────────────
+    async _renderMemberPanel(projects) {
+        const wrap = document.getElementById('dashMemberPanel');
+        if (!wrap) return;
+
+        let kbNodes = [];
+        try { kbNodes = await KB.getAllNodes(); } catch (_) { kbNodes = []; }
+
+        const member = resolveCurrentMember(kbNodes, '@alvaro');
+        const id     = summarizeMemberIdentity(member);
+        const impact = computeMemberImpact({ projects, kbNodes });
+        const avail  = AVAILABILITY_META[id.availability] || AVAILABILITY_META.normal;
+
+        const initials = (id.displayName || 'OP').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+        const emptyState = !id.exists
+            ? '<div class="dash-member-empty">Encara no tens perfil de membre · <a href="/identity" data-link style="color:var(--accent-indigo);">crear-lo a /identity →</a></div>'
+            : '';
+
+        wrap.innerHTML = `
+            <div class="dash-member-panel">
+                <div class="dash-member-head">
+                    <div class="dash-member-avatar">${initials}</div>
+                    <div class="dash-member-info">
+                        <div class="dash-member-name">${this._escapeHtml(id.displayName)}</div>
+                        <div class="dash-member-handle">${id.handle ? this._escapeHtml(id.handle) : '@operador-anonim'}</div>
+                        <div class="dash-member-meta">
+                            <span title="${avail.label}">${avail.icon} ${avail.label}</span>
+                            ${id.guardianOf ? `<span>⚡ ${this._escapeHtml(id.guardianOf)}</span>` : ''}
+                            ${id.cohortNumber !== null ? `<span>🎓 Cohort ${id.cohortNumber}</span>` : ''}
+                            <span>🧠 ${id.skillsCount} skill${id.skillsCount !== 1 ? 's' : ''}</span>
+                            <span>🌐 ${id.sectorsCount} sector${id.sectorsCount !== 1 ? 's' : ''}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dash-member-stats">
+                    <div class="dash-member-stat">
+                        <div class="dash-member-stat-label">Projectes</div>
+                        <div class="dash-member-stat-value">${impact.activeProjects}</div>
+                    </div>
+                    <div class="dash-member-stat">
+                        <div class="dash-member-stat-label">Slices</div>
+                        <div class="dash-member-stat-value">${impact.totalSlices.toLocaleString('ca-ES')}</div>
+                    </div>
+                    <div class="dash-member-stat">
+                        <div class="dash-member-stat-label">Contribucions</div>
+                        <div class="dash-member-stat-value">${impact.totalContributions}</div>
+                    </div>
+                </div>
+                <div class="dash-member-actions">
+                    <a href="/identity" data-link class="dash-member-action">👤 Editar perfil</a>
+                    <a href="/matriu/network" data-link class="dash-member-action">🌐 Xarxa Matriu</a>
+                    <a href="/skills" data-link class="dash-member-action">🧠 Catàleg skills</a>
+                    ${emptyState}
+                </div>
+            </div>
+        `;
+    }
+
+    _escapeHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/[&<>"']/g, function(ch) {
+            return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[ch];
         });
     }
 
