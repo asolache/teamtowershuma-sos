@@ -116,11 +116,20 @@ export function renderNavGroupedHtml({
             const l = g.links[0];
             return `<a href="${l.href}" data-link class="${activeCls(l)}" title="${_esc(l.hint)}"${aria(l)}>${l.icon} ${_esc(l.label)}</a>`;
         }
-        // Categoría con varios links · dropdown
+        // Categoría con varios links · dropdown · UX-AUDIT-001 sprint F: Information Scent
+        // Cada item ara mostra label + hint subtitle (si està definit) per donar
+        // pistes visuals de què trobarà l'usuari abans de clicar.
         const anyActive = g.links.some(l => l.active);
         const headerCls = anyActive ? `${className} ${activeClass} sos-nav-active` : className;
         const items = g.links.map(l => {
-            return `<a href="${l.href}" data-link class="${activeCls(l)}" title="${_esc(l.hint)}"${aria(l)} role="menuitem">${l.icon} ${_esc(l.label)}</a>`;
+            const hint = l.hint ? `<span class="sos-nav-hint">${_esc(l.hint)}</span>` : '';
+            return `<a href="${l.href}" data-link class="${activeCls(l)}" title="${_esc(l.hint)}"${aria(l)} role="menuitem">
+                <span class="sos-nav-icon" aria-hidden="true">${l.icon}</span>
+                <span class="sos-nav-content">
+                    <span class="sos-nav-label">${_esc(l.label)}</span>
+                    ${hint}
+                </span>
+            </a>`;
         }).join('');
         return `<div class="${groupClass}" data-nav-group="${g.category.id}">
                     <button class="${headerCls}" type="button" aria-haspopup="true" aria-expanded="false" title="${_esc(g.category.hint || '')}">${g.category.icon} ${_esc(g.category.label)} <span aria-hidden="true">▾</span></button>
@@ -385,6 +394,95 @@ export async function paintBreadcrumb({
     targetEl.innerHTML = renderBreadcrumbHtml({ items, phase });
 }
 
+// ─── UX-AUDIT-001 sprint F · Bottom Nav mòbil (5 categories) ──────────────
+// Barra inferior tipus app mòbil amb les 5 categories canòniques de
+// NAV_CATEGORIES. Cada item enllaça a un destí representatiu de la categoria
+// i marca actiu si la pathname actual pertany a aquesta categoria.
+//
+// Decisió de routing per categoria:
+//   home        → /dashboard
+//   operations  → /map (project-aware si hi ha projectId)
+//   knowledge   → /tags
+//   market      → /market
+//   identity    → /settings
+
+// Categoria → ruta representativa (no necessàriament la primera del grup,
+// sinó la que té més sentit com a "landing" mobile).
+const BOTTOM_NAV_DEFAULTS = Object.freeze({
+    home:       '/dashboard',
+    operations: '/map',
+    knowledge:  '/tags',
+    market:     '/market',
+    identity:   '/settings',
+});
+
+// Mapping de pathname → category id · per detectar el actiu.
+// Pre-calcula via NAV_DESTINATIONS · cada destí coneix la seva category.
+function _categoryForPath(pathname = '') {
+    if (!pathname) return null;
+    // Strip query/hash
+    const path = pathname.split('?')[0].split('#')[0];
+    // /project/{id} → home (panell)
+    if (path.startsWith('/project/')) return 'home';
+    if (path.startsWith('/n/'))       return 'knowledge';
+    // /matriu* → home (és el landing públic)
+    if (path.startsWith('/matriu'))   return 'home';
+    // /mobile · /presentation → market
+    if (path === '/mobile' || path === '/presentation') return 'market';
+    // /value-accounting → market (es comptabilitat de valor)
+    if (path === '/value-accounting') return 'market';
+    // /pact · /wallet · /sops · /kanban · /map → operations
+    if (['/pact', '/wallet', '/sops', '/kanban', '/map'].includes(path)) return 'operations';
+    // /tags · /folders · /mind · /skills · /learn → knowledge
+    if (['/tags', '/folders', '/mind', '/skills', '/learn'].includes(path)) return 'knowledge';
+    // /market · /efficiency · /savings · /workshops → market
+    if (['/market', '/efficiency', '/savings', '/workshops'].includes(path)) return 'market';
+    // /identity · /settings → identity
+    if (['/identity', '/settings'].includes(path)) return 'identity';
+    // Default home
+    return 'home';
+}
+
+// renderBottomNavHtml · puro · genera l'HTML de la nav mòbil.
+// `active` opcional · si no es passa, es detecta via `pathname`.
+export function renderBottomNavHtml({ pathname = '', projectId = null, active = null } = {}) {
+    const activeCat = active || _categoryForPath(pathname);
+    const items = NAV_CATEGORIES.map(cat => {
+        let href = BOTTOM_NAV_DEFAULTS[cat.id] || '/dashboard';
+        // Operations és project-aware quan hi ha projectId
+        if (cat.id === 'operations' && projectId) {
+            href = '/map?project=' + encodeURIComponent(projectId);
+        }
+        const isActive = cat.id === activeCat;
+        const cls = 'bn-item' + (isActive ? ' active' : '');
+        const aria = isActive ? ' aria-current="page"' : '';
+        return `<a href="${href}" data-link class="${cls}"${aria} title="${_esc(cat.hint || cat.label)}">
+            <span class="bn-icon" aria-hidden="true">${cat.icon}</span>
+            <span class="bn-label">${_esc(cat.label)}</span>
+        </a>`;
+    }).join('');
+    return `<nav class="bottom-nav" aria-label="Mobile navigation"><div class="bn-menu">${items}</div></nav>`;
+}
+
+// paintBottomNav · async · injecta o actualitza la bottom nav al body.
+// Idempotent · localitza per id `sos-bottom-nav` · substitueix l'HTML.
+export function paintBottomNav({
+    pathname = window.location.pathname,
+    search   = window.location.search,
+} = {}) {
+    if (typeof document === 'undefined' || !document.body) return;
+    const params = new URLSearchParams(search || '');
+    const projectId = params.get('project') || (pathname.startsWith('/project/') ? decodeURIComponent(pathname.slice(9)) : null);
+    let el = document.getElementById('sos-bottom-nav');
+    const html = renderBottomNavHtml({ pathname, projectId });
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'sos-bottom-nav';
+        document.body.appendChild(el);
+    }
+    el.innerHTML = html;
+}
+
 // CSS mínimo común para los dropdowns · se inyecta una sola vez en <head>.
 // Cada vista puede mantener sus propios estilos para los anchors (className)
 // pero el contenedor del menú compartido necesita posicionamiento absoluto
@@ -410,7 +508,7 @@ const NAV_GROUP_CSS = `
 }
 .sos-nav-group > [role="menu"] {
     position: absolute; top: calc(100% + 6px); right: 0;
-    min-width: 220px; max-width: 280px;
+    min-width: 260px; max-width: 320px;
     background: var(--bg-panel);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md, 8px);
@@ -438,16 +536,32 @@ const NAV_GROUP_CSS = `
     font-size: var(--text-sm, 0.9375rem);
     font-weight: 500;
     line-height: 1.3;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     transition: background var(--dur-fast, 120ms), color var(--dur-fast, 120ms);
     position: relative;
+    overflow: hidden;
 }
 .sos-nav-group > [role="menu"] > a:hover {
     background: rgba(99,102,241,0.10);
     color: var(--text-main);
 }
+/* UX-AUDIT-001 sprint F · Information Scent */
+.sos-nav-icon { font-size: 1rem; line-height: 1; display: inline-flex; justify-content: center; }
+.sos-nav-content { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sos-nav-label { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sos-nav-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 400;
+    line-height: 1.3;
+    white-space: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.sos-nav-group > [role="menu"] > a:hover .sos-nav-hint { color: var(--text-secondary); }
+.sos-nav-group > [role="menu"] > a.sos-nav-active .sos-nav-hint,
+.sos-nav-group > [role="menu"] > a[aria-current="page"] .sos-nav-hint { color: var(--accent-indigo); opacity: 0.85; }
 .sos-nav-group > [role="menu"] > a:focus-visible {
     outline: 2px solid var(--accent-indigo);
     outline-offset: -2px;

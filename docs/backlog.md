@@ -2420,6 +2420,14 @@ Pendent Sprint H+: refinaments puntuals si apareixen regressions (Matriu skin vi
 | **Phase filter chips** | Sota el panell del membre · 5 chips (Tots · 🎨 DESIGN · 🛠 BUILD · ⚙ OPERATE · 💶 LEDGER) amb count per fase. Click → re-render in-place del project list filtrat per fase. `this._phaseFilter` persisteix dins l'instància. Default = 'all'. Empty state per fase si no hi ha projectes en aquesta fase. Sector grouping es manté DINS la fase seleccionada (no se substitueix · es complementa). |
 | **Reframe enfoque** | Dashboard ara obre amb identitat → impacte → projectes (com a "panell del membre", no com a "lista de projectes técnica"). Coherent amb input @alvaro "la Matriu son las personas". |
 
+### Sprint F resta entregat 2026-05-10 · Bottom Nav mòbil + Information Scent
+
+| Fix | Detall |
+|---|---|
+| **Bottom Nav mòbil · 5 categories canòniques** | `navService.js · renderBottomNavHtml({pathname, projectId, active})` + `paintBottomNav({pathname, search})` async · injecta o actualitza `<nav class="bottom-nav">` al final del body via id `sos-bottom-nav`. Helper intern `_categoryForPath(pathname)` mapeja qualsevol ruta a una de les 5 categories (operations/knowledge/market/identity/home) i marca l'item actiu amb `aria-current="page"` + `::before` indigo pill al top. operations és project-aware quan hi ha `?project=` o `/project/{id}`. CSS al `base.css` refinat: bg `var(--bg-panel)` · border-top `var(--border-default)` · shadow superior · height 60px · safe-area-inset-bottom · max-width 720px centrat. `#app` rep `padding-bottom: 60px + safe-area` en mòbil per no tapar contingut. |
+| **Router auto-paint** | `paintBottomNav` cridat des de `router.js` després de `paintBreadcrumb` · idempotent · cada navegació SPA actualitza el destacat actiu sense remountar el DOM. |
+| **Information Scent · hint subtitle als dropdowns** | `renderNavGroupedHtml` ara emet 2 línies per item: label en negreta + hint subtitle 11px en text-muted (clamp 2 línies via `-webkit-line-clamp`). El hint ja existia a `NAV_DESTINATIONS[i].hint` però només es feia servir com a `title` (tooltip). Ara és visible directament al menú · l'usuari pot anticipar què trobarà a cada destí sense haver de fer hover. Dropdown amplat min 260px / max 320px (era 220/280) per acomodar 2 línies. CSS nou: `.sos-nav-icon` · `.sos-nav-content` · `.sos-nav-label` · `.sos-nav-hint` amb estats hover/active. |
+
 ### Sprint C2 entregat 2026-05-10 · Editor inline al panell del membre
 
 | Fix | Detall |
