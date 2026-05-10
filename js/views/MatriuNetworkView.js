@@ -14,6 +14,7 @@
 import { store } from '../core/store.js';
 import { KB }    from '../core/kb.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { visibleProjects } from '../core/projectFilter.js';
 import { COHORT_0_TOTAL, PANTHEON_GUARDIANS, getGuardianById } from '../core/critical108Roles.js';
 import { listSeats } from '../core/cohortSeatService.js';
 import { listMatriuMembers, migrateAllToMatriuMembers } from '../core/matriuMemberService.js';
@@ -71,7 +72,7 @@ export default class MatriuNetworkView {
         const allNodes = await KB.getAllNodes();
         this.assignments = allNodes.filter(n => n?.type === 'swarm_assignment');
         this.workOrders = allNodes.filter(n => n?.type === 'work_order');
-        this.projects = (store.getState().projects || []).filter(p => !p.isArchived);
+        this.projects = visibleProjects(store.getState().projects);
         return this._renderShell();
     }
 

@@ -24,6 +24,7 @@ import {
 import { searchCnae, getCnae } from '../core/cnaeSeed.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { visibleProjects } from '../core/projectFilter.js';
 import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 const KIND_LABELS = {
@@ -172,7 +173,7 @@ export default class MarketView {
         await KB.init();
         this.items = await KB.query({ type: 'market_item' });
         this.items.sort((a, b) => (b.content?.createdAt || b.createdAt || 0) - (a.content?.createdAt || a.createdAt || 0));
-        this.projects = (store.getState().projects || []).filter(p => !p.isArchived);
+        this.projects = visibleProjects(store.getState().projects);
     }
 
     _populateProjectSelect() {

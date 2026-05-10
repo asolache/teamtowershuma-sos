@@ -16,6 +16,7 @@ import {
     buildGraphFromKb, graphStats, MIND_TYPE_COLORS, colorForType,
 } from '../core/mindGraphService.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { visibleProjects } from '../core/projectFilter.js';
 
 const KIND_LEGEND = [
     { type: 'project',          label: 'Proyectos' },
@@ -136,7 +137,7 @@ export default class MindGraphView {
     async _load() {
         await KB.init();
         this.allNodes = await KB.getAllNodes();
-        this.projects = (store.getState().projects || []).filter(p => !p.isArchived);
+        this.projects = visibleProjects(store.getState().projects);
     }
 
     _populateProjectFilter() {

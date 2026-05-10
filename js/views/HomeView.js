@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { store } from '../core/store.js';
+import { visibleProjects } from '../core/projectFilter.js';
 
 export default class HomeView {
     constructor() {
@@ -12,7 +13,7 @@ export default class HomeView {
 
     async getHtml() {
         const state    = store.getState();
-        const projects = (state.projects || []).filter(p => !p.isArchived);
+        const projects = visibleProjects(state.projects);
 
         return `
         <style>

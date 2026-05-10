@@ -12,6 +12,7 @@
 import { store } from '../core/store.js';
 import { KB }    from '../core/kb.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { visibleProjects } from '../core/projectFilter.js';
 
 function fmtTs(ts) {
     if (!ts) return '—';
@@ -33,7 +34,7 @@ export default class SopsView {
         await store.init();
         const params = new URLSearchParams(window.location.search);
         this.projectId = params.get('project');
-        const projects = (store.getState().projects || []).filter(p => !p.isArchived);
+        const projects = visibleProjects(store.getState().projects);
         this.project = this.projectId ? projects.find(p => p.id === this.projectId) : null;
 
         return `
