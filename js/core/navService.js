@@ -101,25 +101,26 @@ export function renderNavGroupedHtml({
     menuClass   = 'sos-nav-menu',
 } = {}) {
     const groups = groupNavByCategory({ active, projectId });
+    // UX-AUDIT-001 sprint E · classe estable `sos-nav-active` sempre que active=true,
+    // a més de l'activeClass custom · permet styling consistent independent del view.
+    const activeCls = (l) => l.active ? `${className} ${activeClass} sos-nav-active` : className;
+    const aria      = (l) => l.active ? ' aria-current="page"' : '';
     return groups.map(g => {
         // Si la categoría sólo tiene un link y es el dashboard (home), render directo
         if (g.category.id === 'home' && g.links.length === 1) {
             const l = g.links[0];
-            const cls = l.active ? `${className} ${activeClass}` : className;
-            return `<a href="${l.href}" data-link class="${cls}" title="${_esc(l.hint)}">${l.icon} ${_esc(l.label)}</a>`;
+            return `<a href="${l.href}" data-link class="${activeCls(l)}" title="${_esc(l.hint)}"${aria(l)}>${l.icon} ${_esc(l.label)}</a>`;
         }
         // Si hay sólo un link en una categoría no-home, también render directo
         if (g.links.length === 1) {
             const l = g.links[0];
-            const cls = l.active ? `${className} ${activeClass}` : className;
-            return `<a href="${l.href}" data-link class="${cls}" title="${_esc(l.hint)}">${l.icon} ${_esc(l.label)}</a>`;
+            return `<a href="${l.href}" data-link class="${activeCls(l)}" title="${_esc(l.hint)}"${aria(l)}>${l.icon} ${_esc(l.label)}</a>`;
         }
         // Categoría con varios links · dropdown
         const anyActive = g.links.some(l => l.active);
-        const headerCls = anyActive ? `${className} ${activeClass}` : className;
+        const headerCls = anyActive ? `${className} ${activeClass} sos-nav-active` : className;
         const items = g.links.map(l => {
-            const cls = l.active ? `${className} ${activeClass}` : className;
-            return `<a href="${l.href}" data-link class="${cls}" title="${_esc(l.hint)}" role="menuitem">${l.icon} ${_esc(l.label)}</a>`;
+            return `<a href="${l.href}" data-link class="${activeCls(l)}" title="${_esc(l.hint)}"${aria(l)} role="menuitem">${l.icon} ${_esc(l.label)}</a>`;
         }).join('');
         return `<div class="${groupClass}" data-nav-group="${g.category.id}">
                     <button class="${headerCls}" type="button" aria-haspopup="true" aria-expanded="false" title="${_esc(g.category.hint || '')}">${g.category.icon} ${_esc(g.category.label)} <span aria-hidden="true">▾</span></button>
@@ -307,20 +308,35 @@ const BREADCRUMB_STYLE_ID = 'sos-breadcrumb-style';
 const BREADCRUMB_CSS = `
 .sos-breadcrumb {
     display: flex; align-items: center; gap: 6px;
-    padding: 6px 1.5rem; background: #06060a;
-    border-bottom: 1px solid #1a1a22;
-    font-size: 0.78rem; color: #888;
-    font-family: monospace; flex-wrap: wrap;
+    padding: 8px 1.5rem;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--text-xs, 0.8125rem);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    flex-wrap: wrap;
 }
 .sos-breadcrumb a, .sos-breadcrumb .sos-bc-current { display: inline-flex; align-items: center; gap: 4px; }
-.sos-breadcrumb a { color: #a5b4fc; text-decoration: none; }
-.sos-breadcrumb a:hover { color: #c7d2fe; text-decoration: underline; }
-.sos-breadcrumb .sos-bc-current { color: #fff; font-weight: 600; }
-.sos-breadcrumb .sos-bc-sep { color: #444; padding: 0 2px; }
+.sos-breadcrumb a {
+    color: var(--accent-indigo);
+    text-decoration: none;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm, 6px);
+    transition: background var(--dur-fast, 120ms), color var(--dur-fast, 120ms);
+}
+.sos-breadcrumb a:hover { color: var(--text-main); background: rgba(99,102,241,0.10); }
+.sos-breadcrumb .sos-bc-current { color: var(--text-main); font-weight: 600; padding: 2px 6px; }
+.sos-breadcrumb .sos-bc-sep { color: var(--text-disabled, var(--text-muted)); padding: 0 2px; opacity: 0.6; }
 .sos-breadcrumb .sos-bc-phase {
-    margin-left: auto; padding: 2px 9px; border-radius: 10px;
-    border: 1px solid; font-family: monospace; font-size: 0.7rem;
-    letter-spacing: 0.05em; font-weight: 700;
+    margin-left: auto;
+    padding: 3px 10px;
+    border-radius: var(--radius-full, 999px);
+    border: 1px solid;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs, 0.8125rem);
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 @media (max-width: 720px) {
     .sos-breadcrumb { padding: 6px 1rem; }
@@ -376,19 +392,89 @@ export async function paintBreadcrumb({
 const NAV_GROUP_STYLE_ID = 'sos-nav-group-style';
 const NAV_GROUP_CSS = `
 .sos-nav-group { position: relative; display: inline-flex; }
-.sos-nav-group > button { background: transparent; border: 0; padding: 0; margin: 0; cursor: pointer; font: inherit; color: inherit; display: inline-flex; align-items: center; gap: 4px; }
+/* El botón hereda estilos de la className del view (dash-btn, kb-link, etc).
+   Aquí sólo afegim el dropdown-specific gap, focus ring i aria-expanded state. */
+.sos-nav-group > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+.sos-nav-group > button:focus-visible {
+    outline: 2px solid var(--accent-indigo);
+    outline-offset: 2px;
+}
+.sos-nav-group > button[aria-expanded="true"] {
+    color: var(--accent-indigo);
+    border-color: var(--accent-indigo);
+}
 .sos-nav-group > [role="menu"] {
-    position: absolute; top: 100%; right: 0; margin-top: 4px;
-    min-width: 200px; background: #0e0e14; border: 1px solid #2a2a35;
-    border-radius: 8px; padding: 6px; z-index: 1000;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
-    display: flex; flex-direction: column; gap: 2px;
+    position: absolute; top: calc(100% + 6px); right: 0;
+    min-width: 220px; max-width: 280px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md, 8px);
+    padding: 6px;
+    z-index: 1000;
+    box-shadow: var(--shadow-lg, 0 12px 32px rgba(0,0,0,0.50));
+    display: flex; flex-direction: column;
+    gap: 1px;
+    animation: sosNavMenuIn var(--dur-base, 200ms) var(--ease-out, cubic-bezier(0.2,0.8,0.2,1));
+}
+@keyframes sosNavMenuIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 .sos-nav-group > [role="menu"][hidden] { display: none; }
-.sos-nav-group > [role="menu"] > a { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 5px; white-space: nowrap; text-decoration: none; }
-.sos-nav-group > [role="menu"] > a:hover { background: rgba(99,102,241,0.12); }
+.sos-nav-group > [role="menu"] > a {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm, 6px);
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: var(--text-sm, 0.9375rem);
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background var(--dur-fast, 120ms), color var(--dur-fast, 120ms);
+    position: relative;
+}
+.sos-nav-group > [role="menu"] > a:hover {
+    background: rgba(99,102,241,0.10);
+    color: var(--text-main);
+}
+.sos-nav-group > [role="menu"] > a:focus-visible {
+    outline: 2px solid var(--accent-indigo);
+    outline-offset: -2px;
+    color: var(--text-main);
+}
+.sos-nav-group > [role="menu"] > a.sos-nav-active,
+.sos-nav-group > [role="menu"] > a[aria-current="page"] {
+    background: rgba(99,102,241,0.12);
+    color: var(--accent-indigo);
+    font-weight: 600;
+}
+.sos-nav-group > [role="menu"] > a.sos-nav-active::before,
+.sos-nav-group > [role="menu"] > a[aria-current="page"]::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    border-radius: 999px;
+    background: var(--accent-indigo);
+}
 @media (max-width: 720px) {
-    .sos-nav-group > [role="menu"] { right: auto; left: 0; }
+    .sos-nav-group > [role="menu"] {
+        right: auto; left: 0;
+        min-width: 200px;
+    }
 }
 `;
 
