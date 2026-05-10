@@ -2420,7 +2420,17 @@ Pendent Sprint H+: refinaments puntuals si apareixen regressions (Matriu skin vi
 | **Phase filter chips** | Sota el panell del membre · 5 chips (Tots · 🎨 DESIGN · 🛠 BUILD · ⚙ OPERATE · 💶 LEDGER) amb count per fase. Click → re-render in-place del project list filtrat per fase. `this._phaseFilter` persisteix dins l'instància. Default = 'all'. Empty state per fase si no hi ha projectes en aquesta fase. Sector grouping es manté DINS la fase seleccionada (no se substitueix · es complementa). |
 | **Reframe enfoque** | Dashboard ara obre amb identitat → impacte → projectes (com a "panell del membre", no com a "lista de projectes técnica"). Coherent amb input @alvaro "la Matriu son las personas". |
 
-Pendents Sprint C2: editor inline de skills/sectors/availability directament al panell del membre (ara redirigeix a `/identity` per editar).
+### Sprint C2 entregat 2026-05-10 · Editor inline al panell del membre
+
+| Fix | Detall |
+|---|---|
+| **DashboardView · mode edit inline al panell** | Botó "✏ Editar perfil" (substitueix el link a /identity) toggle `this._memberEditOpen`. Quan obert, expand inline `<div class="dash-member-edit">` sota les actions amb 3 grups editables. |
+| **Skills declarades · chips removables + add picker** | Chips indigo amb botó ✕ per treure. `<select>` "+ Afegir skill..." amb totes les 90 SKILL_TAXONOMY no declarades encara (label + domain). On change → push al draft + refresh in-place del bloc edit. |
+| **Sectors d'experiència · chips verds + add picker** | Mateix patró que skills. `<select>` carrega els 19 sectors A-S via `KnowledgeLoader.listSectors()` cached al `_memberCache.sectorsList`. |
+| **Disponibilitat · 3 chips toggle** | high / normal / low amb icones 🟢🟡🔴 i labels canònics. Click → set draft.availability. is-active class amb indigo bg. |
+| **Save → KB.upsert merged** | Si existeix `matriu_member` actual · merge in-place preservant tots els camps no editats + actualitza `skillsDeclared` · `sectorsExperience` · `availability` · `updatedAt` · keywords regenerades. Si no existeix · `buildMatriuMember` amb defaults (`displayName='Operador'` · `handle='@alvaro'` · `cohortNumber=0`). Dispatch `KB_UPSERT` · status "✓ Guardat" · auto-tanca edit mode + re-render panell. |
+| **Cancel · zero impact** | Reseteja `_memberDraft = null` + tanca edit · panell torna a mostrar valors persistits. |
+| **`_refreshEditOnly()` puro DOM** | Re-renderitza només el bloc `#dashMemberEdit` (no el panell sencer) després de cada chip add/remove · evita race conditions amb el draft i flicker. `_bindMemberPanelEditOnly()` separat de `_bindMemberPanel()` perquè el toggle button es bind UNA sola vegada (només es replaceja amb el panell sencer · evita doble listener). |
 
 ### Sprint E entregat 2026-05-10 · Revisió tipogràfica menús + WCAG AA verificat
 

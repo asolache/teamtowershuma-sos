@@ -17,6 +17,9 @@ import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavG
 import { isTestProject, visibleProjects, archivedProjects } from '../core/projectFilter.js';
 import { resolveCurrentMember, summarizeMemberIdentity, computeMemberImpact, groupProjectsByPhase, PHASE_ORDER, AVAILABILITY_META } from '../core/memberPanelService.js';
 import { PHASE_META } from '../core/navService.js';
+// UX-AUDIT-001 sprint C2 · editor inline del perfil membre
+import { buildMatriuMember } from '../core/matriuMemberService.js';
+import { SKILL_TAXONOMY } from '../core/skillTaxonomy.js';
 // UX-AUDIT-001 sprint B · subtipus de sector + PROJECT_TYPES Matriu per al wizard
 import { getSubtypesForSector, buildIaContextHint } from '../core/sectorSubtypes.js';
 import { PROJECT_TYPES } from '../core/critical108Roles.js';
@@ -556,6 +559,76 @@ export default class DashboardView {
                 font-style: italic;
             }
 
+            /* ── Sprint C2 · editor inline ── */
+            .dash-member-edit { grid-column: 1 / -1; padding-top: 14px; border-top: 1px dashed var(--border-default); margin-top: 6px; display: flex; flex-direction: column; gap: 14px; }
+            .dash-member-edit-row { display: flex; flex-direction: column; gap: 6px; }
+            .dash-member-edit-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; font-family: var(--font-mono); }
+            .dash-member-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+            .dash-member-chip {
+                display: inline-flex; align-items: center; gap: 6px;
+                padding: 4px 10px;
+                background: rgba(99,102,241,0.10);
+                border: 1px solid rgba(99,102,241,0.30);
+                color: var(--accent-indigo);
+                border-radius: var(--radius-full);
+                font-size: var(--text-xs);
+                font-weight: 600;
+            }
+            .dash-member-chip button {
+                background: none; border: 0; color: inherit; cursor: pointer;
+                font-size: 14px; line-height: 1; padding: 0 2px; opacity: 0.65;
+            }
+            .dash-member-chip button:hover { opacity: 1; color: var(--accent-red); }
+            .dash-member-chip-sector { background: rgba(16,185,129,0.10); border-color: rgba(16,185,129,0.30); color: var(--accent-green); }
+            .dash-member-edit select, .dash-member-edit input {
+                background: var(--bg-elevated);
+                border: 1px solid var(--border-default);
+                color: var(--text-main);
+                padding: 7px 10px;
+                border-radius: var(--radius-md);
+                font-size: var(--text-sm);
+                font-family: var(--font-base);
+                outline: none;
+                max-width: 320px;
+                transition: border-color var(--dur-fast);
+            }
+            .dash-member-edit select:focus, .dash-member-edit input:focus { border-color: var(--accent-indigo); box-shadow: var(--shadow-focus); }
+            .dash-member-avail-group { display: flex; gap: 6px; flex-wrap: wrap; }
+            .dash-member-avail-btn {
+                padding: 6px 12px;
+                border-radius: var(--radius-full);
+                background: var(--bg-elevated);
+                border: 1px solid var(--border-default);
+                color: var(--text-secondary);
+                font-size: var(--text-xs);
+                font-weight: 600;
+                cursor: pointer;
+                transition: all var(--dur-fast);
+                font-family: var(--font-base);
+            }
+            .dash-member-avail-btn:hover { color: var(--text-main); border-color: var(--accent-indigo); }
+            .dash-member-avail-btn.is-active {
+                background: rgba(99,102,241,0.12);
+                border-color: var(--accent-indigo);
+                color: var(--accent-indigo);
+            }
+            .dash-member-save-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+            .dash-member-save-btn {
+                background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+                color: #fff; border: 0;
+                padding: 8px 16px;
+                border-radius: var(--radius-md);
+                font-weight: 700;
+                font-size: var(--text-sm);
+                cursor: pointer;
+                transition: filter var(--dur-fast);
+                font-family: var(--font-base);
+            }
+            .dash-member-save-btn:hover { filter: brightness(1.08); }
+            .dash-member-save-cancel { background: transparent; color: var(--text-muted); border: 1px solid var(--border-default); padding: 8px 14px; border-radius: var(--radius-md); cursor: pointer; font-size: var(--text-sm); font-weight: 600; }
+            .dash-member-save-cancel:hover { color: var(--text-main); border-color: var(--text-muted); }
+            .dash-member-save-status { font-size: var(--text-xs); color: var(--accent-green); font-family: var(--font-mono); }
+
             /* ── UX-AUDIT-001 sprint C · Phase filter chips ── */
             .dash-phase-bar {
                 display: flex; gap: 8px; flex-wrap: wrap;
@@ -1091,11 +1164,12 @@ export default class DashboardView {
         const impact = computeMemberImpact({ projects, kbNodes });
         const avail  = AVAILABILITY_META[id.availability] || AVAILABILITY_META.normal;
 
-        const initials = (id.displayName || 'OP').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        this._memberCache = { member, id, sectorsList: null };
 
-        const emptyState = !id.exists
-            ? '<div class="dash-member-empty">Encara no tens perfil de membre · <a href="/identity" data-link style="color:var(--accent-indigo);">crear-lo a /identity →</a></div>'
-            : '';
+        const initials = (id.displayName || 'OP').split(/\s+/).map(function(w){return w[0];}).join('').slice(0, 2).toUpperCase();
+
+        const editMode = !!this._memberEditOpen;
+        const editForm = editMode ? await this._renderMemberEditForm(id) : '';
 
         wrap.innerHTML = `
             <div class="dash-member-panel">
@@ -1128,13 +1202,235 @@ export default class DashboardView {
                     </div>
                 </div>
                 <div class="dash-member-actions">
-                    <a href="/identity" data-link class="dash-member-action">👤 Editar perfil</a>
+                    <button class="dash-member-action" id="dashMemberEditBtn">${editMode ? '✕ Tancar editor' : '✏ Editar perfil'}</button>
                     <a href="/matriu/network" data-link class="dash-member-action">🌐 Xarxa Matriu</a>
                     <a href="/skills" data-link class="dash-member-action">🧠 Catàleg skills</a>
-                    ${emptyState}
+                    <a href="/identity" data-link class="dash-member-action">👤 Identitat avançada</a>
+                </div>
+                ${editForm}
+            </div>
+        `;
+
+        this._bindMemberPanel();
+    }
+
+    // ── UX-AUDIT-001 sprint C2 · editor inline ───────────────────────────────
+    async _renderMemberEditForm(id) {
+        // Carrega sectors A-S del KnowledgeLoader (cached)
+        let sectors = [];
+        try { sectors = await KnowledgeLoader.listSectors(); } catch (_) { sectors = []; }
+        this._memberCache = this._memberCache || {};
+        this._memberCache.sectorsList = sectors;
+
+        const declaredSkills  = id.skills || [];
+        const declaredSectors = id.sectors || [];
+        const av = id.availability || 'normal';
+
+        // Per esquemes existents amb skill IDs, busquem el label per al chip
+        const skillLabel = (sid) => {
+            const s = SKILL_TAXONOMY.find(x => x.id === sid);
+            return s ? s.label : sid;
+        };
+        const sectorLabel = (sid) => {
+            const s = sectors.find(x => x.id === sid);
+            return s ? `${sid} · ${s.name}` : sid;
+        };
+
+        // Skills disponibles per afegir (no declarades encara)
+        const availableSkills = SKILL_TAXONOMY.filter(s => !declaredSkills.includes(s.id));
+        const availableSectors = sectors.filter(s => !declaredSectors.includes(s.id));
+
+        const skillChips = declaredSkills.map(sid =>
+            `<span class="dash-member-chip">🧠 ${this._escapeHtml(skillLabel(sid))}<button type="button" data-remove-skill="${this._escapeHtml(sid)}" title="Treure">✕</button></span>`
+        ).join('');
+        const sectorChips = declaredSectors.map(sid =>
+            `<span class="dash-member-chip dash-member-chip-sector">🌐 ${this._escapeHtml(sectorLabel(sid))}<button type="button" data-remove-sector="${this._escapeHtml(sid)}" title="Treure">✕</button></span>`
+        ).join('');
+
+        return `
+            <div class="dash-member-edit" id="dashMemberEdit">
+                <div class="dash-member-edit-row">
+                    <div class="dash-member-edit-label">🧠 Skills declarades · ${declaredSkills.length}</div>
+                    <div class="dash-member-chips" id="dashMemberSkillChips">
+                        ${skillChips || '<span style="color:var(--text-muted);font-size:var(--text-xs);font-style:italic;">Cap skill declarada · afegeix-ne abaix</span>'}
+                    </div>
+                    <select id="dashMemberSkillAdd">
+                        <option value="">+ Afegir skill...</option>
+                        ${availableSkills.map(s => `<option value="${this._escapeHtml(s.id)}">${this._escapeHtml(s.label)} · ${this._escapeHtml(s.domain)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="dash-member-edit-row">
+                    <div class="dash-member-edit-label">🌐 Sectors d'experiència · ${declaredSectors.length}</div>
+                    <div class="dash-member-chips" id="dashMemberSectorChips">
+                        ${sectorChips || '<span style="color:var(--text-muted);font-size:var(--text-xs);font-style:italic;">Cap sector declarat · afegeix-ne abaix</span>'}
+                    </div>
+                    <select id="dashMemberSectorAdd">
+                        <option value="">+ Afegir sector...</option>
+                        ${availableSectors.map(s => `<option value="${this._escapeHtml(s.id)}">${this._escapeHtml(s.id)} · ${this._escapeHtml(s.name)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="dash-member-edit-row">
+                    <div class="dash-member-edit-label">📅 Disponibilitat</div>
+                    <div class="dash-member-avail-group" id="dashMemberAvail">
+                        ${['high','normal','low'].map(k => {
+                            const m = AVAILABILITY_META[k];
+                            return `<button type="button" class="dash-member-avail-btn ${k === av ? 'is-active' : ''}" data-avail="${k}">${m.icon} ${this._escapeHtml(m.label)}</button>`;
+                        }).join('')}
+                    </div>
+                </div>
+                <div class="dash-member-save-row">
+                    <button class="dash-member-save-btn" id="dashMemberSave">💾 Guardar canvis</button>
+                    <button class="dash-member-save-cancel" id="dashMemberCancel">✕ Cancel·lar</button>
+                    <span class="dash-member-save-status" id="dashMemberStatus"></span>
                 </div>
             </div>
         `;
+    }
+
+    _bindMemberPanel() {
+        const self = this;
+        // Toggle edit · només es bind aquí (es replaceja amb el panell sencer)
+        const editBtn = document.getElementById('dashMemberEditBtn');
+        if (editBtn) {
+            editBtn.addEventListener('click', function() {
+                self._memberEditOpen = !self._memberEditOpen;
+                self._memberDraft = null;
+                self._renderProjects();
+            });
+        }
+        // Si està obert el form, bind els controls inner
+        if (this._memberEditOpen) this._bindMemberPanelEditOnly();
+    }
+
+    _bindMemberPanelEditOnly() {
+        const self = this;
+        // Init draft des del membre actual (si no hi ha)
+        const id = this._memberCache?.id || {};
+        if (!this._memberDraft) {
+            this._memberDraft = {
+                skills:       (id.skills || []).slice(),
+                sectors:      (id.sectors || []).slice(),
+                availability: id.availability || 'normal',
+                displayName:  id.displayName || 'Operador',
+                handle:       id.handle || '@alvaro',
+            };
+        }
+
+        // Add skill
+        document.getElementById('dashMemberSkillAdd')?.addEventListener('change', function(e) {
+            const v = e.target.value;
+            if (v && !self._memberDraft.skills.includes(v)) self._memberDraft.skills.push(v);
+            self._memberCache.id.skills = self._memberDraft.skills.slice();
+            self._memberCache.id.skillsCount = self._memberDraft.skills.length;
+            self._refreshEditOnly();
+        });
+        // Remove skill
+        document.querySelectorAll('[data-remove-skill]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const sid = btn.getAttribute('data-remove-skill');
+                self._memberDraft.skills = self._memberDraft.skills.filter(function(x){return x !== sid;});
+                self._memberCache.id.skills = self._memberDraft.skills.slice();
+                self._memberCache.id.skillsCount = self._memberDraft.skills.length;
+                self._refreshEditOnly();
+            });
+        });
+        // Add sector
+        document.getElementById('dashMemberSectorAdd')?.addEventListener('change', function(e) {
+            const v = e.target.value;
+            if (v && !self._memberDraft.sectors.includes(v)) self._memberDraft.sectors.push(v);
+            self._memberCache.id.sectors = self._memberDraft.sectors.slice();
+            self._memberCache.id.sectorsCount = self._memberDraft.sectors.length;
+            self._refreshEditOnly();
+        });
+        // Remove sector
+        document.querySelectorAll('[data-remove-sector]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const sid = btn.getAttribute('data-remove-sector');
+                self._memberDraft.sectors = self._memberDraft.sectors.filter(function(x){return x !== sid;});
+                self._memberCache.id.sectors = self._memberDraft.sectors.slice();
+                self._memberCache.id.sectorsCount = self._memberDraft.sectors.length;
+                self._refreshEditOnly();
+            });
+        });
+        // Availability
+        document.querySelectorAll('[data-avail]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                self._memberDraft.availability = btn.getAttribute('data-avail');
+                self._memberCache.id.availability = self._memberDraft.availability;
+                self._refreshEditOnly();
+            });
+        });
+        // Save
+        document.getElementById('dashMemberSave')?.addEventListener('click', async function() {
+            const btn = this;
+            const status = document.getElementById('dashMemberStatus');
+            btn.disabled = true; btn.textContent = '⏳ Guardant…';
+            try {
+                const existing = self._memberCache.member;
+                let node;
+                if (existing) {
+                    // Merge in-place · preserva tots els camps no editats
+                    node = {
+                        ...existing,
+                        content: {
+                            ...existing.content,
+                            skillsDeclared:    self._memberDraft.skills.slice(),
+                            sectorsExperience: self._memberDraft.sectors.slice(),
+                            availability:      self._memberDraft.availability,
+                            updatedAt:         Date.now(),
+                        },
+                        keywords: Array.from(new Set([
+                            'type:matriu-member',
+                            'kind:matriu-member',
+                            ...(self._memberDraft.skills || []).map(s => 'skill:' + s),
+                            ...(self._memberDraft.sectors || []).map(s => 'sector:' + s),
+                            'avail:' + self._memberDraft.availability,
+                        ])),
+                    };
+                } else {
+                    // Crea de zero
+                    node = buildMatriuMember({
+                        displayName:       self._memberDraft.displayName,
+                        handle:            self._memberDraft.handle,
+                        skillsDeclared:    self._memberDraft.skills,
+                        sectorsExperience: self._memberDraft.sectors,
+                        availability:      self._memberDraft.availability,
+                        cohortNumber:      0,
+                    });
+                }
+                await store.dispatch({ type: 'KB_UPSERT', payload: { node } });
+                btn.textContent = '✓ Guardat';
+                if (status) { status.textContent = '✓ Canvis persistits al KB'; status.style.color = 'var(--accent-green)'; }
+                self._memberEditOpen = false;
+                self._memberDraft = null;
+                setTimeout(function() { self._renderProjects(); }, 600);
+            } catch (err) {
+                console.error('[sprint C2] save member:', err);
+                btn.disabled = false; btn.textContent = '💾 Guardar canvis';
+                if (status) { status.textContent = '✗ ' + (err?.message || 'error'); status.style.color = 'var(--accent-red)'; }
+            }
+        });
+        // Cancel
+        document.getElementById('dashMemberCancel')?.addEventListener('click', function() {
+            self._memberEditOpen = false;
+            self._memberDraft = null;
+            self._renderProjects();
+        });
+    }
+
+    // Refresca SOLAMENT el bloc edit (chips + selects + avail) sense
+    // re-render del panell sencer · evita race conditions amb el draft.
+    async _refreshEditOnly() {
+        const editEl = document.getElementById('dashMemberEdit');
+        if (!editEl) return;
+        const form = await this._renderMemberEditForm(this._memberCache.id);
+        // form retorna el wrapper amb id="dashMemberEdit" · reemplaça
+        const tmp = document.createElement('div');
+        tmp.innerHTML = form;
+        const newEdit = tmp.querySelector('#dashMemberEdit');
+        if (newEdit) editEl.replaceWith(newEdit);
+        // Re-bind només els controls inner del form · NO el editBtn (ja bound)
+        this._bindMemberPanelEditOnly();
     }
 
     _escapeHtml(s) {
