@@ -7,7 +7,7 @@ import { KB }    from './core/kb.js';
 // vista tenga que llamarlo a mano.
 import {
     ensureNavGroupStyle, bindNavGroupDropdowns,
-    paintBreadcrumb,
+    paintBreadcrumb, paintBottomNav,
 } from './core/navService.js';
 import { bootTheme } from './core/themeService.js';
 
@@ -143,6 +143,14 @@ async function router() {
                 projectStats,
             });
         } catch (e) { console.warn('[Router · breadcrumb]', e); }
+
+        // UX-AUDIT-001 sprint F · bottom nav mòbil · 5 categories canòniques
+        try {
+            paintBottomNav({
+                pathname: window.location.pathname,
+                search:   window.location.search,
+            });
+        } catch (e) { console.warn('[Router · bottom-nav]', e); }
     } catch (err) {
         console.error('[Router V11]', err);
         document.getElementById('app').innerHTML = `
