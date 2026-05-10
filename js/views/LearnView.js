@@ -95,56 +95,56 @@ export default class LearnView {
 
         return `
         <style>
-            .lr-shell { background: #050507; color: #e6e6e6; font-family: var(--font-base, sans-serif); display: flex; flex-direction: column; }
+            .lr-shell { background: var(--bg-dark); color: var(--text-main); font-family: var(--font-base, sans-serif); display: flex; flex-direction: column; }
             .lr-topbar { display: flex; align-items: center; gap: 1rem; padding: 14px 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap; }
-            .lr-logo { font-family: monospace; color: #888; text-decoration: none; font-size: 0.78rem; }
+            .lr-logo { font-family: monospace; color: var(--text-muted); text-decoration: none; font-size: 0.78rem; }
             .lr-logo span { color: #6366f1; font-weight: 700; }
-            .lr-title { color: #aaa; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.78rem; }
+            .lr-title { color: var(--text-secondary); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.78rem; }
             .lr-spacer { flex: 1; }
-            .lr-link { color: #888; text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; transition: background 0.15s; }
-            .lr-link:hover { background: rgba(255,255,255,0.06); color: #fff; }
+            .lr-link { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; transition: background 0.15s; }
+            .lr-link:hover { background: var(--glass-hover); color: var(--text-main); }
 
             .lr-progress { padding: 18px 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: center; }
-            .lr-progress-bar { background: rgba(255,255,255,0.06); border-radius: 999px; height: 6px; position: relative; overflow: hidden; }
+            .lr-progress-bar { background: var(--glass-hover); border-radius: 999px; height: 6px; position: relative; overflow: hidden; }
             .lr-progress-fill { background: linear-gradient(90deg, #c084fc, #6366f1); height: 100%; border-radius: 999px; transition: width 0.3s; }
             .lr-progress-meta { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
-            .lr-progress-meta-h { font-family: monospace; font-size: 0.72rem; color: #888; letter-spacing: 0.05em; text-transform: uppercase; }
-            .lr-progress-meta-v { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.6rem; color: #fff; line-height: 1; }
+            .lr-progress-meta-h { font-family: monospace; font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+            .lr-progress-meta-v { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.6rem; color: var(--text-main); line-height: 1; }
             .lr-progress-stats { font-family: monospace; font-size: 0.72rem; color: #c084fc; }
 
             .lr-search { padding: 14px 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
-            .lr-search input { width: 100%; max-width: 480px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px 14px; border-radius: 6px; font-size: 0.9rem; outline: none; transition: border-color 0.15s; }
+            .lr-search input { width: 100%; max-width: 480px; background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.1); color: var(--text-main); padding: 10px 14px; border-radius: 6px; font-size: 0.9rem; outline: none; transition: border-color 0.15s; }
             .lr-search input:focus { border-color: #c084fc; }
 
             .lr-main { display: grid; grid-template-columns: 320px 1fr; min-height: 0; flex: 1; }
             .lr-side { border-right: 1px solid rgba(255,255,255,0.06); overflow-y: auto; padding: 14px 0; }
             .lr-side-item { display: flex; align-items: center; gap: 10px; padding: 12px 1.5rem; cursor: pointer; transition: background 0.15s; border-left: 2px solid transparent; }
-            .lr-side-item:hover { background: rgba(255,255,255,0.04); }
+            .lr-side-item:hover { background: var(--glass-hover); }
             .lr-side-item.is-active { background: rgba(192,132,252,0.10); border-left-color: #c084fc; }
             .lr-side-item.is-seen { opacity: 0.7; }
             .lr-side-icon { width: 28px; text-align: center; font-size: 1rem; }
             .lr-side-text { flex: 1; min-width: 0; }
-            .lr-side-headline { font-size: 0.86rem; color: #fff; font-weight: 500; }
+            .lr-side-headline { font-size: 0.86rem; color: var(--text-main); font-weight: 500; }
             .lr-side-id { font-family: monospace; font-size: 0.7rem; color: #555; margin-top: 2px; }
             .lr-side-check { font-family: monospace; font-size: 0.7rem; color: #4ade80; padding: 2px 8px; border: 1px solid #4ade80; border-radius: 999px; }
             .lr-side-empty { padding: 32px 1.5rem; color: #555; font-size: 0.85rem; text-align: center; }
 
             .lr-content { padding: clamp(20px, 4vw, 48px); overflow-y: auto; }
             .lr-empty { color: #555; padding: 64px 0; text-align: center; }
-            .lr-empty h2 { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.6rem; color: #888; margin-bottom: 0.6rem; }
+            .lr-empty h2 { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.6rem; color: var(--text-muted); margin-bottom: 0.6rem; }
             .lr-doc { max-width: 720px; }
             .lr-doc-tag { font-family: monospace; font-size: 0.75rem; color: #c084fc; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1rem; }
-            .lr-doc h1 { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.05; color: #fff; letter-spacing: -0.01em; margin-bottom: 1.4rem; }
+            .lr-doc h1 { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.05; color: var(--text-main); letter-spacing: -0.01em; margin-bottom: 1.4rem; }
             .lr-doc-body { font-size: 1.04rem; line-height: 1.7; color: #d1d1dc; max-width: 640px; margin-bottom: 1.6rem; }
-            .lr-doc-meta-grid { display: grid; grid-template-columns: 140px 1fr; gap: 12px 24px; padding: 18px; background: rgba(255,255,255,0.04); border-radius: 10px; margin-bottom: 1.6rem; font-size: 0.85rem; }
-            .lr-doc-meta-k { font-family: monospace; color: #888; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.72rem; align-self: center; }
-            .lr-doc-meta-v { color: #fff; }
+            .lr-doc-meta-grid { display: grid; grid-template-columns: 140px 1fr; gap: 12px 24px; padding: 18px; background: var(--glass-hover); border-radius: 10px; margin-bottom: 1.6rem; font-size: 0.85rem; }
+            .lr-doc-meta-k { font-family: monospace; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.72rem; align-self: center; }
+            .lr-doc-meta-v { color: var(--text-main); }
             .lr-doc-meta-v code { background: rgba(192,132,252,0.10); padding: 2px 8px; border-radius: 4px; color: #c084fc; font-size: 0.85rem; }
             .lr-doc-locs { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
-            .lr-doc-loc { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #c7d2fe; text-decoration: none; font-size: 0.82rem; transition: background 0.15s; align-self: flex-start; }
+            .lr-doc-loc { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--border-default); border-radius: 6px; color: #c7d2fe; text-decoration: none; font-size: 0.82rem; transition: background 0.15s; align-self: flex-start; }
             .lr-doc-loc:hover { background: rgba(99,102,241,0.10); border-color: #6366f1; }
             .lr-doc-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-            .lr-btn-seen { background: linear-gradient(135deg, #c084fc, #6366f1); color: #fff; border: 0; padding: 12px 22px; border-radius: 999px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: transform 0.15s; }
+            .lr-btn-seen { background: linear-gradient(135deg, #c084fc, #6366f1); color: var(--text-main); border: 0; padding: 12px 22px; border-radius: 999px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: transform 0.15s; }
             .lr-btn-seen:hover { transform: translateY(-1px); }
             .lr-btn-seen.is-done { background: rgba(74,222,128,0.10); border: 1px solid #4ade80; color: #4ade80; }
             .lr-doc-link { color: #c084fc; text-decoration: none; font-size: 0.85rem; }
@@ -167,7 +167,7 @@ export default class LearnView {
 
             <div class="lr-progress">
                 <div>
-                    <div style="font-family:monospace;font-size:0.72rem;color:#888;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">El teu progrés didàctic</div>
+                    <div style="font-family:monospace;font-size:0.72rem;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">El teu progrés didàctic</div>
                     <div class="lr-progress-bar">
                         <div class="lr-progress-fill" id="lrProgressFill" style="width:${pct}%;"></div>
                     </div>
@@ -281,7 +281,7 @@ export default class LearnView {
                     <div class="lr-doc-meta-v">
                         <div class="lr-doc-locs">
                             ${locs.length === 0
-                                ? '<span style="color:#666;font-size:0.82rem;">— Encara no integrat en cap vista</span>'
+                                ? '<span style="color:var(--text-muted);font-size:0.82rem;">— Encara no integrat en cap vista</span>'
                                 : locs.map(l => `<a href="${escapeHtml(l.path)}" data-link class="lr-doc-loc">${escapeHtml(l.label)} →</a>`).join('')}
                         </div>
                     </div>

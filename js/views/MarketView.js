@@ -63,37 +63,37 @@ export default class MarketView {
         }
         return `
         <style>
-            .mk-shell  { height:100dvh; background:#050507; color:#e6e6e6; font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .mk-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; }
-            .mk-logo   { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
+            .mk-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .mk-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
+            .mk-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
             .mk-logo span { color:#6366f1; }
-            .mk-title  { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
+            .mk-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .mk-spacer { flex:1; }
             .mk-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
-            .mk-btn    { background:#1a1a22; color:#e6e6e6; border:1px solid #2a2a35; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem; font-family:inherit; }
-            .mk-btn:hover { background:#22222d; }
-            .mk-btn-primary { background:#6366f1; border-color:#6366f1; color:#fff; }
+            .mk-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem; font-family:inherit; }
+            .mk-btn:hover { background:var(--bg-elevated); }
+            .mk-btn-primary { background:#6366f1; border-color:#6366f1; color:var(--text-main); }
             .mk-btn-primary:hover { background:#4f46e5; }
 
-            .mk-search-bar { display:flex; gap:0.5rem; align-items:center; padding:0.8rem 1.5rem; background:#0a0a10; border-bottom:1px solid #1a1a22; flex-shrink:0; flex-wrap:wrap; }
-            .mk-search-input { flex:1; min-width:240px; background:#050507; color:#e6e6e6; border:1px solid #2a2a35; padding:8px 12px; border-radius:6px; font-size:0.88rem; font-family:inherit; outline:none; }
+            .mk-search-bar { display:flex; gap:0.5rem; align-items:center; padding:0.8rem 1.5rem; background:var(--bg-panel); border-bottom:1px solid var(--border-default); flex-shrink:0; flex-wrap:wrap; }
+            .mk-search-input { flex:1; min-width:240px; background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); padding:8px 12px; border-radius:6px; font-size:0.88rem; font-family:inherit; outline:none; }
             .mk-search-input:focus { border-color:#6366f1; }
-            .mk-select { background:#050507; color:#e6e6e6; border:1px solid #2a2a35; padding:7px 10px; border-radius:6px; font-size:0.82rem; font-family:inherit; outline:none; cursor:pointer; }
+            .mk-select { background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); padding:7px 10px; border-radius:6px; font-size:0.82rem; font-family:inherit; outline:none; cursor:pointer; }
             .mk-select:hover { border-color:#3a3a45; }
             .mk-pill   { background:rgba(99,102,241,0.12); color:#a5b4fc; padding:3px 10px; border-radius:12px; font-size:0.72rem; font-family:monospace; cursor:pointer; border:1px solid rgba(99,102,241,0.3); }
             .mk-pill:hover { background:rgba(99,102,241,0.25); }
-            .mk-pill.active { background:rgba(99,102,241,0.4); color:#fff; border-color:#6366f1; }
-            .mk-count  { color:#888; font-size:0.78rem; font-family:monospace; }
+            .mk-pill.active { background:rgba(99,102,241,0.4); color:var(--text-main); border-color:#6366f1; }
+            .mk-count  { color:var(--text-muted); font-size:0.78rem; font-family:monospace; }
 
             .mk-main   { padding:1.2rem 1.5rem; flex:1; overflow-y:auto; max-width:1400px; margin:0 auto; width:100%; box-sizing:border-box; }
-            .mk-empty  { text-align:center; padding:3rem 1rem; color:#888; border:1px dashed #2a2a35; border-radius:8px; margin-top:1.5rem; }
+            .mk-empty  { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed #2a2a35; border-radius:8px; margin-top:1.5rem; }
             .mk-grid   { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:1rem; }
-            .mk-card   { background:#0e0e14; border:1px solid #1a1a22; border-left:3px solid var(--mk-color,#6366f1); border-radius:8px; padding:0.9rem; cursor:pointer; transition:background 0.15s; display:flex; flex-direction:column; gap:0.4rem; }
-            .mk-card:hover { background:#13131a; }
-            .mk-card .mk-kind  { font-size:0.7rem; color:#888; font-family:monospace; text-transform:uppercase; letter-spacing:0.05em; }
-            .mk-card h4 { margin:0; font-size:0.95rem; color:#fff; }
-            .mk-card .mk-desc { color:#bbb; font-size:0.78rem; line-height:1.45; max-height:3.7em; overflow:hidden; }
-            .mk-card .mk-meta { color:#888; font-size:0.72rem; font-family:monospace; display:flex; flex-wrap:wrap; gap:0.5rem; }
+            .mk-card   { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid var(--mk-color,#6366f1); border-radius:8px; padding:0.9rem; cursor:pointer; transition:background 0.15s; display:flex; flex-direction:column; gap:0.4rem; }
+            .mk-card:hover { background:var(--bg-elevated); }
+            .mk-card .mk-kind  { font-size:0.7rem; color:var(--text-muted); font-family:monospace; text-transform:uppercase; letter-spacing:0.05em; }
+            .mk-card h4 { margin:0; font-size:0.95rem; color:var(--text-main); }
+            .mk-card .mk-desc { color:var(--text-secondary); font-size:0.78rem; line-height:1.45; max-height:3.7em; overflow:hidden; }
+            .mk-card .mk-meta { color:var(--text-muted); font-size:0.72rem; font-family:monospace; display:flex; flex-wrap:wrap; gap:0.5rem; }
             .mk-card .mk-price { color:#86efac; font-size:0.95rem; font-weight:700; }
             .mk-card .mk-saving { color:#facc15; font-size:0.72rem; }
             .mk-card .mk-tags  { display:flex; flex-wrap:wrap; gap:3px; margin-top:0.2rem; }
@@ -101,19 +101,19 @@ export default class MarketView {
             .mk-card .mk-tag.tax { background:rgba(56,189,248,0.12); color:#7dd3fc; }
 
             .mk-modal { position:fixed; inset:0; background:rgba(0,0,0,0.78); display:flex; align-items:flex-start; justify-content:center; z-index:1000; padding:2rem 1rem; overflow-y:auto; }
-            .mk-modal-inner { background:#0e0e14; border:1px solid #2a2a35; border-radius:10px; padding:1.5rem; width:100%; max-width:720px; }
-            .mk-modal h3 { margin:0 0 0.8rem 0; color:#fff; }
-            .mk-modal label { display:block; color:#aaa; font-size:0.78rem; margin-top:0.7rem; margin-bottom:0.25rem; }
-            .mk-modal input, .mk-modal select, .mk-modal textarea { width:100%; box-sizing:border-box; background:#050507; color:#e6e6e6; border:1px solid #2a2a35; border-radius:5px; padding:0.5rem; font-size:0.85rem; font-family:inherit; }
+            .mk-modal-inner { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:10px; padding:1.5rem; width:100%; max-width:720px; }
+            .mk-modal h3 { margin:0 0 0.8rem 0; color:var(--text-main); }
+            .mk-modal label { display:block; color:var(--text-secondary); font-size:0.78rem; margin-top:0.7rem; margin-bottom:0.25rem; }
+            .mk-modal input, .mk-modal select, .mk-modal textarea { width:100%; box-sizing:border-box; background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); border-radius:5px; padding:0.5rem; font-size:0.85rem; font-family:inherit; }
             .mk-modal textarea { min-height:80px; resize:vertical; }
             .mk-modal .row { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; }
             .mk-modal .actions { display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1.2rem; flex-wrap:wrap; }
 
             .mk-cnae-suggest { position:relative; }
-            .mk-cnae-list { position:absolute; top:100%; left:0; right:0; background:#0e0e14; border:1px solid #2a2a35; border-radius:5px; max-height:240px; overflow-y:auto; z-index:10; display:none; }
+            .mk-cnae-list { position:absolute; top:100%; left:0; right:0; background:var(--bg-panel); border:1px solid var(--border-default); border-radius:5px; max-height:240px; overflow-y:auto; z-index:10; display:none; }
             .mk-cnae-list.show { display:block; }
-            .mk-cnae-item { padding:6px 10px; cursor:pointer; font-size:0.78rem; border-bottom:1px solid #1a1a22; }
-            .mk-cnae-item:hover { background:#13131a; }
+            .mk-cnae-item { padding:6px 10px; cursor:pointer; font-size:0.78rem; border-bottom:1px solid var(--border-default); }
+            .mk-cnae-item:hover { background:var(--bg-elevated); }
             .mk-cnae-item .code { color:#a5b4fc; font-family:monospace; margin-right:6px; }
         </style>
 
@@ -147,7 +147,7 @@ export default class MarketView {
             </div>
 
             <div class="mk-main" id="mkMain">
-                <p style="color:#888;">Cargando…</p>
+                <p style="color:var(--text-muted);">Cargando…</p>
             </div>
         </div>
 
@@ -267,28 +267,28 @@ export default class MarketView {
         root.innerHTML = `
             <div class="mk-modal" id="mkDetailBg">
                 <div class="mk-modal-inner">
-                    <div style="font-size:0.7rem;color:#888;font-family:monospace;text-transform:uppercase;letter-spacing:0.05em;">${KIND_LABELS[c.kind] || c.kind} ${c.visibility && c.visibility !== 'public' ? '· 🔒 ' + c.visibility : ''}</div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);font-family:monospace;text-transform:uppercase;letter-spacing:0.05em;">${KIND_LABELS[c.kind] || c.kind} ${c.visibility && c.visibility !== 'public' ? '· 🔒 ' + c.visibility : ''}</div>
                     <h3 style="margin:0.3rem 0;">${this._esc(c.title || item.id)}</h3>
-                    <div style="color:#888;font-size:0.78rem;font-family:monospace;">id: ${this._esc(item.id)}${item.createdAt ? ' · creado: ' + new Date(item.createdAt).toLocaleString('es-ES') : ''}</div>
+                    <div style="color:var(--text-muted);font-size:0.78rem;font-family:monospace;">id: ${this._esc(item.id)}${item.createdAt ? ' · creado: ' + new Date(item.createdAt).toLocaleString('es-ES') : ''}</div>
 
                     ${c.description ? `<p style="color:#ddd;font-size:0.88rem;line-height:1.5;margin-top:0.8rem;">${this._esc(c.description)}</p>` : ''}
 
                     <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:0.8rem;font-size:0.8rem;">
                         <div><strong style="color:#86efac;font-size:1.05rem;">${c.priceEur != null ? c.priceEur + ' €' : '—'}</strong></div>
-                        ${c.fmvHumanEquivalentEur ? `<div style="color:#aaa;">FMV humano equiv: <strong>${c.fmvHumanEquivalentEur} €</strong></div>` : ''}
+                        ${c.fmvHumanEquivalentEur ? `<div style="color:var(--text-secondary);">FMV humano equiv: <strong>${c.fmvHumanEquivalentEur} €</strong></div>` : ''}
                         ${saving ? `<div style="color:#facc15;">✨ Ahorro vs ${this._esc(saving.vsConvLabel)} (rango ${saving.vsConvLowEur}-${saving.vsConvHighEur}€): <strong>${saving.savingEur} € · -${saving.savingPct}%</strong></div>` : ''}
                     </div>
 
                     <table style="margin-top:1rem;width:100%;border-collapse:collapse;font-size:0.78rem;">
-                        ${cnaeMeta ? `<tr><td style="color:#888;padding:4px 0;">CNAE</td><td style="color:#ddd;">${cnaeMeta.code} · ${this._esc(cnaeMeta.name)}</td></tr>` : (c.cnae ? `<tr><td style="color:#888;padding:4px 0;">CNAE</td><td style="color:#ddd;">${this._esc(c.cnae)}</td></tr>` : '')}
-                        ${c.sectorTT ? `<tr><td style="color:#888;padding:4px 0;">Sector TT</td><td style="color:#ddd;">${this._esc(c.sectorTT)}</td></tr>` : ''}
-                        ${provider ? `<tr><td style="color:#888;padding:4px 0;">Proveedor</td><td style="color:#ddd;"><a href="/n/${this._esc(provider.id)}" data-link class="mk-link">${this._esc(provider.nombre || provider.id)}</a></td></tr>` : ''}
-                        ${c.sku ? `<tr><td style="color:#888;padding:4px 0;">SKU</td><td style="color:#ddd;font-family:monospace;">${this._esc(c.sku)}</td></tr>` : ''}
+                        ${cnaeMeta ? `<tr><td style="color:var(--text-muted);padding:4px 0;">CNAE</td><td style="color:#ddd;">${cnaeMeta.code} · ${this._esc(cnaeMeta.name)}</td></tr>` : (c.cnae ? `<tr><td style="color:var(--text-muted);padding:4px 0;">CNAE</td><td style="color:#ddd;">${this._esc(c.cnae)}</td></tr>` : '')}
+                        ${c.sectorTT ? `<tr><td style="color:var(--text-muted);padding:4px 0;">Sector TT</td><td style="color:#ddd;">${this._esc(c.sectorTT)}</td></tr>` : ''}
+                        ${provider ? `<tr><td style="color:var(--text-muted);padding:4px 0;">Proveedor</td><td style="color:#ddd;"><a href="/n/${this._esc(provider.id)}" data-link class="mk-link">${this._esc(provider.nombre || provider.id)}</a></td></tr>` : ''}
+                        ${c.sku ? `<tr><td style="color:var(--text-muted);padding:4px 0;">SKU</td><td style="color:#ddd;font-family:monospace;">${this._esc(c.sku)}</td></tr>` : ''}
                     </table>
 
                     ${Array.isArray(c.deliverables) && c.deliverables.length ? `
                         <div style="margin-top:1rem;">
-                            <div style="color:#aaa;font-size:0.78rem;margin-bottom:0.3rem;">Entregables:</div>
+                            <div style="color:var(--text-secondary);font-size:0.78rem;margin-bottom:0.3rem;">Entregables:</div>
                             <ul style="font-size:0.82rem;color:#ddd;padding-left:1.2rem;">
                                 ${c.deliverables.map(d => `<li>${this._esc(d)}</li>`).join('')}
                             </ul>
@@ -297,7 +297,7 @@ export default class MarketView {
 
                     ${Array.isArray(c.tags) && c.tags.length ? `
                         <div style="margin-top:1rem;">
-                            <div style="color:#aaa;font-size:0.78rem;margin-bottom:0.3rem;">Tags:</div>
+                            <div style="color:var(--text-secondary);font-size:0.78rem;margin-bottom:0.3rem;">Tags:</div>
                             <div class="mk-tags">${c.tags.map(t => `<span class="mk-tag ${t.includes(':') ? 'tax' : ''}">${this._esc(t)}</span>`).join('')}</div>
                         </div>
                     ` : ''}
@@ -328,7 +328,7 @@ export default class MarketView {
             <div class="mk-modal" id="mkCreateBg">
                 <div class="mk-modal-inner">
                     <h3>＋ Nueva oferta del Mercado</h3>
-                    <p style="color:#888;font-size:0.78rem;margin:0 0 0.6rem 0;">Cualquier output del VNA puede convertirse en producto/servicio. La oferta nace etiquetada (taxonomía + folksonomía) y queda enlazada al proyecto proveedor.</p>
+                    <p style="color:var(--text-muted);font-size:0.78rem;margin:0 0 0.6rem 0;">Cualquier output del VNA puede convertirse en producto/servicio. La oferta nace etiquetada (taxonomía + folksonomía) y queda enlazada al proyecto proveedor.</p>
 
                     <label>Título</label>
                     <input id="mkfTitle" type="text" placeholder="Ej. Mapa de Valor IKEA-style">
@@ -418,7 +418,7 @@ export default class MarketView {
         const renderCnaeOpts = (q) => {
             const matches = searchCnae(q, 8);
             if (!matches.length) { cnaeList.classList.remove('show'); cnaeList.innerHTML = ''; return; }
-            cnaeList.innerHTML = matches.map(m => `<div class="mk-cnae-item" data-code="${m.code}" data-sector="${m.sectorTT || ''}"><span class="code">${m.code}</span>${this._esc(m.name)}${m.sectorTT ? ` <span style="color:#888;">· sector TT ${m.sectorTT}</span>` : ''}</div>`).join('');
+            cnaeList.innerHTML = matches.map(m => `<div class="mk-cnae-item" data-code="${m.code}" data-sector="${m.sectorTT || ''}"><span class="code">${m.code}</span>${this._esc(m.name)}${m.sectorTT ? ` <span style="color:var(--text-muted);">· sector TT ${m.sectorTT}</span>` : ''}</div>`).join('');
             cnaeList.classList.add('show');
             cnaeList.querySelectorAll('.mk-cnae-item').forEach(it => {
                 it.addEventListener('click', () => {

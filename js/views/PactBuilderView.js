@@ -63,7 +63,7 @@ export default class PactBuilderView {
         <div class="pb-shell"><div class="pb-empty">
             <div style="font-size:2.4rem;">📜</div>
             <h2 class="mat-hero-h1">Falta el projecte a la URL</h2>
-            <p style="color:#888;font-size:0.9rem;">Aquesta vista necessita <code>?project={id}</code>.</p>
+            <p style="color:var(--text-muted);font-size:0.9rem;">Aquesta vista necessita <code>?project={id}</code>.</p>
             <a href="/dashboard" data-link style="color:#c084fc;">← Dashboard</a>
         </div></div>`;
     }
@@ -152,14 +152,14 @@ export default class PactBuilderView {
     _renderInitForm(projectTypeId) {
         return `
         <div class="pb-init">
-            <p style="color:#aaa;line-height:1.6;margin-bottom:14px;">Encara no hi ha pacte. Crea el draft amb el teu nom com a primer soci · després pots afegir-ne més des de l'editor.</p>
+            <p style="color:var(--text-secondary);line-height:1.6;margin-bottom:14px;">Encara no hi ha pacte. Crea el draft amb el teu nom com a primer soci · després pots afegir-ne més des de l'editor.</p>
             <div class="pb-init-form">
                 <input type="text" id="pbInitName" class="pb-input" placeholder="El teu nom (displayName) ex. Alvaro Solache">
                 <input type="text" id="pbInitId" class="pb-input" placeholder="DID o handle (identityId) ex. did:sos:abc">
                 <input type="text" id="pbInitRole" class="pb-input" placeholder="Rol al projecte ex. Fundador / CEO">
                 <button class="pb-btn" id="pbInitCreate">+ Crear draft del pacte</button>
             </div>
-            ${projectTypeId ? `<p style="color:#666;font-size:0.78rem;margin-top:10px;font-family:monospace;">tipus · ${escapeHtml(projectTypeId)}</p>` : ''}
+            ${projectTypeId ? `<p style="color:var(--text-muted);font-size:0.78rem;margin-top:10px;font-family:monospace;">tipus · ${escapeHtml(projectTypeId)}</p>` : ''}
         </div>
         `;
     }
@@ -281,7 +281,7 @@ export default class PactBuilderView {
                         return `
                         <tr>
                             <td>${escapeHtml(pt.displayName)}</td>
-                            <td style="font-family:monospace;font-size:0.78rem;color:#888;">${escapeHtml(pt.identityId)}</td>
+                            <td style="font-family:monospace;font-size:0.78rem;color:var(--text-muted);">${escapeHtml(pt.identityId)}</td>
                             <td>${escapeHtml(pt.role)}</td>
                             <td>${escapeHtml(pt.contributionType)}</td>
                             <td style="text-align:right;font-family:'Instrument Serif',Georgia,serif;font-style:italic;color:#c084fc;font-size:1.1rem;">${(pt.initialShare * 100).toFixed(1)}%</td>
@@ -316,26 +316,26 @@ export default class PactBuilderView {
 
     _renderStyle() {
         return `<style>
-            .pb-shell { background: #050507; color: #e6e6e6; min-height: 100%; font-family: var(--font-base, sans-serif); display: flex; flex-direction: column; }
+            .pb-shell { background: var(--bg-dark); color: var(--text-main); min-height: 100%; font-family: var(--font-base, sans-serif); display: flex; flex-direction: column; }
             .pb-topbar { display: flex; align-items: center; gap: 1rem; padding: 14px 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap; flex-shrink: 0; }
-            .pb-logo { font-family: monospace; color: #888; text-decoration: none; font-size: 0.78rem; }
+            .pb-logo { font-family: monospace; color: var(--text-muted); text-decoration: none; font-size: 0.78rem; }
             .pb-logo span { color: #6366f1; font-weight: 700; }
-            .pb-title { color: #aaa; font-size: 0.86rem; display: inline-flex; align-items: center; gap: 6px; }
+            .pb-title { color: var(--text-secondary); font-size: 0.86rem; display: inline-flex; align-items: center; gap: 6px; }
             .pb-spacer { flex: 1; }
-            .pb-link { color: #888; text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; }
-            .pb-link:hover { background: rgba(255,255,255,0.06); color: #fff; }
+            .pb-link { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; }
+            .pb-link:hover { background: var(--glass-hover); color: var(--text-main); }
 
             .pb-main { flex: 1; padding: clamp(20px, 4vw, 36px); max-width: 1100px; margin: 0 auto; width: 100%; box-sizing: border-box; overflow-y: auto; }
             .pb-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; gap: 0.6rem; padding: 2rem; }
 
             .pb-hero { margin-bottom: 24px; padding: 24px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
-            .pb-hero h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); color: #fff; line-height: 1.05; margin-bottom: 6px; }
-            .pb-hero-sub { color: #aaa; font-size: 0.92rem; max-width: 720px; line-height: 1.55; margin-bottom: 18px; }
+            .pb-hero h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); color: var(--text-main); line-height: 1.05; margin-bottom: 6px; }
+            .pb-hero-sub { color: var(--text-secondary); font-size: 0.92rem; max-width: 720px; line-height: 1.55; margin-bottom: 18px; }
 
             .pb-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-            .pb-stat { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid var(--pb-c, #888); border-radius: 8px; padding: 12px 14px; }
-            .pb-stat-label { font-family: monospace; font-size: 0.7rem; color: #888; letter-spacing: 0.06em; text-transform: uppercase; }
-            .pb-stat-value { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.6rem; color: #fff; line-height: 1; margin-top: 4px; }
+            .pb-stat { background: var(--glass-hover); border: 1px solid var(--border-default); border-left: 3px solid var(--pb-c, #888); border-radius: 8px; padding: 12px 14px; }
+            .pb-stat-label { font-family: monospace; font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; }
+            .pb-stat-value { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.6rem; color: var(--text-main); line-height: 1; margin-top: 4px; }
             .pb-stat-sub { font-size: 0.7rem; color: var(--pb-c); margin-top: 3px; font-family: monospace; }
 
             .pb-init { background: rgba(192,132,252,0.04); border: 1px dashed rgba(192,132,252,0.3); border-radius: 8px; padding: 18px; }
@@ -344,28 +344,28 @@ export default class PactBuilderView {
             .pb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
             @media (max-width: 880px) { .pb-grid, .pb-init-form { grid-template-columns: 1fr; } }
 
-            .pb-section { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 18px; margin-bottom: 18px; }
-            .pb-section h2 { color: #fff; font-size: 1rem; margin-bottom: 12px; font-weight: 600; }
+            .pb-section { background: rgba(255,255,255,0.025); border: 1px solid var(--border-default); border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+            .pb-section h2 { color: var(--text-main); font-size: 1rem; margin-bottom: 12px; font-weight: 600; }
 
             .pb-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; }
             .pb-row-stack { grid-template-columns: 1fr; }
-            .pb-row label { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; color: #888; font-family: monospace; letter-spacing: 0.04em; text-transform: uppercase; }
-            .pb-checkbox { flex-direction: row !important; align-items: center !important; gap: 8px !important; text-transform: none !important; padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 6px; cursor: pointer; }
+            .pb-row label { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; color: var(--text-muted); font-family: monospace; letter-spacing: 0.04em; text-transform: uppercase; }
+            .pb-checkbox { flex-direction: row !important; align-items: center !important; gap: 8px !important; text-transform: none !important; padding: 8px 12px; background: var(--bg-elevated); border-radius: 6px; cursor: pointer; }
 
-            .pb-input { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 10px 12px; border-radius: 6px; font-size: 0.88rem; outline: none; transition: border-color 0.15s; font-family: inherit; }
+            .pb-input { background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-main); padding: 10px 12px; border-radius: 6px; font-size: 0.88rem; outline: none; transition: border-color 0.15s; font-family: inherit; }
             .pb-input:focus { border-color: #c084fc; }
             .pb-textarea { resize: vertical; min-height: 60px; font-family: inherit; line-height: 1.55; }
-            .pb-hint { color: #666; font-size: 0.75rem; margin-top: 6px; font-family: monospace; }
+            .pb-hint { color: var(--text-muted); font-size: 0.75rem; margin-top: 6px; font-family: monospace; }
 
             .pb-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
-            .pb-table thead th { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.12); text-align: left; font-family: monospace; font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+            .pb-table thead th { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.12); text-align: left; font-family: monospace; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
             .pb-table tbody td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #ddd; vertical-align: middle; }
 
             .pb-add-party { margin-top: 16px; }
             .pb-add-party summary { color: #c084fc; cursor: pointer; padding: 8px 12px; background: rgba(192,132,252,0.06); border-radius: 6px; font-size: 0.85rem; }
 
             .pb-actions { display: flex; gap: 12px; margin: 24px 0; flex-wrap: wrap; align-items: center; }
-            .pb-btn { background: linear-gradient(135deg, #c084fc, #6366f1); color: #fff; border: 0; padding: 10px 18px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: transform 0.15s; font-size: 0.85rem; }
+            .pb-btn { background: linear-gradient(135deg, #c084fc, #6366f1); color: var(--text-main); border: 0; padding: 10px 18px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: transform 0.15s; font-size: 0.85rem; }
             .pb-btn:hover { transform: translateY(-1px); }
             .pb-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
             .pb-btn-large { padding: 14px 28px; font-size: 0.95rem; }
@@ -376,7 +376,7 @@ export default class PactBuilderView {
             .pb-btn-remove { background: transparent; border: 0; color: #fca5a5; cursor: pointer; font-size: 1rem; opacity: 0.6; }
             .pb-btn-remove:hover { opacity: 1; }
 
-            .pb-markdown { background: #0a0a10; padding: 16px; border-radius: 6px; color: #ddd; font-family: ui-monospace, monospace; font-size: 0.78rem; line-height: 1.6; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; border: 1px solid rgba(255,255,255,0.06); }
+            .pb-markdown { background: var(--bg-panel); padding: 16px; border-radius: 6px; color: #ddd; font-family: ui-monospace, monospace; font-size: 0.78rem; line-height: 1.6; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; border: 1px solid var(--border-default); }
         </style>`;
     }
 

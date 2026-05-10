@@ -336,7 +336,7 @@ export default class DashboardView {
             .dash-form-group { margin-bottom: 14px; }
             .dash-form-label { display: block; font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 5px; }
             .dash-form-input {
-                width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border);
+                width: 100%; background: var(--bg-elevated); border: 1px solid var(--glass-border);
                 color: var(--text-main); padding: 10px 12px; border-radius: var(--radius-md);
                 font-family: var(--font-base); font-size: var(--text-sm); outline: none;
                 transition: border-color var(--duration-fast); box-sizing: border-box;

@@ -161,7 +161,7 @@ export default class MatriuNetworkView {
             return `<div class="mn-no-results">
                 <div style="font-size:2rem;">🔍</div>
                 <p>Cap membre coincideix amb els filtres.</p>
-                ${this.seats.length === 0 ? '<p style="color:#888;font-size:0.85rem;">Encara no hi ha plaçes registrades · ves a un projecte i clica "⚡ Seed 5 plaçes demo" al panel de l\'enjambre.</p>' : ''}
+                ${this.seats.length === 0 ? '<p style="color:var(--text-muted);font-size:0.85rem;">Encara no hi ha plaçes registrades · ves a un projecte i clica "⚡ Seed 5 plaçes demo" al panel de l\'enjambre.</p>' : ''}
             </div>`;
         }
         return filtered.map(s => this._renderSeatCard(s)).join('');
@@ -209,7 +209,7 @@ export default class MatriuNetworkView {
                     <div class="mn-card-projects">
                         <span class="mn-projects-label">Projectes:</span>
                         ${projects.slice(0, 3).map(p => `<a href="/project/${encodeURIComponent(p.id)}" data-link class="mn-project-pill">${escapeHtml(p.nombre || p.name || p.id.slice(-12))}</a>`).join('')}
-                        ${projects.length > 3 ? `<span style="color:#666;font-size:0.7rem;">+${projects.length - 3}</span>` : ''}
+                        ${projects.length > 3 ? `<span style="color:var(--text-muted);font-size:0.7rem;">+${projects.length - 3}</span>` : ''}
                     </div>
                 ` : ''}
             </article>
@@ -315,10 +315,10 @@ export default class MatriuNetworkView {
             .mn-card { background: rgba(255,255,255,0.65); border: 1px solid rgba(42,58,42,0.15); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.15s, box-shadow 0.15s, background 0.15s; }
             .mn-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(42,58,42,0.12); background: #fff; }
             .mn-card-head { display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; padding-bottom: 8px; border-bottom: 2px solid var(--mn-g, rgba(42,58,42,0.15)); }
-            .mn-card-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-family: 'Inter Tight', sans-serif; font-weight: 700; font-size: 1.05rem; flex-shrink: 0; }
+            .mn-card-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-main); font-family: 'Inter Tight', sans-serif; font-weight: 700; font-size: 1.05rem; flex-shrink: 0; }
             .mn-card-id { min-width: 0; }
             .mn-card-name { font-size: 1.15rem; color: #2a3a2a; line-height: 1.2; }
-            .mn-card-handle { font-family: ui-monospace, monospace; font-size: 0.72rem; color: #888; margin-top: 2px; word-break: break-all; }
+            .mn-card-handle { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; word-break: break-all; }
             .mn-card-guardian { padding: 3px 9px; border-radius: 99px; font-family: ui-monospace, monospace; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid; white-space: nowrap; align-self: start; }
 
             .mn-card-bio { color: #3a4a3a; font-size: 0.85rem; line-height: 1.55; opacity: 0.9; margin: 0; }
@@ -326,14 +326,14 @@ export default class MatriuNetworkView {
             .mn-skill { background: rgba(42,58,42,0.06); color: #2a3a2a; padding: 3px 9px; border-radius: 99px; font-family: ui-monospace, monospace; font-size: 0.7rem; }
             .mn-skill-more { background: rgba(194,90,58,0.12); color: #c25a3a; }
             .mn-card-sectors { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
-            .mn-sectors-label { font-family: monospace; font-size: 0.7rem; color: #888; }
+            .mn-sectors-label { font-family: monospace; font-size: 0.7rem; color: var(--text-muted); }
             .mn-sector-pill { background: rgba(90,110,79,0.18); color: #2a3a2a; border: 1px solid rgba(90,110,79,0.4); padding: 2px 7px; border-radius: 99px; font-family: ui-monospace, monospace; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; }
 
             .mn-card-foot { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid rgba(42,58,42,0.08); font-family: ui-monospace, monospace; font-size: 0.74rem; color: #5a6e4f; }
             .mn-foot-item { display: inline-flex; align-items: center; gap: 4px; }
 
             .mn-card-projects { padding-top: 6px; border-top: 1px dashed rgba(42,58,42,0.1); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-            .mn-projects-label { font-family: monospace; font-size: 0.7rem; color: #888; }
+            .mn-projects-label { font-family: monospace; font-size: 0.7rem; color: var(--text-muted); }
             .mn-project-pill { background: rgba(194,90,58,0.1); color: #c25a3a; padding: 3px 9px; border-radius: 99px; font-size: 0.74rem; text-decoration: none; border: 1px solid rgba(194,90,58,0.25); transition: background 0.15s; }
             .mn-project-pill:hover { background: rgba(194,90,58,0.2); }
 
@@ -345,10 +345,10 @@ export default class MatriuNetworkView {
             .mn-empty-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
             .mn-empty-slot { background: rgba(255,255,255,0.4); border: 2px dashed rgba(42,58,42,0.2); border-radius: 10px; padding: 18px 14px; display: flex; flex-direction: column; align-items: center; gap: 10px; transition: border-color 0.15s, background 0.15s; }
             .mn-empty-slot:hover { border-color: #c25a3a; background: rgba(255,255,255,0.7); }
-            .mn-empty-num { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.5rem; color: #888; }
+            .mn-empty-num { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.5rem; color: var(--text-muted); }
             .mn-empty-cta { background: #1a1f1a; color: #f1ebde; padding: 6px 14px; border-radius: 99px; font-size: 0.76rem; font-weight: 600; text-decoration: none; transition: transform 0.15s; }
             .mn-empty-cta:hover { transform: translateY(-1px); }
-            .mn-empty-more { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; color: #888; align-items: center; justify-content: center; }
+            .mn-empty-more { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; color: var(--text-muted); align-items: center; justify-content: center; }
         </style>`;
     }
 

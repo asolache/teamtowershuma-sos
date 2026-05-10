@@ -155,70 +155,70 @@ export default class SkillsExplorerView {
 
     _renderStyle() {
         return `<style>
-            .se-shell { background: #050507; color: #e6e6e6; min-height: 100%; font-family: var(--font-base, sans-serif); display: flex; flex-direction: column; }
+            .se-shell { background: var(--bg-dark); color: var(--text-main); min-height: 100%; font-family: var(--font-base, sans-serif); display: flex; flex-direction: column; }
             .se-topbar { display: flex; align-items: center; gap: 1rem; padding: 14px 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap; flex-shrink: 0; position: sticky; top: 0; background: rgba(5,5,7,0.95); backdrop-filter: blur(8px); z-index: 10; }
-            .se-logo { font-family: monospace; color: #888; text-decoration: none; font-size: 0.78rem; }
+            .se-logo { font-family: monospace; color: var(--text-muted); text-decoration: none; font-size: 0.78rem; }
             .se-logo span { color: #6366f1; font-weight: 700; }
-            .se-title { color: #aaa; font-size: 0.86rem; display: inline-flex; align-items: center; gap: 6px; }
+            .se-title { color: var(--text-secondary); font-size: 0.86rem; display: inline-flex; align-items: center; gap: 6px; }
             .se-spacer { flex: 1; }
-            .se-link { color: #888; text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; }
-            .se-link:hover { background: rgba(255,255,255,0.06); color: #fff; }
+            .se-link { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; }
+            .se-link:hover { background: var(--glass-hover); color: var(--text-main); }
 
             .se-main { flex: 1; padding: clamp(20px, 4vw, 36px); max-width: 1280px; margin: 0 auto; width: 100%; box-sizing: border-box; overflow-y: auto; }
 
             .se-hero { margin-bottom: 24px; padding: 24px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
-            .se-hero h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); color: #fff; line-height: 1.05; margin-bottom: 6px; }
-            .se-hero-sub { color: #aaa; font-size: 0.92rem; max-width: 760px; line-height: 1.55; margin-bottom: 18px; }
+            .se-hero h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); color: var(--text-main); line-height: 1.05; margin-bottom: 6px; }
+            .se-hero-sub { color: var(--text-secondary); font-size: 0.92rem; max-width: 760px; line-height: 1.55; margin-bottom: 18px; }
 
             .se-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-            .se-stat { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid var(--se-c); border-radius: 8px; padding: 12px 14px; text-align: left; cursor: pointer; transition: background 0.15s, transform 0.15s; color: inherit; font-family: inherit; }
-            .se-stat:hover { background: rgba(255,255,255,0.06); transform: translateY(-1px); }
+            .se-stat { background: var(--glass-hover); border: 1px solid var(--border-default); border-left: 3px solid var(--se-c); border-radius: 8px; padding: 12px 14px; text-align: left; cursor: pointer; transition: background 0.15s, transform 0.15s; color: inherit; font-family: inherit; }
+            .se-stat:hover { background: var(--glass-hover); transform: translateY(-1px); }
             .se-stat.is-active { background: rgba(255,255,255,0.1); border-color: var(--se-c); box-shadow: 0 0 0 2px var(--se-c); }
             .se-stat-icon { font-size: 1.2rem; }
-            .se-stat-label { font-family: monospace; font-size: 0.7rem; color: #aaa; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 4px; }
-            .se-stat-value { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.6rem; color: #fff; line-height: 1; margin-top: 4px; }
+            .se-stat-label { font-family: monospace; font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 0.05em; text-transform: uppercase; margin-top: 4px; }
+            .se-stat-value { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.6rem; color: var(--text-main); line-height: 1; margin-top: 4px; }
 
             .se-filters { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 8px; margin: 18px 0; }
             @media (max-width: 880px) { .se-filters { grid-template-columns: 1fr 1fr; } }
-            .se-input { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 10px 12px; border-radius: 6px; font-size: 0.88rem; outline: none; font-family: inherit; transition: border-color 0.15s; }
+            .se-input { background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-main); padding: 10px 12px; border-radius: 6px; font-size: 0.88rem; outline: none; font-family: inherit; transition: border-color 0.15s; }
             .se-input:focus { border-color: #c084fc; }
 
-            .se-results-meta { font-family: monospace; font-size: 0.78rem; color: #888; margin-bottom: 12px; }
+            .se-results-meta { font-family: monospace; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px; }
 
             .se-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
 
-            .se-card { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid var(--se-c, #888); border-radius: 8px; padding: 14px 16px; transition: background 0.15s, transform 0.15s; }
-            .se-card:hover { background: rgba(255,255,255,0.05); transform: translateY(-2px); }
+            .se-card { background: var(--bg-panel); border: 1px solid var(--border-default); border-left: 3px solid var(--se-c, var(--text-muted)); border-radius: var(--radius-md); padding: 14px 16px; transition: background var(--dur-fast), transform var(--dur-fast); box-shadow: var(--shadow-sm); }
+            .se-card:hover { background: var(--glass-hover); transform: translateY(-1px); }
             .se-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
             .se-card-id { font-family: ui-monospace, monospace; font-size: 0.74rem; color: #c084fc; }
-            .se-card-tier { font-family: ui-monospace, monospace; font-size: 0.62rem; padding: 2px 6px; border-radius: 99px; background: rgba(255,255,255,0.06); color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; }
-            .se-card-label { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.15rem; color: #fff; line-height: 1.2; margin-bottom: 8px; }
+            .se-card-tier { font-family: ui-monospace, monospace; font-size: 0.62rem; padding: 2px 6px; border-radius: 99px; background: var(--glass-hover); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+            .se-card-label { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.15rem; color: var(--text-main); line-height: 1.2; margin-bottom: 8px; }
             .se-card-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-            .se-card-pill { font-family: ui-monospace, monospace; font-size: 0.65rem; padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,0.06); color: #aaa; }
+            .se-card-pill { font-family: ui-monospace, monospace; font-size: 0.65rem; padding: 2px 8px; border-radius: 99px; background: var(--glass-hover); color: var(--text-secondary); }
             .se-card-pill.cat { color: var(--se-c); border: 1px solid var(--se-c); background: transparent; }
             .se-card-pill.guardian { background: var(--se-g, #888)22; color: var(--se-g); border: 1px solid var(--se-g); }
             .se-card-pill.aud { background: rgba(168,85,247,0.12); color: #c4b5fd; }
-            .se-card-desc { font-size: 0.84rem; color: #aaa; line-height: 1.55; margin-bottom: 8px; }
-            .se-card-pt { display: flex; gap: 4px; flex-wrap: wrap; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 0.72rem; color: #666; }
+            .se-card-desc { font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin-bottom: 8px; }
+            .se-card-pt { display: flex; gap: 4px; flex-wrap: wrap; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 0.72rem; color: var(--text-muted); }
             .se-card-pt-label { font-family: monospace; opacity: 0.7; }
             .se-card-pt-pill { font-family: monospace; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; background: rgba(99,102,241,0.1); color: #a5b4fc; }
 
-            .se-no-results { color: #666; padding: 3rem; text-align: center; font-style: italic; grid-column: 1 / -1; }
+            .se-no-results { color: var(--text-muted); padding: 3rem; text-align: center; font-style: italic; grid-column: 1 / -1; }
 
             .se-section { margin-top: 48px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,0.06); }
-            .se-section h2 { color: #fff; font-size: 1.2rem; margin-bottom: 8px; }
-            .se-section-sub { color: #888; font-size: 0.88rem; max-width: 720px; line-height: 1.55; margin-bottom: 18px; }
+            .se-section h2 { color: var(--text-main); font-size: 1.2rem; margin-bottom: 8px; }
+            .se-section-sub { color: var(--text-muted); font-size: 0.88rem; max-width: 720px; line-height: 1.55; margin-bottom: 18px; }
 
             .se-guardians-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-            .se-guardian-card { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid var(--se-c); border-radius: 8px; padding: 14px 16px; }
+            .se-guardian-card { background: rgba(255,255,255,0.025); border: 1px solid var(--border-default); border-top: 3px solid var(--se-c); border-radius: 8px; padding: 14px 16px; }
             .se-guardian-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
             .se-guardian-name { color: var(--se-c); font-size: 1.4rem; }
-            .se-guardian-domain { font-family: monospace; font-size: 0.7rem; color: #666; text-transform: uppercase; }
-            .se-guardian-intang { font-size: 0.92rem; color: #fff; margin-bottom: 4px; }
-            .se-guardian-secondary { color: #aaa; font-size: 0.82rem; line-height: 1.55; margin-bottom: 4px; }
-            .se-guardian-recogn { color: #666; font-size: 0.75rem; line-height: 1.5; font-style: italic; margin-bottom: 8px; }
+            .se-guardian-domain { font-family: monospace; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; }
+            .se-guardian-intang { font-size: 0.92rem; color: var(--text-main); margin-bottom: 4px; }
+            .se-guardian-secondary { color: var(--text-secondary); font-size: 0.82rem; line-height: 1.55; margin-bottom: 4px; }
+            .se-guardian-recogn { color: var(--text-muted); font-size: 0.75rem; line-height: 1.5; font-style: italic; margin-bottom: 8px; }
             .se-guardian-skills { padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.06); display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; }
-            .se-guardian-skills-label { font-family: monospace; font-size: 0.7rem; color: #888; }
+            .se-guardian-skills-label { font-family: monospace; font-size: 0.7rem; color: var(--text-muted); }
             .se-skill-pill { font-family: monospace; font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; background: rgba(192,132,252,0.12); color: #c084fc; text-decoration: none; }
             .se-skill-pill:hover { background: rgba(192,132,252,0.24); }
         </style>`;
