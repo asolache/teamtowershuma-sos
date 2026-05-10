@@ -416,25 +416,185 @@ const STRINGS = {
         'settings.back':      '← Inicio',
         'settings.lang':      'Idioma',
     },
+
+    // ── UX-AUDIT-001 sprint D · CA (Català · Matriu cohort 0) ──────────────
+    // Traducció de les keys més visibles · app.* · dash.* · settings.* · vmap.*
+    // Les keys no incloses cauen a ES (fallback chain ca → es → en).
+    ca: {
+        // ── App shell ──────────────────────────────────────────────────────
+        'app.name':           'TeamTowers',
+        'app.version':        'SOS V11',
+        'app.back':           '← Inici',
+        'app.settings':       'Configuració',
+        'app.save':           'Desar',
+        'app.saving':         'Desant…',
+        'app.saved':          'Desat',
+        'app.error':          'Error',
+        'app.cancel':         'Cancel·lar',
+        'app.confirm':        'Confirmar',
+        'app.delete':         'Eliminar',
+        'app.edit':           'Editar',
+        'app.add':            'Afegir',
+        'app.close':          'Tancar',
+        'app.loading':        'Carregant…',
+
+        // ── Dashboard ──────────────────────────────────────────────────────
+        'dash.title':         'Panell de Mapes de Valor',
+        'dash.new':           '+ Nou Projecte',
+        'dash.kb':            'Base de Coneixement',
+        'dash.settings':      'Configuració',
+        'dash.stat.projects': 'Projectes',
+        'dash.stat.roles':    'Rols totals',
+        'dash.stat.txs':      'Transaccions',
+        'dash.empty.title':   'Encara no hi ha mapes de valor.',
+        'dash.empty.sub':     'Prem "+ Nou Projecte" per començar.',
+        'dash.card.roles':    'rols',
+        'dash.card.txs':      'transaccions',
+        'dash.card.health':   'salut',
+        'dash.card.empty':    'buit',
+        'dash.card.archive':  'Arxivar',
+        'dash.card.new':      'Nou projecte',
+        'dash.group.general': 'General',
+        'dash.hero.sub.empty':'Cap projecte — crea el teu primer mapa de valor',
+        'dash.hero.sub.many': 'projectes actius · ordenats per sector',
+        'dash.hero.sub.one':  'projecte actiu',
+
+        'dash.modal.title':   'Nou projecte',
+        'dash.modal.sub':     'Crea un nou mapa de xarxa de valor',
+        'dash.modal.name':    'Nom del projecte *',
+        'dash.modal.name.ph': 'ex. ACME Corp · VNA 2025',
+        'dash.modal.sector':  'Sector (opcional)',
+        'dash.modal.sector.ph':'— Tria sector —',
+        'dash.modal.create':  'Crear i obrir mapa',
+
+        'dash.kb.title':      'Base de Coneixement',
+        'dash.kb.hint':       'Fes clic a un sector per veure els seus rols',
+        'dash.kb.ready':      'llest',
+        'dash.kb.tier2':      'tier 2',
+        'dash.kb.tier2.msg':  'Sector no carregat — es generarà amb IA quan calgui.',
+        'dash.kb.txs':        'Transaccions clau',
+        'dash.kb.more':       'transaccions més',
+
+        // ── ValueMapView ───────────────────────────────────────────────────
+        'vmap.title':         'Mapa de Valor',
+        'vmap.no.project':    'Sense projecte',
+        'vmap.fit':           'Ajustar',
+        'vmap.reset':         'Reorganitzar',
+        'vmap.save':          'Desar',
+        'vmap.suggest':       '✦ Suggerir amb IA',
+        'vmap.roles':         'Rols',
+        'vmap.transactions':  'Transaccions',
+        'vmap.new.role':      '+ Nou rol',
+        'vmap.new.tx':        '+ Nova transacció',
+
+        'vmap.mode.title':    'Nou mapa de valor',
+        'vmap.mode.sub':      'Com vols començar?',
+        'vmap.mode.blank':    'Des de zero',
+        'vmap.mode.blank.desc':'Canvas buit. Dibuixa cada rol i transacció manualment.',
+        'vmap.mode.sector':   'Des de sector',
+        'vmap.mode.sector.desc':'Carrega rols i transaccions típiques del sector com a punt de partida.',
+        'vmap.mode.sector.ph':'Tria sector…',
+
+        'vmap.zoom.in':       'Zoom +',
+        'vmap.zoom.out':      'Zoom -',
+        'vmap.undo':          'Desfer',
+        'vmap.redo':          'Refer',
+        'vmap.legend':        'Llegenda',
+
+        'level.pinya':        'Base operativa',
+        'level.tronc':        'Nucli de valor',
+        'level.pom':          'Cúspide estratègica',
+        'level.pinya.tip':    'pinya — el fonament que ho sosté tot',
+        'level.tronc.tip':    'tronc — on es genera i transforma el valor',
+        'level.pom.tip':      'pom de dalt — qui defineix el rumb i rep el resultat',
+
+        'insp.empty':         'Selecciona un rol\no transacció\nper veure el detall',
+        'insp.level':         'Nivell',
+        'insp.desc':          'Descripció',
+        'insp.actor':         'Actor típic',
+        'insp.txs':           'Transaccions',
+        'insp.tx.in':         'entrants',
+        'insp.tx.out':        'sortints',
+        'insp.incomplete':    'Flux incomplet — afegeix transaccions',
+        'insp.type':          'Tipus',
+        'insp.flow':          'Flux',
+        'insp.hint':          'Senyal d\'alerta',
+        'insp.ego':           '◎ Vista ego',
+        'insp.add.tx':        '+ Afegir transacció',
+        'insp.del.role':      '✕ Eliminar rol',
+        'insp.edit.tx':       '✏ Editar transacció',
+        'insp.del.tx':        '✕ Eliminar',
+        'insp.health.ok':     'Saludable',
+        'insp.health.warn':   'Atenció',
+        'insp.health.crit':   'Crític',
+
+        'save.saving':        'Desant…',
+        'save.ok':            '✅ Desat',
+        'save.error':         '❌ Error',
+
+        'settings.title':     'Configuració · Vault',
+        'settings.sub':       'API Keys · Motor IA · IndexedDB (zero localStorage)',
+        'settings.engine':    'Motor primari',
+        'settings.key.ant':   'Anthropic API Key',
+        'settings.key.ant.hint':'(primari · via proxy Netlify)',
+        'settings.save':      'Desar al KB',
+        'settings.saving':    'Desant…',
+        'settings.saved':     'Desat',
+        'settings.danger':    'Zona de perill',
+        'settings.purge':     'Purgar IndexedDB',
+        'settings.purge.confirm': 'Purgar tota la IndexedDB? Això esborra API Keys i estat.',
+        'settings.purged':    'Purgat. Recarregant…',
+        'settings.back':      '← Inici',
+        'settings.lang':      'Idioma',
+
+        'ego.banner':         'Vista ego:',
+        'ego.back':           '← Veure xarxa completa',
+
+        'ai.panel.title':     'Suggerir amb IA',
+        'ai.prompt.label':    'Descriu l\'organització',
+        'ai.no.key':          'Sense API Key — configura a Configuració',
+        'ai.no.results':      'La IA no ha tornat propostes. Prova amb més context.',
+        'ai.retry':           '↺ Tornar a generar',
+        'ai.accept':          '✓ Acceptar',
+        'ai.edit':            '✏ Editar',
+        'ai.reject':          '✕',
+        'ai.generate':        '✦ Generar mapa de valor',
+        'ai.completing':      'Completant el mapa…',
+        'ai.generating':      'Generant mapa de valor…',
+        'ai.enriching':       'Enriquint context amb la base de coneixement…',
+        'ai.calling':         'Cridant Anthropic…',
+        'ai.processing':      'Processant resposta…',
+        'ai.bulk':            '✓ Acceptar tots els pendents',
+        'ai.roles.title':     'Rols suggerits',
+        'ai.txs.title':       'Transaccions suggerides',
+        'ai.roles.2min':      'Necessites com a mínim 2 rols per crear una transacció.',
+    },
 };
 
 // ─── API pública ──────────────────────────────────────────────────────────────
 
-/** Traduce una clave. Si no existe, devuelve la clave como fallback. */
+// UX-AUDIT-001 sprint D · 3 idiomes suportats · default ES.
+export const SUPPORTED_LANGS = Object.freeze(['ca', 'es', 'en']);
+const DEFAULT_LANG = 'es';
+
+/** Traduce una clave amb fallback chain: lang → es → en → key */
 export function t(key) {
     const lang = getLang();
-    const dict = STRINGS[lang] || STRINGS['en'];
-    return dict[key] !== undefined ? dict[key] : (STRINGS['en'][key] || key);
+    const dict = STRINGS[lang] || STRINGS[DEFAULT_LANG];
+    if (dict[key] !== undefined) return dict[key];
+    if (lang !== 'es' && STRINGS['es'][key] !== undefined) return STRINGS['es'][key];
+    if (lang !== 'en' && STRINGS['en'][key] !== undefined) return STRINGS['en'][key];
+    return key;
 }
 
-/** Devuelve el idioma activo ('en' | 'es'). */
+/** Devuelve el idioma activo ('ca' | 'es' | 'en'). */
 export function getLang() {
-    return window.__lang || 'en';
+    return window.__lang || DEFAULT_LANG;
 }
 
 /** Cambia el idioma, persiste en KB y recarga la vista activa. */
 export async function setLang(lang) {
-    if (lang !== 'en' && lang !== 'es') return;
+    if (!SUPPORTED_LANGS.includes(lang)) return;
     window.__lang = lang;
 
     // Persistir en KB (sin bloquear si KB no está lista)
@@ -458,17 +618,37 @@ export async function initLang() {
         const { KB } = await import('./core/kb.js');
         await KB.init();
         const node = await KB.getNode('sos_lang');
-        window.__lang = (node && node.value) ? node.value : 'en';
+        const v = node && node.value;
+        window.__lang = SUPPORTED_LANGS.includes(v) ? v : DEFAULT_LANG;
     } catch (_) {
-        window.__lang = 'en';
+        window.__lang = DEFAULT_LANG;
     }
 }
 
-/** Genera el HTML del selector EN/ES para insertar en cualquier topbar. */
+// Labels per al selector · UX-AUDIT-001 sprint D
+const LANG_LABELS = Object.freeze({
+    ca: { code: 'CA', name: 'Català' },
+    es: { code: 'ES', name: 'Español' },
+    en: { code: 'EN', name: 'English' },
+});
+
+/** Genera el HTML del selector CA/ES/EN per inserir a qualsevol topbar. */
 export function langSelectorHtml() {
     const lang = getLang();
-    return '<div style="display:flex;gap:2px;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:2px;">' +
-        '<button onclick="window.__setLang(\'en\')" style="background:' + (lang === 'en' ? 'var(--accent-indigo)' : 'transparent') + ';border:none;color:' + (lang === 'en' ? 'white' : 'var(--text-muted)') + ';padding:3px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;font-family:var(--font-mono);transition:all 0.15s;">EN</button>' +
-        '<button onclick="window.__setLang(\'es\')" style="background:' + (lang === 'es' ? 'var(--accent-indigo)' : 'transparent') + ';border:none;color:' + (lang === 'es' ? 'white' : 'var(--text-muted)') + ';padding:3px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;font-family:var(--font-mono);transition:all 0.15s;">ES</button>' +
-    '</div>';
+    const btns = SUPPORTED_LANGS.map(function(code) {
+        const meta = LANG_LABELS[code];
+        const isActive = lang === code;
+        const bg = isActive ? 'var(--accent-indigo)' : 'transparent';
+        const fg = isActive ? '#fff' : 'var(--text-muted)';
+        return '<button onclick="window.__setLang(\'' + code + '\')" '
+            + 'title="' + meta.name + '" '
+            + 'aria-pressed="' + isActive + '" '
+            + 'style="background:' + bg + ';border:none;color:' + fg
+            + ';padding:4px 10px;border-radius:4px;cursor:pointer;'
+            + 'font-size:10px;font-weight:600;font-family:var(--font-mono);'
+            + 'transition:all var(--dur-fast,120ms);letter-spacing:0.05em;">'
+            + meta.code + '</button>';
+    }).join('');
+    return '<div style="display:flex;gap:2px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:2px;">'
+        + btns + '</div>';
 }

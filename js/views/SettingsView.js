@@ -242,6 +242,16 @@ export default class SettingsView {
                 <div id="svManifestoStatus" class="sv-test-result"></div>
             </div>
 
+            <div class="sv-card" style="border-top:3px solid #06b6d4;">
+                <h3 style="color:#06b6d4;margin-top:0;">🌐 Idioma · llengua de la interfície</h3>
+                <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.6;margin-top:0;">
+                    UX-AUDIT-001 sprint D · 3 idiomes suportats · default <strong>ES (Español)</strong>
+                    · <strong>CA (Català)</strong> per la Matriu cohort 0 · <strong>EN</strong>
+                    per a la xarxa ampliada. Persisteix al KB · al canviar es recarrega la vista activa.
+                </p>
+                <div id="settLangSel" style="margin-top:14px;"></div>
+            </div>
+
             <div class="sv-card" style="border-top:3px solid #fbbf24;">
                 <h3 style="color:#fbbf24;margin-top:0;">🎨 Aspecte · tema visual</h3>
                 <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.6;margin-top:0;">
