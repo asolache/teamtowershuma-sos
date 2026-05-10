@@ -2422,6 +2422,19 @@ Pendent Sprint H+: refinaments puntuals si apareixen regressions (Matriu skin vi
 
 Pendents Sprint C2: editor inline de skills/sectors/availability directament al panell del membre (ara redirigeix a `/identity` per editar).
 
+### Sprint E entregat 2026-05-10 · Revisió tipogràfica menús + WCAG AA verificat
+
+| Fix | Detall |
+|---|---|
+| **NAV_GROUP_CSS reescrit Linear-style** | `navService.js` · dropdown menus migrats a vars · `min-width:220px` + `max-width:280px` (era `min-width:200px` sense max) · padding items 8px 12px (era 6px 10px) · `text-overflow:ellipsis` per truncar labels llargs · `grid-template-columns: 22px 1fr` per alinear icones com a columna fixa · animation `sosNavMenuIn` (fade + translateY) al obrir · `box-shadow:var(--shadow-lg)` adaptatiu · `:focus-visible` outline indigo per teclat · indicador d'item actiu amb `::before` pill indigo de 2px a l'esquerra + `font-weight:600` + `aria-current="page"` semantic. |
+| **`sos-nav-active` class estable** | `renderNavGroupedHtml` afegeix classe `sos-nav-active` (a més del activeClass custom passat per la view) · permet styling consistent independent del view · KanbanView usa `kb-link-active` però segueix obtenint el visual styling correcte via la classe estable. `aria-current="page"` també s'afegeix per accessibilitat. |
+| **`.sos-nav-group > button` minimal** | Eliminades overrides agressives que entraven en conflicte amb `dash-btn`/`kb-link`/etc · ara només afegeix `gap:6px` per al chevron · `:focus-visible` indigo ring · `aria-expanded="true"` → color indigo + border indigo. La className passada pel view controla la resta. |
+| **BREADCRUMB_CSS migrat a vars** | Background `#06060a` → `var(--bg-panel)` · border `#1a1a22` → `var(--border-subtle)` · text `#888` → `var(--text-muted)` · links `#a5b4fc` → `var(--accent-indigo)` amb hover `bg:rgba(99,102,241,0.10)` · current `#fff` → `var(--text-main)` · separator `#444` → `var(--text-disabled)` amb opacity 0.6 · phase pill `--text-xs` font + `letter-spacing:0.06em` + `text-transform:uppercase` per look Linear. |
+| **Typo cleanup `var(--duration-*)` → `var(--dur-*)`** | Sed batch · 15+ ocurrències a ValueMapView · DashboardView · altres. Les transicions/animations ara funcionen amb les vars correctes definides a tokens.css (eren no-op silencioses · ara són correctes). `var(--accent-gold)` (no existent) → `var(--accent-claude)` (definit). |
+| **DashboardView dash-btn polit** | Padding `5px 14px` → `6px 12px` · font-weight `700` → `600` (Linear feel) · hover ara amb `background:var(--glass-hover)` per feedback més clar · `:focus-visible` outline indigo · `dash-btn-primary` color fix a `#fff` (era `text-main` que en light feia text negre sobre bg indigo). |
+
+Pendents Sprint E+: auditoria visual als breakpoints mòbil (testejar dropdowns < 720px) · subtitles sota labels al dropdown (KM-001 sprint D backlog) · tooltips amb framework propi per a hints llargs.
+
 
 ---
 
