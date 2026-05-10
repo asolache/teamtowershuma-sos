@@ -103,46 +103,46 @@ export default class WorkshopsView {
     async getHtml() {
         return `
         <style>
-            .ws-shell      { height:100dvh; background:var(--bg-0,#050507); color:#e6e6e6; font-family:var(--font-sans,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .ws-topbar     { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; }
-            .ws-logo       { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
+            .ws-shell      { height:100dvh; background:var(--bg-0,#050507); color:var(--text-main); font-family:var(--font-sans,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .ws-topbar     { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
+            .ws-logo       { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
             .ws-logo span  { color:#6366f1; }
-            .ws-title      { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.8rem; }
+            .ws-title      { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.8rem; }
             .ws-spacer     { flex:1; }
-            .ws-btn        { background:#1a1a22; color:#e6e6e6; border:1px solid #2a2a35; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem; }
-            .ws-btn:hover  { background:#22222d; }
-            .ws-btn-primary{ background:#6366f1; border-color:#6366f1; color:#fff; }
+            .ws-btn        { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem; }
+            .ws-btn:hover  { background:var(--bg-elevated); }
+            .ws-btn-primary{ background:#6366f1; border-color:#6366f1; color:var(--text-main); }
             .ws-btn-primary:hover { background:#4f46e5; }
             .ws-link       { color:#6366f1; text-decoration:none; }
 
             .ws-main       { padding:1.5rem; max-width:1200px; margin:0 auto; flex:1; overflow-y:auto; overflow-x:hidden; width:100%; }
             .ws-stats      { display:flex; gap:1rem; margin-bottom:2rem; flex-wrap:wrap; }
-            .ws-stat       { background:#0e0e14; border:1px solid #1a1a22; border-radius:8px; padding:0.85rem 1.1rem; min-width:130px; }
-            .ws-stat-num   { font-size:1.6rem; font-weight:700; color:#fff; line-height:1; }
-            .ws-stat-lbl   { color:#888; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; margin-top:0.4rem; }
+            .ws-stat       { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:8px; padding:0.85rem 1.1rem; min-width:130px; }
+            .ws-stat-num   { font-size:1.6rem; font-weight:700; color:var(--text-main); line-height:1; }
+            .ws-stat-lbl   { color:var(--text-muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; margin-top:0.4rem; }
 
             .ws-section    { margin-bottom:2rem; }
-            .ws-section-h  { color:#aaa; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.6rem; display:flex; align-items:center; gap:0.5rem; }
-            .ws-section-h .ws-pill { background:#1a1a22; padding:2px 8px; border-radius:10px; font-size:0.7rem; color:#bbb; }
+            .ws-section-h  { color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.6rem; display:flex; align-items:center; gap:0.5rem; }
+            .ws-section-h .ws-pill { background:var(--bg-elevated); padding:2px 8px; border-radius:10px; font-size:0.7rem; color:var(--text-secondary); }
 
             .ws-grid       { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1rem; }
-            .ws-card       { background:#0e0e14; border:1px solid #1a1a22; border-left:3px solid var(--accent,#6366f1); border-radius:8px; padding:1rem; display:flex; flex-direction:column; gap:0.5rem; }
-            .ws-card h4    { margin:0; color:#fff; font-size:1rem; }
-            .ws-card .meta { color:#888; font-size:0.78rem; }
+            .ws-card       { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid var(--accent,#6366f1); border-radius:8px; padding:1rem; display:flex; flex-direction:column; gap:0.5rem; }
+            .ws-card h4    { margin:0; color:var(--text-main); font-size:1rem; }
+            .ws-card .meta { color:var(--text-muted); font-size:0.78rem; }
             .ws-card .row  { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
-            .ws-card .row label { color:#888; font-size:0.7rem; min-width:60px; }
-            .ws-card select{ background:#1a1a22; color:#e6e6e6; border:1px solid #2a2a35; border-radius:5px; padding:3px 6px; font-size:0.78rem; }
-            .ws-card .actions { display:flex; gap:0.4rem; margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid #1a1a22; }
+            .ws-card .row label { color:var(--text-muted); font-size:0.7rem; min-width:60px; }
+            .ws-card select{ background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); border-radius:5px; padding:3px 6px; font-size:0.78rem; }
+            .ws-card .actions { display:flex; gap:0.4rem; margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border-default); }
             .ws-card .actions button { font-size:0.72rem; padding:0.3rem 0.6rem; }
             .ws-card .actions .danger { color:#ff5252; }
 
-            .ws-empty      { text-align:center; padding:3rem 1rem; color:#666; border:1px dashed #2a2a35; border-radius:8px; }
+            .ws-empty      { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed #2a2a35; border-radius:8px; }
 
             .ws-modal      { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:1000; }
-            .ws-modal-inner{ background:#0e0e14; border:1px solid #2a2a35; border-radius:12px; padding:1.5rem; width:90%; max-width:480px; }
-            .ws-modal h3   { margin:0 0 1rem 0; color:#fff; }
-            .ws-modal label{ display:block; color:#aaa; font-size:0.78rem; margin-top:0.7rem; margin-bottom:0.25rem; }
-            .ws-modal input, .ws-modal select, .ws-modal textarea { width:100%; box-sizing:border-box; background:#050507; color:#e6e6e6; border:1px solid #2a2a35; border-radius:5px; padding:0.5rem; font-size:0.85rem; font-family:inherit; }
+            .ws-modal-inner{ background:var(--bg-panel); border:1px solid var(--border-default); border-radius:12px; padding:1.5rem; width:90%; max-width:480px; }
+            .ws-modal h3   { margin:0 0 1rem 0; color:var(--text-main); }
+            .ws-modal label{ display:block; color:var(--text-secondary); font-size:0.78rem; margin-top:0.7rem; margin-bottom:0.25rem; }
+            .ws-modal input, .ws-modal select, .ws-modal textarea { width:100%; box-sizing:border-box; background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); border-radius:5px; padding:0.5rem; font-size:0.85rem; font-family:inherit; }
             .ws-modal textarea { min-height:70px; resize:vertical; }
             .ws-modal .actions { display:flex; gap:0.6rem; justify-content:flex-end; margin-top:1.2rem; }
         </style>
@@ -284,7 +284,7 @@ export default class WorkshopsView {
                 <div class="meta">${this._esc(svc.label)}</div>
                 <div class="meta">${this._esc(c.sector || '—')} · ${audSize}</div>
                 <div class="meta">📅 ${fmtDate(c.date)}</div>
-                ${c.notes ? `<div class="meta" style="color:#aaa;">${this._esc(c.notes)}</div>` : ''}
+                ${c.notes ? `<div class="meta" style="color:var(--text-secondary);">${this._esc(c.notes)}</div>` : ''}
                 ${c.proposalDeliverableId ? `<div class="meta" style="color:#22c55e;">📄 propuesta generada</div>` : ''}
                 ${c.reportDeliverableId   ? `<div class="meta" style="color:#22c55e;">📋 informe post-taller listo</div>` : ''}
                 <div class="row">
@@ -400,17 +400,17 @@ export default class WorkshopsView {
         let body;
         if (payload.state === 'loading') {
             body = `
-                <p style="color:#aaa;">Construyendo contexto SOC + SOP + datos del taller…</p>
-                <p style="color:#666; font-size:0.8rem;">Llamando al LLM. Puede tardar 5-15 segundos.</p>`;
+                <p style="color:var(--text-secondary);">Construyendo contexto SOC + SOP + datos del taller…</p>
+                <p style="color:var(--text-muted); font-size:0.8rem;">Llamando al LLM. Puede tardar 5-15 segundos.</p>`;
         } else if (payload.state === 'error') {
             body = `
                 <p style="color:#ff5252;">No se pudo generar la propuesta:</p>
-                <pre style="background:#050507;padding:0.6rem;border-radius:5px;color:#aaa;white-space:pre-wrap;font-size:0.78rem;">${this._esc(payload.msg)}</pre>`;
+                <pre style="background:var(--bg-dark);padding:0.6rem;border-radius:5px;color:var(--text-secondary);white-space:pre-wrap;font-size:0.78rem;">${this._esc(payload.msg)}</pre>`;
         } else {
             const meta = `Tokens: ${payload.tokens} · Latencia: ${payload.latency} ms · Fuentes: ${payload.sources.length}`;
             body = `
-                <p style="color:#888;font-size:0.75rem;">${this._esc(meta)}</p>
-                <textarea id="wsfProposalText" style="width:100%;min-height:280px;background:#050507;color:#e6e6e6;border:1px solid #2a2a35;border-radius:5px;padding:0.6rem;font-family:monospace;font-size:0.78rem;">${this._esc(payload.text)}</textarea>`;
+                <p style="color:var(--text-muted);font-size:0.75rem;">${this._esc(meta)}</p>
+                <textarea id="wsfProposalText" style="width:100%;min-height:280px;background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-default);border-radius:5px;padding:0.6rem;font-family:monospace;font-size:0.78rem;">${this._esc(payload.text)}</textarea>`;
         }
 
         root.innerHTML = `
@@ -561,13 +561,13 @@ export default class WorkshopsView {
             <div class="ws-modal" id="wsReportNotesBg">
                 <div class="ws-modal-inner" style="max-width:700px;">
                     <h3>📝 Informe post-taller · ${this._esc(w.content?.clientName || '')}</h3>
-                    <p style="color:#aaa;font-size:0.82rem;margin:0.5rem 0 0.8rem 0;">
+                    <p style="color:var(--text-secondary);font-size:0.82rem;margin:0.5rem 0 0.8rem 0;">
                         Pega aquí <strong>las capturas reales</strong> que tomaste durante el taller:
                         intangibles detectados en la pinya, identificación del músic, acotxadors invisibles,
                         patrones de disfunción que surgieron, citas de participantes, compromisos individuales.
                         Cuanto más rico el input, mejor el informe. Sin notas, la IA no debe inventar.
                     </p>
-                    <textarea id="wsfReportNotes" style="width:100%;min-height:240px;background:#050507;color:#e6e6e6;border:1px solid #2a2a35;border-radius:5px;padding:0.6rem;font-family:monospace;font-size:0.82rem;" placeholder="Ejemplo:
+                    <textarea id="wsfReportNotes" style="width:100%;min-height:240px;background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-default);border-radius:5px;padding:0.6rem;font-family:monospace;font-size:0.82rem;" placeholder="Ejemplo:
 - Pinya fase 2: María tocó hombro de Javier en la 2ª ronda con vendas → primer intangible visible
 - Músic identificado en la organización: Sara (project mgr de marketing). El equipo lo confirma sin dudar.
 - Acotxador invisible: Pere (técnico de TI) — todos van a él en momentos críticos sin que conste en el organigrama.
@@ -647,17 +647,17 @@ export default class WorkshopsView {
         let body;
         if (payload.state === 'loading') {
             body = `
-                <p style="color:#aaa;">Construyendo contexto SOC + SOP + capturas del taller…</p>
-                <p style="color:#666;font-size:0.8rem;">Llamando al LLM. Puede tardar 10-25 segundos (output más largo).</p>`;
+                <p style="color:var(--text-secondary);">Construyendo contexto SOC + SOP + capturas del taller…</p>
+                <p style="color:var(--text-muted);font-size:0.8rem;">Llamando al LLM. Puede tardar 10-25 segundos (output más largo).</p>`;
         } else if (payload.state === 'error') {
             body = `
                 <p style="color:#ff5252;">No se pudo generar el informe:</p>
-                <pre style="background:#050507;padding:0.6rem;border-radius:5px;color:#aaa;white-space:pre-wrap;font-size:0.78rem;">${this._esc(payload.msg)}</pre>`;
+                <pre style="background:var(--bg-dark);padding:0.6rem;border-radius:5px;color:var(--text-secondary);white-space:pre-wrap;font-size:0.78rem;">${this._esc(payload.msg)}</pre>`;
         } else {
             const meta = `Tokens: ${payload.tokens} · Latencia: ${payload.latency} ms · Fuentes: ${payload.sources.length}`;
             body = `
-                <p style="color:#888;font-size:0.75rem;">${this._esc(meta)}</p>
-                <textarea id="wsfReportText" style="width:100%;min-height:340px;background:#050507;color:#e6e6e6;border:1px solid #2a2a35;border-radius:5px;padding:0.6rem;font-family:monospace;font-size:0.78rem;">${this._esc(payload.text)}</textarea>`;
+                <p style="color:var(--text-muted);font-size:0.75rem;">${this._esc(meta)}</p>
+                <textarea id="wsfReportText" style="width:100%;min-height:340px;background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-default);border-radius:5px;padding:0.6rem;font-family:monospace;font-size:0.78rem;">${this._esc(payload.text)}</textarea>`;
         }
 
         root.innerHTML = `
@@ -728,7 +728,7 @@ export default class WorkshopsView {
                     <select id="wsfType">
                         ${SERVICE_TYPES.map(t => `<option value="${t.id}" ${t.id===DEFAULT_TYPE?'selected':''}>${t.label}</option>`).join('')}
                     </select>
-                    <p id="wsfTypeHint" style="color:#888;font-size:0.7rem;margin:0.2rem 0 0 0;">${this._esc(SERVICE_TYPES[0].description)}</p>
+                    <p id="wsfTypeHint" style="color:var(--text-muted);font-size:0.7rem;margin:0.2rem 0 0 0;">${this._esc(SERVICE_TYPES[0].description)}</p>
                     <label>Sector / contexto</label>
                     <input id="wsfSector" type="text" placeholder="consultoría / startup / ayuntamiento / CoP...">
                     <label>Fecha</label>

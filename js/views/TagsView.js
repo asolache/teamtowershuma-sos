@@ -23,28 +23,28 @@ export default class TagsView {
         await store.init();
         return `
         <style>
-            .tg-shell  { height:100dvh; background:#050507; color:#e6e6e6; font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .tg-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; }
-            .tg-logo   { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
+            .tg-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .tg-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
+            .tg-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
             .tg-logo span { color:#6366f1; }
-            .tg-title  { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
+            .tg-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .tg-spacer { flex:1; }
             .tg-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
 
             .tg-main   { padding:1.5rem; max-width:1100px; margin:0 auto; flex:1; overflow-y:auto; width:100%; }
-            .tg-cloud  { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.5rem; padding:1rem; background:#0e0e14; border:1px solid #1a1a22; border-radius:8px; }
+            .tg-cloud  { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.5rem; padding:1rem; background:var(--bg-panel); border:1px solid var(--border-default); border-radius:8px; }
             .tg-chip   { background:rgba(99,102,241,0.1); color:#a5b4fc; padding:4px 10px; border-radius:12px; font-family:monospace; font-size:0.78rem; cursor:pointer; border:1px solid rgba(99,102,241,0.3); transition:all 0.15s; user-select:none; }
             .tg-chip:hover { background:rgba(99,102,241,0.25); transform:translateY(-1px); }
-            .tg-chip.active { background:rgba(99,102,241,0.4); color:#fff; border-color:#6366f1; }
+            .tg-chip.active { background:rgba(99,102,241,0.4); color:var(--text-main); border-color:#6366f1; }
             .tg-chip .count { opacity:0.6; margin-left:4px; }
 
-            .tg-empty  { text-align:center; padding:3rem 1rem; color:#666; border:1px dashed #2a2a35; border-radius:8px; }
+            .tg-empty  { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed #2a2a35; border-radius:8px; }
             .tg-list   { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:0.8rem; }
-            .tg-card   { background:#0e0e14; border:1px solid #1a1a22; border-left:3px solid #6366f1; border-radius:8px; padding:0.8rem; text-decoration:none; color:#e6e6e6; transition:background 0.15s; display:block; }
-            .tg-card:hover { background:#13131a; }
-            .tg-card .type   { font-size:0.7rem; color:#888; font-family:monospace; text-transform:uppercase; letter-spacing:0.05em; }
-            .tg-card .title  { color:#fff; font-size:0.92rem; font-weight:600; margin:0.2rem 0; }
-            .tg-card .meta   { color:#888; font-size:0.72rem; }
+            .tg-card   { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid #6366f1; border-radius:8px; padding:0.8rem; text-decoration:none; color:var(--text-main); transition:background 0.15s; display:block; }
+            .tg-card:hover { background:var(--bg-elevated); }
+            .tg-card .type   { font-size:0.7rem; color:var(--text-muted); font-family:monospace; text-transform:uppercase; letter-spacing:0.05em; }
+            .tg-card .title  { color:var(--text-main); font-size:0.92rem; font-weight:600; margin:0.2rem 0; }
+            .tg-card .meta   { color:var(--text-muted); font-size:0.72rem; }
             .tg-card .tags   { margin-top:0.4rem; display:flex; flex-wrap:wrap; gap:3px; }
             .tg-card .tags .t { font-size:0.65rem; padding:1px 6px; border-radius:8px; background:rgba(99,102,241,0.12); color:#a5b4fc; font-family:monospace; }
         </style>
@@ -57,7 +57,7 @@ export default class TagsView {
                 ${renderNavGroupedHtml({ active: 'tags', className: 'tg-link' })}
             </div>
             <div class="tg-main" id="tgMain">
-                <p style="color:#888;">Cargando…</p>
+                <p style="color:var(--text-muted);">Cargando…</p>
             </div>
         </div>`;
     }
@@ -95,14 +95,14 @@ export default class TagsView {
         // Lista de nodos: si hay tag activo → filtrados, si no → vacío con hint
         let listHtml;
         if (!this.active) {
-            listHtml = `<p style="color:#888;font-size:0.85rem;text-align:center;padding:1rem;">Selecciona un tag para ver los nodos enlazados.</p>`;
+            listHtml = `<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:1rem;">Selecciona un tag para ver los nodos enlazados.</p>`;
         } else {
             const matches = nodesWithTag(this.nodes, this.active);
             if (!matches.length) {
                 listHtml = `<p style="color:#fca5a5;font-size:0.85rem;text-align:center;">Sin nodos con #${this.active}</p>`;
             } else {
                 listHtml = `
-                    <p style="color:#aaa;font-size:0.85rem;margin-bottom:0.6rem;">${matches.length} nodo${matches.length === 1 ? '' : 's'} con <span style="color:#a5b4fc;font-family:monospace;">#${this.active}</span>:</p>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.6rem;">${matches.length} nodo${matches.length === 1 ? '' : 's'} con <span style="color:#a5b4fc;font-family:monospace;">#${this.active}</span>:</p>
                     <div class="tg-list">
                         ${matches.map(n => this._cardHtml(n)).join('')}
                     </div>`;
@@ -110,8 +110,8 @@ export default class TagsView {
         }
 
         main.innerHTML = `
-            <h1 style="font-size:1.4rem;color:#fff;margin:0 0 0.4rem 0;">Folksonomía</h1>
-            <p style="color:#aaa;font-size:0.85rem;margin-bottom:1rem;">${this.tags.length} tag${this.tags.length === 1 ? '' : 's'} sobre ${this.nodes.length} nodo${this.nodes.length === 1 ? '' : 's'}. Click en un chip para ver sus nodos.</p>
+            <h1 style="font-size:1.4rem;color:var(--text-main);margin:0 0 0.4rem 0;">Folksonomía</h1>
+            <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1rem;">${this.tags.length} tag${this.tags.length === 1 ? '' : 's'} sobre ${this.nodes.length} nodo${this.nodes.length === 1 ? '' : 's'}. Click en un chip para ver sus nodos.</p>
             <div class="tg-cloud">${cloudHtml}</div>
             ${listHtml}
         `;

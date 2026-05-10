@@ -49,51 +49,51 @@ export default class WalletView {
 
         return `
         <style>
-            .w-shell  { height:100dvh; background:#050507; color:#e6e6e6; font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .w-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; flex-wrap:wrap; }
-            .w-logo   { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
+            .w-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .w-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
+            .w-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
             .w-logo span { color:#6366f1; }
-            .w-title  { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
+            .w-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .w-spacer { flex:1; }
             .w-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
 
             .w-main   { padding:1.5rem; max-width:1080px; margin:0 auto; flex:1; overflow-y:auto; width:100%; box-sizing:border-box; }
-            .w-empty  { text-align:center; padding:3rem 1rem; color:#666; border:1px dashed #2a2a35; border-radius:8px; }
+            .w-empty  { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed #2a2a35; border-radius:8px; }
 
-            .w-hero   { background:linear-gradient(145deg,rgba(34,197,94,0.08),rgba(0,0,0,0)); border:1px solid #1a1a22; border-left:3px solid #22c55e; border-radius:10px; padding:1.5rem; margin-bottom:1.4rem; }
-            .w-hero h1 { margin:0; color:#fff; font-size:1.2rem; }
-            .w-hero .pname { color:#aaa; font-size:0.85rem; margin-top:0.25rem; }
+            .w-hero   { background:linear-gradient(145deg,rgba(34,197,94,0.08),rgba(0,0,0,0)); border:1px solid var(--border-default); border-left:3px solid #22c55e; border-radius:10px; padding:1.5rem; margin-bottom:1.4rem; }
+            .w-hero h1 { margin:0; color:var(--text-main); font-size:1.2rem; }
+            .w-hero .pname { color:var(--text-secondary); font-size:0.85rem; margin-top:0.25rem; }
             .w-balance { display:flex; align-items:baseline; gap:1rem; margin-top:0.8rem; flex-wrap:wrap; }
             .w-balance .amount { font-size:2.4rem; font-weight:700; color:#22c55e; font-family:var(--font-mono,monospace); }
-            .w-balance .currency { color:#aaa; font-size:0.95rem; }
+            .w-balance .currency { color:var(--text-secondary); font-size:0.95rem; }
 
             .w-stats  { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.6rem; margin-top:1rem; }
-            .w-stat   { background:#0e0e14; border:1px solid #1a1a22; border-left:3px solid var(--w-c,#6366f1); border-radius:8px; padding:0.6rem 0.8rem; }
-            .w-stat .label { color:#888; font-size:0.7rem; font-family:monospace; text-transform:uppercase; letter-spacing:0.05em; }
-            .w-stat .value { color:#fff; font-size:1.15rem; font-weight:700; margin-top:0.2rem; font-family:monospace; }
+            .w-stat   { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid var(--w-c,#6366f1); border-radius:8px; padding:0.6rem 0.8rem; }
+            .w-stat .label { color:var(--text-muted); font-size:0.7rem; font-family:monospace; text-transform:uppercase; letter-spacing:0.05em; }
+            .w-stat .value { color:var(--text-main); font-size:1.15rem; font-weight:700; margin-top:0.2rem; font-family:monospace; }
 
-            .w-section h2 { margin:1.6rem 0 0.6rem 0; font-size:0.85rem; color:#aaa; text-transform:uppercase; letter-spacing:0.05em; font-family:monospace; }
+            .w-section h2 { margin:1.6rem 0 0.6rem 0; font-size:0.85rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; font-family:monospace; }
 
             .w-topup  { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.6rem; }
-            .w-preset { background:#0e0e14; border:1px solid #1a1a22; border-radius:8px; padding:0.85rem 1rem; cursor:pointer; transition:all 0.15s; text-align:center; color:#e6e6e6; }
+            .w-preset { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:8px; padding:0.85rem 1rem; cursor:pointer; transition:all 0.15s; text-align:center; color:var(--text-main); }
             .w-preset:hover { background:rgba(34,197,94,0.08); border-color:#22c55e; transform:translateY(-1px); }
             .w-preset .amount { font-size:1.4rem; font-weight:700; color:#22c55e; font-family:monospace; }
-            .w-preset .label  { color:#888; font-size:0.7rem; margin-top:0.15rem; }
+            .w-preset .label  { color:var(--text-muted); font-size:0.7rem; margin-top:0.15rem; }
 
             .w-custom { display:flex; gap:0.5rem; align-items:center; margin-top:0.6rem; flex-wrap:wrap; }
-            .w-input  { background:#050507; color:#e6e6e6; border:1px solid #2a2a35; padding:7px 10px; border-radius:5px; font-family:inherit; font-size:0.85rem; outline:none; }
-            .w-btn    { background:#1a1a22; color:#e6e6e6; border:1px solid #2a2a35; padding:7px 14px; border-radius:5px; cursor:pointer; font-family:inherit; font-size:0.85rem; }
-            .w-btn:hover { background:#22222d; }
-            .w-btn-primary { background:#22c55e; border-color:#22c55e; color:#fff; }
+            .w-input  { background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); padding:7px 10px; border-radius:5px; font-family:inherit; font-size:0.85rem; outline:none; }
+            .w-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:7px 14px; border-radius:5px; cursor:pointer; font-family:inherit; font-size:0.85rem; }
+            .w-btn:hover { background:var(--bg-elevated); }
+            .w-btn-primary { background:#22c55e; border-color:#22c55e; color:var(--text-main); }
             .w-btn-primary:hover { background:#16a34a; }
             .w-btn-warn { background:rgba(250,204,21,0.08); border-color:rgba(250,204,21,0.3); color:#facc15; }
 
             .w-mvts   { display:flex; flex-direction:column; gap:0.3rem; }
-            .w-mvt    { display:grid; grid-template-columns:120px 100px 1fr 100px 110px; gap:0.6rem; padding:0.5rem 0.7rem; background:#0e0e14; border:1px solid #1a1a22; border-radius:6px; font-size:0.78rem; align-items:center; }
-            .w-mvt .when    { color:#aaa; font-family:monospace; font-size:0.7rem; }
-            .w-mvt .kind    { font-family:monospace; font-size:0.72rem; padding:1px 7px; border-radius:8px; text-align:center; background:rgba(255,255,255,0.04); }
-            .w-mvt .ref     { color:#888; font-family:monospace; font-size:0.72rem; word-break:break-all; }
-            .w-mvt .amount  { color:#fff; font-family:monospace; text-align:right; font-weight:600; }
+            .w-mvt    { display:grid; grid-template-columns:120px 100px 1fr 100px 110px; gap:0.6rem; padding:0.5rem 0.7rem; background:var(--bg-panel); border:1px solid var(--border-default); border-radius:6px; font-size:0.78rem; align-items:center; }
+            .w-mvt .when    { color:var(--text-secondary); font-family:monospace; font-size:0.7rem; }
+            .w-mvt .kind    { font-family:monospace; font-size:0.72rem; padding:1px 7px; border-radius:8px; text-align:center; background:var(--glass-hover); }
+            .w-mvt .ref     { color:var(--text-muted); font-family:monospace; font-size:0.72rem; word-break:break-all; }
+            .w-mvt .amount  { color:var(--text-main); font-family:monospace; text-align:right; font-weight:600; }
             .w-mvt .balance { color:#86efac; font-family:monospace; text-align:right; font-size:0.72rem; }
 
             .w-banner { background:rgba(250,204,21,0.06); border:1px dashed rgba(250,204,21,0.3); border-radius:8px; padding:0.7rem 0.9rem; font-size:0.78rem; color:#facc15; margin-top:1rem; line-height:1.45; }
@@ -107,7 +107,7 @@ export default class WalletView {
                 ${renderNavGroupedHtml({ active: '', projectId: this.projectId, className: 'w-link' })}
             </div>
             <div class="w-main" id="wMain">
-                <p style="color:#888;font-size:0.85rem;">Cargando…</p>
+                <p style="color:var(--text-muted);font-size:0.85rem;">Cargando…</p>
             </div>
         </div>`;
     }
@@ -163,7 +163,7 @@ export default class WalletView {
         main.innerHTML = `
             <div class="w-hero">
                 <h1 class="mat-hero-h1">💶 Wallet <strong>del projecte</strong></h1>
-                <div class="pname">${this._esc(projName)} · <code style="color:#666;">${this._esc(this.projectId)}</code></div>
+                <div class="pname">${this._esc(projName)} · <code style="color:var(--text-muted);">${this._esc(this.projectId)}</code></div>
                 <div class="w-balance">
                     <span class="amount">${stats.balance.toFixed(2)}</span>
                     <span class="currency">EUR · saldo disponible</span>

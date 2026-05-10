@@ -54,7 +54,7 @@ export default class HomeView {
 
             .action-card {
                 background: linear-gradient(145deg, rgba(25,25,32,0.9), rgba(10,10,15,0.95));
-                border: 1px solid var(--glass-border);
+                border: 1px solid var(--border-default);
                 border-radius: var(--radius-xl);
                 padding: var(--space-6) var(--space-8);
                 cursor: pointer;
@@ -89,7 +89,7 @@ export default class HomeView {
                 bottom: var(--space-4);
                 right: var(--space-4);
                 background: var(--bg-elevated);
-                border: 1px solid var(--glass-border);
+                border: 1px solid var(--border-default);
                 border-radius: var(--radius-md);
                 padding: var(--space-2) var(--space-4);
                 font-family: var(--font-mono);

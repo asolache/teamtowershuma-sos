@@ -145,7 +145,7 @@ export default class PresentationView {
         return `
         <style>
             .pv-wrap { max-width: 1080px; margin: 0 auto; padding: var(--space-8) var(--space-6); animation: fadeIn 0.4s var(--ease-out); color: var(--text-main); }
-            .pv-topbar { display:flex; align-items:center; gap:1rem; padding: 0 0 var(--space-4) 0; border-bottom: 1px solid var(--glass-border); margin-bottom: var(--space-8); flex-wrap:wrap; }
+            .pv-topbar { display:flex; align-items:center; gap:1rem; padding: 0 0 var(--space-4) 0; border-bottom: 1px solid var(--border-default); margin-bottom: var(--space-8); flex-wrap:wrap; }
             .pv-back { color: var(--text-secondary); text-decoration: none; font-size: var(--text-sm); }
             .pv-back:hover { color: var(--accent-indigo); }
             .pv-hero { padding: var(--space-12) 0 var(--space-8) 0; text-align: center; }
@@ -153,26 +153,26 @@ export default class PresentationView {
             .pv-hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; line-height: 1.1; margin-bottom: var(--space-3); color: var(--text-main); }
             .pv-hero .pv-mantra { font-family: var(--font-serif); font-style: italic; font-size: clamp(1.1rem, 2.5vw, 1.4rem); color: var(--text-secondary); max-width: 720px; margin: 0 auto var(--space-6); }
             .pv-hero .pv-meta { display:flex; gap:var(--space-3); justify-content:center; flex-wrap:wrap; font-size: var(--text-xs); color: var(--text-muted); }
-            .pv-hero .pv-meta span { padding: 4px 10px; background: var(--bg-elevated); border-radius: var(--radius-full); border: 1px solid var(--glass-border); }
+            .pv-hero .pv-meta span { padding: 4px 10px; background: var(--bg-elevated); border-radius: var(--radius-full); border: 1px solid var(--border-default); }
             .pv-section { margin-bottom: var(--space-12); }
-            .pv-section-title { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-muted); margin-bottom: var(--space-4); border-bottom: 1px solid var(--glass-border); padding-bottom: var(--space-2); }
+            .pv-section-title { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-muted); margin-bottom: var(--space-4); border-bottom: 1px solid var(--border-default); padding-bottom: var(--space-2); }
             .pv-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-4); }
-            .pv-role-card { background: var(--bg-panel); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: var(--space-6); transition: transform 0.2s, border-color 0.2s; }
+            .pv-role-card { background: var(--bg-panel); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-6); transition: transform 0.2s, border-color 0.2s; }
             .pv-role-card:hover { transform: translateY(-2px); border-color: var(--accent-indigo); }
             .pv-role-name { font-size: var(--text-lg); font-weight: 800; color: var(--text-main); margin-bottom: var(--space-2); }
             .pv-role-desc { color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-4); }
             .pv-role-section { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin: var(--space-3) 0 var(--space-2); font-weight: 700; }
-            .pv-tx { display:flex; align-items:flex-start; gap: 0.5rem; padding: 6px 0; font-size: var(--text-sm); color: var(--text-main); border-bottom: 1px dashed var(--glass-border); }
+            .pv-tx { display:flex; align-items:flex-start; gap: 0.5rem; padding: 6px 0; font-size: var(--text-sm); color: var(--text-main); border-bottom: 1px dashed var(--border-default); }
             .pv-tx:last-child { border-bottom: 0; }
             .pv-tx-icon { width: 20px; flex-shrink: 0; }
             .pv-tx-tangible   { color: var(--accent-green); }
             .pv-tx-intangible { color: var(--accent-orange); }
             .pv-sop-pill { display:inline-block; padding: 2px 8px; background: rgba(99,102,241,0.12); color: var(--accent-indigo); border-radius: var(--radius-sm); font-size: 0.7rem; margin: 2px 4px 2px 0; }
             .pv-stat-strip { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-8); }
-            .pv-stat { background: var(--bg-elevated); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: var(--space-4); text-align:center; }
+            .pv-stat { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-4); text-align:center; }
             .pv-stat-num { font-size: var(--text-2xl); font-weight: 900; color: var(--accent-indigo); }
             .pv-stat-lbl { font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
-            .pv-cta { display:flex; gap: var(--space-3); justify-content:center; padding: var(--space-8); border-top: 1px solid var(--glass-border); margin-top: var(--space-12); flex-wrap: wrap; }
+            .pv-cta { display:flex; gap: var(--space-3); justify-content:center; padding: var(--space-8); border-top: 1px solid var(--border-default); margin-top: var(--space-12); flex-wrap: wrap; }
             .pv-cta a { padding: 10px 24px; border-radius: var(--radius-full); text-decoration:none; font-weight: 700; font-size: var(--text-sm); }
             .pv-cta-primary { background: var(--accent-indigo); color: white !important; }
             .pv-cta-secondary { background: transparent; color: var(--accent-indigo) !important; border: 1px solid var(--accent-indigo); }
@@ -197,7 +197,7 @@ export default class PresentationView {
                 <a href="/map?project=${encodeURIComponent(project.id)}" data-link class="pv-back">🗺 Editar mapa</a>
                 <div style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;">
                     ${renderNavGroupedHtml({ active: '', projectId: project.id, className: 'pv-back', activeClass: '' })}
-                    <button id="pvBtnPrint" class="pv-back" style="background:transparent;border:1px solid var(--glass-border);padding:6px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:var(--text-xs);">🖨 Imprimir / PDF</button>
+                    <button id="pvBtnPrint" class="pv-back" style="background:transparent;border:1px solid var(--border-default);padding:6px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:var(--text-xs);">🖨 Imprimir / PDF</button>
                 </div>
             </div>
 
@@ -216,14 +216,14 @@ export default class PresentationView {
             </div>
 
             <!-- UX-AUDIT-001 sprint F · IA narrativa adaptable per audiència -->
-            <div class="pv-section pv-print-hide-mobile" style="background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:var(--space-6);">
+            <div class="pv-section pv-print-hide-mobile" style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:var(--space-6);">
                 <div style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;">
                     <span style="font-weight:800;color:var(--accent-purple);">🤖 Narrativa IA</span>
                     <span class="pv-mut" style="font-size:var(--text-xs);color:var(--text-muted);flex:1;min-width:200px;">Genera el hero + descripcions de rols adaptat al projectType + audiència seleccionada.</span>
-                    <select id="pvAudience" class="pv-back" style="background:var(--bg-panel);color:var(--text-main);border:1px solid var(--glass-border);padding:6px 10px;border-radius:var(--radius-sm);font-size:var(--text-xs);">
+                    <select id="pvAudience" class="pv-back" style="background:var(--bg-panel);color:var(--text-main);border:1px solid var(--border-default);padding:6px 10px;border-radius:var(--radius-sm);font-size:var(--text-xs);">
                         ${PUBLIC_AUDIENCES.map(a => `<option value="${a.id}" ${narrativeAudience === a.id ? 'selected' : ''}>${a.icon} ${esc(a.label)}</option>`).join('')}
                     </select>
-                    <button id="pvBtnGenerateNarrative" class="pv-back" style="background:var(--accent-purple);color:white;border:0;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:var(--text-xs);">${narrative ? '↻ Regenerar' : '🤖 Generar'}</button>
+                    <button id="pvBtnGenerateNarrative" class="pv-back" style="background:var(--accent-purple);color:var(--text-main);border:0;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:var(--text-xs);">${narrative ? '↻ Regenerar' : '🤖 Generar'}</button>
                     ${narrative ? `<button id="pvBtnClearNarrative" class="pv-back" style="background:transparent;color:var(--accent-red);border:1px solid var(--accent-red);padding:8px 12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:var(--text-xs);">✕ Esborrar</button>` : ''}
                 </div>
                 <div id="pvNarrativeStatus" style="margin-top:var(--space-3);font-size:var(--text-xs);color:var(--text-muted);font-family:var(--font-mono);min-height:18px;"></div>
@@ -241,7 +241,7 @@ export default class PresentationView {
             ${projectSoc ? `
                 <div class="pv-section">
                     <div class="pv-section-title">📜 SOC · Standard Operating Charter</div>
-                    <div style="background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:var(--space-6);font-family:var(--font-serif);font-style:italic;color:var(--text-secondary);line-height:1.7;">
+                    <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:var(--space-6);font-family:var(--font-serif);font-style:italic;color:var(--text-secondary);line-height:1.7;">
                         ${esc(projectSoc.content?.text || projectSoc.content?.body || projectSoc.content?.charter || 'SOC sense text · obre /pact per editar')}
                     </div>
                 </div>

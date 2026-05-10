@@ -35,26 +35,26 @@ export default class IdentityView {
 
         return `
         <style>
-            .id-shell  { height:100dvh; background:#050507; color:#e6e6e6; font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .id-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; flex-wrap:wrap; }
-            .id-logo   { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
+            .id-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .id-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
+            .id-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
             .id-logo span { color:#6366f1; }
-            .id-title  { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
+            .id-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .id-spacer { flex:1; }
             .id-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
             .id-main   { padding:1.5rem; max-width:760px; margin:0 auto; flex:1; overflow-y:auto; width:100%; box-sizing:border-box; }
-            .id-card   { background:linear-gradient(145deg,rgba(99,102,241,0.05),rgba(0,0,0,0)); border:1px solid #1a1a22; border-left:3px solid #a5b4fc; border-radius:10px; padding:1.4rem; margin-bottom:1.2rem; }
-            .id-card h2 { margin:0 0 0.4rem 0; color:#fff; font-size:1.1rem; }
-            .id-meta   { color:#aaa; font-size:0.8rem; }
+            .id-card   { background:linear-gradient(145deg,rgba(99,102,241,0.05),rgba(0,0,0,0)); border:1px solid var(--border-default); border-left:3px solid #a5b4fc; border-radius:10px; padding:1.4rem; margin-bottom:1.2rem; }
+            .id-card h2 { margin:0 0 0.4rem 0; color:var(--text-main); font-size:1.1rem; }
+            .id-meta   { color:var(--text-secondary); font-size:0.8rem; }
             .id-grid   { display:grid; grid-template-columns:120px 1fr; gap:0.5rem 0.9rem; margin-top:0.7rem; font-size:0.82rem; }
-            .id-grid .k { color:#888; font-family:monospace; text-transform:uppercase; font-size:0.7rem; letter-spacing:0.05em; align-self:center; }
+            .id-grid .k { color:var(--text-muted); font-family:monospace; text-transform:uppercase; font-size:0.7rem; letter-spacing:0.05em; align-self:center; }
             .id-grid .v { color:#ddd; font-family:monospace; font-size:0.75rem; word-break:break-all; }
             .id-grid .v.editable { font-family:inherit; font-size:0.85rem; }
-            .id-input  { width:100%; box-sizing:border-box; background:rgba(0,0,0,0.3); border:1px solid #2a2a35; color:#e6e6e6; padding:6px 9px; border-radius:5px; font-family:inherit; font-size:0.85rem; outline:none; }
+            .id-input  { width:100%; box-sizing:border-box; background:var(--bg-elevated); border:1px solid var(--border-default); color:var(--text-main); padding:6px 9px; border-radius:5px; font-family:inherit; font-size:0.85rem; outline:none; }
             .id-input:focus { border-color:#a5b4fc; }
-            .id-btn    { background:#1a1a22; color:#e6e6e6; border:1px solid #2a2a35; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.85rem; }
-            .id-btn:hover { background:#22222d; }
-            .id-btn-primary { background:#6366f1; border-color:#6366f1; color:#fff; }
+            .id-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.85rem; }
+            .id-btn:hover { background:var(--bg-elevated); }
+            .id-btn-primary { background:#6366f1; border-color:#6366f1; color:var(--text-main); }
             .id-btn-primary:hover { background:#4f46e5; }
             .id-stub   { background:rgba(250,204,21,0.06); border:1px dashed rgba(250,204,21,0.3); border-radius:8px; padding:0.9rem; font-size:0.78rem; color:#facc15; margin-top:0.6rem; }
             .id-status { display:none; margin-top:0.6rem; font-size:0.78rem; color:#86efac; }
@@ -192,15 +192,15 @@ export default class IdentityView {
         if (!root) return;
         const wallets = Array.isArray(this.identity?.content?.wallets) ? this.identity.content.wallets : [];
         if (!wallets.length) {
-            root.innerHTML = '<div style="color:#666;font-size:0.78rem;font-style:italic;">Aún no hay wallets vinculadas.</div>';
+            root.innerHTML = '<div style="color:var(--text-muted);font-size:0.78rem;font-style:italic;">Aún no hay wallets vinculadas.</div>';
             return;
         }
         root.innerHTML = wallets.map(w => {
             const verified = w.verifiedAt ? '<span class="id-pill" title="firma verificada">verified</span>' : '<span class="id-pill" style="background:rgba(250,204,21,0.12);color:#facc15;" title="manual binding · sin firma · upgrade a WalletConnect en MAT-001">manual</span>';
-            return `<div style="display:flex;align-items:center;gap:0.5rem;padding:6px 8px;background:rgba(0,0,0,0.3);border:1px solid #2a2a35;border-radius:5px;margin-bottom:5px;font-size:0.8rem;">
+            return `<div style="display:flex;align-items:center;gap:0.5rem;padding:6px 8px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:5px;margin-bottom:5px;font-size:0.8rem;">
                 <span style="background:rgba(125,211,252,0.15);color:#7dd3fc;padding:2px 7px;border-radius:8px;font-family:monospace;font-size:0.7rem;">${this._esc(w.chain || 'gnosis')}</span>
                 <code style="color:#ddd;font-size:0.75rem;flex:1;word-break:break-all;">${this._esc(w.address)}</code>
-                ${w.label ? `<span style="color:#aaa;font-size:0.72rem;">${this._esc(w.label)}</span>` : ''}
+                ${w.label ? `<span style="color:var(--text-secondary);font-size:0.72rem;">${this._esc(w.label)}</span>` : ''}
                 ${verified}
                 <button class="id-btn" data-unlink="${this._esc(w.address)}" style="padding:3px 8px;font-size:0.72rem;border-color:rgba(255,82,82,0.3);color:#ff5252;">Desvincular</button>
             </div>`;

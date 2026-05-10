@@ -37,37 +37,37 @@ export default class EfficiencyView {
         await store.init();
         return `
         <style>
-            .ef-shell  { height:100dvh; background:#050507; color:#e6e6e6; font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .ef-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; flex-wrap:wrap; }
-            .ef-logo   { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
+            .ef-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .ef-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
+            .ef-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
             .ef-logo span { color:#6366f1; }
-            .ef-title  { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
+            .ef-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .ef-spacer { flex:1; }
             .ef-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
 
             .ef-main   { padding:1.5rem; max-width:1080px; margin:0 auto; flex:1; overflow-y:auto; width:100%; box-sizing:border-box; }
-            .ef-hero   { background:linear-gradient(145deg,rgba(6,182,212,0.06),rgba(0,0,0,0)); border:1px solid #1a1a22; border-left:3px solid #06b6d4; border-radius:10px; padding:1.4rem; margin-bottom:1.4rem; }
-            .ef-hero h1 { margin:0; color:#fff; font-size:1.3rem; }
-            .ef-hero .meta { color:#aaa; font-size:0.85rem; margin-top:0.3rem; }
+            .ef-hero   { background:linear-gradient(145deg,rgba(6,182,212,0.06),rgba(0,0,0,0)); border:1px solid var(--border-default); border-left:3px solid #06b6d4; border-radius:10px; padding:1.4rem; margin-bottom:1.4rem; }
+            .ef-hero h1 { margin:0; color:var(--text-main); font-size:1.3rem; }
+            .ef-hero .meta { color:var(--text-secondary); font-size:0.85rem; margin-top:0.3rem; }
 
             .ef-kpis { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:0.7rem; margin-top:1rem; }
-            .ef-kpi  { background:#0e0e14; border:1px solid #1a1a22; border-left:3px solid var(--ef-c,#06b6d4); border-radius:8px; padding:0.7rem 0.9rem; }
-            .ef-kpi .label { color:#888; font-size:0.7rem; font-family:monospace; text-transform:uppercase; letter-spacing:0.05em; }
-            .ef-kpi .value { color:#fff; font-size:1.35rem; font-weight:700; margin-top:0.2rem; }
-            .ef-kpi .sub   { color:#aaa; font-size:0.7rem; margin-top:0.15rem; }
+            .ef-kpi  { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid var(--ef-c,#06b6d4); border-radius:8px; padding:0.7rem 0.9rem; }
+            .ef-kpi .label { color:var(--text-muted); font-size:0.7rem; font-family:monospace; text-transform:uppercase; letter-spacing:0.05em; }
+            .ef-kpi .value { color:var(--text-main); font-size:1.35rem; font-weight:700; margin-top:0.2rem; }
+            .ef-kpi .sub   { color:var(--text-secondary); font-size:0.7rem; margin-top:0.15rem; }
 
-            .ef-empty { text-align:center; padding:3rem 1rem; color:#666; border:1px dashed #2a2a35; border-radius:8px; }
+            .ef-empty { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed #2a2a35; border-radius:8px; }
             .ef-list  { display:flex; flex-direction:column; gap:0.4rem; margin-top:1rem; }
-            .ef-row   { display:grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1.2fr; gap:0.6rem; padding:0.6rem 0.8rem; background:#0e0e14; border:1px solid #1a1a22; border-radius:6px; font-size:0.78rem; align-items:center; }
-            .ef-row .when     { color:#aaa; font-family:monospace; font-size:0.72rem; }
+            .ef-row   { display:grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1.2fr; gap:0.6rem; padding:0.6rem 0.8rem; background:var(--bg-panel); border:1px solid var(--border-default); border-radius:6px; font-size:0.78rem; align-items:center; }
+            .ef-row .when     { color:var(--text-secondary); font-family:monospace; font-size:0.72rem; }
             .ef-row .provider { color:#a5b4fc; font-family:monospace; }
             .ef-row .tokens   { color:#86efac; font-family:monospace; text-align:right; }
             .ef-row .saved    { color:#facc15; font-family:monospace; text-align:right; }
             .ef-row .nodes    { color:#7dd3fc; font-family:monospace; text-align:right; }
 
             .ef-actions { margin-top:1rem; display:flex; gap:0.5rem; }
-            .ef-btn { background:#1a1a22; color:#e6e6e6; border:1px solid #2a2a35; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.85rem; }
-            .ef-btn:hover { background:#22222d; }
+            .ef-btn { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.85rem; }
+            .ef-btn:hover { background:var(--bg-elevated); }
             .ef-btn.danger { background:rgba(255,82,82,0.08); border-color:rgba(255,82,82,0.3); color:#ff5252; }
         </style>
 
@@ -80,7 +80,7 @@ export default class EfficiencyView {
             </div>
 
             <div class="ef-main" id="efMain">
-                <p style="color:#888;font-size:0.85rem;">Cargando logs…</p>
+                <p style="color:var(--text-muted);font-size:0.85rem;">Cargando logs…</p>
             </div>
         </div>`;
     }
@@ -184,7 +184,7 @@ export default class EfficiencyView {
 
             <div class="ef-list">
                 ${rowsHtml}
-                ${this.logs.length > 100 ? `<div style="color:#888;font-size:0.78rem;text-align:center;padding:0.5rem;">…${this.logs.length - 100} logs más</div>` : ''}
+                ${this.logs.length > 100 ? `<div style="color:var(--text-muted);font-size:0.78rem;text-align:center;padding:0.5rem;">…${this.logs.length - 100} logs más</div>` : ''}
             </div>`;
 
         document.getElementById('efPurge')?.addEventListener('click', async () => {

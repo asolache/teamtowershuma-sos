@@ -31,35 +31,35 @@ export default class FoldersView {
         await store.init();
         return `
         <style>
-            .fl-shell  { height:100dvh; background:#050507; color:#e6e6e6; font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .fl-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; flex-wrap:wrap; }
-            .fl-logo   { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
+            .fl-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .fl-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
+            .fl-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
             .fl-logo span { color:#6366f1; }
-            .fl-title  { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
+            .fl-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .fl-spacer { flex:1; }
             .fl-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
 
             .fl-main   { flex:1; overflow:hidden; display:grid; grid-template-columns:280px 1fr; }
             @media (max-width:780px) { .fl-main { grid-template-columns: 1fr; } .fl-side { display:none; } }
-            .fl-side   { background:#08080c; border-right:1px solid #1a1a22; overflow-y:auto; padding:0.8rem; }
+            .fl-side   { background:var(--bg-panel); border-right:1px solid #1a1a22; overflow-y:auto; padding:0.8rem; }
             .fl-content{ overflow-y:auto; padding:1.2rem 1.5rem; }
 
             .fl-folder-tile { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:6px; cursor:pointer; transition:background 0.12s; margin-bottom:2px; }
             .fl-folder-tile:hover { background:#11111a; }
             .fl-folder-tile.active { background:rgba(99,102,241,0.15); border-left:3px solid #a5b4fc; padding-left:7px; }
             .fl-folder-tile .icon { font-size:1.05rem; }
-            .fl-folder-tile .name { color:#e6e6e6; font-size:0.85rem; flex:1; }
-            .fl-folder-tile .count { color:#888; font-family:monospace; font-size:0.7rem; }
+            .fl-folder-tile .name { color:var(--text-main); font-size:0.85rem; flex:1; }
+            .fl-folder-tile .count { color:var(--text-muted); font-family:monospace; font-size:0.7rem; }
             .fl-folder-tile.system .name { color:#a5b4fc; }
 
-            .fl-section-label { font-size:10px; color:#666; text-transform:uppercase; letter-spacing:0.1em; font-family:monospace; margin:0.8rem 0 0.4rem 0.3rem; }
+            .fl-section-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; font-family:monospace; margin:0.8rem 0 0.4rem 0.3rem; }
 
-            .fl-empty  { text-align:center; padding:3rem 1rem; color:#666; border:1px dashed #2a2a35; border-radius:8px; }
+            .fl-empty  { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed #2a2a35; border-radius:8px; }
             .fl-list   { display:flex; flex-direction:column; gap:0.5rem; }
-            .fl-item   { background:#0e0e14; border:1px solid #1a1a22; border-left:3px solid var(--fl-c,#6366f1); border-radius:8px; padding:0.7rem 0.9rem; text-decoration:none; color:#e6e6e6; transition:background 0.12s; }
-            .fl-item:hover { background:#13131a; }
-            .fl-item h4 { margin:0; color:#fff; font-size:0.9rem; font-weight:600; }
-            .fl-item .meta { color:#888; font-size:0.72rem; font-family:monospace; margin-top:0.25rem; }
+            .fl-item   { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid var(--fl-c,#6366f1); border-radius:8px; padding:0.7rem 0.9rem; text-decoration:none; color:var(--text-main); transition:background 0.12s; }
+            .fl-item:hover { background:var(--bg-elevated); }
+            .fl-item h4 { margin:0; color:var(--text-main); font-size:0.9rem; font-weight:600; }
+            .fl-item .meta { color:var(--text-muted); font-size:0.72rem; font-family:monospace; margin-top:0.25rem; }
             .fl-item .tags { display:flex; flex-wrap:wrap; gap:3px; margin-top:0.35rem; }
             .fl-item .tag  { font-size:0.62rem; padding:1px 6px; border-radius:8px; background:rgba(99,102,241,0.12); color:#a5b4fc; font-family:monospace; }
             .fl-item .tag.tax { background:rgba(56,189,248,0.12); color:#7dd3fc; }
@@ -75,10 +75,10 @@ export default class FoldersView {
 
             <div class="fl-main">
                 <aside class="fl-side" id="flSide">
-                    <p style="color:#888;font-size:0.78rem;">Cargando carpetas…</p>
+                    <p style="color:var(--text-muted);font-size:0.78rem;">Cargando carpetas…</p>
                 </aside>
                 <section class="fl-content" id="flContent">
-                    <p style="color:#888;font-size:0.85rem;">Selecciona una carpeta para ver sus nodos.</p>
+                    <p style="color:var(--text-muted);font-size:0.85rem;">Selecciona una carpeta para ver sus nodos.</p>
                 </section>
             </div>
         </div>`;
@@ -142,7 +142,7 @@ export default class FoldersView {
             <div class="fl-section-label">Sistema · ${sys.length}</div>
             ${sys.map(renderTile).join('')}
             <div class="fl-section-label">Personales · ${usr.length}</div>
-            ${usr.length ? usr.map(renderTile).join('') : '<p style="color:#666;font-size:0.78rem;padding:0.4rem;">Aún no has creado carpetas propias. Sprint B añadirá un wizard.</p>'}
+            ${usr.length ? usr.map(renderTile).join('') : '<p style="color:var(--text-muted);font-size:0.78rem;padding:0.4rem;">Aún no has creado carpetas propias. Sprint B añadirá un wizard.</p>'}
         `;
 
         side.querySelectorAll('.fl-folder-tile').forEach(el => {
@@ -162,7 +162,7 @@ export default class FoldersView {
         if (!main) return;
         const folder = this.folders.find(f => f.id === this.activeFolderId);
         if (!folder) {
-            main.innerHTML = `<p style="color:#888;font-size:0.85rem;">Selecciona una carpeta a la izquierda.</p>`;
+            main.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;">Selecciona una carpeta a la izquierda.</p>`;
             return;
         }
         const c = folder.content || {};
@@ -180,8 +180,8 @@ export default class FoldersView {
 
         const headerHtml = `
             <div style="margin-bottom:1rem;">
-                <h1 style="margin:0;color:#fff;font-size:1.3rem;">${this._esc(c.icon || '📁')} ${this._esc(c.name || folder.id)}</h1>
-                <div style="color:#888;font-size:0.75rem;font-family:monospace;margin-top:0.3rem;">
+                <h1 style="margin:0;color:var(--text-main);font-size:1.3rem;">${this._esc(c.icon || '📁')} ${this._esc(c.name || folder.id)}</h1>
+                <div style="color:var(--text-muted);font-size:0.75rem;font-family:monospace;margin-top:0.3rem;">
                     ${items.length} nodo${items.length === 1 ? '' : 's'} · query: ${queryHints.join(' · ') || '(sin filtros)'}
                 </div>
             </div>`;

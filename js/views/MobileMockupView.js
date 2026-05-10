@@ -26,37 +26,37 @@ export default class MobileMockupView {
         return `
         <style>
             .mm-wrap { max-width: 1200px; margin: 0 auto; padding: var(--space-6); animation: fadeIn 0.4s var(--ease-out); color: var(--text-main); }
-            .mm-header { padding-bottom: var(--space-6); border-bottom: 1px solid var(--glass-border); margin-bottom: var(--space-6); }
+            .mm-header { padding-bottom: var(--space-6); border-bottom: 1px solid var(--border-default); margin-bottom: var(--space-6); }
             .mm-header h1 { font-size: var(--text-2xl); font-weight: 900; margin-bottom: var(--space-2); }
             .mm-header p { color: var(--text-secondary); font-size: var(--text-sm); max-width: 720px; }
 
             .mm-tabs { display:flex; gap: var(--space-2); margin-bottom: var(--space-6); flex-wrap: wrap; }
-            .mm-tab { padding: 8px 16px; background: var(--bg-elevated); border: 1px solid var(--glass-border); border-radius: var(--radius-full); color: var(--text-secondary); cursor: pointer; font-size: var(--text-sm); font-weight: 700; transition: 0.2s; }
-            .mm-tab.active { background: var(--accent-indigo); color: white; border-color: var(--accent-indigo); }
+            .mm-tab { padding: 8px 16px; background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-full); color: var(--text-secondary); cursor: pointer; font-size: var(--text-sm); font-weight: 700; transition: 0.2s; }
+            .mm-tab.active { background: var(--accent-indigo); color: var(--text-main); border-color: var(--accent-indigo); }
             .mm-tab:not(.active):hover { color: var(--text-main); }
 
             .mm-stage { display:flex; gap: var(--space-8); align-items: flex-start; flex-wrap: wrap; }
             .mm-frame {
-                width: 390px; height: 844px; background: #050507;
+                width: 390px; height: 844px; background: var(--bg-dark);
                 border: 12px solid #1a1a22; border-radius: 50px;
                 box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.04);
                 overflow: hidden; position: relative; flex-shrink: 0;
             }
-            .mm-frame::before { content: ''; position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 120px; height: 28px; background: #050507; border-radius: 0 0 14px 14px; z-index: 10; }
-            .mm-screen { width: 100%; height: 100%; overflow-y: auto; background: #0a0a0f; color: white; padding: 50px 0 0 0; font-family: var(--font-base); }
+            .mm-frame::before { content: ''; position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 120px; height: 28px; background: var(--bg-dark); border-radius: 0 0 14px 14px; z-index: 10; }
+            .mm-screen { width: 100%; height: 100%; overflow-y: auto; background: var(--bg-panel); color: var(--text-main); padding: 50px 0 0 0; font-family: var(--font-base); }
 
             .mm-notes { flex: 1; min-width: 320px; }
             .mm-notes h3 { font-size: var(--text-lg); font-weight: 800; margin-bottom: var(--space-3); }
             .mm-notes ul { list-style: none; padding: 0; }
-            .mm-notes li { padding: 8px 0; border-bottom: 1px dashed var(--glass-border); font-size: var(--text-sm); color: var(--text-secondary); }
+            .mm-notes li { padding: 8px 0; border-bottom: 1px dashed var(--border-default); font-size: var(--text-sm); color: var(--text-secondary); }
             .mm-notes li strong { color: var(--text-main); }
-            .mm-notes-block { background: var(--bg-elevated); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: var(--space-6); margin-bottom: var(--space-4); }
+            .mm-notes-block { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-6); margin-bottom: var(--space-4); }
 
             /* ── INNER MOBILE STYLES ────────────────────────────────────── */
             .ms-statusbar { padding: 0 1rem; height: 36px; display:flex; align-items:center; justify-content:space-between; font-size: 11px; font-family: var(--font-mono); color: rgba(255,255,255,0.6); }
             .ms-screen-pad { padding: 0 16px 24px; }
-            .ms-h1 { font-size: 22px; font-weight: 900; margin: 8px 0; color: white; }
-            .ms-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+            .ms-h1 { font-size: 22px; font-weight: 900; margin: 8px 0; color: var(--text-main); }
+            .ms-card { background: var(--glass-hover); border: 1px solid var(--border-default); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
             .ms-row { display:flex; align-items:center; justify-content:space-between; }
             .ms-mut { color: rgba(255,255,255,0.5); font-size: 11px; }
             .ms-acc-indigo { color: #818cf8; }
@@ -65,14 +65,14 @@ export default class MobileMockupView {
             .ms-acc-purple { color: #c084fc; }
             .ms-acc-red    { color: #f87171; }
             .ms-pill { display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; }
-            .ms-btn { width:100%; padding: 12px; border-radius: 12px; border: 0; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-weight: 700; font-size: 14px; cursor:pointer; }
-            .ms-btn-ghost { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: white; }
-            .ms-tabbar { position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: rgba(10,10,15,0.95); backdrop-filter: blur(10px); border-top: 1px solid rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:space-around; padding-bottom: 14px; }
+            .ms-btn { width:100%; padding: 12px; border-radius: 12px; border: 0; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: var(--text-main); font-weight: 700; font-size: 14px; cursor:pointer; }
+            .ms-btn-ghost { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--text-main); }
+            .ms-tabbar { position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: var(--bg-panel); backdrop-filter: blur(10px); border-top: 1px solid rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:space-around; padding-bottom: 14px; }
             .ms-tabbar-icon { display:flex; flex-direction:column; align-items:center; gap: 2px; font-size: 10px; color: rgba(255,255,255,0.45); }
             .ms-tabbar-icon.active { color: #818cf8; }
             .ms-timer { font-family: var(--font-mono); font-size: 32px; font-weight: 800; color: #4ade80; text-align:center; padding: 16px 0; }
             .ms-evidence { display:grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
-            .ms-evidence > div { aspect-ratio: 1; background: rgba(255,255,255,0.05); border-radius: 8px; display:flex; align-items:center; justify-content:center; font-size: 22px; }
+            .ms-evidence > div { aspect-ratio: 1; background: var(--glass-hover); border-radius: 8px; display:flex; align-items:center; justify-content:center; font-size: 22px; }
             .ms-event-line { display:flex; gap: 10px; padding: 10px 0; border-bottom: 1px dashed rgba(255,255,255,0.06); }
             .ms-event-icon { width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size: 14px; }
             .ms-event-text { flex: 1; font-size: 13px; }

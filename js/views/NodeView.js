@@ -56,7 +56,7 @@ export default class NodeView {
         const target = specializedUrlFor(this.node);
         if (target) {
             // Devolvemos shell mínima · afterRender hace el navigateTo
-            return `<div style="display:flex;align-items:center;justify-content:center;height:100dvh;color:#888;font-family:monospace;">
+            return `<div style="display:flex;align-items:center;justify-content:center;height:100dvh;color:var(--text-muted);font-family:monospace;">
                 Redirigiendo a vista especializada…
             </div>`;
         }
@@ -77,7 +77,7 @@ export default class NodeView {
 
     _htmlError(msg) {
         return `
-        <div style="height:100dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;color:#888;font-family:monospace;background:#050507;">
+        <div style="height:100dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;color:var(--text-muted);font-family:monospace;background:var(--bg-dark);">
             <div style="font-size:2.5rem;">🔍</div>
             <div style="color:#fca5a5;">${msg}</div>
             <a href="/" data-link style="color:#6366f1;font-size:0.85rem;">← Inicio</a>
@@ -93,28 +93,28 @@ export default class NodeView {
 
         return `
         <style>
-            .nv-shell  { height:100dvh; background:#050507; color:#e6e6e6; font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .nv-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; }
-            .nv-logo   { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
+            .nv-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .nv-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
+            .nv-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
             .nv-logo span { color:#6366f1; }
             .nv-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
             .nv-spacer { flex:1; }
             .nv-main   { padding:1.5rem; max-width:900px; margin:0 auto; flex:1; overflow-y:auto; width:100%; }
-            .nv-card   { background:#0e0e14; border:1px solid #1a1a22; border-radius:8px; padding:1.2rem; margin-bottom:1rem; }
-            .nv-label  { font-size:0.7rem; color:#888; text-transform:uppercase; letter-spacing:0.05em; font-family:monospace; margin-bottom:0.3rem; }
-            .nv-meta   { color:#aaa; font-size:0.8rem; font-family:monospace; }
-            .nv-json   { background:#000; padding:0.8rem; border-radius:5px; color:#bbb; font-size:0.7rem; max-height:480px; overflow:auto; white-space:pre-wrap; word-break:break-all; }
+            .nv-card   { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:8px; padding:1.2rem; margin-bottom:1rem; }
+            .nv-label  { font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-family:monospace; margin-bottom:0.3rem; }
+            .nv-meta   { color:var(--text-secondary); font-size:0.8rem; font-family:monospace; }
+            .nv-json   { background:#000; padding:0.8rem; border-radius:5px; color:var(--text-secondary); font-size:0.7rem; max-height:480px; overflow:auto; white-space:pre-wrap; word-break:break-all; }
         </style>
 
         <div class="nv-shell">
             <div class="nv-topbar">
                 <a href="/" data-link class="nv-logo">🗼 Team<span>Towers</span></a>
-                <span style="color:#aaa;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Nodo · ${this._esc(n.type || 'sin tipo')}</span>
+                <span style="color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Nodo · ${this._esc(n.type || 'sin tipo')}</span>
                 <div class="nv-spacer"></div>
                 ${renderNavGroupedHtml({ active: '', projectId: n.projectId || c.providerProjectId, className: 'nv-link' })}
             </div>
             <div class="nv-main">
-                <h1 style="font-size:1.5rem;color:#fff;margin:0 0 0.6rem 0;">${this._esc(title)}</h1>
+                <h1 style="font-size:1.5rem;color:var(--text-main);margin:0 0 0.6rem 0;">${this._esc(title)}</h1>
                 <div class="nv-meta">id: ${this._esc(n.id)}${n.projectId ? ' · proyecto: ' + this._esc(n.projectId) : ''}${n.updatedAt ? ' · actualizado: ' + new Date(n.updatedAt).toLocaleString('es-ES') : ''}</div>
 
                 <div class="nv-card">

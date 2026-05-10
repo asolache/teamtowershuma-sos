@@ -97,7 +97,7 @@ export default class ValueAccountingView {
             <div class="va-empty">
                 <div style="font-size:2.4rem;margin-bottom:0.6rem;">📊</div>
                 <h2 class="mat-hero-h1">Falta el projecte a la <strong>URL</strong></h2>
-                <p style="color:#888;font-size:0.9rem;">Aquesta vista necessita <code>?project={id}</code>.</p>
+                <p style="color:var(--text-muted);font-size:0.9rem;">Aquesta vista necessita <code>?project={id}</code>.</p>
                 <a href="/dashboard" data-link style="color:#c084fc;font-size:0.85rem;">← Dashboard</a>
             </div>
         </div>
@@ -181,8 +181,8 @@ export default class ValueAccountingView {
                 </div>
 
                 <div class="va-section">
-                    <h2>🔄 Importar des de WOs ledgered <span style="color:#888;font-weight:400;font-size:0.78rem;">· VAL-001 sprint C · Antigravity Engine</span></h2>
-                    <p style="color:#aaa;font-size:0.88rem;line-height:1.6;margin-bottom:14px;">
+                    <h2>🔄 Importar des de WOs ledgered <span style="color:var(--text-muted);font-weight:400;font-size:0.78rem;">· VAL-001 sprint C · Antigravity Engine</span></h2>
+                    <p style="color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin-bottom:14px;">
                         Cada Work Order amb status='ledgered' + actualHours + party assignat es converteix automàticament en una <strong class="mat-accent">aportació de tipus time</strong>. Si el WO declara <code>fmvPerHour</code>, s'aplica directe; si no, fórmula default <code>2 × salari_anual / 2000h × hores</code>.
                     </p>
                     <div id="vaImportPreview" style="margin-bottom:12px;"></div>
@@ -191,7 +191,7 @@ export default class ValueAccountingView {
 
                 <div class="va-section">
                     <h2>➕ Afegir aportació manual</h2>
-                    <p style="color:#aaa;font-size:0.86rem;margin-bottom:10px;">Per a aportacions que <strong>NO</strong> vénen del Kanban · cash · actius · idees · contactes. Les hores treballades es generen automàticament des dels WOs ledgered.</p>
+                    <p style="color:var(--text-secondary);font-size:0.86rem;margin-bottom:10px;">Per a aportacions que <strong>NO</strong> vénen del Kanban · cash · actius · idees · contactes. Les hores treballades es generen automàticament des dels WOs ledgered.</p>
                     ${this._renderContributionForm()}
                 </div>
 
@@ -210,76 +210,76 @@ export default class ValueAccountingView {
     _renderStyle() {
         return `
         <style>
-            .va-shell { background: #050507; color: #e6e6e6; min-height: 100%; font-family: var(--font-base, sans-serif); display: flex; flex-direction: column; }
+            .va-shell { background: var(--bg-dark); color: var(--text-main); min-height: 100%; font-family: var(--font-base, sans-serif); display: flex; flex-direction: column; }
             .va-topbar { display: flex; align-items: center; gap: 1rem; padding: 14px 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap; flex-shrink: 0; }
-            .va-logo { font-family: monospace; color: #888; text-decoration: none; font-size: 0.78rem; }
+            .va-logo { font-family: monospace; color: var(--text-muted); text-decoration: none; font-size: 0.78rem; }
             .va-logo span { color: #6366f1; font-weight: 700; }
-            .va-title { color: #aaa; font-size: 0.86rem; display: inline-flex; align-items: center; gap: 6px; }
+            .va-title { color: var(--text-secondary); font-size: 0.86rem; display: inline-flex; align-items: center; gap: 6px; }
             .va-spacer { flex: 1; }
-            .va-link { color: #888; text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; transition: background 0.15s; }
-            .va-link:hover { background: rgba(255,255,255,0.06); color: #fff; }
+            .va-link { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; transition: background 0.15s; }
+            .va-link:hover { background: var(--glass-hover); color: var(--text-main); }
 
             .va-main { flex: 1; padding: clamp(20px, 4vw, 36px); max-width: 1240px; margin: 0 auto; width: 100%; box-sizing: border-box; overflow-y: auto; }
             .va-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; gap: 0.6rem; padding: 2rem; }
 
             .va-hero { margin-bottom: 24px; padding: 24px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
-            .va-hero h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); color: #fff; line-height: 1.05; margin-bottom: 6px; }
-            .va-hero-sub { color: #aaa; font-size: 0.92rem; max-width: 720px; line-height: 1.55; margin-bottom: 18px; }
+            .va-hero h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); color: var(--text-main); line-height: 1.05; margin-bottom: 6px; }
+            .va-hero-sub { color: var(--text-secondary); font-size: 0.92rem; max-width: 720px; line-height: 1.55; margin-bottom: 18px; }
 
             .va-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-            .va-stat { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid var(--va-c, #888); border-radius: 8px; padding: 14px 16px; }
-            .va-stat-label { font-family: monospace; font-size: 0.7rem; color: #888; letter-spacing: 0.06em; text-transform: uppercase; }
-            .va-stat-value { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.8rem; color: #fff; line-height: 1; margin-top: 6px; }
+            .va-stat { background: var(--bg-panel); border: 1px solid var(--border-default); border-left: 3px solid var(--va-c, var(--text-muted)); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: var(--shadow-sm); }
+            .va-stat-label { font-family: monospace; font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; }
+            .va-stat-value { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.8rem; color: var(--text-main); line-height: 1; margin-top: 6px; }
             .va-stat-sub { font-family: monospace; font-size: 0.7rem; color: var(--va-c); margin-top: 4px; }
 
             .va-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0; }
             @media (max-width: 880px) { .va-grid { grid-template-columns: 1fr; } }
 
-            .va-section { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
-            .va-section h2 { color: #fff; font-size: 1.05rem; margin-bottom: 14px; font-weight: 600; }
+            .va-section { background: rgba(255,255,255,0.025); border: 1px solid var(--border-default); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+            .va-section h2 { color: var(--text-main); font-size: 1.05rem; margin-bottom: 14px; font-weight: 600; }
 
             .va-pie-chart { width: 100%; height: 320px; display: flex; align-items: center; justify-content: center; }
             .va-pie-chart svg { width: 100%; height: 100%; }
 
             .va-legend { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; max-height: 200px; overflow-y: auto; }
             .va-legend-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: 0.82rem; }
-            .va-legend-item:hover { background: rgba(255,255,255,0.04); }
+            .va-legend-item:hover { background: var(--glass-hover); }
             .va-legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
             .va-legend-name { flex: 1; color: #ddd; }
             .va-legend-pct { font-family: monospace; color: #c084fc; font-weight: 700; }
 
             .va-pies-list { display: flex; flex-direction: column; gap: 10px; }
-            .va-pie-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; background: rgba(255,255,255,0.02); }
+            .va-pie-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--border-default); border-radius: 8px; background: var(--glass-hover); }
             .va-pie-row.is-empty { opacity: 0.55; border-style: dashed; }
             .va-pie-dot { width: 14px; height: 14px; border-radius: 50%; }
-            .va-pie-name { font-weight: 600; color: #fff; text-transform: capitalize; }
-            .va-pie-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; margin-top: 4px; }
+            .va-pie-name { font-weight: 600; color: var(--text-main); text-transform: capitalize; }
+            .va-pie-bar { width: 100%; height: 4px; background: var(--glass-hover); border-radius: 99px; overflow: hidden; margin-top: 4px; }
             .va-pie-bar-fill { height: 100%; border-radius: 99px; }
-            .va-pie-target { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.2rem; color: #fff; }
+            .va-pie-target { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.2rem; color: var(--text-main); }
             .va-pie-status { font-family: monospace; font-size: 0.7rem; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
             .va-pie-status.is-active { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
             .va-pie-status.is-empty { background: rgba(252,165,165,0.12); color: #fca5a5; border: 1px solid rgba(252,165,165,0.3); }
 
             .va-table { width: 100%; border-collapse: collapse; }
-            .va-table thead th { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.12); text-align: left; font-family: monospace; font-size: 0.72rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
-            .va-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+            .va-table thead th { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.12); text-align: left; font-family: monospace; font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+            .va-table tbody tr:hover { background: var(--glass-hover); }
             .va-table tbody td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.88rem; color: #ddd; }
             .va-table tbody td.va-td-pie { font-weight: 600; text-transform: capitalize; }
             .va-table tbody td.va-td-pct { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.15rem; color: #c084fc; text-align: right; }
-            .va-table tbody td.va-td-share-pie { font-family: monospace; color: #888; text-align: right; font-size: 0.82rem; }
-            .va-table-empty { color: #666; font-style: italic; padding: 14px; text-align: center; }
+            .va-table tbody td.va-td-share-pie { font-family: monospace; color: var(--text-muted); text-align: right; font-size: 0.82rem; }
+            .va-table-empty { color: var(--text-muted); font-style: italic; padding: 14px; text-align: center; }
 
             .va-form { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: end; }
-            .va-form label { display: flex; flex-direction: column; gap: 4px; font-family: monospace; font-size: 0.7rem; color: #888; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; }
-            .va-input { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 10px 12px; border-radius: 6px; font-size: 0.88rem; outline: none; transition: border-color 0.15s; font-family: inherit; }
+            .va-form label { display: flex; flex-direction: column; gap: 4px; font-family: monospace; font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; }
+            .va-input { background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-main); padding: 10px 12px; border-radius: 6px; font-size: 0.88rem; outline: none; transition: border-color 0.15s; font-family: inherit; }
             .va-input:focus { border-color: #c084fc; }
-            .va-btn { background: linear-gradient(135deg, #c084fc, #6366f1); color: #fff; border: 0; padding: 10px 18px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: transform 0.15s; font-size: 0.85rem; }
+            .va-btn { background: linear-gradient(135deg, #c084fc, #6366f1); color: var(--text-main); border: 0; padding: 10px 18px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: transform 0.15s; font-size: 0.85rem; }
             .va-btn:hover { transform: translateY(-1px); }
             .va-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
             .va-btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #c084fc; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; margin-top: 12px; }
             .va-btn-secondary:hover { border-color: #c084fc; }
 
-            .va-section-explain p { color: #bbb; font-size: 0.88rem; line-height: 1.65; margin-bottom: 10px; }
+            .va-section-explain p { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.65; margin-bottom: 10px; }
 
             @media (max-width: 720px) {
                 .va-form { grid-template-columns: 1fr; }
@@ -289,8 +289,8 @@ export default class ValueAccountingView {
             .va-edit-targets.is-open { display: block; }
             .va-target-slider { display: grid; grid-template-columns: 110px 1fr 60px; gap: 10px; align-items: center; padding: 6px 0; }
             .va-target-slider input[type=range] { accent-color: #c084fc; }
-            .va-target-slider input[type=number] { width: 60px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.4); color: #fff; border-radius: 4px; font-size: 0.85rem; text-align: right; }
-            .va-target-sum { display: flex; justify-content: space-between; padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 0.85rem; }
+            .va-target-slider input[type=number] { width: 60px; padding: 4px 8px; border: 1px solid var(--border-default); background: var(--bg-elevated); color: var(--text-main); border-radius: 4px; font-size: 0.85rem; text-align: right; }
+            .va-target-sum { display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-elevated); border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 0.85rem; }
             .va-target-sum.is-valid { color: #4ade80; }
             .va-target-sum.is-invalid { color: #fca5a5; }
         </style>
@@ -363,7 +363,7 @@ export default class ValueAccountingView {
                 </label>
                 <button type="submit" class="va-btn">+ Afegir</button>
             </form>
-            <p style="color:#666;font-size:0.75rem;margin-top:8px;font-family:monospace;">
+            <p style="color:var(--text-muted);font-size:0.75rem;margin-top:8px;font-family:monospace;">
                 Pista · per a hores de feina, valor = 2 × salari_anual / 2000 × hores. SOS calcula slices = valor × multiplicador automàticament.
             </p>
         `;
@@ -445,7 +445,7 @@ export default class ValueAccountingView {
         const el = document.getElementById('vaPieChart');
         if (!el) return;
         if (typeof window.d3 === 'undefined') {
-            el.innerHTML = '<p style="color:#888;font-size:0.85rem;">D3 no carregat encara · ves a /map per a forçar la càrrega.</p>';
+            el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">D3 no carregat encara · ves a /map per a forçar la càrrega.</p>';
             return;
         }
         const d3 = window.d3;
@@ -487,7 +487,7 @@ export default class ValueAccountingView {
         }
 
         if (data.length === 0 || sumValue === 0) {
-            el.innerHTML = '<p style="color:#888;font-size:0.85rem;text-align:center;padding:2rem;">Encara no hi ha aportacions · afegeix la primera per veure la tarta.</p>';
+            el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">Encara no hi ha aportacions · afegeix la primera per veure la tarta.</p>';
             return;
         }
 
@@ -540,7 +540,7 @@ export default class ValueAccountingView {
         el.innerHTML = parties.map(p => `
             <div class="va-legend-item">
                 <span class="va-legend-dot" style="background:${PIE_COLORS[p.pieType] || '#888'};"></span>
-                <span class="va-legend-name">${escapeHtml(p.partyId)} <span style="color:#666;font-size:0.78rem;">· ${escapeHtml(p.pieType)}</span></span>
+                <span class="va-legend-name">${escapeHtml(p.partyId)} <span style="color:var(--text-muted);font-size:0.78rem;">· ${escapeHtml(p.pieType)}</span></span>
                 <span class="va-legend-pct">${p.sharePctInProject}%</span>
             </div>
         `).join('');
@@ -595,7 +595,7 @@ export default class ValueAccountingView {
         }).join('');
         return `
             <div class="va-edit-targets" id="vaTargetsEditor">
-                <p style="color:#aaa;font-size:0.85rem;margin-bottom:12px;">Ajusta el % de cada pie · la suma ha de ser <strong>100</strong>.</p>
+                <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:12px;">Ajusta el % de cada pie · la suma ha de ser <strong>100</strong>.</p>
                 ${sliders}
                 <div class="va-target-sum" id="vaTargetSum"><span>Total</span><span id="vaTargetSumValue">100%</span></div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;">

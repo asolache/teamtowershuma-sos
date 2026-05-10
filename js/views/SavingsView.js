@@ -50,49 +50,49 @@ export default class SavingsView {
 
         return `
         <style>
-            .sa-shell  { height:100dvh; background:#050507; color:#e6e6e6; font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .sa-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; flex-wrap:wrap; }
-            .sa-logo   { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
+            .sa-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .sa-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
+            .sa-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
             .sa-logo span { color:#6366f1; }
-            .sa-title  { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
+            .sa-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .sa-spacer { flex:1; }
             .sa-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
 
             .sa-main   { padding:1.5rem; max-width:1180px; margin:0 auto; flex:1; overflow-y:auto; width:100%; box-sizing:border-box; }
 
-            .sa-hero   { background:linear-gradient(145deg,rgba(34,197,94,0.06),rgba(0,0,0,0)); border:1px solid #1a1a22; border-left:3px solid #22c55e; border-radius:10px; padding:1.4rem; margin-bottom:1.4rem; }
-            .sa-hero h1 { margin:0; color:#fff; font-size:1.3rem; }
-            .sa-hero .meta { color:#aaa; font-size:0.85rem; margin-top:0.3rem; line-height:1.45; }
+            .sa-hero   { background:linear-gradient(145deg,rgba(34,197,94,0.06),rgba(0,0,0,0)); border:1px solid var(--border-default); border-left:3px solid #22c55e; border-radius:10px; padding:1.4rem; margin-bottom:1.4rem; }
+            .sa-hero h1 { margin:0; color:var(--text-main); font-size:1.3rem; }
+            .sa-hero .meta { color:var(--text-secondary); font-size:0.85rem; margin-top:0.3rem; line-height:1.45; }
 
             .sa-stats  { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:0.7rem; margin-top:1rem; }
-            .sa-stat   { background:#0e0e14; border:1px solid #1a1a22; border-left:3px solid var(--sa-c,#6366f1); border-radius:8px; padding:0.7rem 0.9rem; }
-            .sa-stat .label { color:#888; font-size:0.7rem; font-family:monospace; text-transform:uppercase; letter-spacing:0.05em; }
-            .sa-stat .value { color:#fff; font-size:1.35rem; font-weight:700; margin-top:0.2rem; font-family:monospace; }
-            .sa-stat .sub   { color:#aaa; font-size:0.7rem; margin-top:0.15rem; }
+            .sa-stat   { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid var(--sa-c,#6366f1); border-radius:8px; padding:0.7rem 0.9rem; }
+            .sa-stat .label { color:var(--text-muted); font-size:0.7rem; font-family:monospace; text-transform:uppercase; letter-spacing:0.05em; }
+            .sa-stat .value { color:var(--text-main); font-size:1.35rem; font-weight:700; margin-top:0.2rem; font-family:monospace; }
+            .sa-stat .sub   { color:var(--text-secondary); font-size:0.7rem; margin-top:0.15rem; }
 
-            .sa-section h2 { margin:1.6rem 0 0.7rem 0; font-size:0.85rem; color:#aaa; text-transform:uppercase; letter-spacing:0.05em; font-family:monospace; }
+            .sa-section h2 { margin:1.6rem 0 0.7rem 0; font-size:0.85rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; font-family:monospace; }
 
             .sa-cards  { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:0.8rem; }
-            .sa-card   { background:#0e0e14; border:1px solid #1a1a22; border-left:3px solid var(--sa-cc,#a855f7); border-radius:10px; padding:1rem; }
+            .sa-card   { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid var(--sa-cc,#a855f7); border-radius:10px; padding:1rem; }
             .sa-card .head { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem; }
             .sa-card .head .icon { font-size:1.5rem; }
-            .sa-card .head .name { color:#fff; font-weight:700; font-size:0.95rem; }
-            .sa-card .range { color:#aaa; font-size:0.75rem; font-family:monospace; margin-bottom:0.3rem; }
+            .sa-card .head .name { color:var(--text-main); font-weight:700; font-size:0.95rem; }
+            .sa-card .range { color:var(--text-secondary); font-size:0.75rem; font-family:monospace; margin-bottom:0.3rem; }
             .sa-card .saving-amt { color:#facc15; font-size:1.4rem; font-weight:700; font-family:monospace; }
             .sa-card .saving-pct { color:#86efac; font-size:0.95rem; font-family:monospace; margin-top:0.2rem; }
             .sa-card .sos-cost { color:#7dd3fc; font-size:0.78rem; font-family:monospace; margin-top:0.4rem; }
-            .sa-card .bar { background:#1a1a22; border-radius:4px; overflow:hidden; height:6px; margin-top:0.5rem; }
+            .sa-card .bar { background:var(--bg-elevated); border-radius:4px; overflow:hidden; height:6px; margin-top:0.5rem; }
             .sa-card .bar > span { display:block; height:100%; background:linear-gradient(90deg,#22c55e,#86efac); }
 
             .sa-table  { width:100%; border-collapse:collapse; font-size:0.78rem; margin-top:0.5rem; }
-            .sa-table th { color:#888; font-family:monospace; font-weight:600; text-align:left; padding:6px 8px; border-bottom:1px solid #1a1a22; text-transform:uppercase; letter-spacing:0.05em; font-size:0.7rem; }
+            .sa-table th { color:var(--text-muted); font-family:monospace; font-weight:600; text-align:left; padding:6px 8px; border-bottom:1px solid var(--border-default); text-transform:uppercase; letter-spacing:0.05em; font-size:0.7rem; }
             .sa-table td { padding:8px; border-bottom:1px solid #11111a; color:#ddd; font-family:monospace; }
             .sa-table td.num { text-align:right; }
             .sa-table tr:hover td { background:rgba(99,102,241,0.04); }
             .sa-table a { color:#a5b4fc; text-decoration:none; }
             .sa-table a:hover { text-decoration:underline; }
 
-            .sa-empty { text-align:center; padding:3rem 1rem; color:#666; border:1px dashed #2a2a35; border-radius:8px; }
+            .sa-empty { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed #2a2a35; border-radius:8px; }
 
             .sa-banner { background:rgba(99,102,241,0.05); border:1px dashed rgba(99,102,241,0.3); border-radius:8px; padding:0.7rem 0.9rem; font-size:0.78rem; color:#a5b4fc; margin-top:1rem; line-height:1.5; }
         </style>
@@ -105,7 +105,7 @@ export default class SavingsView {
                 ${renderNavGroupedHtml({ active: '', projectId: this.projectId, className: 'sa-link' })}
             </div>
             <div class="sa-main" id="saMain">
-                <p style="color:#888;font-size:0.85rem;">Cargando…</p>
+                <p style="color:var(--text-muted);font-size:0.85rem;">Cargando…</p>
             </div>
         </div>`;
     }

@@ -46,36 +46,36 @@ export default class MindGraphView {
         await store.init();
         return `
         <style>
-            .mg-shell  { height:100dvh; background:#050507; color:#e6e6e6; font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .mg-topbar { display:flex; align-items:center; gap:1rem; padding:0.8rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; flex-wrap:wrap; }
-            .mg-logo   { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
+            .mg-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .mg-topbar { display:flex; align-items:center; gap:1rem; padding:0.8rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
+            .mg-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
             .mg-logo span { color:#6366f1; }
-            .mg-title  { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
+            .mg-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .mg-spacer { flex:1; }
             .mg-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
 
-            .mg-controls { display:flex; gap:0.5rem; align-items:center; padding:0.5rem 1.5rem; background:#0a0a10; border-bottom:1px solid #1a1a22; flex-shrink:0; flex-wrap:wrap; font-size:0.78rem; color:#aaa; }
-            .mg-controls select, .mg-controls input { background:#050507; color:#e6e6e6; border:1px solid #2a2a35; padding:5px 8px; border-radius:5px; font-family:inherit; font-size:0.78rem; outline:none; }
+            .mg-controls { display:flex; gap:0.5rem; align-items:center; padding:0.5rem 1.5rem; background:var(--bg-panel); border-bottom:1px solid var(--border-default); flex-shrink:0; flex-wrap:wrap; font-size:0.78rem; color:var(--text-secondary); }
+            .mg-controls select, .mg-controls input { background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); padding:5px 8px; border-radius:5px; font-family:inherit; font-size:0.78rem; outline:none; }
             .mg-controls label { display:flex; gap:5px; align-items:center; cursor:pointer; user-select:none; }
 
             .mg-main   { flex:1; display:grid; grid-template-columns:1fr 240px; overflow:hidden; }
             @media (max-width:780px) { .mg-main { grid-template-columns: 1fr; } .mg-side { display:none; } }
             .mg-canvas { background:radial-gradient(circle at 50% 50%, #0b0b14 0%, #050507 100%); position:relative; overflow:hidden; }
-            .mg-side   { background:#08080c; border-left:1px solid #1a1a22; padding:0.8rem 1rem; overflow-y:auto; }
-            .mg-side h3 { font-size:0.78rem; color:#aaa; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 0.4rem 0; font-family:monospace; }
+            .mg-side   { background:var(--bg-panel); border-left:1px solid #1a1a22; padding:0.8rem 1rem; overflow-y:auto; }
+            .mg-side h3 { font-size:0.78rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin:0 0 0.4rem 0; font-family:monospace; }
             .mg-legend-row { display:flex; align-items:center; gap:8px; font-size:0.78rem; color:#ddd; margin-bottom:5px; }
             .mg-legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; box-shadow:0 0 6px currentColor; }
-            .mg-legend-row .count { color:#888; font-family:monospace; font-size:0.7rem; margin-left:auto; }
+            .mg-legend-row .count { color:var(--text-muted); font-family:monospace; font-size:0.7rem; margin-left:auto; }
 
-            .mg-stat-row { display:flex; justify-content:space-between; font-size:0.78rem; color:#aaa; margin:0.3rem 0; }
-            .mg-stat-row strong { color:#fff; font-family:monospace; }
+            .mg-stat-row { display:flex; justify-content:space-between; font-size:0.78rem; color:var(--text-secondary); margin:0.3rem 0; }
+            .mg-stat-row strong { color:var(--text-main); font-family:monospace; }
 
-            .mg-tooltip { position:absolute; pointer-events:none; background:#0e0e14; border:1px solid #2a2a35; border-radius:6px; padding:8px 10px; font-size:0.78rem; color:#e6e6e6; max-width:280px; z-index:10; display:none; box-shadow:0 4px 16px rgba(0,0,0,0.5); }
-            .mg-tooltip .ttype { color:#888; text-transform:uppercase; font-family:monospace; font-size:0.65rem; letter-spacing:0.05em; }
-            .mg-tooltip .ttitle { color:#fff; font-weight:600; margin:0.2rem 0; }
-            .mg-tooltip .tid { color:#666; font-family:monospace; font-size:0.7rem; word-break:break-all; }
+            .mg-tooltip { position:absolute; pointer-events:none; background:var(--bg-panel); border:1px solid var(--border-default); border-radius:6px; padding:8px 10px; font-size:0.78rem; color:var(--text-main); max-width:280px; z-index:10; display:none; box-shadow:0 4px 16px rgba(0,0,0,0.5); }
+            .mg-tooltip .ttype { color:var(--text-muted); text-transform:uppercase; font-family:monospace; font-size:0.65rem; letter-spacing:0.05em; }
+            .mg-tooltip .ttitle { color:var(--text-main); font-weight:600; margin:0.2rem 0; }
+            .mg-tooltip .tid { color:var(--text-muted); font-family:monospace; font-size:0.7rem; word-break:break-all; }
 
-            .mg-empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#666; font-size:0.85rem; flex-direction:column; gap:0.5rem; padding:2rem; text-align:center; }
+            .mg-empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.85rem; flex-direction:column; gap:0.5rem; padding:2rem; text-align:center; }
         </style>
 
         <div class="mg-shell">
@@ -92,7 +92,7 @@ export default class MindGraphView {
                 </select>
                 <label><input type="checkbox" id="mgTagEdges" checked> Aristas por tags</label>
                 <label>Min weight tags <input type="number" id="mgMinTag" value="1" min="1" max="9" style="width:50px;"></label>
-                <span id="mgStatLine" style="margin-left:auto;color:#666;font-family:monospace;font-size:0.72rem;">cargando…</span>
+                <span id="mgStatLine" style="margin-left:auto;color:var(--text-muted);font-family:monospace;font-size:0.72rem;">cargando…</span>
             </div>
 
             <div class="mg-main">
@@ -113,7 +113,7 @@ export default class MindGraphView {
                     <div class="mg-stat-row"><span>Relation (refs)</span><strong id="mgEdgeRel">0</strong></div>
                     <div class="mg-stat-row"><span>Tag (folksonomía)</span><strong id="mgEdgeTag">0</strong></div>
                     <h3 style="margin-top:1.2rem;">Cómo navegar</h3>
-                    <div style="font-size:0.75rem;color:#aaa;line-height:1.45;">
+                    <div style="font-size:0.75rem;color:var(--text-secondary);line-height:1.45;">
                         Click en un nodo → abre <code>/n/{id}</code> · arrastra para reorganizar · scroll/pinch para zoom · doble click en canvas para liberar.
                     </div>
                 </aside>
@@ -193,7 +193,7 @@ export default class MindGraphView {
             .map(k => {
                 const color = colorForType(k.type);
                 return `<div class="mg-legend-row"><span class="mg-legend-dot" style="background:${color};color:${color};"></span>${this._esc(k.label)}<span class="count">${stats.byType[k.type]}</span></div>`;
-            }).join('') || '<div style="color:#666;font-size:0.75rem;">No hay nodos visibles con los filtros actuales.</div>';
+            }).join('') || '<div style="color:var(--text-muted);font-size:0.75rem;">No hay nodos visibles con los filtros actuales.</div>';
 
         document.getElementById('mgEdgeParent').textContent = stats.byEdgeKind.parent   || 0;
         document.getElementById('mgEdgeRel').textContent    = stats.byEdgeKind.relation || 0;

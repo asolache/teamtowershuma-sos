@@ -445,7 +445,7 @@ export default class ValueMapView {
             }
             .vmap-form-input {
                 width: 100%;
-                background: rgba(0,0,0,0.4);
+                background: var(--bg-elevated);
                 border: 1px solid var(--glass-border);
                 color: var(--text-main);
                 padding: 10px 12px;
@@ -641,7 +641,7 @@ export default class ValueMapView {
             .vmap-ai-textarea {
                 width: 100%;
                 min-height: 100px;
-                background: rgba(0,0,0,0.5);
+                background: var(--bg-elevated);
                 border: 1px solid rgba(224,64,251,0.25);
                 border-radius: var(--radius-md);
                 color: var(--text-main);
@@ -1691,7 +1691,7 @@ export default class ValueMapView {
                 <input class="vmap-inline-input" id="inlRoleName"
                        value="${role.name}"
                        data-field="name" data-role="${role.id}"
-                       style="width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);
+                       style="width:100%;background:var(--bg-elevated);border:1px solid var(--glass-border);
                               color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);
                               font-size:var(--text-xs);font-family:var(--font-base);outline:none;">
             </div>
@@ -1705,7 +1705,7 @@ export default class ValueMapView {
                 </div>
                 <select class="vmap-inline-input" id="inlRoleLevel"
                         data-field="castell_level" data-role="${role.id}"
-                        style="width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);
+                        style="width:100%;background:var(--bg-elevated);border:1px solid var(--glass-border);
                                color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);
                                font-size:var(--text-xs);font-family:var(--font-base);outline:none;">
                     <option value="pinya"       ${role.castell_level === 'pinya'       ? 'selected' : ''}>Base operativa</option>
@@ -1720,7 +1720,7 @@ export default class ValueMapView {
                 <textarea class="vmap-inline-input" id="inlRoleDesc"
                           data-field="description" data-role="${role.id}"
                           rows="2"
-                          style="width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);
+                          style="width:100%;background:var(--bg-elevated);border:1px solid var(--glass-border);
                                  color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);
                                  font-size:var(--text-xs);font-family:var(--font-base);
                                  outline:none;resize:vertical;box-sizing:border-box;"
@@ -1734,7 +1734,7 @@ export default class ValueMapView {
                        value="${role.typical_actor || ''}"
                        data-field="typical_actor" data-role="${role.id}"
                        placeholder="ej: director comercial, cliente"
-                       style="width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);
+                       style="width:100%;background:var(--bg-elevated);border:1px solid var(--glass-border);
                               color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);
                               font-size:var(--text-xs);font-family:var(--font-base);outline:none;">
             </div>
@@ -2140,13 +2140,13 @@ export default class ValueMapView {
                         value="${typeof tx.sequence_order === 'number' ? tx.sequence_order : ''}"
                         data-field="sequence_order" data-tx="${tx.id}"
                         placeholder="1, 2, 3…"
-                        style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);font-size:var(--text-xs);font-family:monospace;outline:none;">
+                        style="background:var(--bg-elevated);border:1px solid var(--glass-border);color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);font-size:var(--text-xs);font-family:monospace;outline:none;">
                     <input class="vmap-inline-input" id="inlTxPhase"
                         type="text"
                         value="${tx.phase ? this._escHtml(tx.phase) : ''}"
                         data-field="phase" data-tx="${tx.id}"
                         placeholder="fase opcional · ej. cosecha"
-                        style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);font-size:var(--text-xs);outline:none;">
+                        style="background:var(--bg-elevated);border:1px solid var(--glass-border);color:var(--text-main);padding:6px 8px;border-radius:var(--radius-sm);font-size:var(--text-xs);outline:none;">
                 </div>
                 <div style="color:var(--text-muted);font-size:9px;margin-top:4px;font-family:monospace;">orden 1, 2, 3… para animar pulsos · phase agrupa pasos</div>
             </div>
