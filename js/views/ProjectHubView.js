@@ -77,48 +77,48 @@ export default class ProjectHubView {
 
         return `
         <style>
-            .ph-shell  { height:100dvh; background:#050507; color:#e6e6e6; font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .ph-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; }
-            .ph-logo   { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
-            .ph-logo span { color:#6366f1; }
-            .ph-title  { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
+            .ph-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); display:flex; flex-direction:column; overflow:hidden; }
+            .ph-topbar { display:flex; align-items:center; gap:1rem; padding:0.85rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
+            .ph-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
+            .ph-logo span { color:var(--accent-indigo); }
+            .ph-title  { color:var(--text-secondary); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .ph-spacer { flex:1; }
-            .ph-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
+            .ph-link   { color:var(--accent-indigo); text-decoration:none; font-size:0.85rem; }
 
             .ph-main   { padding:1.5rem; flex:1; overflow-y:auto; max-width:1300px; margin:0 auto; width:100%; box-sizing:border-box; }
 
-            .ph-hero   { background:linear-gradient(145deg,rgba(99,102,241,0.06),rgba(0,0,0,0)); border:1px solid #1a1a22; border-radius:10px; padding:1.4rem; margin-bottom:1.5rem; }
-            .ph-hero h1 { margin:0; color:#fff; font-size:1.5rem; }
+            .ph-hero   { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:var(--radius-lg); padding:1.4rem; margin-bottom:1.5rem; box-shadow:var(--shadow-sm); }
+            .ph-hero h1 { margin:0; color:var(--text-main); font-size:1.5rem; letter-spacing:-0.01em; }
             .ph-hero .meta { display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem; align-items:center; }
-            .ph-badge  { background:rgba(99,102,241,0.15); color:#a5b4fc; padding:3px 9px; border-radius:10px; font-size:0.7rem; font-family:monospace; border:1px solid rgba(99,102,241,0.3); }
-            .ph-badge.status { background:rgba(34,197,94,0.12); color:${statusColor}; border-color:${statusColor}40; }
+            .ph-badge  { background:rgba(99,102,241,0.15); color:var(--accent-indigo); padding:3px 9px; border-radius:10px; font-size:0.72rem; font-family:var(--font-mono); border:1px solid rgba(99,102,241,0.3); }
+            .ph-badge.status { background:rgba(16,185,129,0.12); color:${statusColor}; border-color:${statusColor}40; }
 
             .ph-stat-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.6rem; margin-top:1rem; }
-            .ph-stat { background:#0e0e14; border:1px solid #1a1a22; border-left:3px solid var(--ph-c,#6366f1); border-radius:8px; padding:0.6rem 0.8rem; }
-            .ph-stat .label { color:#888; font-size:0.7rem; font-family:monospace; text-transform:uppercase; letter-spacing:0.05em; }
-            .ph-stat .value { color:#fff; font-size:1.25rem; font-weight:700; margin-top:0.2rem; }
-            .ph-stat .sub   { color:#aaa; font-size:0.7rem; margin-top:0.15rem; }
+            .ph-stat { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid var(--ph-c,var(--accent-indigo)); border-radius:var(--radius-md); padding:0.7rem 0.9rem; box-shadow:var(--shadow-sm); }
+            .ph-stat .label { color:var(--text-muted); font-size:0.72rem; font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; }
+            .ph-stat .value { color:var(--text-main); font-size:1.25rem; font-weight:700; margin-top:0.2rem; }
+            .ph-stat .sub   { color:var(--text-secondary); font-size:0.72rem; margin-top:0.15rem; }
 
-            .ph-section h2 { margin:0 0 0.7rem 0; color:#fff; font-size:1rem; letter-spacing:0.02em; }
-            .ph-member-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:14px; transition:transform 0.15s, border-color 0.15s; }
-            .ph-member-card:hover { transform:translateY(-2px); border-color:rgba(192,132,252,0.4); }
+            .ph-section h2 { margin:0 0 0.7rem 0; color:var(--text-main); font-size:1.05rem; font-weight:700; letter-spacing:-0.01em; }
+            .ph-member-card { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:14px; transition:transform var(--dur-fast), border-color var(--dur-fast); box-shadow:var(--shadow-sm); }
+            .ph-member-card:hover { transform:translateY(-1px); border-color:var(--accent-purple); }
             .ph-section { margin-top:1.6rem; }
 
             .ph-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:0.7rem; }
-            .ph-tile { display:flex; flex-direction:column; gap:0.3rem; background:#0e0e14; border:1px solid #1a1a22; border-radius:8px; padding:0.85rem; text-decoration:none; color:#e6e6e6; transition:background 0.15s, border-color 0.15s; cursor:pointer; }
-            .ph-tile:hover { background:#13131a; border-color:#2a2a35; }
+            .ph-tile { display:flex; flex-direction:column; gap:0.3rem; background:var(--bg-panel); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:0.85rem; text-decoration:none; color:var(--text-main); transition:all var(--dur-fast); cursor:pointer; box-shadow:var(--shadow-sm); }
+            .ph-tile:hover { background:var(--glass-hover); border-color:var(--accent-indigo); transform:translateY(-1px); }
             .ph-tile .icon { font-size:1.5rem; line-height:1; }
-            .ph-tile .ttl  { color:#fff; font-weight:700; font-size:0.92rem; }
-            .ph-tile .hint { color:#888; font-size:0.72rem; line-height:1.3; }
+            .ph-tile .ttl  { color:var(--text-main); font-weight:700; font-size:0.95rem; }
+            .ph-tile .hint { color:var(--text-muted); font-size:0.78rem; line-height:1.4; }
             .ph-tile.stub  { opacity:0.7; cursor:default; }
-            .ph-tile.stub:hover { background:#0e0e14; }
-            .ph-tile.stub .stub-pill { display:inline-block; font-size:0.62rem; padding:1px 6px; border-radius:8px; background:rgba(250,204,21,0.12); color:#facc15; margin-top:0.3rem; align-self:flex-start; }
+            .ph-tile.stub:hover { background:var(--bg-panel); transform:none; }
+            .ph-tile.stub .stub-pill { display:inline-block; font-size:0.65rem; padding:1px 6px; border-radius:8px; background:rgba(251,191,36,0.12); color:var(--accent-yellow); margin-top:0.3rem; align-self:flex-start; }
 
             .ph-list { display:flex; flex-direction:column; gap:0.4rem; }
-            .ph-item { background:#0e0e14; border:1px solid #1a1a22; border-radius:6px; padding:0.55rem 0.8rem; display:flex; gap:0.6rem; align-items:center; text-decoration:none; color:#e6e6e6; font-size:0.85rem; }
-            .ph-item:hover { background:#13131a; }
-            .ph-item .pname { color:#fff; flex:1; }
-            .ph-item .pmeta { color:#888; font-size:0.72rem; font-family:monospace; }
+            .ph-item { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:0.6rem 0.85rem; display:flex; gap:0.6rem; align-items:center; text-decoration:none; color:var(--text-main); font-size:0.9rem; transition:background var(--dur-fast); }
+            .ph-item:hover { background:var(--glass-hover); }
+            .ph-item .pname { color:var(--text-main); flex:1; }
+            .ph-item .pmeta { color:var(--text-muted); font-size:0.75rem; font-family:var(--font-mono); }
         </style>
 
         <div class="ph-shell">

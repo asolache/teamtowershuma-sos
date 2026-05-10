@@ -2397,6 +2397,19 @@ valueAccountingService ejecuta el "cuánto" en tiempo real.
 | **Hero + role descs adaptables** | Si hi ha narrativa IA, el hero (tag + title + mantra) i les descripcions dels rols es renderitzen amb la versió IA · badge "🤖 IA · ${audience}" al meta del hero · icona 🤖 al costat de cada role-desc generada. Botó "↻ Regenerar" (canvia audiència o regenera) i "✕ Esborrar" (torna als textos default per projectType). Tots els textos cap-curts (slice 80/120/240 chars) per garantir hero llegible. |
 | **Sense races** | Refresca in-place reemplaçant `app.innerHTML` + cridant `afterRender()` · idèntic patró sprint A2 · zero `navigateTo()` que pugui sortir per timeout. |
 
+### Sprint H entregat 2026-05-10 · Linear/Vercel refactor tokens + 5 vistes top
+
+| Fix | Detall |
+|---|---|
+| **tokens.css refactor (Linear/Vercel style)** | Nou sistema · contrast WCAG AA en ambdós temes. `--text-main` `#f3f3f7` dark / `#0f172a` light. `--text-secondary` `#c4c4ce` / `#334155`. `--text-muted` `#8a8a9a` / `#64748b` (slate-500, 5:1 contrast). Nous semantic tokens: `--surface-1/2/3` · `--border-subtle/default/strong` · `--shadow-sm/md/lg` · `--shadow-focus`. Type scale bumped per llegibilitat: `--text-xs:13px` · `--text-sm:15px` · `--text-base:16px` · `--text-md:17px`. Font base canviada a **Inter Tight** (Linear/Vercel feel); Space Grotesk → `--font-display`. Radius més tight (`--radius-xl:1rem` era 1.5rem). Cobertura agressiva del theme-light ampliada a 15+ patrons de hex foscos inline + gradients típics + rgba whites + greys. Light bg ara off-white `#f6f7f9` (no tot blanc) per separar visualment del panel `#ffffff`. |
+| **SettingsView migrat** | `<style>` block · `.sv-card` ara `var(--bg-panel)` + `var(--border-default)` + `box-shadow:var(--shadow-sm)` · zero gradient hardcoded. Inputs amb `:focus { box-shadow:var(--shadow-focus) }` (3px indigo ring estil Vercel). Labels letter-spacing 0.06em refinat. |
+| **DashboardView migrat** | `color:white` → `var(--text-main)` (replace_all) · topbar `rgba(10,10,15,0.97)` → `var(--bg-panel)` · `.dash-card` gradient → flat `var(--bg-panel)` amb `box-shadow:var(--shadow-sm)` · onboard/area/stat/kb-panel/card-action-btn tots migrats a vars semantics. |
+| **KanbanView migrat** | Style block sencer reescrit · `#050507`/`#08080c`/`#0e0e14`/`#1a1a22` → `var(--bg-dark/panel/elevated)` · borders `var(--border-default/subtle)` · text `var(--text-main/secondary/muted)` · badges amb noves accent colors (green `#10b981` · red `#ef4444`). Modal amb `:focus` ring i `box-shadow:var(--shadow-lg)`. |
+| **ProjectHubView migrat** | Style block sencer reescrit · hero/stat/tile/item/member-card tots amb vars + `box-shadow:var(--shadow-sm)` · hover refinat amb `transform:translateY(-1px)`. |
+| **ValueMapView parcial** | Topbar + side panels migrats a `var(--bg-panel)` + `var(--border-default)` · sed batch de `color:white` → `var(--text-main)`. Modal sub-styles encara inline (no crítics, cobertura per atribut). |
+
+Pendents Sprint H+: KnowledgeBaseView · TagsView · SkillsView · WalletView · SavingsView · EfficiencyLogsView · /matriu* · /presentation · Map zoom controls. Encara amb cobertura via attribute selectors al tokens.css.
+
 
 ---
 

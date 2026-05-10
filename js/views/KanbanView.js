@@ -206,57 +206,58 @@ export default class KanbanView {
     async getHtml() {
         return `
         <style>
-            .kb-shell      { height:100dvh; background:var(--bg-0,#050507); color:#e6e6e6; font-family:var(--font-sans,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .kb-topbar     { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #1a1a22; background:#08080c; flex-shrink:0; }
-            .kb-logo       { font-weight:700; color:#fff; text-decoration:none; font-size:1.05rem; }
-            .kb-logo span  { color:#6366f1; }
-            .kb-title      { color:#aaa; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.8rem; }
+            .kb-shell      { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); display:flex; flex-direction:column; overflow:hidden; }
+            .kb-topbar     { display:flex; align-items:center; gap:1rem; padding:0.85rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
+            .kb-logo       { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
+            .kb-logo span  { color:var(--accent-indigo); }
+            .kb-title      { color:var(--text-secondary); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; font-size:0.8rem; }
             .kb-spacer     { flex:1; }
-            .kb-btn        { background:#1a1a22; color:#e6e6e6; border:1px solid #2a2a35; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem; }
-            .kb-btn:hover  { background:#22222d; }
-            .kb-btn-primary{ background:#6366f1; border-color:#6366f1; color:#fff; }
-            .kb-btn-primary:hover { background:#4f46e5; }
-            .kb-link       { color:#6366f1; text-decoration:none; }
+            .kb-btn        { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:var(--radius-md); cursor:pointer; font-size:0.85rem; font-family:var(--font-base); transition:all var(--dur-fast); }
+            .kb-btn:hover  { background:var(--glass-hover); border-color:var(--border-strong); }
+            .kb-btn-primary{ background:var(--accent-indigo); border-color:var(--accent-indigo); color:#fff; }
+            .kb-btn-primary:hover { filter:brightness(1.08); }
+            .kb-link       { color:var(--accent-indigo); text-decoration:none; }
 
             .kb-main       { padding:1.5rem; max-width:1600px; margin:0 auto; flex:1; overflow-y:auto; overflow-x:hidden; width:100%; }
             .kb-stats      { display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; }
-            .kb-stat       { background:#0e0e14; border:1px solid #1a1a22; border-radius:8px; padding:0.85rem 1.1rem; min-width:140px; }
-            .kb-stat-num   { font-size:1.4rem; font-weight:700; color:#fff; line-height:1; }
-            .kb-stat-lbl   { color:#888; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; margin-top:0.4rem; }
+            .kb-stat       { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:0.85rem 1.1rem; min-width:140px; box-shadow:var(--shadow-sm); }
+            .kb-stat-num   { font-size:1.4rem; font-weight:700; color:var(--text-main); line-height:1; }
+            .kb-stat-lbl   { color:var(--text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; margin-top:0.4rem; font-weight:600; }
 
             .kb-board      { display:grid; grid-template-columns:repeat(4, 1fr); gap:1rem; min-height:60vh; }
             @media (max-width: 1100px) { .kb-board { grid-template-columns:repeat(2, 1fr); } }
             @media (max-width: 700px)  { .kb-board { grid-template-columns:1fr; } }
 
-            .kb-col        { background:#0a0a10; border:1px solid #1a1a22; border-radius:8px; padding:0.85rem; display:flex; flex-direction:column; gap:0.7rem; }
-            .kb-col-h      { color:#aaa; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.1em; display:flex; align-items:center; gap:0.5rem; padding-bottom:0.5rem; border-bottom:2px solid var(--accent,#6366f1); }
-            .kb-col-h .pill{ background:#1a1a22; padding:1px 8px; border-radius:10px; font-size:0.7rem; color:#bbb; }
+            .kb-col        { background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:0.85rem; display:flex; flex-direction:column; gap:0.7rem; }
+            .kb-col-h      { color:var(--text-secondary); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.1em; font-weight:700; display:flex; align-items:center; gap:0.5rem; padding-bottom:0.5rem; border-bottom:2px solid var(--accent,var(--accent-indigo)); }
+            .kb-col-h .pill{ background:var(--bg-elevated); padding:1px 8px; border-radius:10px; font-size:0.7rem; color:var(--text-secondary); }
 
-            .kb-card       { background:#0e0e14; border:1px solid #1a1a22; border-left:3px solid var(--accent,#6366f1); border-radius:6px; padding:0.7rem; cursor:pointer; transition:background 0.15s; }
-            .kb-card:hover { background:#13131a; }
-            .kb-card h5    { margin:0 0 0.4rem 0; color:#fff; font-size:0.88rem; line-height:1.25; }
-            .kb-card .meta { color:#888; font-size:0.7rem; line-height:1.5; }
+            .kb-card       { background:var(--bg-elevated); border:1px solid var(--border-subtle); border-left:3px solid var(--accent,var(--accent-indigo)); border-radius:var(--radius-sm); padding:0.7rem; cursor:pointer; transition:background var(--dur-fast), border-color var(--dur-fast); }
+            .kb-card:hover { background:var(--glass-hover); border-color:var(--border-default); }
+            .kb-card h5    { margin:0 0 0.4rem 0; color:var(--text-main); font-size:0.88rem; line-height:1.3; font-weight:700; }
+            .kb-card .meta { color:var(--text-muted); font-size:0.72rem; line-height:1.5; }
             .kb-card .badges { display:flex; gap:0.3rem; flex-wrap:wrap; margin-top:0.4rem; }
-            .kb-badge      { font-size:0.65rem; padding:1px 6px; border-radius:8px; background:#1a1a22; color:#bbb; }
-            .kb-badge.ai   { background:rgba(99,102,241,0.2); color:#a5b4fc; }
-            .kb-badge.human{ background:rgba(34,197,94,0.18); color:#86efac; }
-            .kb-badge.tdd  { background:rgba(212,168,83,0.2); color:#facc15; }
-            .kb-badge.high { background:rgba(255,82,82,0.18); color:#fca5a5; }
-            .kb-badge.med  { background:rgba(99,102,241,0.18); color:#a5b4fc; }
-            .kb-badge.cost { background:rgba(34,197,94,0.18); color:#86efac; font-family:monospace; }
-            .kb-badge.save { background:rgba(212,168,83,0.18); color:#facc15; font-family:monospace; }
+            .kb-badge      { font-size:0.68rem; padding:1px 6px; border-radius:8px; background:var(--bg-elevated); color:var(--text-secondary); }
+            .kb-badge.ai   { background:rgba(99,102,241,0.18); color:var(--accent-indigo); }
+            .kb-badge.human{ background:rgba(16,185,129,0.18); color:var(--accent-green); }
+            .kb-badge.tdd  { background:rgba(212,168,83,0.18); color:var(--accent-claude); }
+            .kb-badge.high { background:rgba(239,68,68,0.18); color:var(--accent-red); }
+            .kb-badge.med  { background:rgba(99,102,241,0.18); color:var(--accent-indigo); }
+            .kb-badge.cost { background:rgba(16,185,129,0.18); color:var(--accent-green); font-family:var(--font-mono); }
+            .kb-badge.save { background:rgba(212,168,83,0.18); color:var(--accent-claude); font-family:var(--font-mono); }
 
-            .kb-empty      { text-align:center; color:#666; font-size:0.8rem; padding:1rem; border:1px dashed #2a2a35; border-radius:6px; }
+            .kb-empty      { text-align:center; color:var(--text-muted); font-size:0.85rem; padding:1rem; border:1px dashed var(--border-default); border-radius:var(--radius-sm); }
 
-            .kb-modal      { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:flex-start; justify-content:center; z-index:1000; padding:2rem 1rem; overflow-y:auto; }
-            .kb-modal-inner{ background:#0e0e14; border:1px solid #2a2a35; border-radius:10px; padding:1.5rem; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
-            .kb-modal h3   { margin:0 0 1rem 0; color:#fff; }
-            .kb-modal label{ display:block; color:#aaa; font-size:0.78rem; margin-top:0.7rem; margin-bottom:0.25rem; }
-            .kb-modal input, .kb-modal select, .kb-modal textarea { width:100%; box-sizing:border-box; background:#050507; color:#e6e6e6; border:1px solid #2a2a35; border-radius:5px; padding:0.5rem; font-size:0.85rem; font-family:inherit; }
+            .kb-modal      { position:fixed; inset:0; background:var(--bg-overlay); display:flex; align-items:flex-start; justify-content:center; z-index:var(--z-modal); padding:2rem 1rem; overflow-y:auto; }
+            .kb-modal-inner{ background:var(--bg-panel); border:1px solid var(--border-default); border-radius:var(--radius-lg); padding:1.5rem; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); color:var(--text-main); }
+            .kb-modal h3   { margin:0 0 1rem 0; color:var(--text-main); }
+            .kb-modal label{ display:block; color:var(--text-secondary); font-size:0.8rem; margin-top:0.7rem; margin-bottom:0.25rem; font-weight:600; }
+            .kb-modal input, .kb-modal select, .kb-modal textarea { width:100%; box-sizing:border-box; background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:0.55rem 0.7rem; font-size:0.9rem; font-family:inherit; outline:none; transition:border-color var(--dur-fast); }
+            .kb-modal input:focus, .kb-modal select:focus, .kb-modal textarea:focus { border-color:var(--accent-indigo); box-shadow:var(--shadow-focus); }
             .kb-modal textarea { min-height:60px; resize:vertical; }
             .kb-modal .row { display:grid; grid-template-columns:1fr 1fr; gap:0.7rem; }
             .kb-modal .actions { display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1.2rem; flex-wrap:wrap; }
-            .kb-modal .actions .danger { background:#3a1a1a; border-color:#5a2a2a; color:#fca5a5; }
+            .kb-modal .actions .danger { background:rgba(239,68,68,0.12); border-color:rgba(239,68,68,0.30); color:var(--accent-red); }
         </style>
 
         <div class="kb-shell">

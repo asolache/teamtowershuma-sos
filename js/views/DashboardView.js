@@ -89,12 +89,12 @@ export default class DashboardView {
             .dash-topbar {
                 display: flex; align-items: center; gap: 12px;
                 padding: 0 20px; height: 52px;
-                border-bottom: 1px solid var(--glass-border);
-                background: rgba(10,10,15,0.97);
+                border-bottom: 1px solid var(--border-default);
+                background: var(--bg-panel);
                 position: sticky; top: 0; z-index: 20; flex-shrink: 0;
             }
             .dash-logo {
-                font-size: var(--text-sm); font-weight: 900; color: white;
+                font-size: var(--text-sm); font-weight: 900; color: var(--text-main);
                 display: flex; align-items: center; gap: 6px; text-decoration: none;
             }
             .dash-logo span { color: var(--accent-indigo); }
@@ -106,9 +106,9 @@ export default class DashboardView {
                 font-weight: 700; cursor: pointer; transition: all var(--duration-fast);
                 font-family: var(--font-base);
             }
-            .dash-btn:hover { border-color: var(--accent-indigo); color: white; }
+            .dash-btn:hover { border-color: var(--accent-indigo); color: var(--text-main); }
             .dash-btn-primary {
-                background: var(--accent-indigo); border-color: var(--accent-indigo); color: white;
+                background: var(--accent-indigo); border-color: var(--accent-indigo); color: var(--text-main);
             }
             .dash-btn-primary:hover { filter: brightness(1.12); }
             .dash-btn-kb {
@@ -143,7 +143,7 @@ export default class DashboardView {
             }
             .dash-hero h1 {
                 font-size: var(--text-2xl); font-weight: 900;
-                color: white; letter-spacing: -0.5px; margin-bottom: 4px;
+                color: var(--text-main); letter-spacing: -0.5px; margin-bottom: 4px;
             }
             .dash-hero h1 span { color: var(--accent-indigo); }
             .dash-hero-sub { font-size: var(--text-sm); color: var(--text-muted); font-family: var(--font-mono); }
@@ -155,15 +155,15 @@ export default class DashboardView {
                 gap: 10px; margin-bottom: 28px;
             }
             .dash-onboard-tile {
-                background: linear-gradient(145deg,rgba(99,102,241,0.04),rgba(0,0,0,0));
-                border: 1px solid var(--glass-border); border-left: 3px solid var(--ob-c,#6366f1);
+                background: var(--bg-panel);
+                border: 1px solid var(--border-default); border-left: 3px solid var(--ob-c,#6366f1);
                 border-radius: var(--radius-md); padding: 12px 14px; cursor: pointer;
                 transition: background 0.15s, transform 0.15s, border-color 0.15s;
                 text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 4px;
             }
             .dash-onboard-tile:hover { background: rgba(99,102,241,0.08); transform: translateY(-1px); border-color: var(--accent-indigo); }
             .dash-onboard-step { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
-            .dash-onboard-title { font-size: 0.92rem; font-weight: 800; color: white; line-height: 1.25; }
+            .dash-onboard-title { font-size: 0.92rem; font-weight: 800; color: var(--text-main); line-height: 1.25; }
             .dash-onboard-desc  { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
 
             .dash-areas {
@@ -171,14 +171,14 @@ export default class DashboardView {
                 gap: 8px; margin-bottom: 28px;
             }
             .dash-area-tile {
-                background: rgba(20,20,28,0.5); border: 1px solid var(--glass-border);
+                background: var(--bg-panel); border: 1px solid var(--border-default);
                 border-radius: var(--radius-md); padding: 10px 12px; cursor: pointer;
                 transition: background 0.15s, border-color 0.15s; text-decoration: none; color: inherit;
                 display: flex; align-items: center; gap: 10px;
             }
             .dash-area-tile:hover { background: rgba(99,102,241,0.08); border-color: var(--accent-indigo); }
             .dash-area-icon  { font-size: 1.3rem; line-height: 1; }
-            .dash-area-label { font-size: 0.85rem; font-weight: 700; color: white; }
+            .dash-area-label { font-size: 0.85rem; font-weight: 700; color: var(--text-main); }
             .dash-area-hint  { font-size: 0.68rem; color: var(--text-muted); }
 
             /* ── Stats bar ── */
@@ -186,12 +186,12 @@ export default class DashboardView {
                 display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap;
             }
             .dash-stat {
-                background: rgba(25,25,32,0.7); border: 1px solid var(--glass-border);
+                background: var(--bg-panel); border: 1px solid var(--border-default);
                 border-radius: var(--radius-md); padding: 12px 18px;
                 min-width: 120px;
             }
             .dash-stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--font-mono); margin-bottom: 4px; }
-            .dash-stat-value { font-size: var(--text-xl); font-weight: 900; color: white; font-family: var(--font-mono); }
+            .dash-stat-value { font-size: var(--text-xl); font-weight: 900; color: var(--text-main); font-family: var(--font-mono); }
 
             /* ── Sector group ── */
             .dash-sector-group { margin-bottom: 32px; animation: slideUp 0.4s var(--ease-out); }
@@ -206,12 +206,13 @@ export default class DashboardView {
             .dash-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 
             .dash-card {
-                background: linear-gradient(145deg, rgba(25,25,32,0.9), rgba(10,10,15,0.95));
-                border: 1px solid var(--glass-border); border-radius: var(--radius-xl);
+                background: var(--bg-panel);
+                border: 1px solid var(--border-default); border-radius: var(--radius-lg);
                 padding: 18px 20px; cursor: pointer; text-decoration: none; color: inherit;
                 transition: all var(--duration-base) var(--ease-out);
                 display: flex; flex-direction: column; gap: 10px;
                 position: relative; overflow: hidden;
+                box-shadow: var(--shadow-sm);
             }
             .dash-card:hover {
                 border-color: var(--accent-indigo);
@@ -219,7 +220,7 @@ export default class DashboardView {
                 box-shadow: var(--shadow-indigo);
             }
             .dash-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-            .dash-card-name { font-size: var(--text-sm); font-weight: 900; color: white; line-height: 1.3; }
+            .dash-card-name { font-size: var(--text-sm); font-weight: 900; color: var(--text-main); line-height: 1.3; }
             .dash-card-sector-badge {
                 font-size: 9px; font-family: var(--font-mono); padding: 2px 7px;
                 border-radius: 3px; background: rgba(99,102,241,0.15);
@@ -245,7 +246,7 @@ export default class DashboardView {
             }
             .dash-card:hover .dash-card-actions { display: flex; }
             .dash-card-action-btn {
-                background: rgba(10,10,15,0.9); border: 1px solid var(--glass-border);
+                background: var(--bg-panel); border: 1px solid var(--border-default);
                 color: var(--text-muted); font-size: 10px; padding: 3px 8px;
                 border-radius: var(--radius-sm); cursor: pointer; transition: all var(--duration-fast);
                 font-family: var(--font-base); font-weight: 700;
@@ -273,8 +274,8 @@ export default class DashboardView {
 
             /* ── Knowledge panel ── */
             .dash-kb-panel {
-                border-left: 1px solid var(--glass-border);
-                background: rgba(8,8,12,0.98);
+                border-left: 1px solid var(--border-default);
+                background: var(--bg-panel);
                 overflow-y: auto;
                 display: none;
             }
@@ -285,7 +286,7 @@ export default class DashboardView {
             }
             .dash-kb-title { font-size: var(--text-sm); font-weight: 900; color: var(--accent-gold); display: flex; align-items: center; gap: 6px; }
             .dash-kb-close { background: transparent; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; padding: 2px 6px; border-radius: var(--radius-sm); }
-            .dash-kb-close:hover { color: white; }
+            .dash-kb-close:hover { color: var(--text-main); }
             .dash-kb-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
             .dash-kb-sector-item {
                 display: flex; align-items: center; justify-content: space-between;
@@ -301,13 +302,13 @@ export default class DashboardView {
                 border-radius: 3px; font-weight: 700;
             }
             .dash-kb-detail { margin-top: 12px; }
-            .dash-kb-detail-title { font-size: var(--text-sm); font-weight: 900; color: white; margin-bottom: 8px; }
+            .dash-kb-detail-title { font-size: var(--text-sm); font-weight: 900; color: var(--text-main); margin-bottom: 8px; }
             .dash-kb-role-item {
                 padding: 7px 10px; border-radius: var(--radius-sm);
                 background: rgba(25,25,32,0.8); margin-bottom: 5px;
                 border-left: 2px solid var(--accent-indigo);
             }
-            .dash-kb-role-name { font-size: var(--text-xs); color: white; font-weight: 700; margin-bottom: 2px; }
+            .dash-kb-role-name { font-size: var(--text-xs); color: var(--text-main); font-weight: 700; margin-bottom: 2px; }
             .dash-kb-role-desc { font-size: 10px; color: var(--text-muted); line-height: 1.5; }
             .dash-kb-role-level { font-size: 9px; font-family: var(--font-mono); color: var(--accent-indigo); margin-top: 3px; }
             .dash-kb-tx-item {
@@ -330,21 +331,21 @@ export default class DashboardView {
                 border-radius: var(--radius-xl); padding: 24px; width: 400px; max-width: 95vw;
                 animation: slideUp var(--duration-base) var(--ease-spring);
             }
-            .dash-modal h2 { font-size: var(--text-lg); font-weight: 900; margin: 0 0 4px; color: white; }
+            .dash-modal h2 { font-size: var(--text-lg); font-weight: 900; margin: 0 0 4px; color: var(--text-main); }
             .dash-modal-sub { font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 20px; font-family: var(--font-mono); }
             .dash-form-group { margin-bottom: 14px; }
             .dash-form-label { display: block; font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 5px; }
             .dash-form-input {
                 width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border);
-                color: white; padding: 10px 12px; border-radius: var(--radius-md);
+                color: var(--text-main); padding: 10px 12px; border-radius: var(--radius-md);
                 font-family: var(--font-base); font-size: var(--text-sm); outline: none;
                 transition: border-color var(--duration-fast); box-sizing: border-box;
             }
             .dash-form-input:focus { border-color: var(--accent-indigo); }
             .dash-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
             .dash-modal-cancel { background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted); padding: 9px 18px; border-radius: var(--radius-md); cursor: pointer; font-weight: 700; font-size: var(--text-sm); font-family: var(--font-base); }
-            .dash-modal-cancel:hover { color: white; }
-            .dash-modal-confirm { background: var(--accent-indigo); border: none; color: white; padding: 9px 20px; border-radius: var(--radius-md); cursor: pointer; font-weight: 900; font-size: var(--text-sm); font-family: var(--font-base); }
+            .dash-modal-cancel:hover { color: var(--text-main); }
+            .dash-modal-confirm { background: var(--accent-indigo); border: none; color: var(--text-main); padding: 9px 20px; border-radius: var(--radius-md); cursor: pointer; font-weight: 900; font-size: var(--text-sm); font-family: var(--font-base); }
             .dash-modal-confirm:hover { filter: brightness(1.1); }
 
             
@@ -356,7 +357,7 @@ export default class DashboardView {
             .dash-hero-inner { position: relative; z-index: 1; }
             .dash-hero { position: relative; margin-bottom: 32px; padding: 28px 0 24px;
                 border-bottom: 1px solid var(--glass-border); animation: fadeIn 0.5s var(--ease-out); }
-            .dash-hero h1 { font-size: 2.4rem; color: white;
+            .dash-hero h1 { font-size: 2.4rem; color: var(--text-main);
                 letter-spacing: -0.5px; margin-bottom: 4px; line-height: 1.05; }
             .dash-hero h1 span { color: var(--accent-indigo); }
             /* MAT-002-B · cuando .mat-hero-h1 está activo, el strong/span coge acento Matriu */
@@ -372,7 +373,7 @@ export default class DashboardView {
                 position: relative; overflow: hidden; }
             .dash-stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase;
                 letter-spacing: 0.1em; font-family: var(--font-mono); margin-bottom: 4px; }
-            .dash-stat-value { font-size: var(--text-xl); font-weight: 900; color: white;
+            .dash-stat-value { font-size: var(--text-xl); font-weight: 900; color: var(--text-main);
                 font-family: var(--font-mono); }
             .dash-stat-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
                 background: var(--glass-border); }
@@ -434,14 +435,14 @@ export default class DashboardView {
                 animation: fadeIn .5s var(--ease-out);
             }
             .dash-empty-icon { font-size: 2.5rem; opacity: .5; }
-            .dash-empty-title { font-size: var(--text-lg); font-weight: 900; color: white;
+            .dash-empty-title { font-size: var(--text-lg); font-weight: 900; color: var(--text-main);
                 text-align: center; }
             .dash-empty-sub { font-size: var(--text-xs); color: var(--text-muted);
                 font-family: var(--font-mono); text-align: center; }
             .dash-empty-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
                 margin-top: 8px; }
             .dash-empty-cta {
-                background: var(--accent-indigo); border: none; color: white;
+                background: var(--accent-indigo); border: none; color: var(--text-main);
                 padding: 9px 20px; border-radius: var(--radius-md); cursor: pointer;
                 font-weight: 900; font-size: var(--text-xs); font-family: var(--font-base);
                 transition: filter .2s; text-decoration: none; display: inline-block;
