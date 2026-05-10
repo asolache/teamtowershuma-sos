@@ -2340,4 +2340,64 @@ valueAccountingService ejecuta el "cuánto" en tiempo real.
 
 ---
 
+---
+
+## UX-AUDIT-001 · Revisió integral UX/colors/textos (input @alvaro 2026-05-09)
+
+> "fes una revisió de tota la UX i colors per millorar la UX un 100% ·
+> millora textos · integració SOS · millora del flux de treball · auditoria
+> de creació de projecte amb sector + preselecció de subtipus per millorar
+> la petició a la IA · revisa per què no va l'animació de seqüència ·
+> millora el dashboard per què l'enfoque matriu sigui més integrat al
+> flux · revisa que es vegin bé tots els textos dels menús · fes que SOS
+> pugui veure's en blanc o en negre · prepara't per al multidioma · revisa
+> els textos que ara surten en 3 idiomes."
+
+### Sprint A entregat 2026-05-09
+
+| Fix | Detall |
+|---|---|
+| **Bug seq order auto-save** | `_inferFlowOrderIA` modal "✓ Aplicar i guardar" ara crida `await this._saveMap()` automàticament + re-render del SVG · toast verd no-blocking en lloc d'`alert`. Solucionava: l'usuari aplicava l'ordre però havia d'anar manualment al "💾 Guardar" del topbar (gairebé invisible). |
+| **Light/Dark theme toggle** | `js/core/themeService.js` puro · KB nodo `sos-ui-theme` · `body.theme-light` class · `applyThemeToDocument` idempotent · `bootTheme` cridat des del router cada navegació (abans del primer render). Tokens `body.theme-light { --bg-dark: #f8f8fb · --text-main: #1a1a22 · etc }`. UI a `/settings → 🎨 Aspecte` · 2 botons "🌙 Fosc / ☀️ Clar". Aplica globalment · vistes amb skin propi (Matriu landing · network) mantenen el seu skin. |
+
+### Sprint A2 entregat 2026-05-09 (estabilització + presentació + mobile mockup)
+
+| Fix | Detall |
+|---|---|
+| **Bug "papallugues" + redirect a /settings** | Causa real identificada: `setTimeout(() => navigateTo('/settings'), 1500-1800)` en `SettingsView` (svSave/svProvider/svPlanSave/svManifestoSave/svManifestoRestore/svTheme) i `ValueMapView._runAISuggestion` quan no hi ha API key. Si l'usuari clicava "Save" o un botó i després marxava de la vista, el timer disparava després i el tornava a `/settings`. **Fix**: tots els handlers fan ara refresh in-place (DOM updates) en lloc de `navigateTo()` · zero races amb la navegació de l'usuari. Afegit també un fix paral·lel al `router.js` · removed el listener `[data-link]` per element redundant (el delegate global a `document` ja en cobreix tots) · evita doble pushState + doble render. |
+| **Quitat el botó "🎓 Cohort 0 Matriu" del topbar Dashboard** | Era un duplicat (el flux Matriu ja és al wizard de New Project + al menú "Matriu" del topbar + a `/matriu/network`). Saturava visualment. El mètode `_openMatriuCohortModal()` segueix disponible per CTAs interns. |
+| **Cobertura tema clar massiva** | Bloc nou a `css/tokens.css` amb selectors d'atribut `body.theme-light *[style*="background:#0a0a0f"]` (etc.) que sobreescriuen els colors hardcodejats inline a moltes vistes (Dashboard, Settings, Kanban, Efficiency, ProjectHub, etc.). També overrides per `.dash-topbar`, `.kb-topbar`, `.sv-card`, `.sv-input`, `.sos-breadcrumb`, `.sos-nav-group [role="menu"]`, scrollbar. Resultat: tema clar funcional sense refactor de 30+ vistes. |
+| **`/presentation` view nova** | `js/views/PresentationView.js` · landing read-only del projecte adaptada al `projectType` (12 hero texts personalitzats per Matriu) · stats strip · llista de rols amb tx IN/OUT (entregables tangibles + intangibles) · SOPs vinculats · WO counters · SOC del projecte si n'hi ha · CTAs cap a /map, /pact, /value-accounting · `window.print()` per generar PDF. Accessible des del topbar de `/map` amb el botó "🎤 Presentació". Registrat com a destí nav en categoria "market" (project-aware · `?project=`). |
+| **`/mobile` mockup** | `js/views/MobileMockupView.js` · 4 pantalles (Home · WO Detail · Wallet · Activity) en frame iPhone 14 Pro · mostra el cicle complet del operador mobile (claim WO → timer → evidència → IA tokens · saldo prepagat o pay-as-you-go · esdeveniments Arweave/Gnosis/OpenTimestamps). Inclou bloc de notes amb decisions de disseny + tech stack proposat (PWA, WebCrypto, WalletConnect, Stripe Payment Links) + roadmap 8 setmanes. Sprint A2: només mockup estàtic · implementació real a sprint posterior. |
+
+### Sprint pendents
+
+| Sprint | Detall |
+|---|---|
+| **UX-AUDIT-001 sprint B · Wizard creació projecte enriquit** | Modal "+ Nou projecte" · obligatori sector A-S del KnowledgeLoader · selector secundari de subtipus dins del sector (ex. K → "K-startup" · "K-platform" · "K-DAO") · selector de PROJECT_TYPE (12 Matriu) · checkbox "Aplicar bootstrap seed". Millora petició IA · prompt amb sector + subtipus + projectType context-rich. Sub-tipus dataset nou (10-20 per cada un dels 19 sectors) com a `js/core/sectorSubtypes.js`. |
+| **UX-AUDIT-001 sprint C · Dashboard Matriu integrat** | El strip MAT-002-F passa a ser ara una secció més visible · cards d'acció centrals · "El meu perfil membre" amb editor inline (skills · sectors · disponibilitat) · "Els meus projectes" amb filter per phase (DESIGN/BUILD/OPERATE/LEDGER) · "El meu impacte" amb stats agregats de slices generats. Reframe · Dashboard com a panell del membre, no del codi tècnic SOS. |
+| **UX-AUDIT-001 sprint D · Multidioma real i18n** | Auditoria completa textos · ara hi ha barreja castellà/català/anglès. Setup i18next + selector idioma a `/settings → 🌐 Idioma`. 3 idiomes: ES (default actual) · CA (Matriu cohort 0) · EN (red ampliada). Marcar ALL strings amb `t('key')` · extraure a `js/i18n/{locale}.json`. Sprint llarg · 2-4 olas per a cobrir totes les 17 vistes. |
+| **UX-AUDIT-001 sprint E · Revisió tipográfica menús** | Auditoria textos dropdowns nav (ara els labels truncats o mal alineats en algunes vistes) · tooltips coherents · iconografia unificada · contrast WCAG AA verificat per tot SOS. |
+| **UX-AUDIT-001 sprint F · Auditoria d'arquitectura d'informació** | (Input @alvaro 2026-05-09 · "auditoria de arquitectura de informacion para mejorar el flujo de trabajo añadiendo un sistema inteligente para elaborar la presentacion del proyecto"). Mapejar tots els punts d'entrada del usuari · catalogar destinacions (ja 19 ara) per intent (descobrir, dissenyar, executar, contabilitzar, presentar, configurar) · simplificar la navegació superior a 5 categories canòniques · proposar una "barra inferior" tipus app per mòbil · proposar Information Scent (etiquetes que prediuen què trobarà l'usuari). El sistema intel·ligent de presentació: a `/presentation` afegir un mode "auto-narrativa IA" que genera el text del hero + descripcions dels rols a partir del KB, adaptat al PROJECT_TYPE i a una audiència seleccionable (founders/equip/usuaris/inversors/comunitat) · cost ~150 tokens per generació · cache al KB. |
+| **UX-AUDIT-001 sprint G · Mobile PWA implementation** | Implementar les 4 pantalles del mockup `/mobile` com a PWA real · service worker + manifest + install prompt · WebCrypto signing per evidències · IndexedDB sync amb el desktop SOS via export firmat · Stripe Payment Links per top-up · Arweave-js + WalletConnect + OpenTimestamps. Roadmap 8 setmanes · 5 sprints documentat al mockup mateix. |
+
+### Sprint B entregat 2026-05-09 · Wizard enriquit + dataset subtipus
+
+| Fix | Detall |
+|---|---|
+| **`js/core/sectorSubtypes.js` nou** | Dataset `SECTOR_SUBTYPES` Object.frozen amb 2-5 subtipus per cada un dels 19 sectors A-S (49 subtipus total). Cada subtipus té `id` · `label` · `hint` · `iaContextHint` (text que enriqueix el system prompt de la IA). Helper `getSubtypesForSector(sectorId)` · `getSubtypeById(sectorId, subtypeId)` · `buildIaContextHint({sectorId, subtypeId, projectType, clientDescription})` · zero side effects. |
+| **Wizard New Project enriquit** | DashboardView modal "+ Nou projecte" · 2 nous selectors revelats segons sector seleccionat: `<select>` subtipus dins del sector (es revela quan canvies sector si n'hi ha subtipus) i `<select>` dels 12 PROJECT_TYPES Matriu. Hints dinàmics sota cada select. Tots els camps opcionals · cap regressió en el flux actual buit/plantilla. |
+| **CREATE_PROJECT augmentat** | Persisteix `subtypeId` · `projectType` · `ia_context_hint` als nous projectes. Camí 3 (sector + descripció · IA): el `_executeClone` reb subtype + projectType i els injecta a la `clientDescription` que rep el `sectorCloner` (zero refactor del cloner) · prompt context-rich per a la IA. |
+
+### Sprint F entregat 2026-05-09 · IA narrativa per /presentation (parcial)
+
+| Fix | Detall |
+|---|---|
+| **Bloc 🤖 Narrativa IA a PresentationView** | A `/presentation?project=...` · panell sobre el hero amb selector d'audiència (5 PUBLIC_AUDIENCES · fundadors/equip/usuaris/inversors/comunitat) + botó "🤖 Generar". Crida `Orchestrator.callLLM({preferredEngine:'anthropic', responseFormat:'json_object', maxTokens:2048})` · ~150-300 tokens consumits per generació. Persistit a `project.presentation_narrative_v1 = {heroTag, heroTitle, heroMantra, roleDescriptions: {roleId: '...'}, audienceId, generatedAt}` via `UPDATE_PROJECT_INFO` action. |
+| **Hero + role descs adaptables** | Si hi ha narrativa IA, el hero (tag + title + mantra) i les descripcions dels rols es renderitzen amb la versió IA · badge "🤖 IA · ${audience}" al meta del hero · icona 🤖 al costat de cada role-desc generada. Botó "↻ Regenerar" (canvia audiència o regenera) i "✕ Esborrar" (torna als textos default per projectType). Tots els textos cap-curts (slice 80/120/240 chars) per garantir hero llegible. |
+| **Sense races** | Refresca in-place reemplaçant `app.innerHTML` + cridant `afterRender()` · idèntic patró sprint A2 · zero `navigateTo()` que pugui sortir per timeout. |
+
+
+---
+
 *Documento vivo · actualizar al cierre de cada Ola.*

@@ -14,6 +14,9 @@ import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { t, langSelectorHtml } from '../i18n.js';
 import { taxonomicTagsForProject, taxonomicTagsForRole, mergeTags, buildTag } from '../core/semanticTagger.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+// UX-AUDIT-001 sprint B · subtipus de sector + PROJECT_TYPES Matriu per al wizard
+import { getSubtypesForSector, buildIaContextHint } from '../core/sectorSubtypes.js';
+import { PROJECT_TYPES } from '../core/critical108Roles.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function uid() { return 'proj-' + Math.random().toString(36).slice(2, 9); }
@@ -496,7 +499,11 @@ export default class DashboardView {
                     <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
                     <input type="file" id="dashImportFile" accept=".json,application/json" style="display:none;">
                     <button class="dash-btn dash-btn-primary" id="dashBtnNew">＋ New Project</button>
-                    <button class="dash-btn" id="dashBtnMatriu" title="MAT-002-A · plantilla preconfigurada Matriu Cohort 0 (SOC + 6 SOPs perks + 2.000 crèdits seed)" style="background:rgba(241,235,222,0.08);color:#f1ebde;border-color:rgba(241,235,222,0.4);">🎓 Cohort 0 Matriu</button>
+                    <!-- UX-AUDIT-001 sprint A2 · botón "🎓 Cohort 0 Matriu" retirado ·
+                         el flujo Matriu ya está integrado en el wizard de New Project
+                         + en el menú "Matriu" del topbar (categoría home) y en
+                         /matriu/network. Mantenerlo aquí duplicaba acción y
+                         visualmente saturaba el topbar. -->
                     <div id="dashLangSelector"></div>
                 </div>
             </div>
@@ -606,6 +613,25 @@ export default class DashboardView {
                         <option value="">— Vacío · sin sector —</option>
                         ${sectorOptions}
                     </select>
+                </div>
+
+                <!-- UX-AUDIT-001 sprint B · subtipus dins del sector (es revela al canviar sector) -->
+                <div class="dash-form-group" id="newProjSubtypeGroup" style="display:none;">
+                    <label class="dash-form-label">Subtipus dins del sector (opcional · enriqueix prompt IA)</label>
+                    <select class="dash-form-input" id="newProjSubtype" style="font-family:var(--font-base);">
+                        <option value="">— Genèric del sector —</option>
+                    </select>
+                    <div id="newProjSubtypeHint" style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;"></div>
+                </div>
+
+                <!-- UX-AUDIT-001 sprint B · PROJECT_TYPES Matriu (12) -->
+                <div class="dash-form-group">
+                    <label class="dash-form-label">Tipus de projecte Matriu (opcional · 12 tipologies de cohort 0)</label>
+                    <select class="dash-form-input" id="newProjType" style="font-family:var(--font-base);">
+                        <option value="">— Sense tipus Matriu —</option>
+                        ${PROJECT_TYPES.map(p => `<option value="${p.id}" title="${p.hint}">${p.num} · ${p.label}</option>`).join('')}
+                    </select>
+                    <div id="newProjTypeHint" style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;"></div>
                 </div>
 
                 <div class="dash-form-group">
@@ -924,9 +950,10 @@ export default class DashboardView {
         document.getElementById('dashBtnNew')?.addEventListener('click', openNewProjectModal);
         // UX-DASH-001 · "Paso 1" del onboarding abre el mismo wizard
         document.getElementById('dashStep1')?.addEventListener('click', openNewProjectModal);
-        // MAT-002-A · botón Cohort 0 Matriu abre wizard plantilla preconfigurada
+        // MAT-002-A · botón Cohort 0 Matriu retirado del topbar (UX-AUDIT-001 sprint A2).
+        // El método _openMatriuCohortModal sigue disponible y se invoca desde el
+        // wizard de New Project + desde la landing /matriu (CTA "Sumar-me a Cohort 0").
         const dashView = this;
-        document.getElementById('dashBtnMatriu')?.addEventListener('click', () => dashView._openMatriuCohortModal());
 
         document.getElementById('dashBtnKB')?.addEventListener('click', function() {
             const main = document.getElementById('dashMain');
@@ -1048,7 +1075,20 @@ export default class DashboardView {
         });
     }
 
-    async _executeClone({ sectorId, clientName, clientDescription }) {
+    async _executeClone({ sectorId, clientName, clientDescription, subtypeId, projectType, iaContextHint }) {
+        // UX-AUDIT-001 sprint B · si arriba subtype + projectType, els enriquim
+        // dins de clientDescription perquè el sectorCloner els incorpori al
+        // prompt (zero refactor del cloner). El context-rich descriptor és
+        // construit per buildIaContextHint i ja conté tot.
+        if (iaContextHint && iaContextHint.trim()) {
+            // Enriquim sense duplicar la descripció original (que ja s'ha posat
+            // dins del context). Passem context complet com a clientDescription.
+            clientDescription = iaContextHint;
+        }
+        // Persistim els nous camps al projecte un cop el cloner els retorni
+        // (al _renderClonePreview > Apply, no aquí · només propaguem).
+        this._pendingSubtypeId   = subtypeId   || null;
+        this._pendingProjectType = projectType || null;
         // UX-FUSE-001 · si _executeClone se invoca desde el wizard fusionado
         // (sin pasar por _openCloneModal), montamos aquí el overlay de
         // progreso para que el feedback visual funcione igual.
@@ -1158,14 +1198,18 @@ export default class DashboardView {
         const projectId = 'proj-' + safeId + '-' + Date.now().toString(36).slice(-5);
         const status    = result.readiness === 'tier 2' ? 'draft' : 'active';
 
-        // 1. Crear proyecto
+        // 1. Crear proyecto · UX-AUDIT-001 sprint B · adjuntar subtype + projectType
+        // si veuen del wizard. Si no n'hi ha, queden null (no breaks res).
         await store.dispatch({
             type: 'CREATE_PROJECT',
             payload: {
                 id:               projectId,
                 nombre:           c.project_name || c.client_id || 'Cliente clonado',
                 sector_id:        c.sector_id || result.sectorBase,
+                sectorId:         c.sector_id || result.sectorBase,  // alias per /presentation
                 based_on_sector:  c.based_on_sector || result.sectorBase,
+                subtypeId:        this._pendingSubtypeId   || null,
+                projectType:      this._pendingProjectType || null,
                 vna_roles:        Array.isArray(c.roles)        ? c.roles        : [],
                 vna_transactions: Array.isArray(c.transactions) ? c.transactions : [],
                 patterns:         Array.isArray(c.patterns)     ? c.patterns     : [],
@@ -1175,6 +1219,9 @@ export default class DashboardView {
                 updatedAt:        Date.now(),
             }
         });
+        // Reset pending after consume
+        this._pendingSubtypeId   = null;
+        this._pendingProjectType = null;
 
         // 2. Persistir nodo client_vna_model en KB Mind-as-Graph
         // UX-002 · auto-tagging taxonómico del proyecto + agregado de tags
@@ -1270,21 +1317,69 @@ export default class DashboardView {
                 hint.innerHTML = '⚠ Para activar la IA necesitas seleccionar un sector base. Sin sector, la descripción se guarda como nota.';
             }
         };
-        document.getElementById('newProjSector')?.addEventListener('change', refreshModeHint);
+        // UX-AUDIT-001 sprint B · revelar subtipus en seleccionar sector
+        const refreshSubtypes = () => {
+            const sectorId = document.getElementById('newProjSector')?.value || '';
+            const group    = document.getElementById('newProjSubtypeGroup');
+            const sel      = document.getElementById('newProjSubtype');
+            const hint     = document.getElementById('newProjSubtypeHint');
+            if (!group || !sel || !hint) return;
+            const subs = sectorId ? getSubtypesForSector(sectorId) : [];
+            if (subs.length === 0) {
+                group.style.display = 'none';
+                sel.innerHTML = '<option value="">— Genèric del sector —</option>';
+                hint.textContent = '';
+                return;
+            }
+            group.style.display = '';
+            sel.innerHTML = '<option value="">— Genèric del sector —</option>' +
+                subs.map(s => `<option value="${s.id}" title="${s.hint}">${s.label}</option>`).join('');
+            hint.textContent = '';
+        };
+        const refreshSubtypeHint = () => {
+            const sectorId = document.getElementById('newProjSector')?.value || '';
+            const subId    = document.getElementById('newProjSubtype')?.value || '';
+            const hint     = document.getElementById('newProjSubtypeHint');
+            if (!hint) return;
+            const subs = getSubtypesForSector(sectorId);
+            const sub  = subs.find(s => s.id === subId);
+            hint.textContent = sub ? sub.hint : '';
+        };
+        const refreshTypeHint = () => {
+            const id   = document.getElementById('newProjType')?.value || '';
+            const hint = document.getElementById('newProjTypeHint');
+            if (!hint) return;
+            const t = id ? PROJECT_TYPES.find(p => p.id === id) : null;
+            hint.textContent = t ? t.hint : '';
+        };
+        document.getElementById('newProjSector')?.addEventListener('change', () => { refreshSubtypes(); refreshModeHint(); });
+        document.getElementById('newProjSubtype')?.addEventListener('change', () => { refreshSubtypeHint(); refreshModeHint(); });
+        document.getElementById('newProjType')?.addEventListener('change',   refreshTypeHint);
         document.getElementById('newProjDesc')?.addEventListener('input',  refreshModeHint);
 
         document.getElementById('newProjConfirm')?.addEventListener('click', async function() {
             const btn  = this;
             const name        = document.getElementById('newProjName').value.trim();
             const sectorId    = document.getElementById('newProjSector').value || null;
+            const subtypeId   = document.getElementById('newProjSubtype')?.value || null;
+            const projectType = document.getElementById('newProjType')?.value || null;
             const description = (document.getElementById('newProjDesc').value || '').trim();
             const status      = document.getElementById('newProjStatus');
             if (!name) { document.getElementById('newProjName').focus(); return; }
 
-            // Camino 3: sector + descripción → IA (delegado a flujo existente)
+            // UX-AUDIT-001 sprint B · construir hint context-rich per a la IA
+            // (només s'usa al camí IA · els altres camins el guarden a project)
+            const iaContextHint = buildIaContextHint({
+                sectorId, subtypeId, projectType, clientDescription: description,
+            });
+
+            // Camino 3: sector + descripción → IA (delegado a flujo existente · ara amb subtype + projectType)
             if (sectorId && description) {
                 document.getElementById('dashModalNew').classList.remove('open');
-                await dashView._executeClone({ sectorId, clientName: name, clientDescription: description });
+                await dashView._executeClone({
+                    sectorId, clientName: name, clientDescription: description,
+                    subtypeId, projectType, iaContextHint,
+                });
                 return;
             }
 
@@ -1314,7 +1409,12 @@ export default class DashboardView {
                         id:               projectId,
                         nombre:           name,
                         sector_id:        sectorId,
+                        sectorId:         sectorId,         // alias per compat amb /presentation
                         based_on_sector:  sectorId,
+                        // UX-AUDIT-001 sprint B · nous camps Matriu
+                        subtypeId:        subtypeId,
+                        projectType:      projectType,
+                        ia_context_hint:  iaContextHint || null,
                         vna_roles:        vnaRoles,
                         vna_transactions: vnaTransactions,
                         patterns,

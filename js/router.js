@@ -9,6 +9,7 @@ import {
     ensureNavGroupStyle, bindNavGroupDropdowns,
     paintBreadcrumb,
 } from './core/navService.js';
+import { bootTheme } from './core/themeService.js';
 
 const ROUTES = [
     { path: '/',          view: () => import('./views/DashboardView.js') },
@@ -50,6 +51,10 @@ const ROUTES = [
     { path: '/value-accounting', view: () => import('./views/ValueAccountingView.js') },
     // PACT-001 sprint B · UI builder del primer contrato (pacto socios)
     { path: '/pact',      view: () => import('./views/PactBuilderView.js') },
+    // UX-AUDIT-001 sprint A2 · vista landing del projecte (read-only · presentació)
+    { path: '/presentation', view: () => import('./views/PresentationView.js') },
+    // UX-AUDIT-001 sprint A2 · mockup mobile app (Work Orders + temps + permaweb + IA + saldo)
+    { path: '/mobile',       view: () => import('./views/MobileMockupView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
@@ -71,6 +76,8 @@ async function router() {
 
     try {
         await store.init();
+        // UX-AUDIT-001 · aplica el tema persistit (light/dark) abans del primer render
+        try { await bootTheme(); } catch (_) { /* non-blocking */ }
         // Destruir vista anterior (detener simulaciones D3, etc.)
         if (window.__currentView && typeof window.__currentView.destroy === 'function') {
             window.__currentView.destroy();
@@ -82,9 +89,11 @@ async function router() {
         const app       = document.getElementById('app');
         app.innerHTML   = await view.getHtml();
         if (typeof view.afterRender === 'function') await view.afterRender();
-        document.querySelectorAll('[data-link]').forEach(link => {
-            link.addEventListener('click', e => { e.preventDefault(); navigateTo(link.getAttribute('href')); });
-        });
+        // UX-AUDIT-001 sprint A2 · el delegado global en `document` (al final
+        // de este módulo) ya cubre todos los [data-link]. Antes se añadía
+        // además un listener por elemento aquí, lo que disparaba navigateTo
+        // dos veces por click → pushState duplicado + router() ejecutándose
+        // dos veces → flickering ("papallugues").
         // UX-NAV-002 · CSS de los dropdowns + bind toggle (idempotente).
         // Ejecutar después de los data-link para que los anchors dentro del
         // menú también respondan al SPA. App entera comparte el CSS único.

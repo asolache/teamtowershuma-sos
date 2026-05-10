@@ -816,6 +816,7 @@ export default class ValueMapView {
                 </div>
                 <div class="vmap-topbar-actions">
                     ${this._state.projectId ? `<a href="/project/${this._state.projectId}" data-link class="vmap-btn" style="text-decoration:none;color:#86efac;border-color:rgba(34,197,94,0.4);" title="Panel del proyecto · stats + ofertas + herramientas">🎛 Panel</a>` : ''}
+                    ${this._state.projectId ? `<a href="/presentation?project=${encodeURIComponent(this._state.projectId)}" data-link class="vmap-btn" style="text-decoration:none;color:var(--accent-indigo);border-color:rgba(99,102,241,0.4);" title="Vista de presentació · landing read-only del projecte (rols + entregables + SOPs)">🎤 Presentació</a>` : ''}
                     ${renderNavGroupedHtml({ active: 'map', projectId: this._state.projectId, className: 'vmap-btn' })}
                     <button class="vmap-btn" style="border-color:var(--accent-purple);color:var(--accent-purple);" id="vmapBtnAI">${t('vmap.suggest')}</button>
                     <button class="vmap-btn" id="vmapBtnAnim" title="H_ANIM_001 · animar flujo de valor por sequence_order de las transactions">▶ Animar flujo</button>
@@ -2478,9 +2479,17 @@ export default class ValueMapView {
     async _runAISuggestion() {
         const apiKey = await Orchestrator.getApiKey('anthropic');
         if (!apiKey) {
-            document.getElementById('vmapAIStatus').textContent = t('ai.no.key');
-            document.getElementById('vmapAIStatus').style.color = 'var(--accent-red)';
-            setTimeout(() => { window.navigateTo('/settings'); }, 1800);
+            // UX-AUDIT-001 sprint A2 · ja no fem auto-navigateTo amb setTimeout ·
+            // mostrem un missatge inline + enllaç /settings que l'usuari pot
+            // pulsar quan vulgui (la navegació forçada amb retraso provocaba
+            // que si l'usuari saltava a un altre menú, després de 1.8s se'l
+            // tornava a /settings · "papallugues").
+            const st = document.getElementById('vmapAIStatus');
+            if (st) {
+                st.style.color = 'var(--accent-red)';
+                st.innerHTML = (t('ai.no.key') || 'Falta API key') +
+                    ' · <a href="/settings" data-link style="color:var(--accent-indigo);text-decoration:underline;">obrir Settings</a>';
+            }
             return;
         }
 
@@ -2956,7 +2965,7 @@ ${ctxResult.systemPrompt}`;
             </div>`;
         document.getElementById('vmapOrderCancel')?.addEventListener('click', close);
         document.getElementById('vmapOrderInfBg')?.addEventListener('click', e => { if (e.target.id === 'vmapOrderInfBg') close(); });
-        document.getElementById('vmapOrderApply')?.addEventListener('click', () => {
+        document.getElementById('vmapOrderApply')?.addEventListener('click', async () => {
             this._state.transactions = result.applied;
             close();
             // Re-render del inspector si la transaction seleccionada está en applied
@@ -2964,12 +2973,26 @@ ${ctxResult.systemPrompt}`;
                 const tx = this._state.transactions.find(t => t.id === this._state.selectedId);
                 if (tx) this._renderTxInspector(tx);
             }
+            // Re-render del mapa per mostrar els nous sequence_order labels
+            try { this._renderMap(); } catch (_) { /* fallback · només re-render inspector */ }
             // Si el flujo está animando · reiniciar para usar el nuevo orden
             if (this._state.flowAnim) {
                 this._stopFlowAnim();
                 setTimeout(() => this._startFlowAnim(), 100);
             }
-            alert('✓ Aplicado · pulsa "💾 Guardar" en el topbar para persistir el cambio.');
+            // UX FIX 2026-05-09 · auto-save en lloc de fer click manual al "💾 Guardar"
+            try {
+                await this._saveMap();
+                // Toast no-blocking en lloc d'alert
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 18px;border-radius:8px;font-weight:700;font-size:0.9rem;z-index:9999;box-shadow:0 4px 12px rgba(34,197,94,0.4);';
+                toast.textContent = '✓ Ordre aplicat i desat · ' + result.applied.length + ' transactions';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2200);
+            } catch (saveErr) {
+                console.error('[H_ANIM_001/inferOrder] auto-save falló:', saveErr);
+                alert('✓ Aplicat al mapa · però hi ha hagut un error al desar · prem "💾 Guardar" al topbar manualment.');
+            }
         });
     }
 
