@@ -25,6 +25,7 @@ import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { linkifyMultiline } from '../core/linkifyService.js';
 import { taxonomicTagsForWo, mergeTags } from '../core/semanticTagger.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { visibleProjects } from '../core/projectFilter.js';
 import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 // Orchestrator se importa dinámicamente con cache-bust en _executeAi
@@ -340,7 +341,7 @@ export default class KanbanView {
         await store.init();
         this.workOrders = await KB.query({ type: 'work_order' });
         this.workshops  = await KB.query({ type: 'workshop' });
-        this.projects   = (store.getState().projects || []).filter(p => !p.isArchived);
+        this.projects   = visibleProjects(store.getState().projects);
         // WO-ASSIGN-001 · plazas Matriu disponibles (todas · type cohort_seat)
         this.cohortSeats = await KB.query({ type: 'cohort_seat' });
         this.workOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));

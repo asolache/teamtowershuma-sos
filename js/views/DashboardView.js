@@ -14,6 +14,7 @@ import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { t, langSelectorHtml } from '../i18n.js';
 import { taxonomicTagsForProject, taxonomicTagsForRole, mergeTags, buildTag } from '../core/semanticTagger.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { isTestProject, visibleProjects, archivedProjects } from '../core/projectFilter.js';
 // UX-AUDIT-001 sprint B · subtipus de sector + PROJECT_TYPES Matriu per al wizard
 import { getSubtypesForSector, buildIaContextHint } from '../core/sectorSubtypes.js';
 import { PROJECT_TYPES } from '../core/critical108Roles.js';
@@ -687,7 +688,7 @@ export default class DashboardView {
 
     async _renderProjects() {
         const state    = store.getState();
-        const projects = (state.projects || []).filter(function(p) { return !p.isArchived; });
+        const projects = visibleProjects(state.projects);
 
         // MAT-002-F · strip Matriu Cohort 0 (visible solo si hay proyectos cohort 0)
         this._renderMatriuStrip(projects);
@@ -806,7 +807,7 @@ export default class DashboardView {
         document.getElementById('dashProjectList').innerHTML = html;
 
         // ── Sección de archivados ────────────────────────────────────────────
-        var archived = (state.projects || []).filter(function(p) { return p.isArchived; });
+        var archived = archivedProjects(state.projects);
         var archDiv = document.getElementById('dashArchivedSection');
         if (!archDiv) {
             archDiv = document.createElement('div');

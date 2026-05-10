@@ -13,6 +13,7 @@ import {
     computeProjectSavings, buildSavingsTable, accumulateAllProjects,
 } from '../core/savingsService.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+import { visibleProjects } from '../core/projectFilter.js';
 import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
 const CATEGORY_ICONS = {
@@ -46,7 +47,7 @@ export default class SavingsView {
         if (this.projectId) {
             this.project = (store.getState().projects || []).find(p => p.id === this.projectId) || null;
         }
-        this.allProjects = (store.getState().projects || []).filter(p => !p.isArchived);
+        this.allProjects = visibleProjects(store.getState().projects);
 
         return `
         <style>
