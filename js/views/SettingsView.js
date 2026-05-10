@@ -469,10 +469,10 @@ export default class SettingsView {
         });
 
         // UX-AUDIT-001 · toggle tema light/dark · in-place, sense navegar.
-        // El canvi és global: applyThemeToDocument toca <body> i tots els
-        // CSS vars cascade. Refresca el botó actiu visualment sense
-        // recarregar la vista (evita race conditions amb navigateTo).
-        document.querySelectorAll('[data-theme]').forEach(btn => {
+        // Selector `.sv-theme-btn` (NO `[data-theme]`) · després del primer
+        // toggle el <body> també té `data-theme` i atraparia un listener
+        // que dispararia saveTheme en cada click a `/settings`.
+        document.querySelectorAll('.sv-theme-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const t = btn.getAttribute('data-theme');
                 try {
@@ -492,6 +492,12 @@ export default class SettingsView {
                             b.style.borderColor = isMe ? '#aaa' : 'var(--glass-border)';
                         }
                     });
+                    // Toast feedback in-place · cap navigateTo · cap race
+                    const toast = document.createElement('div');
+                    toast.textContent = t === 'light' ? '☀️ Tema clar aplicat' : '🌙 Tema fosc aplicat';
+                    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:12px 22px;border-radius:8px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,0.25);z-index:9999;font-family:var(--font-base);font-size:14px;animation:fadeIn 0.2s ease-out;';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 1800);
                 } catch (err) {
                     alert('Error canviant tema: ' + (err?.message || err));
                 }
