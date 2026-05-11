@@ -376,3 +376,231 @@ export async function verifyRegistryEntry(entry) {
     }
     return { valid: !!ok, reason: ok ? 'ok' : 'signature-mismatch' };
 }
+
+// ── Sprint C · Permaweb publish via Turbo SDK + wallet SOS ───────────
+//
+// Decisions @alvaro 2026-05-10:
+//   1. Turbo SDK · jsDelivr ESM CDN (`@ardrive/turbo-sdk@latest/+esm`)
+//   2. Signing key · MATEIXA del projectIO (compartida) · via
+//      `getOrCreateSigningKey` → 1 sol keypair per dispositiu → 1 sol DID
+//   3. Pricing flat 0.05€ per publish · 0.05€ per revoke · verify+discovery
+//      són free · marge ~99% (cost real Arweave ~$0.0001/KB)
+
+// Constants pricing · publicables a UI per transparency
+export const PRICING = Object.freeze({
+    publishEur: 0.05,
+    revokeEur:  0.05,
+    verifyEur:  0,
+    queryEur:   0,
+});
+
+// Mock helper · l'usuari del module pot injectar un Turbo client mock
+// per testing. Per defecte carrega el real des de jsDelivr.
+let _turboLoader = null;
+
+// setTurboLoader · per a tests · injecta una funció async que retorna
+// l'objecte Turbo simulat. Si no s'ha cridat, la càrrega real es fa.
+export function setTurboLoader(loader) {
+    _turboLoader = (typeof loader === 'function') ? loader : null;
+}
+
+async function _loadTurbo() {
+    if (_turboLoader) return _turboLoader();
+    // Real load · jsDelivr ESM
+    const mod = await import('https://cdn.jsdelivr.net/npm/@ardrive/turbo-sdk@latest/+esm');
+    return mod;
+}
+
+// publishToPermaweb · async · descompta del wallet del projecte (decisió
+// @alvaro #1) · puja al permaweb · actualitza entry amb arweaveTxId ·
+// retorna { entry, txId, costEur, walletAfter }.
+//
+// Flux:
+//   1. Verifica que l'entry estigui signat (signRegistryEntry abans)
+//   2. consumeAndPersist al wallet del projecte (0.05€)
+//   3. Carrega Turbo SDK · upload amb tags estàndard
+//   4. Actualitza entry.content.arweaveTxId + content.publishedAt (real)
+//   5. Persisteix l'entry al KB
+//
+// Errors defensius:
+//   - entry sense signatura → throw 'must-sign-first'
+//   - saldo insuficient → throw 'insufficient-funds' (no upload)
+//   - upload falla → refund automàtic + re-throw
+export async function publishToPermaweb({
+    entry,
+    projectId,
+    pricing = PRICING,
+} = {}) {
+    if (!entry || !entry.content) throw new Error('publishToPermaweb requires entry');
+    if (!projectId) throw new Error('publishToPermaweb requires projectId (wallet source)');
+    if (!entry.content.signature) throw new Error('publishToPermaweb · entry not signed · call signRegistryEntry first');
+
+    // Sanity · verify la firma abans de gastar (defensive)
+    const v = await verifyRegistryEntry(entry);
+    if (!v.valid) throw new Error('publishToPermaweb · entry signature invalid: ' + v.reason);
+
+    const price = Number(pricing?.publishEur ?? PRICING.publishEur);
+    if (!(price >= 0)) throw new Error('publishToPermaweb · invalid pricing');
+
+    // 1. Descompta del wallet · import dinàmic per evitar cicle
+    const { consumeAndPersist, getOrCreateWalletForProject } = await import('./walletService.js');
+    const before = await getOrCreateWalletForProject(projectId);
+    if (Number(before.content.balanceEur) < price) {
+        throw new Error('insufficient-funds · saldo ' + before.content.balanceEur + '€ < preu ' + price + '€');
+    }
+
+    let walletAfter;
+    try {
+        walletAfter = await consumeAndPersist({
+            projectId,
+            amountEur: price,
+            kind:      'consume',
+            ref:       'permaweb-publish-' + entry.id,
+            source:    'public-registry-publish',
+            note:      'PERM-USER-001 · publish ' + (entry.content.handle || entry.content.did),
+        });
+    } catch (e) {
+        throw new Error('wallet-consume-failed: ' + (e?.message || e));
+    }
+
+    // 2. Upload al permaweb
+    let txId;
+    try {
+        const tags = arweaveTagsForEntry(entry);
+        const body = canonicalizeRegistryEntry(entry);
+        // Body signat inclou el signature al payload? · YES · el publiquem JUNT amb el signature
+        const payload = JSON.stringify({
+            ...JSON.parse(body),
+            signature:       entry.content.signature,
+            signatureFormat: entry.content.signatureFormat,
+        });
+        const turbo = await _loadTurbo();
+        const factory = turbo.TurboFactory || turbo.default || turbo;
+        const client  = factory.unauthenticated ? factory.unauthenticated() : factory;
+        const result  = await client.uploadFile({
+            fileStreamFactory: () => new Blob([payload], { type: 'application/json' }).stream(),
+            fileSizeFactory:   () => payload.length,
+            dataItemOpts:      { tags },
+        });
+        txId = result?.id || result?.txId;
+        if (!txId) throw new Error('Turbo upload sense txId al response');
+    } catch (e) {
+        // Refund · revertim el cobrament si l'upload falla
+        try {
+            const { refundWallet } = await import('./walletService.js');
+            const refunded = refundWallet({
+                wallet: walletAfter,
+                amountEur: price,
+                ref:    'permaweb-publish-refund-' + entry.id,
+                source: 'public-registry-publish-refund',
+                note:   'refund · upload Turbo failed: ' + (e?.message || e),
+            });
+            // Persisteix refund
+            const { KB } = await import('./kb.js');
+            await KB.upsert(refunded);
+        } catch (_) { /* best-effort refund */ }
+        throw new Error('turbo-upload-failed: ' + (e?.message || e));
+    }
+
+    // 3. Actualitza l'entry amb arweaveTxId + persisteix al KB
+    const updated = {
+        ...entry,
+        content: {
+            ...entry.content,
+            arweaveTxId:    txId,
+            permawebPublishedAt: Date.now(),
+        },
+        updatedAt: Date.now(),
+    };
+    try {
+        const { KB } = await import('./kb.js');
+        await KB.upsert(updated);
+    } catch (_) { /* el txId queda al return igual */ }
+
+    return {
+        entry:       updated,
+        txId,
+        costEur:     price,
+        walletAfter,
+    };
+}
+
+// revokeFromPermaweb · async · publica una nova tx Arweave amb tag
+// `Entry-Type=revocation` apuntant al txId original. Cost igual que
+// publish · descompta del wallet del projecte.
+//
+// Retorna { revocationTxId, costEur, walletAfter }.
+//
+// Decisió @alvaro #4 (default): el lookup descart entries que tenen
+// revocation associada · el lookup ho gestiona a sprint D.
+export async function revokeFromPermaweb({
+    revokesTxId,
+    did,
+    projectId,
+    pricing = PRICING,
+} = {}) {
+    if (!revokesTxId) throw new Error('revokeFromPermaweb requires revokesTxId (txId original)');
+    if (!did) throw new Error('revokeFromPermaweb requires did');
+    if (!projectId) throw new Error('revokeFromPermaweb requires projectId (wallet source)');
+
+    const price = Number(pricing?.revokeEur ?? PRICING.revokeEur);
+    if (!(price >= 0)) throw new Error('revokeFromPermaweb · invalid pricing');
+
+    const { consumeAndPersist, refundWallet, getOrCreateWalletForProject } = await import('./walletService.js');
+    const before = await getOrCreateWalletForProject(projectId);
+    if (Number(before.content.balanceEur) < price) {
+        throw new Error('insufficient-funds · saldo ' + before.content.balanceEur + '€ < preu ' + price + '€');
+    }
+
+    const walletAfter = await consumeAndPersist({
+        projectId,
+        amountEur: price,
+        kind:      'consume',
+        ref:       'permaweb-revoke-' + revokesTxId,
+        source:    'public-registry-revoke',
+        note:      'PERM-USER-001 · revoke ' + did + ' (revokes ' + revokesTxId + ')',
+    });
+
+    let revocationTxId;
+    try {
+        const tags = [
+            { name: 'App-Name',     value: 'SOS-V11' },
+            { name: 'App-Version',  value: REGISTRY_VERSION },
+            { name: 'Entry-Type',   value: 'revocation' },
+            { name: 'DID',          value: did },
+            { name: 'Revokes',      value: revokesTxId },
+            { name: 'Content-Type', value: 'application/json' },
+        ];
+        const payload = JSON.stringify({
+            kind:        'revocation',
+            did,
+            revokesTxId,
+            revokedAt:   Date.now(),
+        });
+        const turbo = await _loadTurbo();
+        const factory = turbo.TurboFactory || turbo.default || turbo;
+        const client  = factory.unauthenticated ? factory.unauthenticated() : factory;
+        const result  = await client.uploadFile({
+            fileStreamFactory: () => new Blob([payload], { type: 'application/json' }).stream(),
+            fileSizeFactory:   () => payload.length,
+            dataItemOpts:      { tags },
+        });
+        revocationTxId = result?.id || result?.txId;
+        if (!revocationTxId) throw new Error('Turbo revoke sense txId');
+    } catch (e) {
+        // Refund
+        try {
+            const refunded = refundWallet({
+                wallet: walletAfter, amountEur: price,
+                ref:    'permaweb-revoke-refund-' + revokesTxId,
+                source: 'public-registry-revoke-refund',
+                note:   'refund · revoke upload failed: ' + (e?.message || e),
+            });
+            const { KB } = await import('./kb.js');
+            await KB.upsert(refunded);
+        } catch (_) { /* best-effort */ }
+        throw new Error('turbo-revoke-failed: ' + (e?.message || e));
+    }
+
+    return { revocationTxId, costEur: price, walletAfter };
+}

@@ -2514,6 +2514,9 @@ Pendents Sprint E+: auditoria visual als breakpoints mòbil (testejar dropdowns 
 | 3 | **Privacitat** granular vs en bloc | 🟡 default proposat · en bloc · si vols privacitat granular no publiquis (clar i defensiu) |
 | 4 | **Revocació** semàntica | 🟡 default proposat · nova tx Arweave amb `Entry-Type=revocation` + `Revokes={txId}` · el lookup descart entries amb revocation associada |
 | 5 | **Federació cohort 0 → permaweb** | ❓ **no clar encara** · per defecte assumim opt-in explícit de cada membre · NO auto-publish automàtic |
+| 6 | **Turbo SDK CDN** · jsDelivr o unpkg? | ✅ **jsDelivr** (`@ardrive/turbo-sdk@latest/+esm`) · més ràpid globalment · `+esm` mode directe sense bundler · mateix vendor que el D3 que ja usem |
+| 7 | **Signing key** · compartida amb projectIO o nova? | ✅ **compartida amb projectIO** (`getOrCreateSigningKey`) · 1 sol keypair → 1 sol DID → simpler local-first |
+| 8 | **Pricing** · flat o per byte? Quant? | ✅ **flat 0.05€ per publish · 0.05€ per revoke · verify+discovery FREE**. Cost real Arweave ~$0.0001 per profile · marge ~99%. Vendible per absurda (Twitter Blue $8/mes recurrent vs SOS 5 cèntim **per sempre**). |
 
 ### Sprint A · entregat (planificat)
 - `js/core/publicRegistryService.js` · schema + builder + validator + canonicalize + extract helpers
