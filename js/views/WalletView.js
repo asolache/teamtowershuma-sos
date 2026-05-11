@@ -219,6 +219,20 @@ export default class WalletView {
                 </div>
             </div>
 
+            ${!isPersonal ? `
+            <div class="w-section">
+                <h2>💰 Registrar ingrés · auto-distribució · sprint C</h2>
+                <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0;">
+                    Quan el projecte rep un ingrés, registra'l aquí · es topupea al wallet i automàticament es marca el split entre <strong>operating reserve</strong> (cobreix APIs IA · permaweb · blockchain) i <strong>stakeholders pool</strong> (disponible per claim segons Slicing Pie).
+                </p>
+                <div class="w-custom">
+                    <input id="wIncomeAmount" class="w-input" type="number" min="0.01" step="0.01" placeholder="Quantitat ingrés · €" style="width:180px;">
+                    <input id="wIncomeNote" class="w-input" type="text" placeholder="font · client · descripció" style="flex:1;min-width:200px;">
+                    <button class="w-btn w-btn-primary" id="wIncomeBtn" style="background:var(--accent-green);border-color:var(--accent-green);">＋ Registrar ingrés</button>
+                </div>
+                <div id="wIncomeStatus" class="w-status" style="display:none;margin-top:8px;font-size:0.85rem;"></div>
+            </div>` : ''}
+
             <div class="w-section">
                 <h2>↗ Transferir a un altre wallet · FUND-FLOW-001 sprint A</h2>
                 <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0;">
@@ -265,6 +279,8 @@ export default class WalletView {
         // FUND-FLOW-001 sprint A · transferència entre wallets
         this._populateTransferDest();
         document.getElementById('wTransferBtn')?.addEventListener('click', () => this._doTransfer());
+        // FUND-FLOW-001 sprint C · registrar ingrés
+        document.getElementById('wIncomeBtn')?.addEventListener('click', () => this._doIncome());
         document.getElementById('wAddAdj')?.addEventListener('click', () => {
             const delta = parseFloat(document.getElementById('wAdjAmount').value);
             const note  = document.getElementById('wAdjNote').value.trim();
@@ -275,8 +291,27 @@ export default class WalletView {
     }
 
     async _doTopUp(amountEur, source, note) {
+        // ALPHA-STRIPE-001 sprint A2 (UX millora) · si és un preset Stripe,
+        // obre Payment Link en nova tab + demana confirmació de pagament real
+        // abans de registrar el topup al wallet (sense webhook auto).
+        if (source === 'preset') {
+            try {
+                const { loadStripeConfig, openTopupPaymentLink } = await import('../core/stripeService.js');
+                const cfg = await loadStripeConfig();
+                const linkKey = 'paymentLink' + amountEur;
+                const link = cfg?.paymentLinks?.[amountEur] || cfg?.[linkKey];
+                if (link) {
+                    await openTopupPaymentLink({ amountEur });
+                    if (!confirm(`Has obert la pàgina de pagament Stripe per ${amountEur}€.\n\nQuan hagis completat el pagament real, click OK per registrar el topup al wallet del projecte.\n\nSi vols cancel·lar (encara no has pagat), click Cancel.`)) {
+                        return;
+                    }
+                    source = 'stripe-confirmed';
+                    note = (note || '') + ' (Stripe confirmat manualment)';
+                }
+            } catch (_) { /* No Stripe configurat · fallback a manual */ }
+        }
         try {
-            this.wallet = topUpWallet({ wallet: this.wallet, amountEur, source, ref: 'manual-topup', note });
+            this.wallet = topUpWallet({ wallet: this.wallet, amountEur, source, ref: 'topup-' + Date.now(), note });
             await persistWallet(this.wallet);
             this._render();
         } catch (err) {
@@ -348,6 +383,36 @@ export default class WalletView {
             setStatus(`✓ Transferits ${amt.toFixed(2)}€ → ${dest}`, true);
             amtIn.value = '';
             sel.value   = '';
+            await this._load();
+            this._render();
+        } catch (e) {
+            setStatus('✗ ' + (e?.message || 'error desconegut'), false);
+        }
+    }
+
+    async _doIncome() {
+        const amtEl  = document.getElementById('wIncomeAmount');
+        const noteEl = document.getElementById('wIncomeNote');
+        const status = document.getElementById('wIncomeStatus');
+        const amt    = parseFloat(amtEl?.value);
+        const note   = (noteEl?.value || '').trim();
+        const setStatus = (msg, ok = true) => {
+            if (!status) return;
+            status.style.display = 'block';
+            status.textContent = msg;
+            status.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)';
+        };
+        if (!Number.isFinite(amt) || amt <= 0) { setStatus('✗ Quantitat invàlida', false); return; }
+        try {
+            const { recordIncomeAndDistribute } = await import('../core/walletService.js');
+            const result = await recordIncomeAndDistribute({
+                projectId: this.projectId,
+                amountEur: amt,
+                note:      note || ('manual income · ' + new Date().toLocaleDateString('ca-ES')),
+            });
+            const r = result.split;
+            setStatus(`✓ Ingrés registrat ${amt.toFixed(2)}€ · ${r.reserveEur.toFixed(2)}€ reserva · ${r.stakeholdersEur.toFixed(2)}€ pool stakeholders`, true);
+            amtEl.value = ''; noteEl.value = '';
             await this._load();
             this._render();
         } catch (e) {
