@@ -18,7 +18,7 @@ import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from 
 import {
     buildPublicRegistryEntry, signRegistryEntry, verifyRegistryEntry,
     publishToPermaweb, revokeFromPermaweb, PRICING,
-    PUBLIC_REGISTRY_TYPE, registryEntryIdFor,
+    PUBLIC_REGISTRY_TYPE, registryEntryIdFor, isPermawebMockEnabled,
 } from '../core/publicRegistryService.js';
 import { KB } from '../core/kb.js';
 import { visibleProjects } from '../core/projectFilter.js';
@@ -262,17 +262,22 @@ export default class IdentityView {
         const projectOptions = projects.map(p => `<option value="${this._esc(p.id)}">${this._esc(p.nombre || p.name || p.id)}</option>`).join('');
 
         const isPublished = !!(entry && entry.content?.arweaveTxId);
+        const mockMode = await isPermawebMockEnabled();
+        const mockBanner = mockMode
+            ? '<div style="background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.40);border-radius:6px;padding:6px 10px;margin-bottom:0.7rem;font-size:0.78rem;color:#a855f7;display:flex;align-items:center;gap:6px;"><strong>🧪 MOCK MODE actiu</strong> · publish/revoke amb txId fake · cap cost real · cap upload Arweave · canvia a <a href="/settings" data-link style="color:#a855f7;text-decoration:underline;">/settings</a></div>'
+            : '';
 
         if (isPublished) {
             const tx = entry.content.arweaveTxId;
             const publishedAt = new Date(entry.content.permawebPublishedAt || entry.content.publishedAt || 0).toLocaleDateString('ca-ES');
-            body.innerHTML = `
-                <div style="display:grid;grid-template-columns:1fr auto;gap:0.6rem;align-items:center;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.30);border-radius:8px;padding:0.7rem 0.9rem;">
+            const isMockTx = tx.startsWith('MOCK_TX_');
+            body.innerHTML = mockBanner + `
+                <div style="display:grid;grid-template-columns:1fr auto;gap:0.6rem;align-items:center;background:${isMockTx ? 'rgba(168,85,247,0.08)' : 'rgba(16,185,129,0.08)'};border:1px solid ${isMockTx ? 'rgba(168,85,247,0.30)' : 'rgba(16,185,129,0.30)'};border-radius:8px;padding:0.7rem 0.9rem;">
                     <div>
-                        <div style="font-weight:700;color:var(--accent-green);">✓ Publicat al permaweb</div>
+                        <div style="font-weight:700;color:${isMockTx ? '#a855f7' : 'var(--accent-green)'};">${isMockTx ? '🧪 Publicat (mock · fake tx)' : '✓ Publicat al permaweb'}</div>
                         <div class="id-meta" style="margin-top:4px;">Tx · <code style="color:var(--accent-indigo);">${this._esc(tx.slice(0,12))}…</code> · ${publishedAt}</div>
                     </div>
-                    <a href="https://arweave.net/${encodeURIComponent(tx)}" target="_blank" rel="noopener" class="id-btn">🔗 Veure tx</a>
+                    ${isMockTx ? '<span class="id-btn" style="opacity:0.6;cursor:default;" title="Mock · cap upload real">🧪 Mock</span>' : `<a href="https://arweave.net/${encodeURIComponent(tx)}" target="_blank" rel="noopener" class="id-btn">🔗 Veure tx</a>`}
                 </div>
                 <div style="margin-top:0.7rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
                     <label class="id-meta" style="white-space:nowrap;">Wallet del projecte ·</label>
@@ -285,20 +290,20 @@ export default class IdentityView {
                 <div id="idPermawebStatus" class="id-status" style="margin-top:0.5rem;"></div>
             `;
         } else {
-            body.innerHTML = `
+            body.innerHTML = mockBanner + `
                 <div style="display:grid;grid-template-columns:1fr auto;gap:0.6rem;align-items:center;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:8px;padding:0.7rem 0.9rem;">
                     <div>
                         <div style="font-weight:700;color:var(--text-secondary);">— No publicat encara</div>
                         <div class="id-meta" style="margin-top:4px;">Quan publiques · qualsevol SOS local pot descobrir-te i verificar la teva identitat.</div>
                     </div>
-                    <div style="font-family:var(--font-mono);font-size:0.85rem;color:var(--accent-indigo);font-weight:700;">${PRICING.publishEur.toFixed(2)}€</div>
+                    <div style="font-family:var(--font-mono);font-size:0.85rem;color:var(--accent-indigo);font-weight:700;">${mockMode ? '0,00€ (mock)' : PRICING.publishEur.toFixed(2) + '€'}</div>
                 </div>
                 <div style="margin-top:0.7rem;display:grid;grid-template-columns:1fr auto;gap:0.5rem;align-items:center;">
                     <select id="idPermawebProject" class="id-input">
-                        <option value="">— Tria projecte (font del saldo) —</option>
+                        <option value="">— ${mockMode ? 'Tria projecte (mock · no descompta)' : 'Tria projecte (font del saldo)'} —</option>
                         ${projectOptions}
                     </select>
-                    <button class="id-btn id-btn-primary" id="idPermawebPublish">🌐 Publicar</button>
+                    <button class="id-btn id-btn-primary" id="idPermawebPublish">${mockMode ? '🧪 Publicar (mock)' : '🌐 Publicar'}</button>
                 </div>
                 <div id="idPermawebStatus" class="id-status" style="margin-top:0.5rem;"></div>
             `;
