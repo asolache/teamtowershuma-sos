@@ -23,19 +23,21 @@ export default class TagsView {
         await store.init();
         return `
         <style>
-            .tg-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .tg-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
+            .tg-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); display:flex; flex-direction:column; overflow:hidden; }
+            .tg-topbar { display:flex; align-items:center; gap:10px; padding:8px 16px; flex-wrap:wrap; min-height:48px; box-sizing:border-box; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
             .tg-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
-            .tg-logo span { color:#6366f1; }
+            .tg-logo span { color:var(--accent-indigo); }
             .tg-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .tg-spacer { flex:1; }
-            .tg-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
+            .tg-link { color:var(--text-secondary); text-decoration:none; font-size:var(--text-xs); font-weight:600; padding:6px 10px; border-radius:var(--radius-sm); transition:all var(--dur-fast); display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+            .tg-link:hover { color:var(--text-main); background:var(--glass-hover); }
+            .tg-link:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
 
             .tg-main   { padding:1.5rem; max-width:1100px; margin:0 auto; flex:1; overflow-y:auto; width:100%; }
             .tg-cloud  { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.5rem; padding:1rem; background:var(--bg-panel); border:1px solid var(--border-default); border-radius:8px; }
             .tg-chip   { background:rgba(99,102,241,0.1); color:var(--accent-indigo); padding:4px 10px; border-radius:12px; font-family:monospace; font-size:0.78rem; cursor:pointer; border:1px solid rgba(99,102,241,0.3); transition:all 0.15s; user-select:none; }
             .tg-chip:hover { background:rgba(99,102,241,0.25); transform:translateY(-1px); }
-            .tg-chip.active { background:rgba(99,102,241,0.4); color:var(--text-main); border-color:#6366f1; }
+            .tg-chip.active { background:rgba(99,102,241,0.4); color:var(--text-main); border-color:var(--accent-indigo); }
             .tg-chip .count { opacity:0.6; margin-left:4px; }
 
             .tg-empty  { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed #2a2a35; border-radius:8px; }

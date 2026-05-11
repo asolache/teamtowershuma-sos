@@ -51,13 +51,15 @@ export default class SavingsView {
 
         return `
         <style>
-            .sa-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .sa-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
+            .sa-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); display:flex; flex-direction:column; overflow:hidden; }
+            .sa-topbar { display:flex; align-items:center; gap:10px; padding:8px 16px; flex-wrap:wrap; min-height:48px; box-sizing:border-box; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
             .sa-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
-            .sa-logo span { color:#6366f1; }
+            .sa-logo span { color:var(--accent-indigo); }
             .sa-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .sa-spacer { flex:1; }
-            .sa-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
+            .sa-link { color:var(--text-secondary); text-decoration:none; font-size:var(--text-xs); font-weight:600; padding:6px 10px; border-radius:var(--radius-sm); transition:all var(--dur-fast); display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+            .sa-link:hover { color:var(--text-main); background:var(--glass-hover); }
+            .sa-link:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
 
             .sa-main   { padding:1.5rem; max-width:1180px; margin:0 auto; flex:1; overflow-y:auto; width:100%; box-sizing:border-box; }
 

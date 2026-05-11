@@ -47,13 +47,15 @@ export default class MindGraphView {
         await store.init();
         return `
         <style>
-            .mg-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
+            .mg-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); display:flex; flex-direction:column; overflow:hidden; }
             .mg-topbar { display:flex; align-items:center; gap:1rem; padding:0.8rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
             .mg-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
-            .mg-logo span { color:#6366f1; }
+            .mg-logo span { color:var(--accent-indigo); }
             .mg-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .mg-spacer { flex:1; }
-            .mg-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
+            .mg-link { color:var(--text-secondary); text-decoration:none; font-size:var(--text-xs); font-weight:600; padding:6px 10px; border-radius:var(--radius-sm); transition:all var(--dur-fast); display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+            .mg-link:hover { color:var(--text-main); background:var(--glass-hover); }
+            .mg-link:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
 
             .mg-controls { display:flex; gap:0.5rem; align-items:center; padding:0.5rem 1.5rem; background:var(--bg-panel); border-bottom:1px solid var(--border-default); flex-shrink:0; flex-wrap:wrap; font-size:0.78rem; color:var(--text-secondary); }
             .mg-controls select, .mg-controls input { background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); padding:5px 8px; border-radius:5px; font-family:inherit; font-size:0.78rem; outline:none; }

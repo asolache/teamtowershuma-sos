@@ -103,17 +103,20 @@ export default class WorkshopsView {
     async getHtml() {
         return `
         <style>
-            .ws-shell      { height:100dvh; background:var(--bg-0,#050507); color:var(--text-main); font-family:var(--font-sans,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .ws-topbar     { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
+            .ws-shell      { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); display:flex; flex-direction:column; overflow:hidden; }
+            .ws-topbar     { display:flex; align-items:center; gap:10px; padding:8px 16px; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; min-height:48px; box-sizing:border-box; }
             .ws-logo       { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
-            .ws-logo span  { color:#6366f1; }
+            .ws-logo span  { color:var(--accent-indigo); }
             .ws-title      { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.8rem; }
             .ws-spacer     { flex:1; }
-            .ws-btn        { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem; }
-            .ws-btn:hover  { background:var(--bg-elevated); }
-            .ws-btn-primary{ background:#6366f1; border-color:#6366f1; color:#fff; }
+            .ws-btn        { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:6px 12px; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--text-xs); font-weight:600; font-family:var(--font-base); line-height:1.3; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; transition:all var(--dur-fast); }
+            .ws-btn:hover { background:var(--glass-hover); border-color:var(--accent-indigo); color:var(--text-main); }
+            .ws-btn:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
+            .ws-btn-primary{ background:var(--accent-indigo); border-color:var(--accent-indigo); color:#fff; }
             .ws-btn-primary:hover { background:#4f46e5; }
-            .ws-link       { color:#6366f1; text-decoration:none; }
+            .ws-link { color:var(--text-secondary); text-decoration:none; font-size:var(--text-xs); font-weight:600; padding:6px 10px; border-radius:var(--radius-sm); transition:all var(--dur-fast); display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+            .ws-link:hover { color:var(--text-main); background:var(--glass-hover); }
+            .ws-link:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
 
             .ws-main       { padding:1.5rem; max-width:1200px; margin:0 auto; flex:1; overflow-y:auto; overflow-x:hidden; width:100%; }
             .ws-stats      { display:flex; gap:1rem; margin-bottom:2rem; flex-wrap:wrap; }
