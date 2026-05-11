@@ -35,6 +35,7 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'folders',   icon: '📁', label: 'Folders',   href: '/folders',    global: true,  category: 'knowledge',  hint: 'Carpetas inteligentes · queries persistentes' },
     { id: 'mind',      icon: '🕸',  label: 'Mind-Graph',href: '/mind',       global: true,  category: 'knowledge',  hint: 'Mind-as-Graph total · panorámica del KB' },
     { id: 'sectors',   icon: '📚', label: 'Sectores',  href: '/sectors',    global: true,  category: 'knowledge',  hint: 'Catálogo A-S · readiness · roles y transacciones tipo del KB' },
+    { id: 'registry',  icon: '🌐', label: 'Registre',  href: '/registry',   global: true,  category: 'knowledge',  hint: 'Registre públic permaweb · operadors SOS descobribles · verify free' },
     { id: 'market',    icon: '🛒', label: 'Mercado',   href: '/market',     global: true,  category: 'market',     hint: 'Catálogo de productos y servicios' },
     { id: 'efficiency',icon: '⚡', label: 'Eficiencia', href: '/efficiency', global: true,  category: 'market',     hint: 'KM-001 · tokens/coste/pruning · ROI IA' },
     { id: 'savings',   icon: '📊', label: 'Ahorro',    href: '/savings',    global: true,  category: 'market',     hint: 'Cuadro comparativo de ahorro vs convencional · global o por proyecto' },
