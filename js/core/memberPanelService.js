@@ -14,17 +14,16 @@ import { isTestProject } from './projectFilter.js';
 // ── Member resolution ─────────────────────────────────────────────────
 
 // resolveCurrentMember · pura · cerca el membre del operador actual al KB.
-// Estratègia: 1r `content.handle === '@alvaro'` · 2n primer `matriu_member`.
-// Retorna `null` si encara no hi ha cap membre creat.
+// Estratègia: matchejar EXACTAMENT per `content.handle === preferredHandle`.
+// Retorna `null` si no hi ha cap match · NO fa fallback al primer membre
+// del KB perquè altres members (cohort 0, seed) podrien aparèixer com si
+// fossin l'operador actual (bug @alvaro veu "Marc · @marc" al panell).
+// Fix UX-AUDIT-001 sprint H+ pass 5 · 2026-05-10.
 export function resolveCurrentMember(kbNodes = [], preferredHandle = '@alvaro') {
     if (!Array.isArray(kbNodes) || kbNodes.length === 0) return null;
+    if (!preferredHandle) return null;
     const members = kbNodes.filter(n => n?.type === 'matriu_member');
-    if (members.length === 0) return null;
-    if (preferredHandle) {
-        const byHandle = members.find(m => m?.content?.handle === preferredHandle);
-        if (byHandle) return byHandle;
-    }
-    return members[0];
+    return members.find(m => m?.content?.handle === preferredHandle) || null;
 }
 
 // summarizeMemberIdentity · pura · extreu camps display-ready.
