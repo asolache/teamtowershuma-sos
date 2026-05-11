@@ -130,6 +130,11 @@ export function buildGraphFromKb(allNodes, options = {}) {
         if (c.assignee && c.assignee.id) pushRel(n.id, c.assignee.id, 'assignee');
         if (c.createdBy)         pushRel(n.id, c.createdBy,         'created_by');
         if (n.createdBy)         pushRel(n.id, n.createdBy,         'created_by');
+        // UX-AUDIT-001 sprint H+ · transactions enllacen roles · from/to
+        if (n.type === 'transaction') {
+            if (c.from) pushRel(c.from, n.id, 'tx_from');
+            if (c.to)   pushRel(n.id, c.to, 'tx_to');
+        }
     }
 
     // 4c. Tag edges · aristas implícitas por tags compartidos (UX-001)
