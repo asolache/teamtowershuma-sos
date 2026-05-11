@@ -141,27 +141,75 @@ export default class MindGraphView {
         const kbNodes = await KB.getAllNodes();
         this.projects = visibleProjects(store.getState().projects);
 
-        // FIX 2026-05-10 · els `project` viuen a `state.projects[]` (no a KB).
-        // Sense aquesta injecció, els SOPs/WOs creats apareixen al graph però
-        // sense node arrel del projecte i sense parent edges visibles.
+        // FIX 2026-05-10 · projects · roles · transactions viuen a
+        // `state.projects[]` (legacy V11 pre-Mind-as-Graph schema) i NO al KB.
+        // Sense aquesta injecció · els SOPs/WOs creats apareixien al graph però
+        // sense node arrel del projecte, sense roles, i les arestes role_ref /
+        // sopRef es perdien (idSet no els tenia).
         const kbIds = new Set(kbNodes.map(n => n.id));
-        const projectSynthetic = this.projects
-            .filter(p => p && p.id && !kbIds.has(p.id))
-            .map(p => ({
-                id:        p.id,
-                type:      'project',
-                projectId: p.id,
-                content:   {
-                    name:        p.nombre || p.name || p.id,
-                    sectorId:    p.sector_id || p.based_on_sector || null,
-                    description: p.description || '',
-                    tags:        Array.isArray(p.tags) ? p.tags : [],
-                },
-                keywords:  ['type:project', 'kind:project'],
-                createdAt: p.createdAt || 0,
-                updatedAt: p.updatedAt || p.createdAt || 0,
-            }));
-        this.allNodes = [...projectSynthetic, ...kbNodes];
+        const synthetic = [];
+
+        for (const p of this.projects) {
+            if (!p || !p.id) continue;
+            if (!kbIds.has(p.id)) {
+                synthetic.push({
+                    id:        p.id,
+                    type:      'project',
+                    projectId: p.id,
+                    content:   {
+                        name:        p.nombre || p.name || p.id,
+                        sectorId:    p.sector_id || p.based_on_sector || null,
+                        description: p.description || '',
+                        tags:        Array.isArray(p.tags) ? p.tags : [],
+                    },
+                    keywords:  ['type:project', 'kind:project'],
+                    createdAt: p.createdAt || 0,
+                    updatedAt: p.updatedAt || p.createdAt || 0,
+                });
+                kbIds.add(p.id);
+            }
+            // Roles del projecte · viuen a p.roles[] o p.vna_roles[]
+            const roles = Array.isArray(p.roles) ? p.roles : (Array.isArray(p.vna_roles) ? p.vna_roles : []);
+            for (const r of roles) {
+                if (!r || !r.id || kbIds.has(r.id)) continue;
+                synthetic.push({
+                    id:        r.id,
+                    type:      'role',
+                    projectId: p.id,
+                    content:   {
+                        name:           r.name || r.id,
+                        description:    r.description || '',
+                        castell_level:  r.castell_level || null,
+                        typical_actor:  r.typical_actor || null,
+                        tags:           Array.isArray(r.tags) ? r.tags : [],
+                    },
+                    keywords:  ['type:role', 'kind:role'],
+                });
+                kbIds.add(r.id);
+            }
+            // Transactions del projecte · viuen a p.vna_transactions[] o p.transactions[]
+            const txs = Array.isArray(p.vna_transactions) ? p.vna_transactions : (Array.isArray(p.transactions) ? p.transactions : []);
+            for (const t of txs) {
+                if (!t || !t.id || kbIds.has(t.id)) continue;
+                synthetic.push({
+                    id:        t.id,
+                    type:      'transaction',
+                    projectId: p.id,
+                    content:   {
+                        deliverable: t.deliverable || '',
+                        from:        t.from || null,
+                        to:          t.to || null,
+                        type:        t.type || null,
+                        is_must:     t.is_must || false,
+                        tags:        Array.isArray(t.tags) ? t.tags : [],
+                    },
+                    keywords:  ['type:transaction', 'kind:transaction'],
+                });
+                kbIds.add(t.id);
+            }
+        }
+
+        this.allNodes = [...synthetic, ...kbNodes];
     }
 
     _populateProjectFilter() {
