@@ -394,6 +394,45 @@ export const PRICING = Object.freeze({
     queryEur:   0,
 });
 
+// ── Mock mode · testing sense xarxa ni saldo real ───────────────────
+// Quan està ON · publishToPermaweb i revokeFromPermaweb generen txId
+// fake i SKIPPEN el wallet consume + Turbo upload. Permet provar el
+// flux end-to-end (entry signat · cache local · UI badges · revoke
+// chain) sense gastar res. Toggle persistit al KB com a `config` node.
+
+const MOCK_CONFIG_ID = 'permaweb-mock-mode';
+
+export async function isPermawebMockEnabled() {
+    try {
+        const { KB } = await import('./kb.js');
+        const node = await KB.getNode(MOCK_CONFIG_ID);
+        return !!(node?.value || node?.content?.enabled);
+    } catch (_) { return false; }
+}
+
+export async function setPermawebMockEnabled(enabled) {
+    const { KB } = await import('./kb.js');
+    const now = Date.now();
+    await KB.upsert({
+        id: MOCK_CONFIG_ID,
+        type: 'config',
+        value: !!enabled,
+        content: { kind: 'permaweb-mock-mode', enabled: !!enabled, updatedAt: now },
+        keywords: ['type:config', 'kind:permaweb-mock-mode'],
+        updatedAt: now,
+    });
+    return !!enabled;
+}
+
+// Genera un txId mock · format reconeixible (prefix MOCK_TX_) + hex hash
+// determinístic del payload · permet idempotència en tests
+function _mockTxIdFor(payload) {
+    let h = 0;
+    const s = String(payload);
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return 'MOCK_TX_' + h.toString(16).padStart(8, '0') + '_' + Math.random().toString(36).slice(2, 8);
+}
+
 // Mock helper · l'usuari del module pot injectar un Turbo client mock
 // per testing. Per defecte carrega el real des de jsDelivr.
 let _turboLoader = null;
@@ -441,6 +480,26 @@ export async function publishToPermaweb({
 
     const price = Number(pricing?.publishEur ?? PRICING.publishEur);
     if (!(price >= 0)) throw new Error('publishToPermaweb · invalid pricing');
+
+    // MOCK MODE · skip wallet + Turbo · fake txId + persist
+    if (await isPermawebMockEnabled()) {
+        const txId = _mockTxIdFor(canonicalizeRegistryEntry(entry) + Date.now());
+        const updated = {
+            ...entry,
+            content: {
+                ...entry.content,
+                arweaveTxId:         txId,
+                permawebPublishedAt: Date.now(),
+                _mock:               true,
+            },
+            updatedAt: Date.now(),
+        };
+        try {
+            const { KB } = await import('./kb.js');
+            await KB.upsert(updated);
+        } catch (_) {}
+        return { entry: updated, txId, costEur: 0, walletAfter: null, mock: true };
+    }
 
     // 1. Descompta del wallet · import dinàmic per evitar cicle
     const { consumeAndPersist, getOrCreateWalletForProject } = await import('./walletService.js');
@@ -545,6 +604,12 @@ export async function revokeFromPermaweb({
 
     const price = Number(pricing?.revokeEur ?? PRICING.revokeEur);
     if (!(price >= 0)) throw new Error('revokeFromPermaweb · invalid pricing');
+
+    // MOCK MODE · skip wallet + Turbo · fake revocation txId
+    if (await isPermawebMockEnabled()) {
+        const revocationTxId = _mockTxIdFor('revoke-' + revokesTxId + '-' + Date.now());
+        return { revocationTxId, costEur: 0, walletAfter: null, mock: true };
+    }
 
     const { consumeAndPersist, refundWallet, getOrCreateWalletForProject } = await import('./walletService.js');
     const before = await getOrCreateWalletForProject(projectId);

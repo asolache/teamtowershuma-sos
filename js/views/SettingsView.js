@@ -242,6 +242,24 @@ export default class SettingsView {
                 <div id="svManifestoStatus" class="sv-test-result"></div>
             </div>
 
+            <div class="sv-card" style="border-top:3px solid #a855f7;">
+                <h3 style="color:#a855f7;margin-top:0;">🧪 Mode test · Permaweb (mock)</h3>
+                <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.6;margin-top:0;">
+                    PERM-USER-001 sprint E+ · activa el mode test perquè el botó <strong>🌐 Publicar</strong>
+                    de <a href="/identity" data-link style="color:var(--accent-indigo);">/identity</a> generi un
+                    <strong>txId fake</strong> (prefix <code>MOCK_TX_</code>) <strong>sense descomptar saldo del wallet ni pujar res al permaweb</strong>.
+                    Útil per provar el flux end-to-end (signatura ECDSA · cache local · UI badges · revoke) sense cost real.
+                    Persistit al KB com a config · revisable abans de cada publish.
+                </p>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:14px;">
+                    <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" id="svPermawebMock" style="width:18px;height:18px;cursor:pointer;">
+                        <span style="font-weight:600;">Mode test ON</span>
+                    </label>
+                    <span id="svPermawebMockStatus" class="sv-key-status" style="font-size:11px;"></span>
+                </div>
+            </div>
+
             <div class="sv-card" style="border-top:3px solid #06b6d4;">
                 <h3 style="color:#06b6d4;margin-top:0;">🌐 Idioma · llengua de la interfície</h3>
                 <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.6;margin-top:0;">
@@ -321,6 +339,41 @@ export default class SettingsView {
     async afterRender() {
         const sel = document.getElementById('settLangSel');
         if (sel) sel.innerHTML = langSelectorHtml();
+
+        // PERM-USER-001 sprint E+ · mock mode toggle
+        try {
+            const { isPermawebMockEnabled, setPermawebMockEnabled } = await import('../core/publicRegistryService.js');
+            const checkbox = document.getElementById('svPermawebMock');
+            const status   = document.getElementById('svPermawebMockStatus');
+            const renderStatus = (on) => {
+                if (!status) return;
+                if (on) {
+                    status.textContent = '🧪 MOCK · cap cost real · publish/revoke amb txId fake';
+                    status.style.background = 'rgba(168,85,247,0.12)';
+                    status.style.color = '#a855f7';
+                } else {
+                    status.textContent = '⚙ Mode real · publish=0.05€ · revoke=0.05€ · Turbo SDK + wallet';
+                    status.style.background = 'rgba(99,102,241,0.10)';
+                    status.style.color = 'var(--accent-indigo)';
+                }
+            };
+            if (checkbox) {
+                const initialOn = await isPermawebMockEnabled();
+                checkbox.checked = initialOn;
+                renderStatus(initialOn);
+                checkbox.addEventListener('change', async () => {
+                    const on = !!checkbox.checked;
+                    try {
+                        await setPermawebMockEnabled(on);
+                        renderStatus(on);
+                    } catch (err) {
+                        console.error('[settings] permaweb mock toggle:', err);
+                        checkbox.checked = !on;
+                    }
+                });
+            }
+        } catch (e) { console.warn('[settings] permaweb mock init', e); }
+
 
         // UX-AUDIT-001 sprint A2 · al cambiar provider, guardar in-place SIN
         // navegar. Antes esto disparaba navigateTo('/settings') aunque el
