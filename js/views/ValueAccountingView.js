@@ -380,6 +380,155 @@ export default class ValueAccountingView {
         this._bindForm();
         this._bindEditTargets();
         this._bindImportWos();
+        // FUND-FLOW-001 sprint C+D · panell distribució + claim
+        this._renderDistributionPanel().catch(e => console.warn('[va] distribution panel', e));
+    }
+
+    async _renderDistributionPanel() {
+        const main = document.querySelector('.va-main');
+        if (!main || !this.projectId) return;
+        // Carrega rule + wallet
+        const { getDistributionRuleForProject, saveDistributionRule } = await import('../core/distributionRuleService.js');
+        const { getOrCreateWalletForProject, computeStakeholdersPool, withdrawClaim } = await import('../core/walletService.js');
+        const { resolveCurrentMember } = await import('../core/memberPanelService.js');
+        const rule = await getDistributionRuleForProject(this.projectId);
+        const wallet = await getOrCreateWalletForProject(this.projectId);
+        const pool = computeStakeholdersPool(wallet, rule.stakeholdersBps);
+
+        // Crea section dins .va-main si no existeix
+        let section = document.getElementById('vaDistSection');
+        if (!section) {
+            section = document.createElement('section');
+            section.id = 'vaDistSection';
+            section.style.cssText = 'margin-top:1.6rem;background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:1.2rem;';
+            main.appendChild(section);
+        }
+
+        const partiesHtml = (this.projectPie.parties || []).map(p => {
+            const share = (p.sharePctInProject || 0) / 100;
+            const claimedByThisParty = (wallet.content.movements || [])
+                .filter(m => m && m.kind === 'consume' && m.source === 'stakeholder-claim' && m.ref && m.ref.includes(':party-' + p.partyId))
+                .reduce((s, m) => s + Number(m.amountEur || 0), 0);
+            const claimableForParty = Math.max(0, pool.allocatedEur * share - claimedByThisParty);
+            return `<tr>
+                <td style="padding:6px 8px;">${this._escHtml(p.partyId)}</td>
+                <td style="padding:6px 8px;text-align:right;color:var(--text-muted);font-family:var(--font-mono);font-size:0.78rem;">${(p.sharePctInProject || 0).toFixed(2)}%</td>
+                <td style="padding:6px 8px;text-align:right;font-family:var(--font-mono);color:var(--accent-green);font-weight:600;">${claimableForParty.toFixed(2)} €</td>
+                <td style="padding:6px 8px;text-align:right;color:var(--text-muted);font-family:var(--font-mono);font-size:0.78rem;">${claimedByThisParty.toFixed(2)} €</td>
+                <td style="padding:6px 8px;text-align:right;">
+                    <button class="va-btn va-btn-claim" data-party="${this._escHtml(p.partyId)}" data-share="${share}" data-claimable="${claimableForParty}" ${claimableForParty <= 0 ? 'disabled' : ''}>💸 Retirar</button>
+                </td>
+            </tr>`;
+        }).join('');
+
+        section.innerHTML = `
+            <h2 style="margin:0 0 0.6rem 0;color:var(--text-main);font-size:1.05rem;">🌊 Distribució automàtica · sprint C/D</h2>
+            <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 0.8rem 0;">
+                Quan arribi un <strong>topup amb source='income'</strong> al wallet del projecte (botó "💰 Registrar ingrés" a /wallet?project=${this._escHtml(this.projectId)}), automàticament es marca el split entre reserve operativa i pool stakeholders. Els stakeholders poden retirar el seu pie segons la seva share.
+            </p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:1rem;">
+                <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:8px 12px;">
+                    <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);text-transform:uppercase;">Saldo wallet</div>
+                    <div style="font-size:1.2rem;font-weight:700;font-family:var(--font-mono);color:var(--text-main);">${Number(wallet.content.balanceEur || 0).toFixed(2)} €</div>
+                </div>
+                <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:8px 12px;">
+                    <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);text-transform:uppercase;">Pool stakeholders</div>
+                    <div style="font-size:1.2rem;font-weight:700;font-family:var(--font-mono);color:var(--accent-green);">${pool.allocatedEur.toFixed(2)} €</div>
+                </div>
+                <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:8px 12px;">
+                    <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);text-transform:uppercase;">Ja retirat</div>
+                    <div style="font-size:1.2rem;font-weight:700;font-family:var(--font-mono);color:var(--text-muted);">${pool.claimedEur.toFixed(2)} €</div>
+                </div>
+                <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:8px 12px;">
+                    <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);text-transform:uppercase;">Claimable global</div>
+                    <div style="font-size:1.2rem;font-weight:700;font-family:var(--font-mono);color:var(--accent-claude);">${pool.claimableEur.toFixed(2)} €</div>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:0.8rem;flex-wrap:wrap;">
+                <label style="font-size:0.78rem;color:var(--text-muted);">Regla:</label>
+                <input type="number" min="0" max="100" id="vaRuleReserve" value="${(rule.operatingReserveBps/100).toFixed(0)}" style="width:60px;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:4px 6px;text-align:right;font-family:var(--font-mono);">
+                <span style="color:var(--text-muted);font-size:0.78rem;">% reserve · </span>
+                <input type="number" min="0" max="100" id="vaRuleStake" value="${(rule.stakeholdersBps/100).toFixed(0)}" style="width:60px;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:4px 6px;text-align:right;font-family:var(--font-mono);">
+                <span style="color:var(--text-muted);font-size:0.78rem;">% stakeholders</span>
+                <button id="vaRuleSave" class="va-btn" style="background:var(--accent-indigo);color:#fff;border:0;padding:4px 12px;border-radius:6px;font-size:0.78rem;font-weight:600;cursor:pointer;">💾 Guardar regla</button>
+                <span id="vaRuleStatus" style="font-size:0.78rem;color:var(--accent-green);"></span>
+            </div>
+
+            <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border-default);">
+                        <th style="padding:6px 8px;text-align:left;color:var(--text-muted);font-size:0.72rem;font-family:var(--font-mono);text-transform:uppercase;">Party</th>
+                        <th style="padding:6px 8px;text-align:right;color:var(--text-muted);font-size:0.72rem;font-family:var(--font-mono);text-transform:uppercase;">Share</th>
+                        <th style="padding:6px 8px;text-align:right;color:var(--text-muted);font-size:0.72rem;font-family:var(--font-mono);text-transform:uppercase;">Claimable</th>
+                        <th style="padding:6px 8px;text-align:right;color:var(--text-muted);font-size:0.72rem;font-family:var(--font-mono);text-transform:uppercase;">Retirat</th>
+                        <th style="padding:6px 8px;text-align:right;"></th>
+                    </tr>
+                </thead>
+                <tbody>${partiesHtml || '<tr><td colspan="5" style="padding:1rem;text-align:center;color:var(--text-muted);font-style:italic;">Cap party encara · afegeix contributions al projecte</td></tr>'}</tbody>
+            </table>
+            <div id="vaClaimStatus" style="margin-top:0.6rem;font-size:0.85rem;display:none;"></div>
+        `;
+
+        // Bind regla
+        document.getElementById('vaRuleSave')?.addEventListener('click', async () => {
+            const r  = parseFloat(document.getElementById('vaRuleReserve').value);
+            const s  = parseFloat(document.getElementById('vaRuleStake').value);
+            const st = document.getElementById('vaRuleStatus');
+            if (!Number.isFinite(r) || !Number.isFinite(s) || r + s > 100) {
+                if (st) { st.textContent = '✗ Suma > 100%'; st.style.color = 'var(--accent-red)'; }
+                return;
+            }
+            try {
+                await saveDistributionRule({ projectId: this.projectId, operatingReserveBps: r * 100, stakeholdersBps: s * 100 });
+                if (st) { st.textContent = '✓ Guardat'; st.style.color = 'var(--accent-green)'; }
+                setTimeout(() => { if (st) st.textContent = ''; }, 1500);
+                this._renderDistributionPanel();
+            } catch (err) {
+                if (st) { st.textContent = '✗ ' + err.message; st.style.color = 'var(--accent-red)'; }
+            }
+        });
+
+        // Bind claim buttons
+        document.querySelectorAll('.va-btn-claim').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const partyId   = btn.getAttribute('data-party');
+                const share     = parseFloat(btn.getAttribute('data-share'));
+                const claimable = parseFloat(btn.getAttribute('data-claimable'));
+                const status    = document.getElementById('vaClaimStatus');
+                if (claimable <= 0) return;
+                const setStatus = (msg, ok = true) => {
+                    if (!status) return;
+                    status.style.display = 'block';
+                    status.textContent = msg;
+                    status.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)';
+                };
+                // Per ara · auto-assume el handle de l'operador actual (`@alvaro`)
+                // En sprint futur: verify partyId correspon a un member del operador
+                let toHandle = '@alvaro';
+                try {
+                    const { KB } = await import('../core/kb.js');
+                    const kbNodes = await KB.getAllNodes();
+                    const me = resolveCurrentMember(kbNodes, '@alvaro');
+                    if (me?.content?.handle) toHandle = me.content.handle;
+                } catch (_) {}
+                if (!confirm(`Retirar ${claimable.toFixed(2)}€ del pool al teu wallet personal (${toHandle})?\n\nParty: ${partyId}\nShare: ${(share*100).toFixed(2)}%\n\nDescompta del wallet del projecte · es topupea al teu wallet personal.`)) return;
+                btn.disabled = true; btn.textContent = '⏳';
+                try {
+                    const res = await withdrawClaim({
+                        projectId: this.projectId,
+                        partyId, partyShare: share,
+                        toHandle, amountEur: claimable,
+                        note: 'manual claim from /value-accounting',
+                    });
+                    setStatus(`✓ Retirats ${res.amountEur.toFixed(2)}€ · refs ${res.ref.slice(0,32)}…`, true);
+                    setTimeout(() => this._renderDistributionPanel(), 500);
+                } catch (err) {
+                    setStatus('✗ ' + (err?.message || 'error desconegut'), false);
+                    btn.disabled = false; btn.textContent = '💸 Retirar';
+                }
+            });
+        });
     }
 
     _bindImportWos() {

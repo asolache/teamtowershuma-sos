@@ -2655,6 +2655,145 @@ Operador (@alvaro)
 - **Discoverability**: nova UX "qui sou els SOS operators del món" · viu a permaweb · indestructible.
 - **Bridge a Matriu cohort 0 → cohort 1+**: quan cohort 0 (108 places) es publica al permaweb, qualsevol pot veure-la i sol·licitar entrar a cohort 1 amb el seu propi perfil.
 
+## FUND-FLOW-001 · UX simple de saldo personal + projecte + auto-distribució (input @alvaro 2026-05-10)
+
+> Visió @alvaro · "vull poder carregar saldo com a persona i fer servir
+> les APIs de SOS (permaweb · blockchain · IA) amb control real de
+> consum · i quan toqui derivar saldo al compte d'un projecte per donar
+> crèdit. I quan el projecte generi ingressos, automatitzar que es
+> distribueixin entre 1) despeses operatives APIs/fees i 2) stakeholders
+> segons el pacte de socis i acords dinàmics signats."
+
+### Estat actual (què funciona avui)
+
+| Peça | Estat | On |
+|---|---|---|
+| Wallet per projecte amb saldo + moviments | ✅ | `walletService.js` · 4 kinds (topup/consume/refund/adjustment) |
+| Funding manual via Stripe Payment Links | ✅ alfa | `stripeService.js` (4 trams · pk_test_ only · sense webhook auto) |
+| Consum automàtic IA del wallet | ✅ | MKT-001 sprint C3 · `chargeWalletForLlmCall` post-LLM |
+| Consum del wallet per permaweb publish/revoke | ✅ | PERM-USER-001 sprint C · 0.05€/publish |
+| Slicing Pie + FairShares per projecte | ✅ | VAL-001 sprint A-C · `valueAccountingService.js` |
+| WO → contribution automàtic al ledger | ✅ | VAL-001 sprint C · `woContributionService.js` |
+
+### Anti-inventari (què falta per la visió completa)
+
+| Falta | Per què cal |
+|---|---|
+| **Wallet personal** (no lligat a projecte) | Avui tots els wallets són per-projecte · l'operador no té un saldo "seu" general · ha de ser un projecte fictici |
+| **Transferència wallet ↔ wallet** | Per derivar saldo personal a un projecte i tornar (quan el projecte genera ingressos i el repartiment toca a l'operador) |
+| **Stripe webhook automàtic** | Sprint B pendent · Netlify Function amb `sk_test_` env · ara cal ajust manual post-pagament |
+| **Distribució automàtica d'ingressos** | Regla configurable per projecte · `{operatingReserveBps, stakeholdersBps, foundersBps}` que dispara al rebre topup amb `source='income'` |
+| **Stakeholder claim/withdraw** | Cada party del Slicing Pie pot fer `claimableEur(projectId, partyId)` + botó "💸 Retirar el meu pie" · descompta del wallet projecte · topup al wallet personal del party |
+| **Schema `public_project_entry` al permaweb** | Per a federació · projectes publicats descobribles · "oportunitats" |
+| **Vista `/opportunities`** | UI · projectes públics del permaweb que busquen rols/skills · permet sol·licitar entrar com a stakeholder |
+| **Consum unificat** (IA + permaweb + blockchain) | Avui IA i permaweb consumen separadament · un `costEur` unificat amb breakdown per categoria al moviment del wallet |
+
+### Sprint plan FUND-FLOW-001
+
+#### Sprint A · Wallet personal + transferència (~1h · sense xarxa)
+- `walletService.js` · `personalWalletIdFor(handle)` retorna `__personal_${handle.slice(1)}__`
+- `getOrCreatePersonalWallet(handle = '@alvaro')` async
+- `transferBetweenWallets({fromProjectId, toProjectId, amountEur, note})` · consume + topup atòmic amb refs encadenats (`ref:'transfer-{ts}'` a ambdós moviments)
+- UI · `/wallet` sense `?project=` mostra el wallet personal (no errors com ara)
+- UI · al `/wallet` afegir "↗ Transferir a projecte" amb selector
+- Tests · 12 asserts puros
+
+#### Sprint B · Stripe webhook auto-credit (~2h · necessita Netlify)
+- Netlify Function `netlify/functions/stripe-webhook.js` · valida `stripe-signature` amb `sk_test_` al env
+- Quan rep `checkout.session.completed` · POST al SOS local? · ALT · l'usuari sincronitza manualment a `/wallet?refresh` que llegeix les sessions completed via API
+- UX · botó "↻ Refresh des de Stripe" al wallet · llegeix `payment_intent` amb metadata `projectId` per imputar
+- Tests · mock Stripe API
+
+#### Sprint C · Distribució automàtica d'ingressos (~2h)
+- Schema `distribution_rule` per projecte (singleton al KB · `id:{projectId}::distribution-rule`):
+  - `operatingReserveBps` (basis points · default 2000 = 20% per cobrir APIs/fees)
+  - `stakeholdersBps` (default 8000 = 80% repartit segons Slicing Pie)
+  - `customRules[]` (opcional · regles addicionals tipus "10% al fons de reserva fundacional")
+- Helper · `distributeIncome({projectId, amountEur, source})` async:
+  - Aplica `operatingReserveBps` → marca al wallet com `source='operating-reserve'`
+  - Aplica `stakeholdersBps` → distribueix entre parties del Slicing Pie pro-rata
+  - Persisteix moviments amb `kind='income-distribution'` + breakdown al note
+- UI · `/value-accounting` · nou panel "🌊 Regla de distribució" editable
+- Hook · quan topup arribi amb `source='income'`, dispara `distributeIncome` automàticament
+
+#### Sprint D · Stakeholder claim/withdraw (~1.5h)
+- `valueAccountingService.claimableEurForParty({projectId, partyId})` pure · calcula:
+  - Pie share del party (Slicing Pie + FairShares)
+  - × saldo disponible al wallet projecte assignat al stakeholder bucket
+  - − ja retirat (suma de moviments `kind='claim-withdraw' ref:party-{partyId}'`)
+- UI · `/value-accounting` · cada party row · botó "💸 Retirar X €"
+  - Confirm modal · "Retirar X € · descompta del wallet projecte · topup al teu wallet personal"
+  - Verifica que `partyId` correspon al `@handle` del operador actual (`resolveCurrentMember`) · refuse altres
+- Auto-tx · consume project wallet + topup personal wallet amb refs encadenats
+
+#### Sprint E · Cost unificat + telemetria APIs (~1.5h)
+- `costTrackingService.js` nou · agrega:
+  - IA: tokens × pricing del `Orchestrator.callLLM`
+  - Permaweb: 0.05€ per publish/revoke · més bytes en futur
+  - Blockchain: gas estimat per a futurs sprints (PACT-001 sprint D ja anticipa)
+- UI · nou widget al `/savings` o `/wallet` · "Breakdown del consum del wallet projecte X" amb stacked bar per categoria
+- KM-001 ja té telemetria IA pruning · reuse-la
+
+#### Sprint F · Federació projectes públics al permaweb (~3h)
+- Schema `public_project_entry` similar a `public_registry_entry`:
+  - `projectId` · `ownerDid` · nom · descripció · sectorId · subtype · estat
+  - `lookingForSkills[]` · `lookingForSectors[]` · stakeholders count
+  - Signed ECDSA pel owner
+- `publishProjectToPermaweb({projectId, ownerProjectId})` · cost 0.05€ · igual flow que PERM-USER-001
+- Vista `/opportunities` · llistat de projectes públics descobrits via GraphQL · filtres per sector/skill · botó "📩 Sol·licitar unir-me"
+- Sol·licitud · genera `join_request` signat · pot anar al permaweb (cost) o quedar local (free) i sincronitzar amb el owner per export/import
+
+### UX simple proposat (la "experiència @alvaro")
+
+```
+1. /onboarding (alfa primera vegada)
+   ─ Hola! Configurem el teu SOS local-first
+   ─ [💶 Carrega 5€ al teu saldo personal · descompta de la teva targeta via Stripe]
+   ─ "Aquest saldo cobreix · IA queries · permaweb · blockchain fees · TOT"
+   ─ "Cap dada es comparteix · només pagues el cost real + un petit marge SOS"
+   ─ [⏭ Salta · ja ho faré després]
+
+2. /identity
+   ─ Saldo personal: 5,00€  [↗ Recarrega]
+   ─ El teu DID local · publica al permaweb (0,05€ del saldo personal)
+
+3. /dashboard → "+ Nou projecte"
+   ─ El projecte té el seu propi wallet (separat del teu personal)
+   ─ "Vols transferir saldo del teu personal al projecte?" [Sí · 1€] [No]
+
+4. Treballes al projecte
+   ─ Cada query IA · cada permaweb publish · cada blockchain tx descompta
+     del wallet del projecte (no del personal)
+   ─ Si el projecte queda sense saldo · prompt "Recarrega projecte des de
+     personal · o des de Stripe"
+
+5. Projecte genera ingressos (manual o via Stripe)
+   ─ topup amb source='income' al wallet projecte
+   ─ AUTO: 20% queda com 'operating-reserve' (futurs APIs/fees)
+   ─ AUTO: 80% disponible per claim dels stakeholders segons Slicing Pie
+
+6. /value-accounting
+   ─ Veus el teu pie · 35% del projecte
+   ─ Saldo claim disponible · 28€ (35% de 80€ disponible)
+   ─ [💸 Retirar 28€ al meu personal]
+
+7. Saldo personal augmenta · pots usar-lo per altres projectes,
+   permaweb publishes, o retirar a credit card via Stripe Connect
+   (sprint futur)
+```
+
+### Decisions estratègiques pendents de consensuar amb @alvaro
+
+1. **Personal wallet · global o per handle?** · Recomanació: per handle (un wallet per `matriu_member`)
+2. **Auto-distribució · default % d'operating reserve** · Recomanació: 20% (cobreix IA mensual normal)
+3. **Stripe pricing** · cost real + quin marge SOS? · Recomanació: cost real + 5% marge (10€ usuari paga · 9,50€ entren al wallet, 0,50€ marge SOS)
+4. **Stripe Connect per a withdraw a credit card** · sprint X futur · cal Stripe Connect Express compte
+5. **Federation /opportunities · qui paga publish del projecte?** · El project wallet (no el personal del founder) per coherència
+
+### Implementació immediata (Sprint A · sense xarxa)
+
+Comencem **avui** amb Sprint A · wallet personal + transferència. Té zero deps · zero risc · base per a tot el plà. Sprints B-F segueixen quan @alvaro confirmi les decisions.
+
 ---
 
 *Documento vivo · actualizar al cierre de cada Ola.*

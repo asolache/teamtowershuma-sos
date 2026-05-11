@@ -1441,20 +1441,20 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 20,                          '20 destinos canónicos (+ registry PERM-USER-001 sprint E)');
+    assert(NAV_DESTINATIONS.length === 21,                          '21 destinos canónicos (+ mywallet FUND-FLOW-001 sprint A)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 16,                                'sin projectId · 16 links (20-4 globals=false: sops · wallet · value · pact)');
+    assert(linksGlobal.length === 17,                                'sin projectId · 17 links (21-4 globals=false)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
     // con projectId → todos + query ?project= en los aplicables
     const linksProject = buildNavLinks({ active: 'kanban', projectId: 'proj-x' });
-    assert(linksProject.length === 20,                              'con projectId · 20 links (todos · + registry PERM-USER-001 sprint E)');
+    assert(linksProject.length === 21,                              'con projectId · 21 links (+ mywallet)');
     assert(linksProject.find(l => l.id === 'wallet').href === '/wallet?project=proj-x', 'wallet con project query');
     assert(linksProject.find(l => l.id === 'savings').href === '/savings?project=proj-x', 'savings con project query');
     assert(linksProject.find(l => l.id === 'sops').href === '/sops?project=proj-x',     'sops con project query');

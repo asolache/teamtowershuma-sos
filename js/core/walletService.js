@@ -205,6 +205,250 @@ export async function consumeAndPersist({ projectId, amountEur, ref = null, sour
     return await persistWallet(updated);
 }
 
+// ─── FUND-FLOW-001 sprint A · Wallet personal + transferència ─────────────
+//
+// Visió @alvaro 2026-05-10 · l'operador té UN saldo personal (no lligat
+// a cap projecte) i pot derivar saldo a wallets de projecte concret.
+// Quan un projecte genera ingressos, els stakeholders poden retirar el
+// seu pie cap al seu personal (sprint D).
+//
+// El "personal wallet" és un cas especial · projectId convencional
+// `__personal_${handle}__` (ex. `__personal_alvaro__`). Tota l'API
+// existent funciona idènticament · només canvia el sentit semantic.
+
+// personalWalletIdFor · pura · genera el projectId convencional per a un handle.
+export function personalWalletIdFor(handle = '@alvaro') {
+    const clean = String(handle || '@alvaro').replace(/^@/, '').replace(/[^\w-]/g, '').toLowerCase().slice(0, 32) || 'anon';
+    return '__personal_' + clean + '__';
+}
+
+// isPersonalWallet · pura · true si el projectId segueix la convenció.
+export function isPersonalWallet(projectId) {
+    return typeof projectId === 'string' && projectId.startsWith('__personal_') && projectId.endsWith('__');
+}
+
+// getOrCreatePersonalWallet · async · crea (o recupera) el wallet personal
+// del handle indicat. Mateixa shape que els de projecte · només el
+// projectId convencional. Marca isPersonal=true al content per UI.
+export async function getOrCreatePersonalWallet(handle = '@alvaro') {
+    const pid = personalWalletIdFor(handle);
+    const wallet = await getOrCreateWalletForProject(pid, { isPersonal: true, ownerHandle: handle });
+    return wallet;
+}
+
+// transferBetweenWallets · async · atòmic-best-effort · descompta del
+// source · acredita al destination amb refs encadenats per traçabilitat.
+// Llença InsufficientFunds si saldo source < amount.
+// Retorna { from, to, amountEur, ref }.
+export async function transferBetweenWallets({
+    fromProjectId,
+    toProjectId,
+    amountEur,
+    note = '',
+    source = 'transfer',
+} = {}) {
+    if (!fromProjectId || !toProjectId) {
+        throw new Error('transferBetweenWallets requires fromProjectId + toProjectId');
+    }
+    if (fromProjectId === toProjectId) {
+        throw new Error('transferBetweenWallets · source i destination són el mateix wallet');
+    }
+    const amt = Number(amountEur);
+    if (!Number.isFinite(amt) || amt <= 0) {
+        throw new Error('transferBetweenWallets · amount must be > 0');
+    }
+    const fromWallet = await getOrCreateWalletForProject(fromProjectId);
+    if (Number(fromWallet.content.balanceEur) < amt) {
+        throw new Error('insufficient-funds · saldo origen ' + fromWallet.content.balanceEur + '€ < ' + amt + '€');
+    }
+    const transferRef = 'transfer-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    const fromLabel = isPersonalWallet(fromProjectId) ? 'personal' : fromProjectId;
+    const toLabel   = isPersonalWallet(toProjectId)   ? 'personal' : toProjectId;
+    const baseNote  = note || ('transfer ' + fromLabel + ' → ' + toLabel);
+
+    // 1. Descompta del source
+    const after1 = await consumeAndPersist({
+        projectId: fromProjectId,
+        amountEur: amt,
+        kind:      'consume',
+        ref:       transferRef + ':out',
+        source,
+        note:      baseNote + ' (out)',
+    });
+    // 2. Acredita al destination · si falla, refund automàtic al source
+    try {
+        const after2 = await topUpAndPersist({
+            projectId: toProjectId,
+            amountEur: amt,
+            source,
+            ref:       transferRef + ':in',
+            note:      baseNote + ' (in)',
+        });
+        return { from: after1, to: after2, amountEur: amt, ref: transferRef };
+    } catch (e) {
+        // Refund best-effort
+        try {
+            const refunded = refundWallet({
+                wallet:    after1,
+                amountEur: amt,
+                ref:       transferRef + ':refund',
+                source,
+                note:      'refund failed transfer · ' + (e?.message || e),
+            });
+            await persistWallet(refunded);
+        } catch (_) { /* best-effort */ }
+        throw new Error('transfer-failed: ' + (e?.message || e));
+    }
+}
+
+// ─── FUND-FLOW-001 sprint C · Distribució automàtica d'ingressos ─────────
+//
+// Quan arriba un topup amb source='income', el wallet enregistra el moviment
+// + la regla de distribució calcula el split en operating-reserve i
+// stakeholders-pool. El balanceEur del wallet manté tot el saldo (1 balanç
+// únic) · els buckets es deriven com a agregats dels moviments amb font:
+//   - sum topup source='income' × stakeholdersBps/10000 = pool acumulat
+//   - sum consume source='stakeholder-claim' = total claimed
+//   - claimable per party = (poolAcumulat - clientPersonalShare) × partyShare%
+
+export const INCOME_SOURCE       = 'income';
+export const CLAIM_SOURCE        = 'stakeholder-claim';
+export const RESERVE_SOURCE      = 'operating-reserve';   // info-only · marca consumes que provenen de reserva
+export const ALLOCATION_SOURCE   = 'income-allocation';   // marker movements amb amount=0
+
+// computeStakeholdersPool · pura · suma de l'allocation per stakeholders
+// segons tots els moviments d'income passats. NO mutate.
+export function computeStakeholdersPool(wallet, ruleStakeholdersBps = 8000) {
+    if (!wallet || !wallet.content) return { allocatedEur: 0, claimedEur: 0, claimableEur: 0 };
+    const movs = wallet.content.movements || [];
+    let allocatedEur = 0;
+    let claimedEur   = 0;
+    const bps = Number(ruleStakeholdersBps);
+    const factor = Number.isFinite(bps) && bps >= 0 ? (bps / 10000) : 0.8;
+    for (const m of movs) {
+        if (!m) continue;
+        if (m.kind === 'topup' && m.source === INCOME_SOURCE) {
+            allocatedEur += Number(m.amountEur || 0) * factor;
+        }
+        if (m.kind === 'consume' && m.source === CLAIM_SOURCE) {
+            claimedEur += Number(m.amountEur || 0);
+        }
+    }
+    allocatedEur = Math.round(allocatedEur * 10000) / 10000;
+    claimedEur   = Math.round(claimedEur   * 10000) / 10000;
+    return {
+        allocatedEur,
+        claimedEur,
+        claimableEur: Math.max(0, Math.round((allocatedEur - claimedEur) * 10000) / 10000),
+    };
+}
+
+// recordIncomeAndDistribute · async · accept un topup d'ingrés i persisteix
+// el moviment + opcionalment marker movements informatius de l'allocation.
+// El balanceEur incrementa per amountEur sencer · la distribució es calcula
+// virtualment per computeStakeholdersPool.
+export async function recordIncomeAndDistribute({ projectId, amountEur, note = '', ref = null } = {}) {
+    if (!projectId) throw new Error('recordIncomeAndDistribute requires projectId');
+    const amt = Number(amountEur);
+    if (!Number.isFinite(amt) || amt <= 0) throw new Error('amount must be > 0');
+
+    // Carrega regla per a calcular split (default 20/80)
+    let rule = { operatingReserveBps: 2000, stakeholdersBps: 8000 };
+    try {
+        const { getDistributionRuleForProject, computeIncomeSplit } = await import('./distributionRuleService.js');
+        rule = await getDistributionRuleForProject(projectId);
+        const split = computeIncomeSplit({ amountEur: amt, rule });
+        // Persisteix el topup principal amb tag 'income' i les sub-quantitats al note per traçabilitat
+        const updated = await topUpAndPersist({
+            projectId,
+            amountEur: amt,
+            source: INCOME_SOURCE,
+            ref:    ref || ('income-' + Date.now()),
+            note:   note + (note ? ' · ' : '') + 'reserva ' + split.reserveEur.toFixed(2) + '€ · stakeholders ' + split.stakeholdersEur.toFixed(2) + '€',
+        });
+        return { wallet: updated, split, rule };
+    } catch (e) {
+        // Fallback · si distributionRuleService no està disponible, topup normal
+        const updated = await topUpAndPersist({
+            projectId, amountEur: amt, source: INCOME_SOURCE,
+            ref: ref || ('income-' + Date.now()),
+            note: note || 'income',
+        });
+        return { wallet: updated, split: { reserveEur: 0, stakeholdersEur: amt, leftoverEur: 0 }, rule };
+    }
+}
+
+// withdrawClaim · async · retira el pie d'un stakeholder: consume del
+// wallet projecte (kind=consume source=stakeholder-claim) + topup al
+// wallet personal del handle indicat.
+// Refuse si amount > claimable.
+export async function withdrawClaim({ projectId, partyId, partyShare, toHandle, amountEur, note = '' } = {}) {
+    if (!projectId) throw new Error('withdrawClaim requires projectId');
+    if (!partyId)   throw new Error('withdrawClaim requires partyId');
+    if (!toHandle)  throw new Error('withdrawClaim requires toHandle (destinatari del wallet personal)');
+    const amt = Number(amountEur);
+    if (!Number.isFinite(amt) || amt <= 0) throw new Error('amount must be > 0');
+
+    // Verifica claimable
+    const wallet = await getOrCreateWalletForProject(projectId);
+    const rule = await (async () => {
+        try {
+            const m = await import('./distributionRuleService.js');
+            const r = await m.getDistributionRuleForProject(projectId);
+            return r;
+        } catch (_) { return { stakeholdersBps: 8000 }; }
+    })();
+    const pool = computeStakeholdersPool(wallet, rule.stakeholdersBps);
+    const share = Number(partyShare);
+    if (!Number.isFinite(share) || share < 0 || share > 1) {
+        throw new Error('partyShare must be 0..1 (fraction, no percent)');
+    }
+    // Claimable global per a aquest party = pool × share - ja claimed per aquest party
+    const claimedByParty = (wallet.content.movements || [])
+        .filter(m => m && m.kind === 'consume' && m.source === CLAIM_SOURCE && m.ref && m.ref.includes(':party-' + partyId))
+        .reduce((s, m) => s + Number(m.amountEur || 0), 0);
+    const claimablePartyEur = Math.max(0, pool.allocatedEur * share - claimedByParty);
+
+    if (amt > claimablePartyEur + 1e-6) {
+        throw new Error('claim-exceeds-share · claimable=' + claimablePartyEur.toFixed(4) + '€ · requested=' + amt + '€');
+    }
+    if (Number(wallet.content.balanceEur) < amt) {
+        throw new Error('insufficient-funds · balance ' + wallet.content.balanceEur + '€ < ' + amt + '€');
+    }
+
+    const ref = 'claim-' + Date.now() + ':party-' + partyId;
+    // 1. Consume del wallet projecte
+    const after1 = await consumeAndPersist({
+        projectId, amountEur: amt,
+        ref: ref + ':out',
+        source: CLAIM_SOURCE,
+        note: note + (note ? ' · ' : '') + 'claim · party ' + partyId + ' → ' + toHandle,
+    });
+    // 2. Topup al wallet personal del destinatari
+    const personalId = personalWalletIdFor(toHandle);
+    try {
+        const after2 = await topUpAndPersist({
+            projectId: personalId,
+            amountEur: amt,
+            source: CLAIM_SOURCE,
+            ref: ref + ':in',
+            note: 'claim from ' + projectId + ' · party ' + partyId,
+        });
+        return { fromProjectWallet: after1, toPersonalWallet: after2, amountEur: amt, ref };
+    } catch (e) {
+        // Refund · revertim
+        try {
+            const refunded = refundWallet({
+                wallet: after1, amountEur: amt,
+                ref: ref + ':refund', source: CLAIM_SOURCE,
+                note: 'refund claim · personal wallet topup failed: ' + (e?.message || e),
+            });
+            await persistWallet(refunded);
+        } catch (_) {}
+        throw new Error('claim-failed: ' + (e?.message || e));
+    }
+}
+
 // ─── MKT-001 sprint C3 · helper puro de cargo por llamada LLM ──────────────
 // Convierte costUSD → costEur con un rate configurable (default 0.92).
 // PURO · sin I/O · testeable.
