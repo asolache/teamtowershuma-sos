@@ -39,33 +39,75 @@ export default class SopsView {
 
         return `
         <style>
-            .sv-shell  { height:100dvh; background:var(--bg-0,#050507); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .sv-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
-            .sv-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
-            .sv-logo span { color:#6366f1; }
-            .sv-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
+            .sv-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); display:flex; flex-direction:column; overflow:hidden; }
+            .sv-topbar {
+                display:flex; align-items:center; gap:10px;
+                padding:8px 16px;
+                border-bottom:1px solid var(--border-default);
+                background:var(--bg-panel);
+                flex-shrink:0;
+                flex-wrap:wrap;
+                min-height:48px;
+                box-sizing:border-box;
+            }
+            .sv-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; white-space:nowrap; }
+            .sv-logo span { color:var(--accent-indigo); }
+            .sv-title  { color:var(--text-secondary); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; white-space:nowrap; }
             .sv-spacer { flex:1; }
-            .sv-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
-            .sv-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem; font-family:inherit; }
-            .sv-btn:hover { background:var(--bg-elevated); }
-            .sv-btn-primary { background:#6366f1; border-color:#6366f1; color:var(--text-main); }
-            .sv-btn-primary:hover { background:#4f46e5; }
-            .sv-btn-warn { background:rgba(212,168,83,0.12); border-color:rgba(212,168,83,0.4); color:var(--accent-orange); }
-            .sv-btn-danger { background:rgba(255,82,82,0.08); border-color:rgba(255,82,82,0.4); color:#ff5252; }
+            .sv-link   {
+                color:var(--text-secondary);
+                text-decoration:none;
+                font-size:var(--text-xs);
+                font-weight:600;
+                padding:6px 10px;
+                border-radius:var(--radius-sm);
+                transition:all var(--dur-fast);
+                display:inline-flex;
+                align-items:center;
+                gap:4px;
+                white-space:nowrap;
+            }
+            .sv-link:hover { color:var(--text-main); background:var(--glass-hover); }
+            .sv-link:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
+            .sv-btn {
+                background:var(--bg-elevated);
+                color:var(--text-main);
+                border:1px solid var(--border-default);
+                padding:6px 12px;
+                border-radius:var(--radius-sm);
+                cursor:pointer;
+                font-size:var(--text-xs);
+                font-weight:600;
+                font-family:var(--font-base);
+                line-height:1.3;
+                display:inline-flex;
+                align-items:center;
+                gap:4px;
+                white-space:nowrap;
+                transition:all var(--dur-fast);
+            }
+            .sv-btn:hover { background:var(--glass-hover); border-color:var(--accent-indigo); color:var(--text-main); }
+            .sv-btn:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
+            .sv-btn-primary { background:var(--accent-indigo); border-color:var(--accent-indigo); color:#fff; }
+            .sv-btn-primary:hover { filter:brightness(1.10); color:#fff; background:var(--accent-indigo); }
+            .sv-btn-warn { background:rgba(245,158,11,0.12); border-color:rgba(245,158,11,0.4); color:var(--accent-orange); }
+            .sv-btn-warn:hover { background:rgba(245,158,11,0.18); color:var(--accent-orange); }
+            .sv-btn-danger { background:rgba(239,68,68,0.10); border-color:rgba(239,68,68,0.40); color:var(--accent-red); }
+            .sv-btn-danger:hover { background:rgba(239,68,68,0.18); color:var(--accent-red); }
 
             .sv-main   { padding:1.5rem; max-width:1300px; margin:0 auto; flex:1; overflow-y:auto; overflow-x:hidden; width:100%; }
-            .sv-empty  { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed #2a2a35; border-radius:8px; }
+            .sv-empty  { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed var(--border-default); border-radius:var(--radius-md); }
             .sv-grid   { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:1rem; }
-            .sv-card   { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid var(--readiness,#6366f1); border-radius:8px; padding:1rem; cursor:pointer; transition:background 0.15s; }
-            .sv-card:hover { background:var(--bg-elevated); }
-            .sv-card h4 { margin:0 0 0.4rem 0; color:var(--text-main); font-size:0.95rem; }
+            .sv-card   { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid var(--readiness,var(--accent-indigo)); border-radius:var(--radius-md); padding:1rem; cursor:pointer; transition:all var(--dur-fast); box-shadow:var(--shadow-sm); }
+            .sv-card:hover { background:var(--glass-hover); transform:translateY(-1px); }
+            .sv-card h4 { margin:0 0 0.4rem 0; color:var(--text-main); font-size:0.95rem; font-weight:700; }
             .sv-card .meta { color:var(--text-muted); font-size:0.72rem; }
             .sv-card .summary { color:var(--text-secondary); font-size:0.78rem; margin:0.5rem 0; line-height:1.4; max-height:3.6em; overflow:hidden; }
             .sv-card .badges { display:flex; gap:0.3rem; flex-wrap:wrap; margin-top:0.4rem; }
-            .sv-badge  { font-size:0.65rem; padding:1px 6px; border-radius:8px; background:var(--bg-elevated); color:var(--text-secondary); }
-            .sv-badge.ready  { background:rgba(34,197,94,0.18); color:var(--accent-green); }
+            .sv-badge  { font-size:0.68rem; padding:2px 7px; border-radius:8px; background:var(--bg-elevated); color:var(--text-secondary); font-weight:600; }
+            .sv-badge.ready  { background:rgba(16,185,129,0.18); color:var(--accent-green); }
             .sv-badge.solid  { background:rgba(99,102,241,0.18); color:var(--accent-indigo); }
-            .sv-badge.tier2  { background:rgba(255,145,0,0.15); color:#fb923c; }
+            .sv-badge.tier2  { background:rgba(245,158,11,0.15); color:var(--accent-orange); }
 
             .sv-modal  { position:fixed; inset:0; background:rgba(0,0,0,0.78); display:flex; align-items:flex-start; justify-content:center; z-index:1000; padding:2rem 1rem; overflow-y:auto; }
             .sv-modal-inner { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:10px; padding:1.5rem; width:100%; max-width:780px; }
@@ -80,7 +122,7 @@ export default class SopsView {
             /* H1.10.5 · Indicador "IA pensando" reutilizable */
             .sv-thinking { display:inline-flex; align-items:center; gap:0.5rem; color:var(--accent-indigo); font-size:0.85rem; }
             .sv-thinking .dots { display:inline-flex; gap:3px; }
-            .sv-thinking .dots span { width:6px; height:6px; border-radius:50%; background:#a5b4fc; animation:sv-pulse 1.2s infinite ease-in-out; }
+            .sv-thinking .dots span { width:6px; height:6px; border-radius:50%; background:var(--accent-indigo); animation:sv-pulse 1.2s infinite ease-in-out; }
             .sv-thinking .dots span:nth-child(2) { animation-delay:0.2s; }
             .sv-thinking .dots span:nth-child(3) { animation-delay:0.4s; }
             @keyframes sv-pulse { 0%,80%,100%{opacity:0.3;transform:scale(0.8);} 40%{opacity:1;transform:scale(1.1);} }

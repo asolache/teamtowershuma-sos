@@ -54,7 +54,7 @@ export default class IdentityView {
             .id-input:focus { border-color:var(--accent-indigo); }
             .id-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.85rem; }
             .id-btn:hover { background:var(--bg-elevated); }
-            .id-btn-primary { background:#6366f1; border-color:#6366f1; color:var(--text-main); }
+            .id-btn-primary { background:#6366f1; border-color:#6366f1; color:#fff; }
             .id-btn-primary:hover { background:#4f46e5; }
             .id-stub   { background:rgba(250,204,21,0.06); border:1px dashed rgba(250,204,21,0.3); border-radius:8px; padding:0.9rem; font-size:0.78rem; color:var(--accent-orange); margin-top:0.6rem; }
             .id-status { display:none; margin-top:0.6rem; font-size:0.78rem; color:var(--accent-green); }

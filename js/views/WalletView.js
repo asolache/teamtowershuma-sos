@@ -84,7 +84,7 @@ export default class WalletView {
             .w-input  { background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); padding:7px 10px; border-radius:5px; font-family:inherit; font-size:0.85rem; outline:none; }
             .w-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:7px 14px; border-radius:5px; cursor:pointer; font-family:inherit; font-size:0.85rem; }
             .w-btn:hover { background:var(--bg-elevated); }
-            .w-btn-primary { background:#22c55e; border-color:#22c55e; color:var(--text-main); }
+            .w-btn-primary { background:#22c55e; border-color:#22c55e; color:#fff; }
             .w-btn-primary:hover { background:#16a34a; }
             .w-btn-warn { background:rgba(250,204,21,0.08); border-color:rgba(250,204,21,0.3); color:var(--accent-orange); }
 
