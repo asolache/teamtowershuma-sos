@@ -2505,6 +2505,39 @@ Pendents Sprint E+: auditoria visual als breakpoints mòbil (testejar dropdowns 
 
 ---
 
+### Decisions consensuades amb @alvaro 2026-05-10
+
+| # | Decisió | Resposta @alvaro |
+|---|---|---|
+| 1 | **Funding model** · credit card directe via Turbo SDK · o wallet SOS prepagat? | ✅ **Wallet SOS prepagat** · l'usuari carrega el wallet (ALPHA-STRIPE-001 sprint A · Payment Links) i el publish/revoke descompta del saldo · UX unificat amb la resta del SOS · zero credit card direct integration al permaweb |
+| 2 | **TTL cache** local | 🟡 default proposat · 1h discovery active · 24h background · revisable a /settings |
+| 3 | **Privacitat** granular vs en bloc | 🟡 default proposat · en bloc · si vols privacitat granular no publiquis (clar i defensiu) |
+| 4 | **Revocació** semàntica | 🟡 default proposat · nova tx Arweave amb `Entry-Type=revocation` + `Revokes={txId}` · el lookup descart entries amb revocation associada |
+| 5 | **Federació cohort 0 → permaweb** | ❓ **no clar encara** · per defecte assumim opt-in explícit de cada membre · NO auto-publish automàtic |
+
+### Sprint A · entregat (planificat)
+- `js/core/publicRegistryService.js` · schema + builder + validator + canonicalize + extract helpers
+- Tests asserts puros
+- Zero deps externes · TDD-able sense network
+
+### Funding flux (decisió #1 detallat)
+
+```
+Operador (@alvaro)
+  └─> /wallet?project=<projectId>  (saldo prepagat)
+        └─> "Publish public registry entry"
+              └─> publicRegistryService.publishToPermaweb({entry, projectId, jwk})
+                    ├─> walletService.consumeAndPersist({projectId, eur:0.02, kind:'permaweb-publish'})
+                    │     └─> wallet.balanceEur -= 0.02
+                    │     └─> movement registrat amb ref='permaweb-{txId}'
+                    └─> Turbo SDK upload (signed amb ECDSA · backend de SOS · NO usuari final mai veu credit card)
+                          └─> Arweave tx confirmat · txId tornat
+```
+
+> Per què wallet SOS i no credit card: (a) l'usuari ja carrega el wallet per a IA (Anthropic/OpenAI) · una sola UX de "saldo SOS". (b) ALPHA-STRIPE-001 ja gestiona el funding amb Payment Links (zero claus secret al frontend). (c) un operador empresarial pot tenir el wallet del projecte separat dels seus pagos personals.
+
+---
+
 ## PERM-USER-001 · Permaweb · usuarios únicos + registre públic (input @alvaro 2026-05-10)
 
 > Reframe SOS V11 cap a **identitats verificables i descobribles**: cada
