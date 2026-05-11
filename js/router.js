@@ -51,6 +51,8 @@ const ROUTES = [
     { path: '/sectors',   view: () => import('./views/SectorsView.js') },
     // PERM-USER-001 sprint E · /registry · permaweb public registry
     { path: '/registry',  view: () => import('./views/RegistryView.js') },
+    // FUND-FLOW-001 sprint F · /opportunities · projectes públics permaweb
+    { path: '/opportunities', view: () => import('./views/OpportunitiesView.js') },
     // VAL-001 sprint B · vista /value-accounting · tarta del proyecto (Slicing Pie + FairShares)
     { path: '/value-accounting', view: () => import('./views/ValueAccountingView.js') },
     // PACT-001 sprint B · UI builder del primer contrato (pacto socios)
