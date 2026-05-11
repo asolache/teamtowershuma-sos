@@ -910,7 +910,7 @@ A partir de este nodo VISION-001 nacen / se reorganizan los siguientes:
 | **MAT-002-I sprint E** | ✅ entregat. Step 1 modal /matriu enriquit · select guardian amb rol (✦) + valor intangible (🪶) per cada un dels 12 PW · ex. "Atenea · ✦ estratègia · 🪶 governança deliberativa · protecció flux valor". Llegenda sota select. Multi-select de sectors d'experiència (A-S del KnowledgeLoader) amb 19 opcions etiquetades. matriuMemberService.buildMatriuMember accepta `sectorsExperience: ['A','K','P']` · es persisteix al schema + keywords (`sector:A`). MatriuNetworkView mostra pills de sectors al peu de cada card amb skin verd olivó (rgba(90,110,79)). Sub-camp "especialitat" dins de cada sector pendent · sprint posterior · necessita primer la taxonomia universal SKILL-TAX-002. | ✅ verde |
 | **SKILL-TAX-002 sprint B** | ✅ entregat. Vista nova `/skills` · `js/views/SkillsExplorerView.js` · directori complet de les 90 skills amb 5 filtres (category · audience · projectType · tier · cerca text) · stat-cards clicables per categoria amb count · skill cards amb pill categoria + tier + domain + guardians afins (badges colorats) + audiences targets + count project types afins (top 3 + "+N"). Secció "🪶 Valors intangibles per guardian Pantheon Work" · 12 cards mostrant primary intangible + secondary + recognizesValueIn + top 3 skills (clicables → /skills?q=X). URL state sync (replaceState) per a permalinks /skills?category=care&audience=comunitat. Destí nav nou `🧠 Skills` (categoria knowledge · global=true · 5 links a knowledge ara). 18 destinos canónicos totals. Sprint C pendent · external refs ESCO/O*NET/LinkedIn skill mapping per a interoperabilitat plataformes externes. | 🟢 sprint B verde · C 🟡 |
 | **SKILL-TAX-002** | **Taxonomía universal de skills · sprint A entregat** · `js/core/skillTaxonomyExtension.js` capa universal sobre SKILL_TAXONOMY existent (90 skills MAT-003 sprint B) · NO toca dades frozen, només enriqueix via lookup. **5 categories canòniques** (`SKILL_CATEGORIES`): soft 💬 · hard ⚙️ · meta 🌀 · care 💗 · governance ⚖️. `categoryForSkill(skillId)` puro · heurística per `domain` + overrides explícits per a 27 skills on la categoria default no captura la naturalesa real (ex. `conflict-mediation` → care · `multi-loop-learning` → meta). **Audience targeting** · `audienceProjectTypesForSkill(skillId)` puro · mapping skill → quins dels 12 PROJECT_TYPES la consideren rellevant · 14 overrides explícits (universals · digitals · regeneratius · cures) + heurística per tier='foundation' = tots. `skillsForProjectType(typeId)` per a UI suggerent. **Intangible value per cada un dels 12 guardians** · `INTANGIBLE_VALUE_OF_GUARDIAN` Object.freeze · ex. Atenea · primary "governança deliberativa" + secondary [estratègia defensiva · protecció flux valor · civisme] + recognizesValueIn [decisions difícils · destreses pràctiques]. `topSkillsForGuardian(gId, max=5)` per a suggested skills al modal. **5 audiències humanes públiques** (PUBLIC_AUDIENCES alineat amb FairShares + capa humana): fundadors 🏛 · equip 🛠 · usuaris 🤝 · inversors 🌊 · comunitat 🌍. `audiencesForSkill(skillId)` puro. **External refs** placeholder per a sprint B (ESCO/O*NET/LinkedIn import/export). Modal /matriu integra · al canviar guardian al step 1 mostra suggested skills clickables (afegeixen al input) + línia 🪶 amb el valor intangible del guardian. Tests · 25 asserts puros nous. Suite global +1. Sprint B pendent · external refs ESCO/O*NET + UI vista /learn enriquida amb categories filter + audience filter. | 🟢 sprint A verde · B 🟡 |
-| **PERMAWEB-001** | **Sincronització SOS local ↔ permaweb (Arweave)** · base de dades distribuïda de nodes humans (matriu_member). Cada usuari pot opt-in a publicar el seu perfil públic a Arweave · els altres SOS locals descobreixen i fan caching. 4 capes: A · key derivation per ARGON2 + auth · B · publicador (firma ECDSA + mint Arweave tx) · C · indexador descentralitzat (gateway gql Arweave) · D · cache local del KB amb TTL. Privacitat · usuari decideix què surt públic (perfil bàsic · skills) vs privat (DID claves · wallets · projectes interns). | 🟡 pendent disseny |
+| **PERMAWEB-001** | **Sincronització SOS local ↔ permaweb (Arweave)** · base de dades distribuïda de nodes humans (matriu_member). Cada usuari pot opt-in a publicar el seu perfil públic a Arweave · els altres SOS locals descobreixen i fan caching. 4 capes: A · key derivation per ARGON2 + auth · B · publicador (firma ECDSA + mint Arweave tx) · C · indexador descentralitzat (gateway gql Arweave) · D · cache local del KB amb TTL. Privacitat · usuari decideix què surt públic (perfil bàsic · skills) vs privat (DID claves · wallets · projectes interns). **Refinament 2026-05-10 · veure secció dedicada PERM-USER-001 abaix amb sprint plan A-E.** | 🟢 planificat · sprint A pendent |
 | **PUBLICREG-001** | **Registre públic de contabilitat triple-entry + timestamping legal** · integració amb · 1) Gnosis Chain (Pact.sol per pactes · MAT-001 fase 4) · 2) OpenTimestamps (validesa legal a EU eIDAS) · 3) Arweave (immutable storage + timestamp). Cada `value_contribution` o `pact` important pot ser timestampejat opt-in. Triple-entry literal · "el ledger ja és públic per disseny". Per validesa fiscal · format export ESEF + TimestampToken eIDAS. | 🟡 pendent disseny |
 | **ALPHA-STRIPE-001** | **Sprint A entregat** · `js/core/stripeService.js` puro · 4 plans canónics SOS V11 (free 0€ · pro 9€/mes · cooperative 19€/mes USDC · enterprise custom) frozen amb features per cada un. Topup amounts default [10,25,50,100] €. Estratègia local-first sense backend · usa **Stripe Payment Links** (URLs creades manualment al Stripe Dashboard) · zero claus secret/restricted al codi. Helpers · `validatePublishableKey` (rebutja sk_/rk_) · `detectKeyType` ('publishable' / 'secret' / 'restricted' / 'invalid' per UI feedback) · `validatePaymentLinkUrl` (només https://buy.stripe.com/...) · `buildPlanNode` · `buildConfigNode` (defensive · sk_ NOT persisted encara que es passi) · `loadStripeConfig` · `saveStripeConfig` · `loadCurrentPlan` · `setCurrentPlan` · `openTopupPaymentLink({kb, amountEur})` que obre la URL del Payment Link configurat en nova tab. UI a `/settings` · card morada "💳 ALPHA-STRIPE-001 · Saldo + plans" amb · plan actiu · selector dels 4 plans · input pk_test_ amb validació en temps real (warning vermell si l'usuari pega sk_/rk_ accidentalment) · 4 inputs Payment Links amb botons "↗ Recarregar X €" que obren la URL · botó "💾 Guardar" + "💳 Aplicar pla". Banner ⚠️ vermell explícit advertint MAI posar sk_/rk_ al frontend + link directe al dashboard.stripe.com per fer "Roll key". Tests · 35+ asserts puros (validacions seguretat · detect key types · sk_ NOT persisted · KB mock end-to-end). Sprint B pendent · webhook handler (Netlify Function amb sk al env) per crèdit automàtic post-pagament. Sprint C · Stripe Elements embedded (en lloc de Payment Links) usant pk_test_ pública. Sprint D · USDC checkout via cooperative plan (necessita MAT-001 fase 1 WalletConnect). Documentat al backlog · @alvaro va compartir rk_test_5102Y3L2k4... per error · recomendat REVOCAR-LA al dashboard.stripe.com immediatament (Roll key). | 🟢 sprint A verde · B/C/D 🟡 |
 
@@ -2502,6 +2502,155 @@ Pendents Sprint D fase B+: traducció complerta de tots els strings (175→525) 
 
 Pendents Sprint E+: auditoria visual als breakpoints mòbil (testejar dropdowns < 720px) · subtitles sota labels al dropdown (KM-001 sprint D backlog) · tooltips amb framework propi per a hints llargs.
 
+
+---
+
+### Decisions consensuades amb @alvaro 2026-05-10
+
+| # | Decisió | Resposta @alvaro |
+|---|---|---|
+| 1 | **Funding model** · credit card directe via Turbo SDK · o wallet SOS prepagat? | ✅ **Wallet SOS prepagat** · l'usuari carrega el wallet (ALPHA-STRIPE-001 sprint A · Payment Links) i el publish/revoke descompta del saldo · UX unificat amb la resta del SOS · zero credit card direct integration al permaweb |
+| 2 | **TTL cache** local | 🟡 default proposat · 1h discovery active · 24h background · revisable a /settings |
+| 3 | **Privacitat** granular vs en bloc | 🟡 default proposat · en bloc · si vols privacitat granular no publiquis (clar i defensiu) |
+| 4 | **Revocació** semàntica | 🟡 default proposat · nova tx Arweave amb `Entry-Type=revocation` + `Revokes={txId}` · el lookup descart entries amb revocation associada |
+| 5 | **Federació cohort 0 → permaweb** | ❓ **no clar encara** · per defecte assumim opt-in explícit de cada membre · NO auto-publish automàtic |
+
+### Sprint A · entregat (planificat)
+- `js/core/publicRegistryService.js` · schema + builder + validator + canonicalize + extract helpers
+- Tests asserts puros
+- Zero deps externes · TDD-able sense network
+
+### Funding flux (decisió #1 detallat)
+
+```
+Operador (@alvaro)
+  └─> /wallet?project=<projectId>  (saldo prepagat)
+        └─> "Publish public registry entry"
+              └─> publicRegistryService.publishToPermaweb({entry, projectId, jwk})
+                    ├─> walletService.consumeAndPersist({projectId, eur:0.02, kind:'permaweb-publish'})
+                    │     └─> wallet.balanceEur -= 0.02
+                    │     └─> movement registrat amb ref='permaweb-{txId}'
+                    └─> Turbo SDK upload (signed amb ECDSA · backend de SOS · NO usuari final mai veu credit card)
+                          └─> Arweave tx confirmat · txId tornat
+```
+
+> Per què wallet SOS i no credit card: (a) l'usuari ja carrega el wallet per a IA (Anthropic/OpenAI) · una sola UX de "saldo SOS". (b) ALPHA-STRIPE-001 ja gestiona el funding amb Payment Links (zero claus secret al frontend). (c) un operador empresarial pot tenir el wallet del projecte separat dels seus pagos personals.
+
+---
+
+## PERM-USER-001 · Permaweb · usuarios únicos + registre públic (input @alvaro 2026-05-10)
+
+> Reframe SOS V11 cap a **identitats verificables i descobribles**: cada
+> operador té un DID determinístic + clau ECDSA local-first · pot **opt-in**
+> a publicar el seu perfil al permaweb (Arweave) · qualsevol altre SOS
+> local pot descobrir-lo i verificar-lo sense backend central.
+>
+> Visió antigravity: **cap servidor SOS gestiona la directory · viu al
+> permaweb · cada SOS local actua com a node de la xarxa**.
+
+### Inventari actual (què ja existeix)
+
+| Peça | Estat | On |
+|---|---|---|
+| Keypair ECDSA P-256 per dispositiu | ✅ | `projectIO.js` (1 sola clau · reutilitzada) |
+| DID determinístic (SHA-256 publicJwk → `did:sos:{32hex}`) | ✅ | `identityService.deriveDidFromJwk` |
+| Schema `user_identity` (DID + JWK + handle + wallets) | ✅ | `identityService.buildIdentityNode` |
+| Schema `matriu_member` (fusió user_identity + cohort_seat + skills + sectors) | ✅ | `matriuMemberService.js` |
+| Helpers migració `user_identity` → `matriu_member` | ✅ | `migrateAllToMatriuMembers(dryRun)` |
+| UI `/identity` perfil editable + DID copiable | ✅ | `IdentityView.js` |
+| Mockup mobile amb permaweb events (Arweave tx-id) | ✅ | `MobileMockupView.js` (paper) |
+| Signature ECDSA over export snapshots | ✅ | `projectIO.downloadSnapshotJson` |
+| Discovery UI `/matriu/network` (108 places · només local) | ✅ | `MatriuNetworkView.js` |
+
+### Anti-inventari (què cal construir)
+
+| Falta | Per què | Sprint |
+|---|---|---|
+| Schema `public_registry_entry` (perfil públic minim · DID + JWK + handle + skills + sectors · NO wallets · NO clau privada) | Decoupling del `matriu_member` (privat) i la versió pública | A |
+| Builder + validator pur del registry entry | TDD-able · sense effects | A |
+| `signRegistryEntry(entry, privateJwk)` + `verifyRegistryEntry(entry)` | Cada entry porta firma ECDSA over canonical JSON · qualsevol altre SOS pot verificar autenticitat | B |
+| Arweave SDK integration (Turbo SDK · paid uploads) | Pujar entries al permaweb · cost ~$0.00001/KB negligible | C |
+| `publishToPermaweb(entry, wallet)` async + UI opt-in toggle | Usuari controla 100% què surt · explicit consent | C |
+| GraphQL gateway query a `arweave.net/graphql` per tag `App-Name=SOS-V11` + `Entry-Type=public-registry-entry` | Discovery descentralitzat | D |
+| `cachePublicRegistry({ttl})` · sincronitza entries al KB local amb expiració | Performance · una sola query/h | D |
+| UI `/registry` vista nova · busca per handle/DID · llista entries amb avatar/skills/sectors · verificació visible (✓ firma vàlida) | UX del descobriment | E |
+| Toggle "🌐 Publicar el meu perfil públic" a `/identity` | Privacitat · revocable | E |
+| `revokeRegistryEntry(did)` · marca l'entry com a revocada amb nova tx Arweave | GDPR compliance · "right to be forgotten" parcial (no esborra Arweave · marca com a inactive) | E |
+
+### Sprint plan A-E
+
+#### Sprint A · Foundation · schema + builder/validator puros (~1h)
+- `js/core/publicRegistryService.js` nou:
+  - `PUBLIC_REGISTRY_TYPE = 'public_registry_entry'`
+  - `buildPublicRegistryEntry({did, handle, displayName, bio, publicJwk, skillsDeclared, sectorsExperience, availability, guardianOf, cohortNumber, avatar})` pura
+  - `validatePublicRegistryEntry(entry)` pura · valida shape + camps obligatoris + què NO ha d'estar (privateJwk · wallets[] · oauthProviders[])
+  - `canonicalizeRegistryEntry(entry)` pura · ordre canònic deterministic per signar (clau JSON.stringify amb keys ordenats)
+  - `extractPublicFromMatriuMember(member)` pura · helper per generar entry des d'un matriu_member · selecciona només camps públics safe
+- Tests · ~20 asserts puros (validació · canonicalització · extracció)
+
+#### Sprint B · Signatura ECDSA over canonical JSON (~1h)
+- `publicRegistryService.signRegistryEntry({entry, privateJwk})` async · canonicaliza + signa amb `crypto.subtle.sign` · retorna entry + `signature` base64
+- `publicRegistryService.verifyRegistryEntry(entry)` async · reconstrueix canonical + verify amb publicJwk de l'entry mateixa · retorna `{valid:bool, reason:string}`
+- Defensiu · si firma absent retorna `{valid:false, reason:'no-signature'}`
+- Tests · ~15 asserts amb keypair real (crypto.subtle disponible a node 19+ · skippable a entorns vells)
+
+#### Sprint C · Permaweb publish via Arweave Turbo SDK (~2h)
+- Dependència nova · `@ardrive/turbo-sdk` (50KB · ESM · CDN compatible)
+- `publishToPermaweb({entry, jwk})` async:
+  - Tags Arweave: `App-Name=SOS-V11`, `Entry-Type=public-registry-entry`, `DID={did}`, `Handle={handle}`
+  - Body · canonicalizeRegistryEntry(entry) + signature
+  - Retorna `{txId, status, costUSD}`
+- Funding · Turbo SDK suporta credit card directe o via Stripe Payment Link (compatible amb ALPHA-STRIPE-001)
+- UI `/identity` · toggle "🌐 Publicar" + status badge (draft · pending · published txId)
+- Tests · mock Turbo SDK · 10 asserts d'integració
+
+#### Sprint D · Discovery + cache + verify (~2h)
+- `queryPermawebRegistry({since, handles, dids})` async · GraphQL a `https://arweave.net/graphql` amb tags filter
+- Resposta · array de tx descriptors (txId, owner, tags, timestamp)
+- `fetchEntryByTxId(txId)` async · descarrega body via `https://arweave.net/{txId}`
+- `cacheToKb({entries, ttl=3600000})` · upsert al KB local amb tipus `public_registry_entry` + flag `cachedAt` + `fromPermaweb=true`
+- `getCachedRegistry({maxAge})` síncron · llegeix del KB filtrat per TTL
+- Tests · mock fetch · 12 asserts
+
+#### Sprint E · UI Discovery + opt-in/revoke (~2-3h)
+- Vista nova `/registry` · `RegistryView.js`:
+  - Buscador AJAX per handle/DID/skill/sector
+  - Llista de cards · avatar gradient (per DID hash) + handle + displayName + bio · pills skills/sectors · badge "✓ verificat" si verifyRegistryEntry passa
+  - Stats top · "Tens local · 12 entries · 8 verificades · última sync fa 23min" + botó "↻ Refresh des de permaweb"
+  - Click card → `/n/{did}` per detail (reutilitza NodeView fallback)
+- `IdentityView` · nova secció "🌐 Registre públic":
+  - Toggle "Publicar el meu perfil al permaweb"
+  - Si publicat · mostra txId + link arweave.net + botó "🗑 Revocar (nou tx)"
+  - Cost · "Cost estimat: ~$0.00002 (~0.02 cèntim · una sola vegada)"
+- `MatriuNetworkView` · ja existeix · afegir filter "Mostrar globals (permaweb)" al costat dels filtres locals
+- Tests · 15 asserts UI binding + lookup
+
+### Dependències i blockers
+
+- **No bloqueja**: tots els sprints són additius · zero canvis al schema existent (es manté `matriu_member` privat com a font de veritat local).
+- **CDN Arweave**: usar `https://unpkg.com/@ardrive/turbo-sdk` (ESM) · zero npm install al SOS local-first.
+- **Costs**: Turbo accepta credit card sense backend · ~0.02 cèntim per perfil · plenament alfa-friendly.
+- **Privacy by default**: opt-in explícit · perfil privat mai surt automàticament · entry pot tenir TTL implícit declarat al body.
+- **eIDAS legal** (opcional): combinar amb OpenTimestamps anchor per validesa legal (sprint Z futur · vinculat a PUBLICREG-001).
+
+### Decisions claus pendents de consensuar amb @alvaro
+
+1. **Funding model**: ¿usuari paga directament amb credit card via Turbo SDK · o pot pagar via wallet SOS prepagat?
+   - Recomanació: ambdós opt-in · default credit card (UX simpler primer).
+2. **TTL de cache local**: 1h · 24h · 7 dies?
+   - Recomanació: 1h per Discovery actives · 24h en background.
+3. **Filtre privacitat default**: ¿skills sempre públiques · o opt-in granular per camp?
+   - Recomanació: tot el perfil públic és opt-in en bloc · si vols privacitat granular no publiquis.
+4. **Revocació**: ¿quina semàntica? Nova tx Arweave amb `Entry-Type=revocation` apuntant al txId revocat.
+5. **Federació entre permaweb i Matriu Network**: ¿els 108 places de la cohort 0 aniran al permaweb automàticament un cop @alvaro ho activi?
+   - Recomanació: NO automàtic · cada membre ha de signar el seu opt-in.
+
+### ROI esperat (per què val la pena)
+
+- **Unique users sense backend**: SOS V11 manté la seva tesi local-first/antigravity · zero hosting cost per a la directory.
+- **Trust verificable**: signatura ECDSA dins l'entry · qualsevol altre SOS local pot verificar sense intermediaris.
+- **Discoverability**: nova UX "qui sou els SOS operators del món" · viu a permaweb · indestructible.
+- **Bridge a Matriu cohort 0 → cohort 1+**: quan cohort 0 (108 places) es publica al permaweb, qualsevol pot veure-la i sol·licitar entrar a cohort 1 amb el seu propi perfil.
 
 ---
 
