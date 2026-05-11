@@ -1441,20 +1441,20 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 19,                          '19 destinos canónicos (+ sectors UX-AUDIT-001 sprint H+)');
+    assert(NAV_DESTINATIONS.length === 20,                          '20 destinos canónicos (+ registry PERM-USER-001 sprint E)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 15,                                'sin projectId · 15 links (19-4 globals=false: sops · wallet · value · pact)');
+    assert(linksGlobal.length === 16,                                'sin projectId · 16 links (20-4 globals=false: sops · wallet · value · pact)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
     // con projectId → todos + query ?project= en los aplicables
     const linksProject = buildNavLinks({ active: 'kanban', projectId: 'proj-x' });
-    assert(linksProject.length === 19,                              'con projectId · 19 links (todos · + sectors UX-AUDIT-001 sprint H+)');
+    assert(linksProject.length === 20,                              'con projectId · 20 links (todos · + registry PERM-USER-001 sprint E)');
     assert(linksProject.find(l => l.id === 'wallet').href === '/wallet?project=proj-x', 'wallet con project query');
     assert(linksProject.find(l => l.id === 'savings').href === '/savings?project=proj-x', 'savings con project query');
     assert(linksProject.find(l => l.id === 'sops').href === '/sops?project=proj-x',     'sops con project query');
@@ -1491,7 +1491,7 @@ async function testNavService() {
     // home ahora tiene 2 links (dashboard + matriu) tras MAT-002-H
     assert(groupsNoP.find(g => g.category.id === 'home')?.links.length === 2,          'home · 2 links (dashboard + matriu)');
     // knowledge ahora 4 (tags + folders + mind + learn) tras UX-EDU-001 sprint C
-    assert(groupsNoP.find(g => g.category.id === 'knowledge')?.links.length === 6,     'knowledge · 6 links (tags + folders + mind + learn + skills + sectors)');
+    assert(groupsNoP.find(g => g.category.id === 'knowledge')?.links.length === 7,     'knowledge · 7 links (+ registry PERM-USER-001)');
     // sin projectId · operations sólo tiene 2 (map · kanban) · sops y wallet son global=false
     const opsNoP = groupsNoP.find(g => g.category.id === 'operations');
     assert(opsNoP && opsNoP.links.length === 2,                                        'operations sin projectId · 2 links (map · kanban)');

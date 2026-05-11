@@ -49,6 +49,8 @@ const ROUTES = [
     { path: '/skills',    view: () => import('./views/SkillsExplorerView.js') },
     // UX-AUDIT-001 sprint H+ · /sectors · substitueix el botó "Knowledge Base" del Dashboard
     { path: '/sectors',   view: () => import('./views/SectorsView.js') },
+    // PERM-USER-001 sprint E · /registry · permaweb public registry
+    { path: '/registry',  view: () => import('./views/RegistryView.js') },
     // VAL-001 sprint B · vista /value-accounting · tarta del proyecto (Slicing Pie + FairShares)
     { path: '/value-accounting', view: () => import('./views/ValueAccountingView.js') },
     // PACT-001 sprint B · UI builder del primer contrato (pacto socios)
