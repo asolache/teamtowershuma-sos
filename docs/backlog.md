@@ -2420,6 +2420,13 @@ Pendent Sprint H+: refinaments puntuals si apareixen regressions (Matriu skin vi
 | **Phase filter chips** | Sota el panell del membre · 5 chips (Tots · 🎨 DESIGN · 🛠 BUILD · ⚙ OPERATE · 💶 LEDGER) amb count per fase. Click → re-render in-place del project list filtrat per fase. `this._phaseFilter` persisteix dins l'instància. Default = 'all'. Empty state per fase si no hi ha projectes en aquesta fase. Sector grouping es manté DINS la fase seleccionada (no se substitueix · es complementa). |
 | **Reframe enfoque** | Dashboard ara obre amb identitat → impacte → projectes (com a "panell del membre", no com a "lista de projectes técnica"). Coherent amb input @alvaro "la Matriu son las personas". |
 
+### Sprint H+ pass 4 2026-05-10 · 2 bugs reportats per @alvaro
+
+| Fix | Detall |
+|---|---|
+| **Bug · `/mind` no veu projectes nous** | Els nodes `project` viuen al `state.projects[]` (legacy V11 que pre-existeix al Mind-as-Graph schema) i NO al KB. `MindGraphView._load()` només llegia `KB.getAllNodes()` · els SOPs/WOs creats apareixien al graph però sense node arrel del projecte i sense parent edges visibles. Fix · `_load` ara injecta un node sintètic `{type:'project', id:p.id, ...}` per cada projecte de `state.projects` que no estigui ja al KB. Les parent edges (SOP→Project) ara es resolen contra l'idSet ampliat. |
+| **Bug · botons navbar surten "blancs"** | `<button>` sense reset hereta user-agent defaults (gris-blanc amb text negre Helvetica). La majoria de buttons SOS tenen className explícita amb bg/color/font, però les `*-link` classnames usades per `renderNavGroupedHtml` només defineixen color + padding · els nav-group buttons sortien amb el style nadiu del navegador a la topbar fosca (caixa blanca sobre fons fosc · "salgan en blanco"). Fix · afegit reset `button { background:transparent; color:inherit; font:inherit; border:0; cursor:pointer; }` a `base.css` · specificity 0,0,1 · qualsevol className (0,1,0) segueix overridejant. |
+
 ### Sprint H+ pass 3 2026-05-10 · Auditoria sistemàtica · 10 vistes topbars + btns
 
 | Fix | Detall |
