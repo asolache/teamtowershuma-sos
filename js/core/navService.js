@@ -46,6 +46,7 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'skills',    icon: '🧠', label: 'Skills',    href: '/skills',     global: true,  category: 'knowledge',  hint: 'SKILL-TAX-002 · 90 skills · 5 categories · 5 audiències · 12 tipus de projecte' },
     { id: 'matriu',    icon: '✦',  label: 'Matriu',    href: '/matriu',     global: true,  category: 'home',       hint: 'Landing pública Matriu Incoopadora · Cohort 0 oberta' },
     { id: 'identity',  icon: '👤', label: 'Identidad', href: '/identity',   global: true,  category: 'identity',   hint: 'Tu perfil · DID local-first · wallet' },
+    { id: 'mywallet',  icon: '💼', label: 'El meu saldo', href: '/wallet',  global: true,  category: 'identity',   hint: 'FUND-FLOW-001 · saldo personal per pagar APIs IA · permaweb · blockchain · transferible a projectes' },
     { id: 'settings',  icon: '⚙',  label: 'Settings',  href: '/settings',   global: true,  category: 'identity',   hint: 'Claves API · IA · purga' },
 ]);
 

@@ -118,13 +118,19 @@ export default class WalletView {
     async afterRender() {
         ensureExplainerStyle();
         bindExplainerBadges(document);
+        // FUND-FLOW-001 sprint A · si no hi ha projectId · obre el wallet personal
         if (!this.projectId) {
-            document.getElementById('wMain').innerHTML = `
-                <div class="w-empty">
-                    <p>Esta vista necesita un proyecto activo.</p>
-                    <p style="font-size:0.85rem;color:#777;">Abre <a href="/dashboard" data-link class="w-link">el dashboard</a> y entra en un proyecto · luego pulsa <strong>💶 Wallet</strong> en el panel.</p>
-                </div>`;
-            return;
+            try {
+                const { personalWalletIdFor } = await import('../core/walletService.js');
+                this.projectId = personalWalletIdFor('@alvaro');
+                this._isPersonal = true;
+            } catch (e) {
+                document.getElementById('wMain').innerHTML = `
+                    <div class="w-empty">
+                        <p>Error carregant wallet personal: ${this._esc(e.message)}</p>
+                    </div>`;
+                return;
+            }
         }
         await this._load();
         this._render();
@@ -163,10 +169,18 @@ export default class WalletView {
                 </div>`;
         }).join('') : '<div class="w-empty"><p>Sin movimientos todavía. Recarga el saldo para empezar.</p></div>';
 
+        const isPersonal = !!this._isPersonal;
+        const heroTitle = isPersonal
+            ? '💶 El meu <strong>saldo personal</strong>'
+            : '💶 Wallet <strong>del projecte</strong>';
+        const heroSub = isPersonal
+            ? '<span style="color:var(--accent-purple);font-weight:700;">Wallet personal</span> · no lligat a cap projecte · usat per pagar APIs IA · permaweb · blockchain · o transferit a projectes concrets'
+            : this._esc(projName) + ' · <code style="color:var(--text-muted);">' + this._esc(this.projectId) + '</code>';
+
         main.innerHTML = `
             <div class="w-hero">
-                <h1 class="mat-hero-h1">💶 Wallet <strong>del projecte</strong></h1>
-                <div class="pname">${this._esc(projName)} · <code style="color:var(--text-muted);">${this._esc(this.projectId)}</code></div>
+                <h1 class="mat-hero-h1">${heroTitle}</h1>
+                <div class="pname">${heroSub}</div>
                 <div class="w-balance">
                     <span class="amount">${stats.balance.toFixed(2)}</span>
                     <span class="currency">EUR · saldo disponible</span>
@@ -206,6 +220,24 @@ export default class WalletView {
             </div>
 
             <div class="w-section">
+                <h2>↗ Transferir a un altre wallet · FUND-FLOW-001 sprint A</h2>
+                <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0;">
+                    ${isPersonal
+                        ? 'Deriva saldo del teu wallet personal a un projecte concret · útil per finançar projectes amb el teu saldo personal'
+                        : 'Retorna saldo del projecte al teu wallet personal · útil quan un stakeholder reclama el seu pie · o transfereix entre projectes'}
+                </p>
+                <div class="w-custom">
+                    <select id="wTransferDest" class="w-input" style="flex:1;min-width:240px;">
+                        <option value="">— Tria destí —</option>
+                        ${(window.__sos_transferTargets || []).join('')}
+                    </select>
+                    <input id="wTransferAmount" class="w-input" type="number" min="0.01" step="0.01" placeholder="Quantitat · €" style="width:160px;">
+                    <button class="w-btn" id="wTransferBtn">↗ Transferir</button>
+                </div>
+                <div id="wTransferStatus" class="w-status" style="display:none;margin-top:8px;font-size:0.85rem;"></div>
+            </div>
+
+            <div class="w-section">
                 <h2>Ajuste manual (auditoría)</h2>
                 <div class="w-custom">
                     <input id="wAdjAmount" class="w-input" type="number" step="0.01" placeholder="±€ · positivo añade · negativo resta" style="width:200px;">
@@ -230,6 +262,9 @@ export default class WalletView {
             if (!Number.isFinite(amt) || amt <= 0) { alert('Cantidad inválida'); return; }
             this._doTopUp(amt, 'manual', note);
         });
+        // FUND-FLOW-001 sprint A · transferència entre wallets
+        this._populateTransferDest();
+        document.getElementById('wTransferBtn')?.addEventListener('click', () => this._doTransfer());
         document.getElementById('wAddAdj')?.addEventListener('click', () => {
             const delta = parseFloat(document.getElementById('wAdjAmount').value);
             const note  = document.getElementById('wAdjNote').value.trim();
@@ -263,6 +298,61 @@ export default class WalletView {
 
     _esc(s) {
         return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+    }
+
+    // FUND-FLOW-001 sprint A · transferència UI ──────────────────────────
+    async _populateTransferDest() {
+        const sel = document.getElementById('wTransferDest');
+        if (!sel) return;
+        const { personalWalletIdFor, isPersonalWallet } = await import('../core/walletService.js');
+        const { visibleProjects } = await import('../core/projectFilter.js');
+        const { store } = await import('../core/store.js');
+        const projects = visibleProjects(store.getState().projects);
+        const personalId = personalWalletIdFor('@alvaro');
+        const opts = [];
+        // Si estem al wallet personal · llistem projectes com a destí
+        // Si estem a un projecte · llistem el personal + altres projectes
+        if (!isPersonalWallet(this.projectId)) {
+            opts.push(`<option value="${this._esc(personalId)}">💼 El meu wallet personal</option>`);
+        }
+        for (const p of projects) {
+            if (p.id === this.projectId) continue;
+            opts.push(`<option value="${this._esc(p.id)}">${this._esc(p.nombre || p.name || p.id)}</option>`);
+        }
+        sel.innerHTML = '<option value="">— Tria destí —</option>' + opts.join('');
+    }
+
+    async _doTransfer() {
+        const sel    = document.getElementById('wTransferDest');
+        const amtIn  = document.getElementById('wTransferAmount');
+        const status = document.getElementById('wTransferStatus');
+        const dest   = sel?.value;
+        const amt    = parseFloat(amtIn?.value);
+        const setStatus = (msg, ok = true) => {
+            if (!status) return;
+            status.style.display = 'block';
+            status.textContent = msg;
+            status.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)';
+        };
+        if (!dest) { setStatus('✗ Tria destí', false); return; }
+        if (!Number.isFinite(amt) || amt <= 0) { setStatus('✗ Quantitat invàlida', false); return; }
+        try {
+            const { transferBetweenWallets } = await import('../core/walletService.js');
+            await transferBetweenWallets({
+                fromProjectId: this.projectId,
+                toProjectId:   dest,
+                amountEur:     amt,
+                source:        'manual-transfer',
+                note:          'FUND-FLOW-001 · transfer ' + amt + '€',
+            });
+            setStatus(`✓ Transferits ${amt.toFixed(2)}€ → ${dest}`, true);
+            amtIn.value = '';
+            sel.value   = '';
+            await this._load();
+            this._render();
+        } catch (e) {
+            setStatus('✗ ' + (e?.message || 'error desconegut'), false);
+        }
     }
 
     destroy() {}

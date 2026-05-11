@@ -205,6 +205,102 @@ export async function consumeAndPersist({ projectId, amountEur, ref = null, sour
     return await persistWallet(updated);
 }
 
+// ─── FUND-FLOW-001 sprint A · Wallet personal + transferència ─────────────
+//
+// Visió @alvaro 2026-05-10 · l'operador té UN saldo personal (no lligat
+// a cap projecte) i pot derivar saldo a wallets de projecte concret.
+// Quan un projecte genera ingressos, els stakeholders poden retirar el
+// seu pie cap al seu personal (sprint D).
+//
+// El "personal wallet" és un cas especial · projectId convencional
+// `__personal_${handle}__` (ex. `__personal_alvaro__`). Tota l'API
+// existent funciona idènticament · només canvia el sentit semantic.
+
+// personalWalletIdFor · pura · genera el projectId convencional per a un handle.
+export function personalWalletIdFor(handle = '@alvaro') {
+    const clean = String(handle || '@alvaro').replace(/^@/, '').replace(/[^\w-]/g, '').toLowerCase().slice(0, 32) || 'anon';
+    return '__personal_' + clean + '__';
+}
+
+// isPersonalWallet · pura · true si el projectId segueix la convenció.
+export function isPersonalWallet(projectId) {
+    return typeof projectId === 'string' && projectId.startsWith('__personal_') && projectId.endsWith('__');
+}
+
+// getOrCreatePersonalWallet · async · crea (o recupera) el wallet personal
+// del handle indicat. Mateixa shape que els de projecte · només el
+// projectId convencional. Marca isPersonal=true al content per UI.
+export async function getOrCreatePersonalWallet(handle = '@alvaro') {
+    const pid = personalWalletIdFor(handle);
+    const wallet = await getOrCreateWalletForProject(pid, { isPersonal: true, ownerHandle: handle });
+    return wallet;
+}
+
+// transferBetweenWallets · async · atòmic-best-effort · descompta del
+// source · acredita al destination amb refs encadenats per traçabilitat.
+// Llença InsufficientFunds si saldo source < amount.
+// Retorna { from, to, amountEur, ref }.
+export async function transferBetweenWallets({
+    fromProjectId,
+    toProjectId,
+    amountEur,
+    note = '',
+    source = 'transfer',
+} = {}) {
+    if (!fromProjectId || !toProjectId) {
+        throw new Error('transferBetweenWallets requires fromProjectId + toProjectId');
+    }
+    if (fromProjectId === toProjectId) {
+        throw new Error('transferBetweenWallets · source i destination són el mateix wallet');
+    }
+    const amt = Number(amountEur);
+    if (!Number.isFinite(amt) || amt <= 0) {
+        throw new Error('transferBetweenWallets · amount must be > 0');
+    }
+    const fromWallet = await getOrCreateWalletForProject(fromProjectId);
+    if (Number(fromWallet.content.balanceEur) < amt) {
+        throw new Error('insufficient-funds · saldo origen ' + fromWallet.content.balanceEur + '€ < ' + amt + '€');
+    }
+    const transferRef = 'transfer-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    const fromLabel = isPersonalWallet(fromProjectId) ? 'personal' : fromProjectId;
+    const toLabel   = isPersonalWallet(toProjectId)   ? 'personal' : toProjectId;
+    const baseNote  = note || ('transfer ' + fromLabel + ' → ' + toLabel);
+
+    // 1. Descompta del source
+    const after1 = await consumeAndPersist({
+        projectId: fromProjectId,
+        amountEur: amt,
+        kind:      'consume',
+        ref:       transferRef + ':out',
+        source,
+        note:      baseNote + ' (out)',
+    });
+    // 2. Acredita al destination · si falla, refund automàtic al source
+    try {
+        const after2 = await topUpAndPersist({
+            projectId: toProjectId,
+            amountEur: amt,
+            source,
+            ref:       transferRef + ':in',
+            note:      baseNote + ' (in)',
+        });
+        return { from: after1, to: after2, amountEur: amt, ref: transferRef };
+    } catch (e) {
+        // Refund best-effort
+        try {
+            const refunded = refundWallet({
+                wallet:    after1,
+                amountEur: amt,
+                ref:       transferRef + ':refund',
+                source,
+                note:      'refund failed transfer · ' + (e?.message || e),
+            });
+            await persistWallet(refunded);
+        } catch (_) { /* best-effort */ }
+        throw new Error('transfer-failed: ' + (e?.message || e));
+    }
+}
+
 // ─── MKT-001 sprint C3 · helper puro de cargo por llamada LLM ──────────────
 // Convierte costUSD → costEur con un rate configurable (default 0.92).
 // PURO · sin I/O · testeable.
