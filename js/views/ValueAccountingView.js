@@ -98,7 +98,7 @@ export default class ValueAccountingView {
                 <div style="font-size:2.4rem;margin-bottom:0.6rem;">📊</div>
                 <h2 class="mat-hero-h1">Falta el projecte a la <strong>URL</strong></h2>
                 <p style="color:var(--text-muted);font-size:0.9rem;">Aquesta vista necessita <code>?project={id}</code>.</p>
-                <a href="/dashboard" data-link style="color:#c084fc;font-size:0.85rem;">← Dashboard</a>
+                <a href="/dashboard" data-link style="color:var(--accent-purple);font-size:0.85rem;">← Dashboard</a>
             </div>
         </div>
         ${this._renderStyle()}
@@ -109,9 +109,9 @@ export default class ValueAccountingView {
         return `
         <div class="va-shell">
             <div class="va-empty">
-                <div style="font-size:2.4rem;color:#fca5a5;">✘</div>
+                <div style="font-size:2.4rem;color:var(--accent-red);">✘</div>
                 <h2 class="mat-hero-h1">${escapeHtml(msg)}</h2>
-                <a href="/dashboard" data-link style="color:#c084fc;font-size:0.85rem;">← Dashboard</a>
+                <a href="/dashboard" data-link style="color:var(--accent-purple);font-size:0.85rem;">← Dashboard</a>
             </div>
         </div>
         ${this._renderStyle()}
@@ -246,7 +246,7 @@ export default class ValueAccountingView {
             .va-legend-item:hover { background: var(--glass-hover); }
             .va-legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
             .va-legend-name { flex: 1; color: #ddd; }
-            .va-legend-pct { font-family: monospace; color: #c084fc; font-weight: 700; }
+            .va-legend-pct { font-family: monospace; color: var(--accent-purple); font-weight: 700; }
 
             .va-pies-list { display: flex; flex-direction: column; gap: 10px; }
             .va-pie-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--border-default); border-radius: 8px; background: var(--glass-hover); }
@@ -258,26 +258,26 @@ export default class ValueAccountingView {
             .va-pie-target { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.2rem; color: var(--text-main); }
             .va-pie-status { font-family: monospace; font-size: 0.7rem; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
             .va-pie-status.is-active { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
-            .va-pie-status.is-empty { background: rgba(252,165,165,0.12); color: #fca5a5; border: 1px solid rgba(252,165,165,0.3); }
+            .va-pie-status.is-empty { background: rgba(252,165,165,0.12); color: var(--accent-red); border: 1px solid rgba(252,165,165,0.3); }
 
             .va-table { width: 100%; border-collapse: collapse; }
             .va-table thead th { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.12); text-align: left; font-family: monospace; font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
             .va-table tbody tr:hover { background: var(--glass-hover); }
             .va-table tbody td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.88rem; color: #ddd; }
             .va-table tbody td.va-td-pie { font-weight: 600; text-transform: capitalize; }
-            .va-table tbody td.va-td-pct { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.15rem; color: #c084fc; text-align: right; }
+            .va-table tbody td.va-td-pct { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.15rem; color: var(--accent-purple); text-align: right; }
             .va-table tbody td.va-td-share-pie { font-family: monospace; color: var(--text-muted); text-align: right; font-size: 0.82rem; }
             .va-table-empty { color: var(--text-muted); font-style: italic; padding: 14px; text-align: center; }
 
             .va-form { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: end; }
             .va-form label { display: flex; flex-direction: column; gap: 4px; font-family: monospace; font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; }
             .va-input { background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-main); padding: 10px 12px; border-radius: 6px; font-size: 0.88rem; outline: none; transition: border-color 0.15s; font-family: inherit; }
-            .va-input:focus { border-color: #c084fc; }
+            .va-input:focus { border-color: var(--accent-purple); }
             .va-btn { background: linear-gradient(135deg, #c084fc, #6366f1); color: var(--text-main); border: 0; padding: 10px 18px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: transform 0.15s; font-size: 0.85rem; }
             .va-btn:hover { transform: translateY(-1px); }
             .va-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-            .va-btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #c084fc; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; margin-top: 12px; }
-            .va-btn-secondary:hover { border-color: #c084fc; }
+            .va-btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--accent-purple); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; margin-top: 12px; }
+            .va-btn-secondary:hover { border-color: var(--accent-purple); }
 
             .va-section-explain p { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.65; margin-bottom: 10px; }
 
@@ -288,11 +288,11 @@ export default class ValueAccountingView {
             .va-edit-targets { background: rgba(192,132,252,0.06); border: 1px solid rgba(192,132,252,0.3); border-radius: 8px; padding: 14px; margin-top: 12px; display: none; }
             .va-edit-targets.is-open { display: block; }
             .va-target-slider { display: grid; grid-template-columns: 110px 1fr 60px; gap: 10px; align-items: center; padding: 6px 0; }
-            .va-target-slider input[type=range] { accent-color: #c084fc; }
+            .va-target-slider input[type=range] { accent-color: var(--accent-purple); }
             .va-target-slider input[type=number] { width: 60px; padding: 4px 8px; border: 1px solid var(--border-default); background: var(--bg-elevated); color: var(--text-main); border-radius: 4px; font-size: 0.85rem; text-align: right; }
             .va-target-sum { display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-elevated); border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 0.85rem; }
             .va-target-sum.is-valid { color: #4ade80; }
-            .va-target-sum.is-invalid { color: #fca5a5; }
+            .va-target-sum.is-invalid { color: var(--accent-red); }
         </style>
         `;
     }
@@ -395,7 +395,7 @@ export default class ValueAccountingView {
                 const stats = importStats(result);
                 if (result.contributions.length === 0) {
                     if (preview) preview.innerHTML = `
-                        <div style="background:rgba(252,165,165,0.06);border:1px solid rgba(252,165,165,0.3);border-radius:6px;padding:12px;color:#fca5a5;font-size:0.88rem;">
+                        <div style="background:rgba(252,165,165,0.06);border:1px solid rgba(252,165,165,0.3);border-radius:6px;padding:12px;color:var(--accent-red);font-size:0.88rem;">
                             Cap WO contributable trobat. Revisa que els WOs estiguin <code>status='ledgered'</code> + <code>actualHours > 0</code> + tinguin party assignat (assignedToSeatId o assignee.id ≠ pending).
                             ${stats.skippedCount > 0 ? '<br>· ' + stats.skippedCount + ' WOs descartats per: ' + Object.entries(stats.skippedReasons).map(([k,v])=>k+'×'+v).join(' · ') : ''}
                         </div>
@@ -434,7 +434,7 @@ export default class ValueAccountingView {
                 }, 1200);
             } catch (err) {
                 console.error('[VAL-001 C] importWos failed:', err);
-                if (preview) preview.innerHTML = `<div style="color:#fca5a5;font-size:0.88rem;">✘ Error: ${escapeHtml(err?.message || String(err))}</div>`;
+                if (preview) preview.innerHTML = `<div style="color:var(--accent-red);font-size:0.88rem;">✘ Error: ${escapeHtml(err?.message || String(err))}</div>`;
                 btn.disabled = false;
                 btn.textContent = '🔄 Escanejar WOs i importar';
             }

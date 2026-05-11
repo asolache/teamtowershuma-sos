@@ -79,7 +79,7 @@ export default class NodeView {
         return `
         <div style="height:100dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;color:var(--text-muted);font-family:monospace;background:var(--bg-dark);">
             <div style="font-size:2.5rem;">🔍</div>
-            <div style="color:#fca5a5;">${msg}</div>
+            <div style="color:var(--accent-red);">${msg}</div>
             <a href="/" data-link style="color:#6366f1;font-size:0.85rem;">← Inicio</a>
             <a href="/tags" data-link style="color:#6366f1;font-size:0.85rem;">🏷 Cloud de tags</a>
         </div>`;

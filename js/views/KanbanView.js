@@ -559,10 +559,10 @@ export default class KanbanView {
         } else {
             const meta = `Tokens: ${(payload.tokens?.prompt_tokens || 0)} in / ${(payload.tokens?.completion_tokens || 0)} out · Latencia: ${payload.latencyMs} ms · Fuentes: ${payload.sources?.length || 0}`;
             const banner = payload.state === 'tdd-passed'
-                ? `<p style="color:#86efac;font-size:0.85rem;">✅ TDD-auto pasó — la WO se contabilizó automáticamente.</p>`
+                ? `<p style="color:var(--accent-green);font-size:0.85rem;">✅ TDD-auto pasó — la WO se contabilizó automáticamente.</p>`
                 : payload.state === 'tdd-failed'
-                ? `<p style="color:#fca5a5;font-size:0.85rem;">⚠ TDD-auto falló — la WO volvió a Backlog para revisión humana.</p>`
-                : `<p style="color:#86efac;font-size:0.85rem;">✅ Ejecución completada — pendiente de aprobación manual.</p>`;
+                ? `<p style="color:var(--accent-red);font-size:0.85rem;">⚠ TDD-auto falló — la WO volvió a Backlog para revisión humana.</p>`
+                : `<p style="color:var(--accent-green);font-size:0.85rem;">✅ Ejecución completada — pendiente de aprobación manual.</p>`;
             body = `
                 ${banner}
                 <p style="color:#888;font-size:0.75rem;">${this._esc(meta)}</p>
@@ -660,7 +660,7 @@ export default class KanbanView {
         if (c.assignedToSeatId) {
             const seat = (this.cohortSeats || []).find(s => s.id === c.assignedToSeatId);
             const name = (seat?.content?.displayName || c.assignedToSeatId.slice(-12));
-            assigneeBadge = `<span class="kb-badge human" style="background:rgba(192,132,252,0.15);color:#c084fc;border-color:rgba(192,132,252,0.4);" title="Plaza Matriu · ${this._esc(c.assignedToSeatId)}">🐝 ${this._esc(name)}</span>`;
+            assigneeBadge = `<span class="kb-badge human" style="background:rgba(192,132,252,0.15);color:var(--accent-purple);border-color:rgba(192,132,252,0.4);" title="Plaza Matriu · ${this._esc(c.assignedToSeatId)}">🐝 ${this._esc(name)}</span>`;
         } else if (ass.kind === 'ai') {
             assigneeBadge = `<span class="kb-badge ai">🤖 ${this._esc(ass.engine || '?')}</span>`;
         } else {
@@ -735,7 +735,7 @@ export default class KanbanView {
             }));
             if (!sopOptions.length) {
                 emptyHtml = `
-                    <p style="color:#fca5a5;font-size:0.85rem;margin:1rem 0 0.5rem 0;">
+                    <p style="color:var(--accent-red);font-size:0.85rem;margin:1rem 0 0.5rem 0;">
                         Este proyecto aún no tiene SOPs propios.
                     </p>
                     <p style="color:#aaa;font-size:0.78rem;">
@@ -756,7 +756,7 @@ export default class KanbanView {
                 slugForRef: s.slug,
             }));
             if (!sopOptions.length) {
-                emptyHtml = `<p style="color:#fca5a5;font-size:0.85rem;">No hay SOPs públicos en _index.md.</p>`;
+                emptyHtml = `<p style="color:var(--accent-red);font-size:0.85rem;">No hay SOPs públicos en _index.md.</p>`;
             }
         }
 
@@ -771,7 +771,7 @@ export default class KanbanView {
             <div class="kb-modal" id="kbFromSopBg">
                 <div class="kb-modal-inner">
                     <h3>📋 Generar WOs desde SOP</h3>
-                    <p style="background:rgba(99,102,241,0.1);border-left:2px solid #6366f1;padding:0.5rem;border-radius:3px;margin:0.5rem 0;color:#a5b4fc;font-size:0.78rem;">
+                    <p style="background:rgba(99,102,241,0.1);border-left:2px solid #6366f1;padding:0.5rem;border-radius:3px;margin:0.5rem 0;color:var(--accent-indigo);font-size:0.78rem;">
                         <strong>${this._esc(modeLabel)}</strong><br>
                         <span style="color:#aaa;">${modeHint}</span>
                     </p>
@@ -831,7 +831,7 @@ export default class KanbanView {
                 console.log('[H1.10.3] Preview · sopValue=', value);
                 const selected = sopOptions.find(o => o.value === value);
                 if (!selected) {
-                    area.innerHTML = `<p style="color:#fca5a5;font-size:0.8rem;">Selecciona un SOP del desplegable.</p>`;
+                    area.innerHTML = `<p style="color:var(--accent-red);font-size:0.8rem;">Selecciona un SOP del desplegable.</p>`;
                     pendingWOs = [];
                     return;
                 }
@@ -845,7 +845,7 @@ export default class KanbanView {
                 }
                 console.log('[H1.10.3] Preview · steps:', steps.length);
                 if (!steps.length) {
-                    area.innerHTML = `<p style="color:#fca5a5;font-size:0.8rem;">El SOP seleccionado no tiene <code>steps:</code>. Añádelos al .md o regenera el SOP del proyecto.</p>`;
+                    area.innerHTML = `<p style="color:var(--accent-red);font-size:0.8rem;">El SOP seleccionado no tiene <code>steps:</code>. Añádelos al .md o regenera el SOP del proyecto.</p>`;
                     pendingWOs = [];
                     return;
                 }
@@ -858,7 +858,7 @@ export default class KanbanView {
                 });
                 console.log('[H1.10.3] Preview · pendingWOs generadas:', pendingWOs.length);
                 area.innerHTML = `
-                    <p style="color:#86efac;font-size:0.8rem;">Se crearán <b>${pendingWOs.length} WOs</b> en Backlog${projectActive ? ' (con projectId=' + this._esc(this.projectFilter) + ')' : ''}:</p>
+                    <p style="color:var(--accent-green);font-size:0.8rem;">Se crearán <b>${pendingWOs.length} WOs</b> en Backlog${projectActive ? ' (con projectId=' + this._esc(this.projectFilter) + ')' : ''}:</p>
                     <ul style="font-size:0.78rem;color:#bbb;padding-left:1.2rem;">
                         ${pendingWOs.map(w => `
                             <li style="margin-bottom:0.3rem;">
@@ -871,7 +871,7 @@ export default class KanbanView {
                 `;
             } catch (err) {
                 console.error('[H1.10.3] Preview error:', err);
-                area.innerHTML = `<p style="color:#fca5a5;font-size:0.8rem;">Error en preview: ${this._esc(err.message)}</p>`;
+                area.innerHTML = `<p style="color:var(--accent-red);font-size:0.8rem;">Error en preview: ${this._esc(err.message)}</p>`;
                 pendingWOs = [];
             }
         });
@@ -930,7 +930,7 @@ export default class KanbanView {
                     <option value="">— ninguno —</option>
                     ${sopOpts}
                 </select>
-                ${projSops.length === 0 ? '<small style="color:#fca5a5;">Este proyecto aún no tiene SOPs propios. <a href="/sops?project=' + this._esc(this.projectFilter) + '" data-link class="kb-link">Generar SOPs</a></small>' : ''}
+                ${projSops.length === 0 ? '<small style="color:var(--accent-red);">Este proyecto aún no tiene SOPs propios. <a href="/sops?project=' + this._esc(this.projectFilter) + '" data-link class="kb-link">Generar SOPs</a></small>' : ''}
             `;
         } else {
             sopFieldHtml = `
@@ -1170,15 +1170,15 @@ export default class KanbanView {
                         <div>Coste humano estimado: <b style="color:#fff;">${fmtEur(cost.humanCostEstimated)}</b></div>
                         ${cost.humanCostReal != null ? `<div>Coste humano real: <b style="color:#fff;">${fmtEur(cost.humanCostReal)}</b></div>` : ''}
                         ${cost.aiCostReal != null ? `<div>Coste IA real (incl. ${Math.round((MARKUP-1)*100)}% markup): <b style="color:#fff;">${fmtEur(cost.aiCostReal)}</b></div>` : ''}
-                        ${cost.savingEur != null && cost.savingEur > 0 ? `<div>✨ Ahorro automatización: <b style="color:#facc15;">${fmtEur(cost.savingEur)}</b></div>` : ''}
-                        ${status === 'ledgered' && c.ledgeredAt ? `<div style="color:#86efac;margin-top:0.3rem;">✓ Contabilizada el ${new Date(c.ledgeredAt).toLocaleString('es-ES')}</div>` : ''}
+                        ${cost.savingEur != null && cost.savingEur > 0 ? `<div>✨ Ahorro automatización: <b style="color:var(--accent-orange);">${fmtEur(cost.savingEur)}</b></div>` : ''}
+                        ${status === 'ledgered' && c.ledgeredAt ? `<div style="color:var(--accent-green);margin-top:0.3rem;">✓ Contabilizada el ${new Date(c.ledgeredAt).toLocaleString('es-ES')}</div>` : ''}
                     </div>
 
                     ${c.aiOutput ? `
                         <label style="margin-top:0.8rem;">Output IA (editable antes de contabilizar)</label>
                         <textarea id="kbdAiOutput" style="min-height:160px;font-family:monospace;font-size:0.78rem;">${this._esc(c.aiOutput)}</textarea>
                     ` : ''}
-                    ${c.tddFailed ? `<p style="color:#fca5a5;font-size:0.78rem;margin-top:0.6rem;">⚠ Última auto-aprobación TDD falló. Revisa el output y promueve manualmente.</p>` : ''}
+                    ${c.tddFailed ? `<p style="color:var(--accent-red);font-size:0.78rem;margin-top:0.6rem;">⚠ Última auto-aprobación TDD falló. Revisa el output y promueve manualmente.</p>` : ''}
 
                     <div class="actions">
                         <button class="kb-btn danger" id="kbdDel">Borrar</button>
@@ -1273,7 +1273,7 @@ export default class KanbanView {
             <div class="kb-modal" id="kbAssistBg">
                 <div class="kb-modal-inner" style="max-width:880px;">
                     <h3>🤖 Asistencia IA con contexto · ${this._esc(c.title || wo.id)}</h3>
-                    <p style="background:rgba(99,102,241,0.1);border-left:2px solid #6366f1;padding:0.5rem;border-radius:3px;margin:0.5rem 0;color:#a5b4fc;font-size:0.78rem;">
+                    <p style="background:rgba(99,102,241,0.1);border-left:2px solid #6366f1;padding:0.5rem;border-radius:3px;margin:0.5rem 0;color:var(--accent-indigo);font-size:0.78rem;">
                         La IA recibe SOC raíz + SOP de referencia + estado del proyecto + rol VNA + los datos
                         brutos que pegues abajo, y devuelve un informe MD con estructura SOS estándar
                         (8 secciones: Contexto · Síntesis · Diagnóstico · Plan · DTD · Intangibles ·
@@ -1285,7 +1285,7 @@ export default class KanbanView {
 
                     <div class="actions" style="margin-top:0.6rem;">
                         <button class="kb-btn" id="kbaGenerate" style="border-color:rgba(99,102,241,0.4);color:var(--accent-indigo);">🧠 Generar informe IA con contexto</button>
-                        <span id="kbaThinking" style="display:none;color:#a5b4fc;font-size:0.85rem;">🧠 IA pensando<span id="kbaDots">.</span></span>
+                        <span id="kbaThinking" style="display:none;color:var(--accent-indigo);font-size:0.85rem;">🧠 IA pensando<span id="kbaDots">.</span></span>
                     </div>
 
                     <label style="margin-top:0.8rem;">Informe IA${metaLine ? ' · <span style="color:#888;font-size:0.7rem;font-weight:normal;">previo: ' + this._esc(metaLine) + '</span>' : ''}</label>

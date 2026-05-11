@@ -181,7 +181,7 @@ export default class SkillsExplorerView {
             .se-filters { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 8px; margin: 18px 0; }
             @media (max-width: 880px) { .se-filters { grid-template-columns: 1fr 1fr; } }
             .se-input { background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-main); padding: 10px 12px; border-radius: 6px; font-size: 0.88rem; outline: none; font-family: inherit; transition: border-color 0.15s; }
-            .se-input:focus { border-color: #c084fc; }
+            .se-input:focus { border-color: var(--accent-purple); }
 
             .se-results-meta { font-family: monospace; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px; }
 
@@ -190,7 +190,7 @@ export default class SkillsExplorerView {
             .se-card { background: var(--bg-panel); border: 1px solid var(--border-default); border-left: 3px solid var(--se-c, var(--text-muted)); border-radius: var(--radius-md); padding: 14px 16px; transition: background var(--dur-fast), transform var(--dur-fast); box-shadow: var(--shadow-sm); }
             .se-card:hover { background: var(--glass-hover); transform: translateY(-1px); }
             .se-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
-            .se-card-id { font-family: ui-monospace, monospace; font-size: 0.74rem; color: #c084fc; }
+            .se-card-id { font-family: ui-monospace, monospace; font-size: 0.74rem; color: var(--accent-purple); }
             .se-card-tier { font-family: ui-monospace, monospace; font-size: 0.62rem; padding: 2px 6px; border-radius: 99px; background: var(--glass-hover); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
             .se-card-label { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 1.15rem; color: var(--text-main); line-height: 1.2; margin-bottom: 8px; }
             .se-card-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
@@ -201,7 +201,7 @@ export default class SkillsExplorerView {
             .se-card-desc { font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin-bottom: 8px; }
             .se-card-pt { display: flex; gap: 4px; flex-wrap: wrap; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 0.72rem; color: var(--text-muted); }
             .se-card-pt-label { font-family: monospace; opacity: 0.7; }
-            .se-card-pt-pill { font-family: monospace; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; background: rgba(99,102,241,0.1); color: #a5b4fc; }
+            .se-card-pt-pill { font-family: monospace; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; background: rgba(99,102,241,0.1); color: var(--accent-indigo); }
 
             .se-no-results { color: var(--text-muted); padding: 3rem; text-align: center; font-style: italic; grid-column: 1 / -1; }
 
@@ -219,7 +219,7 @@ export default class SkillsExplorerView {
             .se-guardian-recogn { color: var(--text-muted); font-size: 0.75rem; line-height: 1.5; font-style: italic; margin-bottom: 8px; }
             .se-guardian-skills { padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.06); display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; }
             .se-guardian-skills-label { font-family: monospace; font-size: 0.7rem; color: var(--text-muted); }
-            .se-skill-pill { font-family: monospace; font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; background: rgba(192,132,252,0.12); color: #c084fc; text-decoration: none; }
+            .se-skill-pill { font-family: monospace; font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; background: rgba(192,132,252,0.12); color: var(--accent-purple); text-decoration: none; }
             .se-skill-pill:hover { background: rgba(192,132,252,0.24); }
         </style>`;
     }

@@ -162,7 +162,7 @@ export function renderTagsEditor({ tags = [], inputId = 'tagsInput', chipClass =
                 ${t}
             </span>`;
         }
-        return `<span class="${chipClass}" data-tag="${t}" data-taxonomy="false" title="Click para eliminar" style="display:inline-flex;align-items:center;gap:4px;background:rgba(99,102,241,0.15);color:#a5b4fc;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-family:monospace;cursor:pointer;border:1px solid rgba(99,102,241,0.3);">
+        return `<span class="${chipClass}" data-tag="${t}" data-taxonomy="false" title="Click para eliminar" style="display:inline-flex;align-items:center;gap:4px;background:rgba(99,102,241,0.15);color:var(--accent-indigo);padding:2px 8px;border-radius:10px;font-size:0.72rem;font-family:monospace;cursor:pointer;border:1px solid rgba(99,102,241,0.3);">
             #${t} <span style="opacity:0.6;font-size:0.65rem;">×</span>
         </span>`;
     }).join(' ');

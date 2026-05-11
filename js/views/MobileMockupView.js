@@ -62,7 +62,7 @@ export default class MobileMockupView {
             .ms-acc-indigo { color: #818cf8; }
             .ms-acc-green  { color: #4ade80; }
             .ms-acc-orange { color: #fb923c; }
-            .ms-acc-purple { color: #c084fc; }
+            .ms-acc-purple { color: var(--accent-purple); }
             .ms-acc-red    { color: #f87171; }
             .ms-pill { display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; }
             .ms-btn { width:100%; padding: 12px; border-radius: 12px; border: 0; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: var(--text-main); font-weight: 700; font-size: 14px; cursor:pointer; }
@@ -169,7 +169,7 @@ export default class MobileMockupView {
                     <div class="ms-mut">Saldo wallet</div>
                     <div style="font-size:28px;font-weight:900;margin:4px 0;">42,80 €</div>
                     <div class="ms-row">
-                        <span class="ms-pill" style="background:rgba(99,102,241,0.2);color:#a5b4fc;">PRO · 9€/mes</span>
+                        <span class="ms-pill" style="background:rgba(99,102,241,0.2);color:var(--accent-indigo);">PRO · 9€/mes</span>
                         <span class="ms-mut" style="font-size:10px;">+ pay-as-you-go</span>
                     </div>
                 </div>
@@ -187,7 +187,7 @@ export default class MobileMockupView {
 
                 <div class="ms-card" style="border-left: 3px solid #6366f1;">
                     <div class="ms-row">
-                        <span class="ms-pill" style="background:rgba(99,102,241,0.15);color:#a5b4fc;">BACKLOG</span>
+                        <span class="ms-pill" style="background:rgba(99,102,241,0.15);color:var(--accent-indigo);">BACKLOG</span>
                         <span class="ms-mut">Cohort 0 · #45</span>
                     </div>
                     <div style="font-size:14px;font-weight:700;margin-top:4px;">Onboarding nou membre Apolo</div>

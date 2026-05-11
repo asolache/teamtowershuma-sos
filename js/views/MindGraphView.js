@@ -279,7 +279,7 @@ export default class MindGraphView {
                     <div class="ttype">${this._esc(d.type)}</div>
                     <div class="ttitle">${this._esc(d.label || d.id)}</div>
                     <div class="tid">${this._esc(d.id)}</div>
-                    ${d.tags && d.tags.length ? `<div style="margin-top:4px;font-size:0.7rem;color:#a5b4fc;">${d.tags.slice(0, 3).map(t => '#' + this._esc(t)).join(' ')}</div>` : ''}
+                    ${d.tags && d.tags.length ? `<div style="margin-top:4px;font-size:0.7rem;color:var(--accent-indigo);">${d.tags.slice(0, 3).map(t => '#' + this._esc(t)).join(' ')}</div>` : ''}
                 `;
                 tooltip.style.display = 'block';
                 tooltip.style.left = (event.offsetX + 12) + 'px';

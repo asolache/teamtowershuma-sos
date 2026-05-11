@@ -833,7 +833,7 @@ export default class DashboardView {
                         style="font-family:inherit;resize:vertical;min-height:90px;"></textarea>
                 </div>
 
-                <div id="newProjModeHint" style="font-size:0.78rem;color:#a5b4fc;background:rgba(99,102,241,0.08);border-left:3px solid #6366f1;padding:0.5rem 0.7rem;border-radius:4px;margin:0.5rem 0;">
+                <div id="newProjModeHint" style="font-size:0.78rem;color:var(--accent-indigo);background:rgba(99,102,241,0.08);border-left:3px solid #6366f1;padding:0.5rem 0.7rem;border-radius:4px;margin:0.5rem 0;">
                     📦 <strong>Vacío</strong> · proyecto sin roles · los añades tú a mano en el mapa.
                 </div>
 
@@ -1703,7 +1703,7 @@ export default class DashboardView {
                     <strong style="color:#fff;">${this._escapeHtml(c.project_name || c.client_id || 'Sin nombre')}</strong>
                 </div>
                 ${c.emergent_notes ? `
-                    <div style="margin-top:0.6rem;padding:0.5rem;background:rgba(212,168,83,0.08);border-left:2px solid #d4a853;border-radius:3px;color:#facc15;font-size:0.78rem;">
+                    <div style="margin-top:0.6rem;padding:0.5rem;background:rgba(212,168,83,0.08);border-left:2px solid #d4a853;border-radius:3px;color:var(--accent-orange);font-size:0.78rem;">
                         <strong>Emergentes:</strong> ${this._escapeHtml(c.emergent_notes)}
                     </div>
                 ` : ''}
@@ -1714,7 +1714,7 @@ export default class DashboardView {
             </div>
 
             ${result.readiness === 'tier 2' ? `
-                <p style="color:#fca5a5;font-size:0.78rem;margin-top:0.6rem;">
+                <p style="color:var(--accent-red);font-size:0.78rem;margin-top:0.6rem;">
                     ⚠ El mapa generado no llega al umbral 'solid'. Puedes guardarlo como
                     <code>draft</code> y enriquecerlo manualmente, o cancelar y reintentar
                     con una descripción más rica del cliente.

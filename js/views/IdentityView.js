@@ -51,14 +51,14 @@ export default class IdentityView {
             .id-grid .v { color:#ddd; font-family:monospace; font-size:0.75rem; word-break:break-all; }
             .id-grid .v.editable { font-family:inherit; font-size:0.85rem; }
             .id-input  { width:100%; box-sizing:border-box; background:var(--bg-elevated); border:1px solid var(--border-default); color:var(--text-main); padding:6px 9px; border-radius:5px; font-family:inherit; font-size:0.85rem; outline:none; }
-            .id-input:focus { border-color:#a5b4fc; }
+            .id-input:focus { border-color:var(--accent-indigo); }
             .id-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.85rem; }
             .id-btn:hover { background:var(--bg-elevated); }
             .id-btn-primary { background:#6366f1; border-color:#6366f1; color:var(--text-main); }
             .id-btn-primary:hover { background:#4f46e5; }
-            .id-stub   { background:rgba(250,204,21,0.06); border:1px dashed rgba(250,204,21,0.3); border-radius:8px; padding:0.9rem; font-size:0.78rem; color:#facc15; margin-top:0.6rem; }
-            .id-status { display:none; margin-top:0.6rem; font-size:0.78rem; color:#86efac; }
-            .id-pill   { display:inline-block; font-size:0.7rem; padding:2px 8px; border-radius:10px; background:rgba(34,197,94,0.12); color:#86efac; font-family:monospace; }
+            .id-stub   { background:rgba(250,204,21,0.06); border:1px dashed rgba(250,204,21,0.3); border-radius:8px; padding:0.9rem; font-size:0.78rem; color:var(--accent-orange); margin-top:0.6rem; }
+            .id-status { display:none; margin-top:0.6rem; font-size:0.78rem; color:var(--accent-green); }
+            .id-pill   { display:inline-block; font-size:0.7rem; padding:2px 8px; border-radius:10px; background:rgba(34,197,94,0.12); color:var(--accent-green); font-family:monospace; }
         </style>
 
         <div class="id-shell">
@@ -97,7 +97,7 @@ export default class IdentityView {
                     <div class="id-status" id="idStatus">✓ Guardado</div>
                 </div>
 
-                <div class="id-card" style="border-left-color:#facc15;">
+                <div class="id-card" style="border-left-color:var(--accent-orange);">
                     <h2>🔗 Wallets vinculadas</h2>
                     <div class="id-meta">Direcciones Ethereum / Gnosis asociadas a esta identidad. Sprint B · binding manual (sin firma de verificación). La firma con wallet real (verifiedAt) se delega a MAT-001 fase 1 con WalletConnect.</div>
 
@@ -117,10 +117,10 @@ export default class IdentityView {
                         <input id="idWalletLabel" class="id-input" type="text" placeholder="etiqueta · ej. Safe matriu" style="width:160px;">
                         <button class="id-btn id-btn-primary" id="idLinkWallet">＋ Vincular</button>
                     </div>
-                    <div id="idWalletErr" style="display:none;margin-top:0.4rem;font-size:0.78rem;color:#fca5a5;"></div>
+                    <div id="idWalletErr" style="display:none;margin-top:0.4rem;font-size:0.78rem;color:var(--accent-red);"></div>
                 </div>
 
-                <div class="id-card" style="border-left-color:#86efac;">
+                <div class="id-card" style="border-left-color:var(--accent-green);">
                     <h2>🪪 Conectar OAuth</h2>
                     <div class="id-meta">Vincula GitHub · Google · email magic-link para que otros operadores te encuentren sin necesidad de cripto.</div>
                     <div class="id-stub">🚧 Sprint C · Netlify Functions + OAuth providers · delegado.</div>
@@ -196,7 +196,7 @@ export default class IdentityView {
             return;
         }
         root.innerHTML = wallets.map(w => {
-            const verified = w.verifiedAt ? '<span class="id-pill" title="firma verificada">verified</span>' : '<span class="id-pill" style="background:rgba(250,204,21,0.12);color:#facc15;" title="manual binding · sin firma · upgrade a WalletConnect en MAT-001">manual</span>';
+            const verified = w.verifiedAt ? '<span class="id-pill" title="firma verificada">verified</span>' : '<span class="id-pill" style="background:rgba(250,204,21,0.12);color:var(--accent-orange);" title="manual binding · sin firma · upgrade a WalletConnect en MAT-001">manual</span>';
             return `<div style="display:flex;align-items:center;gap:0.5rem;padding:6px 8px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:5px;margin-bottom:5px;font-size:0.8rem;">
                 <span style="background:rgba(125,211,252,0.15);color:#7dd3fc;padding:2px 7px;border-radius:8px;font-family:monospace;font-size:0.7rem;">${this._esc(w.chain || 'gnosis')}</span>
                 <code style="color:#ddd;font-size:0.75rem;flex:1;word-break:break-all;">${this._esc(w.address)}</code>
