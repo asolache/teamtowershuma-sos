@@ -2420,6 +2420,15 @@ Pendent Sprint H+: refinaments puntuals si apareixen regressions (Matriu skin vi
 | **Phase filter chips** | Sota el panell del membre · 5 chips (Tots · 🎨 DESIGN · 🛠 BUILD · ⚙ OPERATE · 💶 LEDGER) amb count per fase. Click → re-render in-place del project list filtrat per fase. `this._phaseFilter` persisteix dins l'instància. Default = 'all'. Empty state per fase si no hi ha projectes en aquesta fase. Sector grouping es manté DINS la fase seleccionada (no se substitueix · es complementa). |
 | **Reframe enfoque** | Dashboard ara obre amb identitat → impacte → projectes (com a "panell del membre", no com a "lista de projectes técnica"). Coherent amb input @alvaro "la Matriu son las personas". |
 
+### Sprint H+ pass 3 2026-05-10 · Auditoria sistemàtica · 10 vistes topbars + btns
+
+| Fix | Detall |
+|---|---|
+| **Patrons antics detectats i corregits a 10 vistes** | Audit automàtic detectava: (a) `topbar { padding:1rem 1.5rem }` no-responsive · (b) topbars sense `flex-wrap` (overflow en mòbil/zoom) · (c) `color:#6366f1` hardcoded en lloc de `var(--accent-indigo)` · (d) `var(--bg-0,#050507)` fallback legacy · (e) `var(--font-base,sans-serif)` fallback legacy · (f) `btn-primary background:#6366f1` hardcoded. Sed batch a Wallet · Workshops · Identity · Market · Efficiency · Savings · MindGraph · Folders · Tags · Node + SopsView (fix lot 2 ja inclòs). |
+| **Topbars Linear-style** | `padding:1rem 1.5rem` → `padding:8px 16px` · afegit `flex-wrap:wrap` + `min-height:48px` + `box-sizing:border-box` · gap reduït de 1rem a 10px. Botons ja no fan overflow horitzontal en zoom o mòbil. |
+| **`*-link` className upgrade · btn-style** | Cada vista té el seu `.X-link` que rep `renderNavGroupedHtml` com className. Abans: `color:#6366f1; text-decoration:none; font-size:0.85rem;` (text simple). Ara: `display:inline-flex` · `padding:6px 10px` · `font-weight:600` · `:hover { background:var(--glass-hover); color:var(--text-main); }` · `:focus-visible` outline indigo · `white-space:nowrap`. Resultat: els nav-grouped buttons al topbar es veuen com a botons consistents amb hover bg, no com a text-links. Aplicat a 10 vistes via Python regex batch. |
+| **`*-btn` className upgrade · Linear feel** | A 5 vistes (Efficiency · Identity · Market · Workshops · Wallet) reescrit el base button class · `padding:6px 12px` (era 0.5rem 1rem · alçada inconsistent amb la nav grouped) · `font-weight:600` · `line-height:1.3` · `display:inline-flex` per alinear icones · `:hover { background:var(--glass-hover); border-color:var(--accent-indigo); }` · `:focus-visible` outline indigo · `transition:all var(--dur-fast)`. |
+
 ### Sprint H+ fix lot 2 2026-05-10 · /map topbar polit + pastel colors fix global
 
 | Fix | Detall |

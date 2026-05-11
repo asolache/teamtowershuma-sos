@@ -35,13 +35,15 @@ export default class IdentityView {
 
         return `
         <style>
-            .id-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .id-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
+            .id-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); display:flex; flex-direction:column; overflow:hidden; }
+            .id-topbar { display:flex; align-items:center; gap:10px; padding:8px 16px; flex-wrap:wrap; min-height:48px; box-sizing:border-box; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
             .id-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
-            .id-logo span { color:#6366f1; }
+            .id-logo span { color:var(--accent-indigo); }
             .id-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .id-spacer { flex:1; }
-            .id-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
+            .id-link { color:var(--text-secondary); text-decoration:none; font-size:var(--text-xs); font-weight:600; padding:6px 10px; border-radius:var(--radius-sm); transition:all var(--dur-fast); display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+            .id-link:hover { color:var(--text-main); background:var(--glass-hover); }
+            .id-link:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
             .id-main   { padding:1.5rem; max-width:760px; margin:0 auto; flex:1; overflow-y:auto; width:100%; box-sizing:border-box; }
             .id-card   { background:linear-gradient(145deg,rgba(99,102,241,0.05),rgba(0,0,0,0)); border:1px solid var(--border-default); border-left:3px solid #a5b4fc; border-radius:10px; padding:1.4rem; margin-bottom:1.2rem; }
             .id-card h2 { margin:0 0 0.4rem 0; color:var(--text-main); font-size:1.1rem; }
@@ -52,9 +54,10 @@ export default class IdentityView {
             .id-grid .v.editable { font-family:inherit; font-size:0.85rem; }
             .id-input  { width:100%; box-sizing:border-box; background:var(--bg-elevated); border:1px solid var(--border-default); color:var(--text-main); padding:6px 9px; border-radius:5px; font-family:inherit; font-size:0.85rem; outline:none; }
             .id-input:focus { border-color:var(--accent-indigo); }
-            .id-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.85rem; }
-            .id-btn:hover { background:var(--bg-elevated); }
-            .id-btn-primary { background:#6366f1; border-color:#6366f1; color:#fff; }
+            .id-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:6px 12px; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--text-xs); font-weight:600; font-family:var(--font-base); line-height:1.3; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; transition:all var(--dur-fast); }
+            .id-btn:hover { background:var(--glass-hover); border-color:var(--accent-indigo); color:var(--text-main); }
+            .id-btn:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
+            .id-btn-primary { background:var(--accent-indigo); border-color:var(--accent-indigo); color:#fff; }
             .id-btn-primary:hover { background:#4f46e5; }
             .id-stub   { background:rgba(250,204,21,0.06); border:1px dashed rgba(250,204,21,0.3); border-radius:8px; padding:0.9rem; font-size:0.78rem; color:var(--accent-orange); margin-top:0.6rem; }
             .id-status { display:none; margin-top:0.6rem; font-size:0.78rem; color:var(--accent-green); }

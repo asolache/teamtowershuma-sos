@@ -64,26 +64,29 @@ export default class MarketView {
         }
         return `
         <style>
-            .mk-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .mk-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
+            .mk-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); display:flex; flex-direction:column; overflow:hidden; }
+            .mk-topbar { display:flex; align-items:center; gap:10px; padding:8px 16px; flex-wrap:wrap; min-height:48px; box-sizing:border-box; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
             .mk-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
-            .mk-logo span { color:#6366f1; }
+            .mk-logo span { color:var(--accent-indigo); }
             .mk-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .mk-spacer { flex:1; }
-            .mk-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
-            .mk-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem; font-family:inherit; }
-            .mk-btn:hover { background:var(--bg-elevated); }
-            .mk-btn-primary { background:#6366f1; border-color:#6366f1; color:#fff; }
+            .mk-link { color:var(--text-secondary); text-decoration:none; font-size:var(--text-xs); font-weight:600; padding:6px 10px; border-radius:var(--radius-sm); transition:all var(--dur-fast); display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+            .mk-link:hover { color:var(--text-main); background:var(--glass-hover); }
+            .mk-link:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
+            .mk-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:6px 12px; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--text-xs); font-weight:600; font-family:var(--font-base); line-height:1.3; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; transition:all var(--dur-fast); }
+            .mk-btn:hover { background:var(--glass-hover); border-color:var(--accent-indigo); color:var(--text-main); }
+            .mk-btn:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
+            .mk-btn-primary { background:var(--accent-indigo); border-color:var(--accent-indigo); color:#fff; }
             .mk-btn-primary:hover { background:#4f46e5; }
 
             .mk-search-bar { display:flex; gap:0.5rem; align-items:center; padding:0.8rem 1.5rem; background:var(--bg-panel); border-bottom:1px solid var(--border-default); flex-shrink:0; flex-wrap:wrap; }
             .mk-search-input { flex:1; min-width:240px; background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); padding:8px 12px; border-radius:6px; font-size:0.88rem; font-family:inherit; outline:none; }
-            .mk-search-input:focus { border-color:#6366f1; }
+            .mk-search-input:focus { border-color:var(--accent-indigo); }
             .mk-select { background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); padding:7px 10px; border-radius:6px; font-size:0.82rem; font-family:inherit; outline:none; cursor:pointer; }
             .mk-select:hover { border-color:#3a3a45; }
             .mk-pill   { background:rgba(99,102,241,0.12); color:var(--accent-indigo); padding:3px 10px; border-radius:12px; font-size:0.72rem; font-family:monospace; cursor:pointer; border:1px solid rgba(99,102,241,0.3); }
             .mk-pill:hover { background:rgba(99,102,241,0.25); }
-            .mk-pill.active { background:rgba(99,102,241,0.4); color:var(--text-main); border-color:#6366f1; }
+            .mk-pill.active { background:rgba(99,102,241,0.4); color:var(--text-main); border-color:var(--accent-indigo); }
             .mk-count  { color:var(--text-muted); font-size:0.78rem; font-family:monospace; }
 
             .mk-main   { padding:1.2rem 1.5rem; flex:1; overflow-y:auto; max-width:1400px; margin:0 auto; width:100%; box-sizing:border-box; }

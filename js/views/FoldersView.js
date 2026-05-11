@@ -31,13 +31,15 @@ export default class FoldersView {
         await store.init();
         return `
         <style>
-            .fl-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .fl-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
+            .fl-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); display:flex; flex-direction:column; overflow:hidden; }
+            .fl-topbar { display:flex; align-items:center; gap:10px; padding:8px 16px; flex-wrap:wrap; min-height:48px; box-sizing:border-box; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; flex-wrap:wrap; }
             .fl-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
-            .fl-logo span { color:#6366f1; }
+            .fl-logo span { color:var(--accent-indigo); }
             .fl-title  { color:var(--text-secondary); font-weight:500; letter-spacing:0.05em; text-transform:uppercase; font-size:0.78rem; }
             .fl-spacer { flex:1; }
-            .fl-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
+            .fl-link { color:var(--text-secondary); text-decoration:none; font-size:var(--text-xs); font-weight:600; padding:6px 10px; border-radius:var(--radius-sm); transition:all var(--dur-fast); display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+            .fl-link:hover { color:var(--text-main); background:var(--glass-hover); }
+            .fl-link:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
 
             .fl-main   { flex:1; overflow:hidden; display:grid; grid-template-columns:280px 1fr; }
             @media (max-width:780px) { .fl-main { grid-template-columns: 1fr; } .fl-side { display:none; } }

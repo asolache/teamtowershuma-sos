@@ -80,8 +80,8 @@ export default class NodeView {
         <div style="height:100dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;color:var(--text-muted);font-family:monospace;background:var(--bg-dark);">
             <div style="font-size:2.5rem;">🔍</div>
             <div style="color:var(--accent-red);">${msg}</div>
-            <a href="/" data-link style="color:#6366f1;font-size:0.85rem;">← Inicio</a>
-            <a href="/tags" data-link style="color:#6366f1;font-size:0.85rem;">🏷 Cloud de tags</a>
+            <a href="/" data-link style="color:var(--accent-indigo);font-size:0.85rem;">← Inicio</a>
+            <a href="/tags" data-link style="color:var(--accent-indigo);font-size:0.85rem;">🏷 Cloud de tags</a>
         </div>`;
     }
 
@@ -93,11 +93,13 @@ export default class NodeView {
 
         return `
         <style>
-            .nv-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base,sans-serif); display:flex; flex-direction:column; overflow:hidden; }
-            .nv-topbar { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
+            .nv-shell  { height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); display:flex; flex-direction:column; overflow:hidden; }
+            .nv-topbar { display:flex; align-items:center; gap:10px; padding:8px 16px; flex-wrap:wrap; min-height:48px; box-sizing:border-box; border-bottom:1px solid var(--border-default); background:var(--bg-panel); flex-shrink:0; }
             .nv-logo   { font-weight:700; color:var(--text-main); text-decoration:none; font-size:1.05rem; }
-            .nv-logo span { color:#6366f1; }
-            .nv-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
+            .nv-logo span { color:var(--accent-indigo); }
+            .nv-link { color:var(--text-secondary); text-decoration:none; font-size:var(--text-xs); font-weight:600; padding:6px 10px; border-radius:var(--radius-sm); transition:all var(--dur-fast); display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+            .nv-link:hover { color:var(--text-main); background:var(--glass-hover); }
+            .nv-link:focus-visible { outline:2px solid var(--accent-indigo); outline-offset:2px; }
             .nv-spacer { flex:1; }
             .nv-main   { padding:1.5rem; max-width:900px; margin:0 auto; flex:1; overflow-y:auto; width:100%; }
             .nv-card   { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:8px; padding:1.2rem; margin-bottom:1rem; }
