@@ -14,6 +14,15 @@ import {
 } from '../core/identityService.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
+// PERM-USER-001 sprint E+ refinement · permaweb publish/revoke al panell d'identitat
+import {
+    buildPublicRegistryEntry, signRegistryEntry, verifyRegistryEntry,
+    publishToPermaweb, revokeFromPermaweb, PRICING,
+    PUBLIC_REGISTRY_TYPE, registryEntryIdFor,
+} from '../core/publicRegistryService.js';
+import { KB } from '../core/kb.js';
+import { visibleProjects } from '../core/projectFilter.js';
+import { getOrCreateSigningKey } from '../core/projectIO.js';
 
 export default class IdentityView {
     constructor() {
@@ -123,6 +132,14 @@ export default class IdentityView {
                     <div id="idWalletErr" style="display:none;margin-top:0.4rem;font-size:0.78rem;color:var(--accent-red);"></div>
                 </div>
 
+                <div class="id-card" id="idPermawebCard" style="border-left-color:#06b6d4;">
+                    <h2>🌐 Registre públic · Permaweb</h2>
+                    <div class="id-meta">Publica el teu perfil al permaweb Arweave perquè altres operadors SOS puguin descobrir-te i verificar la teva identitat amb ECDSA P-256. <strong>Cost ${PRICING.publishEur.toFixed(2)}€</strong> una sola vegada · es descompta del wallet del projecte triat (no credit card). Verify és free per a tothom · publicat = visible al <a href="/registry" data-link style="color:var(--accent-indigo);">/registre</a> de qualsevol SOS local.</div>
+                    <div id="idPermawebBody" style="margin-top:0.8rem;">
+                        <div class="id-meta" style="font-style:italic;">Carregant estat…</div>
+                    </div>
+                </div>
+
                 <div class="id-card" style="border-left-color:var(--accent-green);">
                     <h2>🪪 Conectar OAuth</h2>
                     <div class="id-meta">Vincula GitHub · Google · email magic-link para que otros operadores te encuentren sin necesidad de cripto.</div>
@@ -141,6 +158,8 @@ export default class IdentityView {
         ensureExplainerStyle();
         bindExplainerBadges(document);
         this._renderWalletList();
+        // PERM-USER-001 sprint E+ · render permaweb card (async · llegeix KB)
+        this._renderPermawebCard().catch(e => console.warn('[identity] permaweb card', e));
 
         document.getElementById('idLinkWallet')?.addEventListener('click', async () => {
             const addrEl  = document.getElementById('idWalletAddr');
@@ -221,6 +240,148 @@ export default class IdentityView {
 
     _esc(s) {
         return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+    }
+
+    // ── PERM-USER-001 sprint E+ · Permaweb publish/revoke ─────────────────
+    async _renderPermawebCard() {
+        const body = document.getElementById('idPermawebBody');
+        if (!body) return;
+        const id = this.identity;
+        if (!id) {
+            body.innerHTML = '<div class="id-meta" style="color:var(--accent-orange);">Necessites identitat creada · pulsa "💾 Guardar" abans.</div>';
+            return;
+        }
+        // Cerca entry ja publicat al KB
+        let entry = null;
+        try {
+            const existing = await KB.getNode(registryEntryIdFor(id.primaryDid));
+            if (existing && existing.type === PUBLIC_REGISTRY_TYPE) entry = existing;
+        } catch (_) {}
+
+        const projects = visibleProjects(store.getState().projects);
+        const projectOptions = projects.map(p => `<option value="${this._esc(p.id)}">${this._esc(p.nombre || p.name || p.id)}</option>`).join('');
+
+        const isPublished = !!(entry && entry.content?.arweaveTxId);
+
+        if (isPublished) {
+            const tx = entry.content.arweaveTxId;
+            const publishedAt = new Date(entry.content.permawebPublishedAt || entry.content.publishedAt || 0).toLocaleDateString('ca-ES');
+            body.innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr auto;gap:0.6rem;align-items:center;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.30);border-radius:8px;padding:0.7rem 0.9rem;">
+                    <div>
+                        <div style="font-weight:700;color:var(--accent-green);">✓ Publicat al permaweb</div>
+                        <div class="id-meta" style="margin-top:4px;">Tx · <code style="color:var(--accent-indigo);">${this._esc(tx.slice(0,12))}…</code> · ${publishedAt}</div>
+                    </div>
+                    <a href="https://arweave.net/${encodeURIComponent(tx)}" target="_blank" rel="noopener" class="id-btn">🔗 Veure tx</a>
+                </div>
+                <div style="margin-top:0.7rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                    <label class="id-meta" style="white-space:nowrap;">Wallet del projecte ·</label>
+                    <select id="idPermawebProject" class="id-input" style="width:auto;flex:1;min-width:180px;">
+                        <option value="">— Tria projecte —</option>
+                        ${projectOptions}
+                    </select>
+                    <button class="id-btn" id="idPermawebRevoke" style="border-color:rgba(239,68,68,0.4);color:var(--accent-red);">🗑 Revocar (${PRICING.revokeEur.toFixed(2)}€)</button>
+                </div>
+                <div id="idPermawebStatus" class="id-status" style="margin-top:0.5rem;"></div>
+            `;
+        } else {
+            body.innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr auto;gap:0.6rem;align-items:center;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:8px;padding:0.7rem 0.9rem;">
+                    <div>
+                        <div style="font-weight:700;color:var(--text-secondary);">— No publicat encara</div>
+                        <div class="id-meta" style="margin-top:4px;">Quan publiques · qualsevol SOS local pot descobrir-te i verificar la teva identitat.</div>
+                    </div>
+                    <div style="font-family:var(--font-mono);font-size:0.85rem;color:var(--accent-indigo);font-weight:700;">${PRICING.publishEur.toFixed(2)}€</div>
+                </div>
+                <div style="margin-top:0.7rem;display:grid;grid-template-columns:1fr auto;gap:0.5rem;align-items:center;">
+                    <select id="idPermawebProject" class="id-input">
+                        <option value="">— Tria projecte (font del saldo) —</option>
+                        ${projectOptions}
+                    </select>
+                    <button class="id-btn id-btn-primary" id="idPermawebPublish">🌐 Publicar</button>
+                </div>
+                <div id="idPermawebStatus" class="id-status" style="margin-top:0.5rem;"></div>
+            `;
+        }
+        this._bindPermawebCard(entry);
+    }
+
+    _bindPermawebCard(entry) {
+        const status = () => document.getElementById('idPermawebStatus');
+        const setStatus = (msg, color) => {
+            const s = status();
+            if (!s) return;
+            s.textContent = msg;
+            s.style.color = color || 'var(--accent-green)';
+            s.style.display = msg ? 'block' : 'none';
+        };
+
+        document.getElementById('idPermawebPublish')?.addEventListener('click', async () => {
+            const btn = document.getElementById('idPermawebPublish');
+            const projSel = document.getElementById('idPermawebProject');
+            const projectId = projSel?.value;
+            if (!projectId) { setStatus('✗ Tria un projecte primer · el cost es descomptarà del seu wallet', 'var(--accent-orange)'); return; }
+            btn.disabled = true; btn.textContent = '⏳ Signant…';
+            setStatus('Construint entry · signant amb ECDSA P-256…', 'var(--text-muted)');
+            try {
+                const id = this.identity;
+                const keyMeta = await getOrCreateSigningKey();
+                // Build entry des de la identitat actual
+                const entry = buildPublicRegistryEntry({
+                    did:         id.primaryDid,
+                    handle:      id.handle || null,
+                    displayName: id.displayName || 'Operador',
+                    bio:         id.bio || '',
+                    avatar:      id.avatar || null,
+                    publicJwk:   keyMeta.publicJwk,
+                    skillsDeclared: id.skillsDeclared || [],
+                    sectorsExperience: id.sectorsExperience || [],
+                });
+                const signed = await signRegistryEntry({ entry, privateJwk: keyMeta.privateJwk });
+                btn.textContent = '⏳ Pujant al permaweb…';
+                setStatus('Pujant entry al permaweb via Turbo SDK…', 'var(--text-muted)');
+                const result = await publishToPermaweb({ entry: signed, projectId });
+                setStatus(`✓ Publicat · txId ${result.txId.slice(0,12)}… · cost ${result.costEur.toFixed(2)}€`, 'var(--accent-green)');
+                setTimeout(() => this._renderPermawebCard(), 800);
+            } catch (e) {
+                console.error('[permaweb] publish failed', e);
+                setStatus('✗ ' + (e?.message || 'error desconegut'), 'var(--accent-red)');
+                btn.disabled = false; btn.textContent = '🌐 Publicar';
+            }
+        });
+
+        document.getElementById('idPermawebRevoke')?.addEventListener('click', async () => {
+            const btn = document.getElementById('idPermawebRevoke');
+            const projSel = document.getElementById('idPermawebProject');
+            const projectId = projSel?.value;
+            if (!projectId) { setStatus('✗ Tria projecte (saldo)', 'var(--accent-orange)'); return; }
+            if (!entry || !entry.content?.arweaveTxId) { setStatus('✗ Cap tx per revocar', 'var(--accent-red)'); return; }
+            if (!confirm('Revocar el perfil públic? El registre original queda al permaweb (immutable) però amb tag revocation associat · els SOS locals que sincronitzin després el descartaran del lookup. Cost ' + PRICING.revokeEur.toFixed(2) + '€.')) return;
+            btn.disabled = true; btn.textContent = '⏳ Revocant…';
+            setStatus('Pujant revocation al permaweb…', 'var(--text-muted)');
+            try {
+                const result = await revokeFromPermaweb({
+                    revokesTxId: entry.content.arweaveTxId,
+                    did:         entry.content.did,
+                    projectId,
+                });
+                // Marca l'entry local com a revocat
+                try {
+                    const updated = {
+                        ...entry,
+                        content: { ...entry.content, _revoked: true, _revocationTxId: result.revocationTxId },
+                        updatedAt: Date.now(),
+                    };
+                    await KB.upsert(updated);
+                } catch (_) {}
+                setStatus(`✓ Revocat · revocation txId ${result.revocationTxId.slice(0,12)}…`, 'var(--accent-green)');
+                setTimeout(() => this._renderPermawebCard(), 800);
+            } catch (e) {
+                console.error('[permaweb] revoke failed', e);
+                setStatus('✗ ' + (e?.message || 'error desconegut'), 'var(--accent-red)');
+                btn.disabled = false; btn.textContent = `🗑 Revocar (${PRICING.revokeEur.toFixed(2)}€)`;
+            }
+        });
     }
 
     destroy() {}
