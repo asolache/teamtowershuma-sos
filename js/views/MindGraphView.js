@@ -168,8 +168,12 @@ export default class MindGraphView {
                 });
                 kbIds.add(p.id);
             }
-            // Roles del projecte · viuen a p.roles[] o p.vna_roles[]
-            const roles = Array.isArray(p.roles) ? p.roles : (Array.isArray(p.vna_roles) ? p.vna_roles : []);
+            // Roles del projecte · poden viure a p.roles[] i/o p.vna_roles[]
+            // (legacy V11 · alguns projectes seed encara usen vna_roles, altres roles)
+            const roles = [
+                ...(Array.isArray(p.roles)     ? p.roles     : []),
+                ...(Array.isArray(p.vna_roles) ? p.vna_roles : []),
+            ];
             for (const r of roles) {
                 if (!r || !r.id || kbIds.has(r.id)) continue;
                 synthetic.push({
@@ -187,8 +191,11 @@ export default class MindGraphView {
                 });
                 kbIds.add(r.id);
             }
-            // Transactions del projecte · viuen a p.vna_transactions[] o p.transactions[]
-            const txs = Array.isArray(p.vna_transactions) ? p.vna_transactions : (Array.isArray(p.transactions) ? p.transactions : []);
+            // Transactions del projecte · poden viure a p.vna_transactions[] o p.transactions[]
+            const txs = [
+                ...(Array.isArray(p.vna_transactions) ? p.vna_transactions : []),
+                ...(Array.isArray(p.transactions)     ? p.transactions     : []),
+            ];
             for (const t of txs) {
                 if (!t || !t.id || kbIds.has(t.id)) continue;
                 synthetic.push({
