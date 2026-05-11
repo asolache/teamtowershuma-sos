@@ -6,6 +6,20 @@
 /* ── RESET ──────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+/* UX-AUDIT-001 sprint H+ · reset de user-agent defaults a <button>.
+   Sense això, qualsevol button amb una className que no defineixi
+   explícitament bg/color/font/border (per exemple els de la nav grouped
+   amb classes minimals tipus .sv-link · .w-link) hereta el style nadiu
+   del navegador (gris-blanc amb text negre, font diferent) i sortia
+   inconsistent dins el topbar fosc/clar de SOS. */
+button {
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    border: 0;
+    cursor: pointer;
+}
 body {
     font-family: var(--font-base);
     background: var(--bg-dark);

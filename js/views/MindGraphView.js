@@ -138,8 +138,30 @@ export default class MindGraphView {
 
     async _load() {
         await KB.init();
-        this.allNodes = await KB.getAllNodes();
+        const kbNodes = await KB.getAllNodes();
         this.projects = visibleProjects(store.getState().projects);
+
+        // FIX 2026-05-10 · els `project` viuen a `state.projects[]` (no a KB).
+        // Sense aquesta injecció, els SOPs/WOs creats apareixen al graph però
+        // sense node arrel del projecte i sense parent edges visibles.
+        const kbIds = new Set(kbNodes.map(n => n.id));
+        const projectSynthetic = this.projects
+            .filter(p => p && p.id && !kbIds.has(p.id))
+            .map(p => ({
+                id:        p.id,
+                type:      'project',
+                projectId: p.id,
+                content:   {
+                    name:        p.nombre || p.name || p.id,
+                    sectorId:    p.sector_id || p.based_on_sector || null,
+                    description: p.description || '',
+                    tags:        Array.isArray(p.tags) ? p.tags : [],
+                },
+                keywords:  ['type:project', 'kind:project'],
+                createdAt: p.createdAt || 0,
+                updatedAt: p.updatedAt || p.createdAt || 0,
+            }));
+        this.allNodes = [...projectSynthetic, ...kbNodes];
     }
 
     _populateProjectFilter() {
