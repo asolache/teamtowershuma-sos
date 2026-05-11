@@ -2420,6 +2420,16 @@ Pendent Sprint H+: refinaments puntuals si apareixen regressions (Matriu skin vi
 | **Phase filter chips** | Sota el panell del membre · 5 chips (Tots · 🎨 DESIGN · 🛠 BUILD · ⚙ OPERATE · 💶 LEDGER) amb count per fase. Click → re-render in-place del project list filtrat per fase. `this._phaseFilter` persisteix dins l'instància. Default = 'all'. Empty state per fase si no hi ha projectes en aquesta fase. Sector grouping es manté DINS la fase seleccionada (no se substitueix · es complementa). |
 | **Reframe enfoque** | Dashboard ara obre amb identitat → impacte → projectes (com a "panell del membre", no com a "lista de projectes técnica"). Coherent amb input @alvaro "la Matriu son las personas". |
 
+### Sprint H+ fix lot 2026-05-10 · Sectores nav + bug subtipus + audit pendents
+
+| Fix | Detall |
+|---|---|
+| **`js/core/sectorSubtypes.js` realineat amb CNAE** | Bug crític · les keys del SECTOR_SUBTYPES feien servir taxonomia Matriu (A=Salut · B=Habitatge…) que NO coincideix amb les del `KnowledgeLoader.listSectors()` (A=Agriculture · B=Mining…). Resultat: l'usuari triava un sector al wizard "+ Nou projecte" i veia subtipus d'un àmbit no relacionat. Reescrit el dict amb keys CNAE A-S agrupant els subtipus existents per àmbit semàntic. IDs dels subtipus mantinguts (`A-residencia` continua sent `A-residencia` però ara viu sota R · Salut). `getSubtypeById` amb fallback que cerca a tots els sectors per backwards compat de projectes amb subtipus antic. |
+| **`/sectors` view nova · `js/views/SectorsView.js`** | Substitueix el botó "📚 Knowledge Base" del topbar del Dashboard (sortia idèntic a totes les vistes · saturava). Pàgina dedicada amb llista dels 19 sectors A-S amb readiness badges (ready/solid/tier 2) + drill-down de roles + transaccions clau. Mateixa lògica que el panell lateral del Dashboard, com a vista pròpia (grid 2 columnes responsive). |
+| **NAV_DESTINATIONS · entry `sectors`** | Afegit a la categoria knowledge · icon 📚 · label "Sectores" · global:true · hint "Catálogo A-S · readiness · roles y transacciones tipo del KB". Knowledge group passa de 5 a 6 links. Tests actualitzats (NAV_DESTINATIONS.length 18→19 · linksGlobal 14→15 · linksProject 18→19 · knowledge group 5→6). |
+| **Dashboard topbar polit** | Botó `dashBtnKB` eliminat del topbar (mantingut comment per traçabilitat). Topbar més net amb només Export · Import · + New Project + lang selector. |
+| **TODO Sprint H+ pendents** | Auditoria visual de TOTES les vistes (19) que verifiqui: (1) nav grouped es renderitza correctament a la topbar de cada view · (2) cap botó hardcodejat amb color trencat en light/dark · (3) `:focus-visible` consistent · (4) breadcrumb visible · (5) bottom nav mobile actiu correcte per cada ruta. Cada vista té el seu propi className per als nav buttons (sv-link · kb-link · vmap-btn · etc.) i poden tenir regressions visuals subtils que només es veuen en navegació real. |
+
 ### Sprint D fase A entregat 2026-05-10 · Multidioma · CA afegit + default ES + selector 3 botons
 
 | Fix | Detall |
