@@ -1,0 +1,15 @@
+{
+    "name": "teamtowers-sos-v11",
+    "version": "11.19.0",
+    "description": "TeamTowers SOS V11 · Swarm Operative System · local-first · Antigravity",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "test": "node js/tests/publicRegistry.test.js && node js/tests/fundFlow.test.js",
+        "test:permaweb": "node js/tests/publicRegistry.test.js",
+        "test:fund-flow": "node js/tests/fundFlow.test.js"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
