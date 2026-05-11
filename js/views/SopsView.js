@@ -141,7 +141,7 @@ export default class SopsView {
                 <a href="/" data-link class="sv-logo">🗼 Team<span>Towers</span></a>
                 <span class="sv-title">SOPs del proyecto</span>
                 <div class="sv-spacer"></div>
-                ${renderNavGroupedHtml({ active: 'sops', projectId: this.projectId, className: 'sv-link' })}
+                
                 ${this.projectId ? `<button class="sv-btn sv-btn-primary" id="svBtnBulkGen" title="Genera SOPs faltantes para todos los roles del proyecto">🤖 Generar todos los SOPs</button>` : ''}
             </div>
             <div class="sv-main" id="svMain"></div>

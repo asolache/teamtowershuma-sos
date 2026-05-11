@@ -132,7 +132,7 @@ export default class ValueAccountingView {
                 <span class="va-title">📊 Contabilitat de valor ${renderExplainerBadge('triple-entry-accounting', { size: 'xs' })} ${renderExplainerBadge('slicing-pie', { size: 'xs' })} ${renderExplainerBadge('fair-fractal-tokenomics', { size: 'xs' })}</span>
                 <div class="va-spacer"></div>
                 <a href="/project/${encodeURIComponent(p.id)}" data-link class="va-link">🎛 Panel projecte</a>
-                ${renderNavGroupedHtml({ active: '', projectId: p.id, className: 'va-link' })}
+                
             </div>
 
             <div class="va-main">

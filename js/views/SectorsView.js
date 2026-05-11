@@ -103,7 +103,7 @@ export default class SectorsView {
                 <a href="/" data-link class="sec-logo">🗼 Team<span>Towers</span></a>
                 <span class="sec-title">📚 Sectors · catàleg A-S</span>
                 <div class="sec-spacer"></div>
-                ${renderNavGroupedHtml({ active: 'sectors', className: 'sec-link' })}
+                
             </div>
 
             <div class="sec-main">

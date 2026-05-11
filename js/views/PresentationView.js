@@ -196,7 +196,7 @@ export default class PresentationView {
                 <span style="color:var(--text-muted);">·</span>
                 <a href="/map?project=${encodeURIComponent(project.id)}" data-link class="pv-back">🗺 Editar mapa</a>
                 <div style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;">
-                    ${renderNavGroupedHtml({ active: '', projectId: project.id, className: 'pv-back', activeClass: '' })}
+                    
                     <button id="pvBtnPrint" class="pv-back" style="background:transparent;border:1px solid var(--border-default);padding:6px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:var(--text-xs);">🖨 Imprimir / PDF</button>
                 </div>
             </div>

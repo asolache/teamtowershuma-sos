@@ -126,7 +126,7 @@ export default class ProjectHubView {
                 <a href="/" data-link class="ph-logo">🗼 Team<span>Towers</span></a>
                 <span class="ph-title">Proyecto · panel</span>
                 <div class="ph-spacer"></div>
-                ${renderNavGroupedHtml({ active: '', projectId: this.projectId, className: 'ph-link' })}
+                
                 <a href="/n/${encodeURIComponent(p.id)}" data-link class="ph-link">📂 Nodo</a>
             </div>
 

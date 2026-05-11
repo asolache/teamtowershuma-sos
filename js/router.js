@@ -7,7 +7,7 @@ import { KB }    from './core/kb.js';
 // vista tenga que llamarlo a mano.
 import {
     ensureNavGroupStyle, bindNavGroupDropdowns,
-    paintBreadcrumb, paintBottomNav,
+    paintBreadcrumb, paintBottomNav, paintGlobalNav,
 } from './core/navService.js';
 import { bootTheme } from './core/themeService.js';
 
@@ -102,6 +102,23 @@ async function router() {
         ensureNavGroupStyle();
         bindNavGroupDropdowns(document.getElementById('app') || document);
 
+        // UX-AUDIT-001 sprint H+ pass 5 · Global Nav sticky al top · ABANS
+        // del breadcrumb. Slot únic gestionat aquí · cada vista no la incrusta.
+        try {
+            let gslot = document.getElementById('sos-global-nav-slot');
+            if (!gslot) {
+                gslot = document.createElement('div');
+                gslot.id = 'sos-global-nav-slot';
+                const app = document.getElementById('app');
+                if (app && app.parentNode) {
+                    app.parentNode.insertBefore(gslot, app);
+                } else {
+                    document.body.insertBefore(gslot, document.body.firstChild);
+                }
+            }
+            paintGlobalNav({ pathname: window.location.pathname, search: window.location.search });
+        } catch (e) { console.warn('[Router · global-nav]', e); }
+
         // UX-NAV-003 · breadcrumb dinámico bajo la topbar (zero changes en
         // vistas individuales · el slot se gestiona aquí). Calcula la fase
         // del proyecto activo si lo hay, vía stats del KB.
@@ -110,7 +127,8 @@ async function router() {
             if (!slot) {
                 slot = document.createElement('div');
                 slot.id = 'sos-breadcrumb-slot';
-                // Insertar como hermano del #app, justo antes de él en el body.
+                // Insertar como hermano del #app, justo antes de él en el body
+                // PERÒ després del global-nav-slot (que ja existeix per inserció anterior).
                 const app = document.getElementById('app');
                 if (app && app.parentNode) {
                     app.parentNode.insertBefore(slot, app);

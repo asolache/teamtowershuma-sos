@@ -79,7 +79,7 @@ export default class EfficiencyView {
                 <a href="/" data-link class="ef-logo">🗼 Team<span>Towers</span></a>
                 <span class="ef-title">Efficiency · KM-001 ahorro IA ${renderExplainerBadge('context-pruning', { size: 'xs' })}</span>
                 <div class="ef-spacer"></div>
-                ${renderNavGroupedHtml({ active: '', className: 'ef-link' })}
+                
             </div>
 
             <div class="ef-main" id="efMain">

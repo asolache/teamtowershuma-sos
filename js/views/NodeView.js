@@ -113,7 +113,7 @@ export default class NodeView {
                 <a href="/" data-link class="nv-logo">🗼 Team<span>Towers</span></a>
                 <span style="color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Nodo · ${this._esc(n.type || 'sin tipo')}</span>
                 <div class="nv-spacer"></div>
-                ${renderNavGroupedHtml({ active: '', projectId: n.projectId || c.providerProjectId, className: 'nv-link' })}
+                
             </div>
             <div class="nv-main">
                 <h1 style="font-size:1.5rem;color:var(--text-main);margin:0 0 0.6rem 0;">${this._esc(title)}</h1>

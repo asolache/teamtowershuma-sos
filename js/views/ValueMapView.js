@@ -845,7 +845,7 @@ export default class ValueMapView {
                 <div class="vmap-topbar-actions">
                     ${this._state.projectId ? `<a href="/project/${this._state.projectId}" data-link class="vmap-btn" style="text-decoration:none;color:var(--accent-green);border-color:rgba(16,185,129,0.45);" title="Panel del proyecto · stats + ofertas + herramientas">🎛 Panel</a>` : ''}
                     ${this._state.projectId ? `<a href="/presentation?project=${encodeURIComponent(this._state.projectId)}" data-link class="vmap-btn" style="text-decoration:none;color:var(--accent-indigo);border-color:rgba(99,102,241,0.45);" title="Vista de presentació · landing read-only del projecte (rols + entregables + SOPs)">🎤 Presentació</a>` : ''}
-                    ${renderNavGroupedHtml({ active: 'map', projectId: this._state.projectId, className: 'vmap-btn' })}
+                    
                     <button class="vmap-btn" style="border-color:var(--accent-purple);color:var(--accent-purple);" id="vmapBtnAI">${t('vmap.suggest')}</button>
                     <button class="vmap-btn" id="vmapBtnAnim" title="H_ANIM_001 · animar flujo de valor por sequence_order de las transactions">▶ Animar flujo</button>
                     <button class="vmap-btn" id="vmapBtnInferOrder" title="H_ANIM_001 sprint C · IA infiere sequence_order y phase de todas las transactions">🤖 Inferir orden IA</button>

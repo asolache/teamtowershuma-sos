@@ -86,7 +86,7 @@ export default class MindGraphView {
                 <a href="/" data-link class="mg-logo">🗼 Team<span>Towers</span></a>
                 <span class="mg-title">Mind-as-Graph · vista total</span>
                 <div class="mg-spacer"></div>
-                ${renderNavGroupedHtml({ active: '', className: 'mg-link' })}
+                
             </div>
 
             <div class="mg-controls">

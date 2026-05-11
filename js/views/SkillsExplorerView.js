@@ -72,7 +72,7 @@ export default class SkillsExplorerView {
                 <span class="se-title">🧠 Skills · catàleg universal ${renderExplainerBadge('vna', { size: 'xs' })} ${renderExplainerBadge('folksonomy', { size: 'xs' })} ${renderExplainerBadge('taxonomy', { size: 'xs' })}</span>
                 <div class="se-spacer"></div>
                 <a href="/learn" data-link class="se-link">📜 Conceptes</a>
-                ${renderNavGroupedHtml({ active: '', className: 'se-link' })}
+                
             </div>
 
             <div class="se-main">

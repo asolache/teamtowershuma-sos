@@ -126,7 +126,7 @@ export default class MarketView {
                 <a href="/" data-link class="mk-logo">🗼 Team<span>Towers</span></a>
                 <span class="mk-title">Mercado SOS · productos y servicios ${renderExplainerBadge('slicing-pie', { size: 'xs' })}</span>
                 <div class="mk-spacer"></div>
-                ${renderNavGroupedHtml({ active: 'market', className: 'mk-link' })}
+                
                 <button class="mk-btn mk-btn-primary" id="mkBtnNew">＋ Nueva oferta</button>
             </div>
 

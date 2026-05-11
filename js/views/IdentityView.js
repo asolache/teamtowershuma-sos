@@ -69,7 +69,7 @@ export default class IdentityView {
                 <a href="/" data-link class="id-logo">🗼 Team<span>Towers</span></a>
                 <span class="id-title">Identidad · perfil del operador ${renderExplainerBadge('did', { size: 'xs' })} ${renderExplainerBadge('sbt', { size: 'xs' })}</span>
                 <div class="id-spacer"></div>
-                ${renderNavGroupedHtml({ active: '', className: 'id-link' })}
+                
             </div>
 
             <div class="id-main">

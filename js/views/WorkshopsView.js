@@ -155,7 +155,7 @@ export default class WorkshopsView {
                 <a href="/" data-link class="ws-logo">🗼 Team<span>Towers</span></a>
                 <span class="ws-title">Workshops · Fent Pinya Ops</span>
                 <div class="ws-spacer"></div>
-                ${renderNavGroupedHtml({ active: '', className: 'ws-link' })}
+                
                 <button class="ws-btn ws-btn-primary" id="wsBtnNew">＋ Nuevo taller</button>
             </div>
 

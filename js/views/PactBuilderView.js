@@ -92,7 +92,7 @@ export default class PactBuilderView {
                 <div class="pb-spacer"></div>
                 <a href="/project/${encodeURIComponent(p.id)}" data-link class="pb-link">🎛 Panel projecte</a>
                 <a href="/value-accounting?project=${encodeURIComponent(p.id)}" data-link class="pb-link">🥧 Tarta</a>
-                ${renderNavGroupedHtml({ active: '', projectId: p.id, className: 'pb-link' })}
+                
             </div>
 
             <div class="pb-main">

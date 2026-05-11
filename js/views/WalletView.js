@@ -107,7 +107,7 @@ export default class WalletView {
                 <a href="/" data-link class="w-logo">🗼 Team<span>Towers</span></a>
                 <span class="w-title">Wallet · prepago del proyecto ${renderExplainerBadge('econom-ia', { size: 'xs' })}</span>
                 <div class="w-spacer"></div>
-                ${renderNavGroupedHtml({ active: '', projectId: this.projectId, className: 'w-link' })}
+                
             </div>
             <div class="w-main" id="wMain">
                 <p style="color:var(--text-muted);font-size:0.85rem;">Cargando…</p>
