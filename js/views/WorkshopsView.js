@@ -111,7 +111,7 @@ export default class WorkshopsView {
             .ws-spacer     { flex:1; }
             .ws-btn        { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem; }
             .ws-btn:hover  { background:var(--bg-elevated); }
-            .ws-btn-primary{ background:#6366f1; border-color:#6366f1; color:var(--text-main); }
+            .ws-btn-primary{ background:#6366f1; border-color:#6366f1; color:#fff; }
             .ws-btn-primary:hover { background:#4f46e5; }
             .ws-link       { color:#6366f1; text-decoration:none; }
 

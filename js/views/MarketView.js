@@ -73,7 +73,7 @@ export default class MarketView {
             .mk-link   { color:#6366f1; text-decoration:none; font-size:0.85rem; }
             .mk-btn    { background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-default); padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem; font-family:inherit; }
             .mk-btn:hover { background:var(--bg-elevated); }
-            .mk-btn-primary { background:#6366f1; border-color:#6366f1; color:var(--text-main); }
+            .mk-btn-primary { background:#6366f1; border-color:#6366f1; color:#fff; }
             .mk-btn-primary:hover { background:#4f46e5; }
 
             .mk-search-bar { display:flex; gap:0.5rem; align-items:center; padding:0.8rem 1.5rem; background:var(--bg-panel); border-bottom:1px solid var(--border-default); flex-shrink:0; flex-wrap:wrap; }
