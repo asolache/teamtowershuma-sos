@@ -115,7 +115,8 @@ export function buildGraphFromKb(allNodes, options = {}) {
     //     Ojo: muchos refs son slugs (sopRef='sop-fent-pinya-taller') que
     //     coinciden con node.id. Si no hay match, se ignoran.
     const pushRel = (src, tgt, label) => {
-        if (!tgt || !idSet.has(tgt) || src === tgt) return;
+        if (!src || !tgt || src === tgt) return;
+        if (!idSet.has(src) || !idSet.has(tgt)) return;
         edges.push({ source: src, target: tgt, kind: 'relation', weight: 1.5, label });
     };
     for (const n of filtered) {
