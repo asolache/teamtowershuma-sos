@@ -299,14 +299,14 @@ export default class ProjectHubView {
                         <div style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:1.05rem;color:#fff;line-height:1.2;">${this._esc(c.displayName || member.id)}</div>
                         <div style="font-family:monospace;font-size:0.7rem;color:#888;margin-top:2px;">${this._esc(c.handle || member.id.slice(-12))}</div>
                     </div>
-                    ${isOwner ? '<span class="ph-badge" style="background:rgba(192,132,252,0.18);color:#c084fc;border:1px solid rgba(192,132,252,0.4);">★ owner</span>' : ''}
+                    ${isOwner ? '<span class="ph-badge" style="background:rgba(192,132,252,0.18);color:var(--accent-purple);border:1px solid rgba(192,132,252,0.4);">★ owner</span>' : ''}
                 </header>
                 ${c.guardianOf ? `<div style="font-family:monospace;font-size:0.72rem;color:${guardianColor};margin-top:8px;text-transform:uppercase;letter-spacing:0.05em;">⚡ ${this._esc(c.guardianOf)}</div>` : ''}
                 ${c.bio ? `<p style="font-size:0.82rem;color:#aaa;line-height:1.5;margin:8px 0;">${this._esc(c.bio)}</p>` : ''}
                 ${skills.length > 0 ? `
                     <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">
                         ${skills.map(sk => `<span style="background:rgba(255,255,255,0.06);color:#bbb;padding:2px 8px;border-radius:99px;font-family:monospace;font-size:0.7rem;">${this._esc(sk)}</span>`).join('')}
-                        ${(c.skillsDeclared || []).length > 4 ? `<span style="background:rgba(192,132,252,0.12);color:#c084fc;padding:2px 8px;border-radius:99px;font-family:monospace;font-size:0.7rem;">+${(c.skillsDeclared || []).length - 4}</span>` : ''}
+                        ${(c.skillsDeclared || []).length > 4 ? `<span style="background:rgba(192,132,252,0.12);color:var(--accent-purple);padding:2px 8px;border-radius:99px;font-family:monospace;font-size:0.7rem;">+${(c.skillsDeclared || []).length - 4}</span>` : ''}
                     </div>
                 ` : ''}
                 ${fitMax > 0 ? `<div style="margin-top:8px;font-family:monospace;font-size:0.72rem;color:#fbbf24;">fit ${(fitMax * 100).toFixed(0)}% · ${projectAssigns.length} role${projectAssigns.length !== 1 ? 's' : ''}</div>` : ''}
@@ -328,13 +328,13 @@ export default class ProjectHubView {
             ${meta ? `
                 <div style="background:rgba(192,132,252,0.06);border:1px solid rgba(192,132,252,0.25);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem;font-size:0.85rem;">
                     <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;color:#c8c8d4;">
-                        <strong style="color:#c084fc;font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Tipus</strong>
+                        <strong style="color:var(--accent-purple);font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Tipus</strong>
                         <span>${this._esc(projectType?.label || meta.typeId)}</span>
-                        <strong style="color:#c084fc;font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Sectors</strong>
+                        <strong style="color:var(--accent-purple);font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Sectors</strong>
                         <span>${this._esc((meta.sectorAffinity || []).join(' · ') || '—')}</span>
-                        <strong style="color:#c084fc;font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Guardians</strong>
-                        <span>${(requiredGuardians.map(g => `<span class="ph-badge" style="background:rgba(192,132,252,0.18);color:#c084fc;border:1px solid rgba(192,132,252,0.4);">${this._esc(g)}</span>`)).join(' ') || '—'}</span>
-                        <strong style="color:#c084fc;font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Setmanes est.</strong>
+                        <strong style="color:var(--accent-purple);font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Guardians</strong>
+                        <span>${(requiredGuardians.map(g => `<span class="ph-badge" style="background:rgba(192,132,252,0.18);color:var(--accent-purple);border:1px solid rgba(192,132,252,0.4);">${this._esc(g)}</span>`)).join(' ') || '—'}</span>
+                        <strong style="color:var(--accent-purple);font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Setmanes est.</strong>
                         <span>${meta.expectedOutcomes?.weeksToOperateMin ?? '?'}–${meta.expectedOutcomes?.weeksToOperateMax ?? '?'}</span>
                     </div>
                 </div>
@@ -381,7 +381,7 @@ export default class ProjectHubView {
             <div id="phSwarmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
                 <div style="background:#0f0f15;border:1px solid rgba(192,132,252,0.3);border-radius:12px;padding:1.5rem;max-width:760px;width:calc(100% - 32px);max-height:90vh;overflow-y:auto;color:#e6e6e6;font-family:var(--font-base,sans-serif);">
                     <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;margin-bottom:1rem;">
-                        <h3 style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:1.6rem;color:#c084fc;margin:0;">🐝 Matchmaker · enjambre ↔ projecte</h3>
+                        <h3 style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:1.6rem;color:var(--accent-purple);margin:0;">🐝 Matchmaker · enjambre ↔ projecte</h3>
                         <button id="phSwarmModalClose" style="background:none;border:0;color:#888;cursor:pointer;font-size:1.4rem;line-height:1;">×</button>
                     </div>
                     <div id="phSwarmModalBody" style="font-size:0.88rem;line-height:1.55;">
@@ -428,7 +428,7 @@ export default class ProjectHubView {
         this._setSwarmModalBody(`
             <div style="text-align:center;padding:2rem 0;">
                 <div style="font-size:2rem;margin-bottom:0.6rem;">🧠</div>
-                <div style="color:#c084fc;">Carregant catàleg + plaçes…</div>
+                <div style="color:var(--accent-purple);">Carregant catàleg + plaçes…</div>
             </div>
         `);
 
@@ -460,7 +460,7 @@ export default class ProjectHubView {
             this._setSwarmModalBody(`
                 <div style="text-align:center;padding:2rem 0;">
                     <div style="font-size:2rem;margin-bottom:0.6rem;">🤖</div>
-                    <div style="color:#c084fc;">L'agent IA està matching ${requiredRoles.length} roles ↔ ${seats.length} plaçes…</div>
+                    <div style="color:var(--accent-purple);">L'agent IA està matching ${requiredRoles.length} roles ↔ ${seats.length} plaçes…</div>
                     <div style="color:#666;font-size:0.78rem;margin-top:0.4rem;">això pot trigar 10-30s segons el provider</div>
                 </div>
             `);
@@ -488,7 +488,7 @@ export default class ProjectHubView {
         } catch (err) {
             console.error('[MAT-003 F] activateSwarm falló:', err);
             this._setSwarmModalBody(`
-                <p style="color:#fca5a5;">Error: ${this._esc(err?.message || String(err))}</p>
+                <p style="color:var(--accent-red);">Error: ${this._esc(err?.message || String(err))}</p>
                 <p style="color:#888;font-size:0.78rem;">Comprova que tens la API key del provider configurada a /settings.</p>
             `);
         }
@@ -515,7 +515,7 @@ export default class ProjectHubView {
 
         const gapsHtml = (team.gaps && team.gaps.length > 0) ? `
             <div style="margin-top:1rem;padding:0.8rem;background:rgba(252,165,165,0.06);border:1px solid rgba(252,165,165,0.3);border-radius:6px;">
-                <strong style="color:#fca5a5;">Gaps · roles sense plaça:</strong>
+                <strong style="color:var(--accent-red);">Gaps · roles sense plaça:</strong>
                 <span style="color:#ddd;">${team.gaps.map(g => this._esc(g.split('::').pop())).join(' · ')}</span>
             </div>
         ` : '';
@@ -583,7 +583,7 @@ export default class ProjectHubView {
         return `
         <div style="height:100dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;color:#888;font-family:monospace;background:#050507;">
             <div style="font-size:2.5rem;">🔍</div>
-            <div style="color:#fca5a5;">${msg}</div>
+            <div style="color:var(--accent-red);">${msg}</div>
             <a href="/dashboard" data-link style="color:#6366f1;font-size:0.85rem;">← Dashboard</a>
         </div>`;
     }

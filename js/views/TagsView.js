@@ -33,7 +33,7 @@ export default class TagsView {
 
             .tg-main   { padding:1.5rem; max-width:1100px; margin:0 auto; flex:1; overflow-y:auto; width:100%; }
             .tg-cloud  { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.5rem; padding:1rem; background:var(--bg-panel); border:1px solid var(--border-default); border-radius:8px; }
-            .tg-chip   { background:rgba(99,102,241,0.1); color:#a5b4fc; padding:4px 10px; border-radius:12px; font-family:monospace; font-size:0.78rem; cursor:pointer; border:1px solid rgba(99,102,241,0.3); transition:all 0.15s; user-select:none; }
+            .tg-chip   { background:rgba(99,102,241,0.1); color:var(--accent-indigo); padding:4px 10px; border-radius:12px; font-family:monospace; font-size:0.78rem; cursor:pointer; border:1px solid rgba(99,102,241,0.3); transition:all 0.15s; user-select:none; }
             .tg-chip:hover { background:rgba(99,102,241,0.25); transform:translateY(-1px); }
             .tg-chip.active { background:rgba(99,102,241,0.4); color:var(--text-main); border-color:#6366f1; }
             .tg-chip .count { opacity:0.6; margin-left:4px; }
@@ -46,7 +46,7 @@ export default class TagsView {
             .tg-card .title  { color:var(--text-main); font-size:0.92rem; font-weight:600; margin:0.2rem 0; }
             .tg-card .meta   { color:var(--text-muted); font-size:0.72rem; }
             .tg-card .tags   { margin-top:0.4rem; display:flex; flex-wrap:wrap; gap:3px; }
-            .tg-card .tags .t { font-size:0.65rem; padding:1px 6px; border-radius:8px; background:rgba(99,102,241,0.12); color:#a5b4fc; font-family:monospace; }
+            .tg-card .tags .t { font-size:0.65rem; padding:1px 6px; border-radius:8px; background:rgba(99,102,241,0.12); color:var(--accent-indigo); font-family:monospace; }
         </style>
 
         <div class="tg-shell">
@@ -99,10 +99,10 @@ export default class TagsView {
         } else {
             const matches = nodesWithTag(this.nodes, this.active);
             if (!matches.length) {
-                listHtml = `<p style="color:#fca5a5;font-size:0.85rem;text-align:center;">Sin nodos con #${this.active}</p>`;
+                listHtml = `<p style="color:var(--accent-red);font-size:0.85rem;text-align:center;">Sin nodos con #${this.active}</p>`;
             } else {
                 listHtml = `
-                    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.6rem;">${matches.length} nodo${matches.length === 1 ? '' : 's'} con <span style="color:#a5b4fc;font-family:monospace;">#${this.active}</span>:</p>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.6rem;">${matches.length} nodo${matches.length === 1 ? '' : 's'} con <span style="color:var(--accent-indigo);font-family:monospace;">#${this.active}</span>:</p>
                     <div class="tg-list">
                         ${matches.map(n => this._cardHtml(n)).join('')}
                     </div>`;

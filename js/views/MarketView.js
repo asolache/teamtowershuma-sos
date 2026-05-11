@@ -81,7 +81,7 @@ export default class MarketView {
             .mk-search-input:focus { border-color:#6366f1; }
             .mk-select { background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); padding:7px 10px; border-radius:6px; font-size:0.82rem; font-family:inherit; outline:none; cursor:pointer; }
             .mk-select:hover { border-color:#3a3a45; }
-            .mk-pill   { background:rgba(99,102,241,0.12); color:#a5b4fc; padding:3px 10px; border-radius:12px; font-size:0.72rem; font-family:monospace; cursor:pointer; border:1px solid rgba(99,102,241,0.3); }
+            .mk-pill   { background:rgba(99,102,241,0.12); color:var(--accent-indigo); padding:3px 10px; border-radius:12px; font-size:0.72rem; font-family:monospace; cursor:pointer; border:1px solid rgba(99,102,241,0.3); }
             .mk-pill:hover { background:rgba(99,102,241,0.25); }
             .mk-pill.active { background:rgba(99,102,241,0.4); color:var(--text-main); border-color:#6366f1; }
             .mk-count  { color:var(--text-muted); font-size:0.78rem; font-family:monospace; }
@@ -95,10 +95,10 @@ export default class MarketView {
             .mk-card h4 { margin:0; font-size:0.95rem; color:var(--text-main); }
             .mk-card .mk-desc { color:var(--text-secondary); font-size:0.78rem; line-height:1.45; max-height:3.7em; overflow:hidden; }
             .mk-card .mk-meta { color:var(--text-muted); font-size:0.72rem; font-family:monospace; display:flex; flex-wrap:wrap; gap:0.5rem; }
-            .mk-card .mk-price { color:#86efac; font-size:0.95rem; font-weight:700; }
-            .mk-card .mk-saving { color:#facc15; font-size:0.72rem; }
+            .mk-card .mk-price { color:var(--accent-green); font-size:0.95rem; font-weight:700; }
+            .mk-card .mk-saving { color:var(--accent-orange); font-size:0.72rem; }
             .mk-card .mk-tags  { display:flex; flex-wrap:wrap; gap:3px; margin-top:0.2rem; }
-            .mk-card .mk-tag   { font-size:0.62rem; padding:1px 6px; border-radius:8px; background:rgba(99,102,241,0.12); color:#a5b4fc; font-family:monospace; }
+            .mk-card .mk-tag   { font-size:0.62rem; padding:1px 6px; border-radius:8px; background:rgba(99,102,241,0.12); color:var(--accent-indigo); font-family:monospace; }
             .mk-card .mk-tag.tax { background:rgba(56,189,248,0.12); color:#7dd3fc; }
 
             .mk-modal { position:fixed; inset:0; background:rgba(0,0,0,0.78); display:flex; align-items:flex-start; justify-content:center; z-index:1000; padding:2rem 1rem; overflow-y:auto; }
@@ -115,7 +115,7 @@ export default class MarketView {
             .mk-cnae-list.show { display:block; }
             .mk-cnae-item { padding:6px 10px; cursor:pointer; font-size:0.78rem; border-bottom:1px solid var(--border-default); }
             .mk-cnae-item:hover { background:var(--bg-elevated); }
-            .mk-cnae-item .code { color:#a5b4fc; font-family:monospace; margin-right:6px; }
+            .mk-cnae-item .code { color:var(--accent-indigo); font-family:monospace; margin-right:6px; }
         </style>
 
         <div class="mk-shell">
@@ -275,9 +275,9 @@ export default class MarketView {
                     ${c.description ? `<p style="color:#ddd;font-size:0.88rem;line-height:1.5;margin-top:0.8rem;">${this._esc(c.description)}</p>` : ''}
 
                     <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:0.8rem;font-size:0.8rem;">
-                        <div><strong style="color:#86efac;font-size:1.05rem;">${c.priceEur != null ? c.priceEur + ' €' : '—'}</strong></div>
+                        <div><strong style="color:var(--accent-green);font-size:1.05rem;">${c.priceEur != null ? c.priceEur + ' €' : '—'}</strong></div>
                         ${c.fmvHumanEquivalentEur ? `<div style="color:var(--text-secondary);">FMV humano equiv: <strong>${c.fmvHumanEquivalentEur} €</strong></div>` : ''}
-                        ${saving ? `<div style="color:#facc15;">✨ Ahorro vs ${this._esc(saving.vsConvLabel)} (rango ${saving.vsConvLowEur}-${saving.vsConvHighEur}€): <strong>${saving.savingEur} € · -${saving.savingPct}%</strong></div>` : ''}
+                        ${saving ? `<div style="color:var(--accent-orange);">✨ Ahorro vs ${this._esc(saving.vsConvLabel)} (rango ${saving.vsConvLowEur}-${saving.vsConvHighEur}€): <strong>${saving.savingEur} € · -${saving.savingPct}%</strong></div>` : ''}
                     </div>
 
                     <table style="margin-top:1rem;width:100%;border-collapse:collapse;font-size:0.78rem;">
@@ -401,7 +401,7 @@ export default class MarketView {
                     <label>Tags folksonómicos (separados por coma)</label>
                     <input id="mkfTags" type="text" placeholder="b2b, vna, urgente, formacion">
 
-                    <div id="mkfErr" style="color:#fca5a5;font-size:0.78rem;margin-top:0.6rem;display:none;"></div>
+                    <div id="mkfErr" style="color:var(--accent-red);font-size:0.78rem;margin-top:0.6rem;display:none;"></div>
 
                     <div class="actions">
                         <button class="mk-btn" id="mkfCancel">Cancelar</button>

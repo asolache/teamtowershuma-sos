@@ -106,7 +106,7 @@ export default class ValueMapView {
             .vmap-shell {
                 display: grid;
                 grid-template-columns: 220px 1fr 260px;
-                grid-template-rows: 48px 1fr;
+                grid-template-rows: auto 1fr;
                 height: 100dvh;
                 width: 100vw;
                 overflow: hidden;
@@ -114,24 +114,28 @@ export default class ValueMapView {
                 font-family: var(--font-base);
             }
 
-            /* ── Topbar ─────────────────────────────────────────────── */
+            /* ── Topbar · Linear-style flex-wrap responsive ───────────── */
             .vmap-topbar {
                 grid-column: 1 / -1;
                 display: flex;
                 align-items: center;
-                gap: 12px;
-                padding: 0 16px;
+                gap: 10px;
+                padding: 8px 16px;
                 border-bottom: 1px solid var(--border-default);
                 background: var(--bg-panel);
                 z-index: 10;
+                flex-wrap: wrap;
+                min-height: 48px;
+                box-sizing: border-box;
             }
             .vmap-topbar-title {
-                font-weight: 800;
+                font-weight: 700;
                 font-size: var(--text-sm);
                 color: var(--text-main);
-                display: flex;
+                display: inline-flex;
                 align-items: center;
                 gap: 8px;
+                white-space: nowrap;
             }
             .vmap-topbar-title span { color: var(--accent-indigo); }
             .vmap-project-name {
@@ -139,34 +143,58 @@ export default class ValueMapView {
                 color: var(--text-muted);
                 font-family: var(--font-mono);
                 margin-left: 4px;
+                max-width: 220px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
-            .vmap-topbar-actions { margin-left: auto; display: flex; gap: 8px; }
+            .vmap-topbar-actions {
+                margin-left: auto;
+                display: flex;
+                gap: 6px;
+                align-items: center;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+            }
             .vmap-btn {
-                background: transparent;
-                border: 1px solid var(--glass-border);
+                background: var(--bg-elevated);
+                border: 1px solid var(--border-default);
                 color: var(--text-secondary);
-                padding: 5px 12px;
+                padding: 6px 12px;
                 border-radius: var(--radius-sm);
                 font-size: var(--text-xs);
-                font-weight: 700;
+                font-weight: 600;
                 cursor: pointer;
                 transition: all var(--dur-fast);
                 font-family: var(--font-base);
+                line-height: 1.3;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                white-space: nowrap;
             }
-            .vmap-btn:hover { border-color: var(--accent-indigo); color: var(--text-main); }
+            .vmap-btn:hover {
+                border-color: var(--accent-indigo);
+                color: var(--text-main);
+                background: var(--glass-hover);
+            }
+            .vmap-btn:focus-visible {
+                outline: 2px solid var(--accent-indigo);
+                outline-offset: 2px;
+            }
             .vmap-btn-primary {
                 background: var(--accent-indigo);
                 border-color: var(--accent-indigo);
-                color: var(--text-main);
+                color: #fff;
             }
-            .vmap-btn-primary:hover { filter: brightness(1.15); }
+            .vmap-btn-primary:hover { filter: brightness(1.10); color: #fff; }
             .vmap-btn-save {
-                background: linear-gradient(135deg, var(--accent-green), #00b248);
-                border: none;
-                color: #000;
-                font-weight: 900;
+                background: linear-gradient(135deg, var(--accent-green), #059669);
+                border: 1px solid transparent;
+                color: #fff;
+                font-weight: 700;
             }
-            .vmap-btn-save:hover { filter: brightness(1.1); }
+            .vmap-btn-save:hover { filter: brightness(1.08); color: #fff; }
 
             /* ── Panel izquierdo ────────────────────────────────────── */
             .vmap-left {
@@ -815,8 +843,8 @@ export default class ValueMapView {
                     <span class="vmap-project-name" id="vmapProjectName">Sin proyecto</span>
                 </div>
                 <div class="vmap-topbar-actions">
-                    ${this._state.projectId ? `<a href="/project/${this._state.projectId}" data-link class="vmap-btn" style="text-decoration:none;color:#86efac;border-color:rgba(34,197,94,0.4);" title="Panel del proyecto · stats + ofertas + herramientas">🎛 Panel</a>` : ''}
-                    ${this._state.projectId ? `<a href="/presentation?project=${encodeURIComponent(this._state.projectId)}" data-link class="vmap-btn" style="text-decoration:none;color:var(--accent-indigo);border-color:rgba(99,102,241,0.4);" title="Vista de presentació · landing read-only del projecte (rols + entregables + SOPs)">🎤 Presentació</a>` : ''}
+                    ${this._state.projectId ? `<a href="/project/${this._state.projectId}" data-link class="vmap-btn" style="text-decoration:none;color:var(--accent-green);border-color:rgba(16,185,129,0.45);" title="Panel del proyecto · stats + ofertas + herramientas">🎛 Panel</a>` : ''}
+                    ${this._state.projectId ? `<a href="/presentation?project=${encodeURIComponent(this._state.projectId)}" data-link class="vmap-btn" style="text-decoration:none;color:var(--accent-indigo);border-color:rgba(99,102,241,0.45);" title="Vista de presentació · landing read-only del projecte (rols + entregables + SOPs)">🎤 Presentació</a>` : ''}
                     ${renderNavGroupedHtml({ active: 'map', projectId: this._state.projectId, className: 'vmap-btn' })}
                     <button class="vmap-btn" style="border-color:var(--accent-purple);color:var(--accent-purple);" id="vmapBtnAI">${t('vmap.suggest')}</button>
                     <button class="vmap-btn" id="vmapBtnAnim" title="H_ANIM_001 · animar flujo de valor por sequence_order de las transactions">▶ Animar flujo</button>
@@ -1795,11 +1823,11 @@ export default class ValueMapView {
         }
         const stepsCount = Array.isArray(existing.content?.steps) ? existing.content.steps.length : 0;
         return `
-            <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:6px 10px;font-size:0.75rem;color:#86efac;display:flex;align-items:center;gap:6px;">
+            <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:6px 10px;font-size:0.75rem;color:var(--accent-green);display:flex;align-items:center;gap:6px;">
                 <span>✅</span>
                 <span><strong>SOP generado</strong> · ${stepsCount} steps</span>
             </div>
-            <button class="vmap-inspector-btn" id="inspBtnViewSop" style="border-color:rgba(34,197,94,0.4);color:#86efac;">📂 Ver SOP del rol</button>
+            <button class="vmap-inspector-btn" id="inspBtnViewSop" style="border-color:rgba(34,197,94,0.4);color:var(--accent-green);">📂 Ver SOP del rol</button>
             <button class="vmap-inspector-btn" id="inspBtnRegenSop" style="border-color:rgba(99,102,241,0.4);color:var(--accent-indigo);">🔁 Regenerar SOP con IA</button>
         `;
     }
@@ -1881,7 +1909,7 @@ export default class ValueMapView {
                     <strong style="color:#fff;">${this._escHtml(sop.name || sop.id)}</strong>
                     <div style="color:#aaa;font-size:0.78rem;margin-top:0.4rem;">${this._escHtml(sop.summary || '')}</div>
                     <div style="margin-top:0.7rem;">
-                        <strong style="color:#a5b4fc;font-size:0.78rem;">Steps generados:</strong>
+                        <strong style="color:var(--accent-indigo);font-size:0.78rem;">Steps generados:</strong>
                         <ol style="font-size:0.78rem;color:#bbb;padding-left:1.2rem;margin-top:0.3rem;">
                             ${(sop.steps || []).map(s => `
                                 <li style="margin-bottom:0.25rem;">
@@ -2931,10 +2959,10 @@ ${ctxResult.systemPrompt}`;
             const fromName = rolesMap.get(tx.from)?.name || tx.from;
             const toName   = rolesMap.get(tx.to)?.name   || tx.to;
             return `<tr>
-                <td style="text-align:center;color:#facc15;font-family:monospace;font-weight:700;">${o.sequence_order}</td>
-                <td style="color:#a5b4fc;font-family:monospace;font-size:0.72rem;">${o.phase ? this._escHtml(o.phase) : '—'}</td>
+                <td style="text-align:center;color:var(--accent-orange);font-family:monospace;font-weight:700;">${o.sequence_order}</td>
+                <td style="color:var(--accent-indigo);font-family:monospace;font-size:0.72rem;">${o.phase ? this._escHtml(o.phase) : '—'}</td>
                 <td style="color:#fff;">${this._escHtml(fromName)} <span style="color:#666;">→</span> ${this._escHtml(toName)}</td>
-                <td style="color:#86efac;font-size:0.78rem;">${this._escHtml(tx.deliverable || '')}</td>
+                <td style="color:var(--accent-green);font-size:0.78rem;">${this._escHtml(tx.deliverable || '')}</td>
             </tr>`;
         }).join('');
 
@@ -3024,7 +3052,7 @@ ${ctxResult.systemPrompt}`;
             const so = typeof t.sequence_order === 'number' ? t.sequence_order : (i + 1);
             const tangColor = t.type === 'tangible' ? '#a5b4fc' : '#fb923c';
             return `
-                ${phaseChange ? `<div style="grid-column:1 / -1;margin:1rem 0 0.4rem 0;color:#facc15;font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">— ${this._escHtml(t.phase)} —</div>` : ''}
+                ${phaseChange ? `<div style="grid-column:1 / -1;margin:1rem 0 0.4rem 0;color:var(--accent-orange);font-family:monospace;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">— ${this._escHtml(t.phase)} —</div>` : ''}
                 <div style="background:#0e0e14;border:1px solid #1a1a22;border-left:3px solid ${tangColor};border-radius:8px;padding:0.7rem 0.9rem;">
                     <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
                         <span style="background:${tangColor}22;color:${tangColor};padding:2px 8px;border-radius:10px;font-family:monospace;font-size:0.72rem;font-weight:700;">${so}</span>

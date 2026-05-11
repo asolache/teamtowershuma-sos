@@ -2420,6 +2420,16 @@ Pendent Sprint H+: refinaments puntuals si apareixen regressions (Matriu skin vi
 | **Phase filter chips** | Sota el panell del membre · 5 chips (Tots · 🎨 DESIGN · 🛠 BUILD · ⚙ OPERATE · 💶 LEDGER) amb count per fase. Click → re-render in-place del project list filtrat per fase. `this._phaseFilter` persisteix dins l'instància. Default = 'all'. Empty state per fase si no hi ha projectes en aquesta fase. Sector grouping es manté DINS la fase seleccionada (no se substitueix · es complementa). |
 | **Reframe enfoque** | Dashboard ara obre amb identitat → impacte → projectes (com a "panell del membre", no com a "lista de projectes técnica"). Coherent amb input @alvaro "la Matriu son las personas". |
 
+### Sprint H+ fix lot 2 2026-05-10 · /map topbar polit + pastel colors fix global
+
+| Fix | Detall |
+|---|---|
+| **/map topbar reescrit Linear-style** | `.vmap-shell` grid-template-rows `48px → auto` (era altura fixa que tallava si topbar wrap). `.vmap-topbar` `flex-wrap:wrap` · `min-height:48px` · padding `8px 16px` (era `0 16px`). `.vmap-topbar-actions` `flex-wrap:wrap` + `justify-content:flex-end` · 10+ botons del topbar ja no fan overflow horitzontal. `.vmap-btn` redissenyat · bg `var(--bg-elevated)` (era transparent · feia que es veiessin "blancs" en light per herència del topbar bg `var(--bg-panel)` blanc), padding `6px 12px`, `display:inline-flex` + `align-items:center` per alinear icones, `:focus-visible` outline indigo, `line-height:1.3`. |
+| **`.vmap-btn-primary` text fix** | Color text `var(--text-main)` → `#fff` · bug crític en tema clar (text-main era negre → invisible sobre bg indigo). |
+| **`.vmap-btn-save` polit** | Gradient `var(--accent-green)→#059669` (era `→#00b248`) · text `#fff` (era `#000` que es veia agressiu sobre verd brillant) · `border:1px solid transparent` per coherent alçada amb altres btns · `font-weight:700` (era 900 · massa pesat). |
+| **Inline pastel colors fix global** | Sed batch a 22 fitxers · `color:#86efac` (green-300) → `var(--accent-green)` · `color:#a5b4fc` (indigo-300) → `var(--accent-indigo)` · `color:#fca5a5` (red-300) → `var(--accent-red)` · `color:#c084fc` (purple-400) → `var(--accent-purple)` · `color:#facc15` (yellow-400) → `var(--accent-orange)` (les pastel-300/400 fallaven WCAG AA sobre bg blanc · accents canonics passen). Afectades vistes Wallet · Tags · Sops · Kanban · Node · Skills · Savings · Learn · Dashboard · Settings · MindGraph · Folders · ValueAccounting · ValueMap · MobileMockup · Market · Identity · PactBuilder · ProjectHub · Efficiency + serveis didacticService · tagsService. |
+| **Panel + Presentació btns del topbar /map** | Inline `color:#86efac` → `color:var(--accent-green)` per al botó "🎛 Panel" · ja visible en ambdós temes. Border opacity ajustada de 0.40 a 0.45 per millor visibilitat. |
+
 ### Sprint H+ fix lot 2026-05-10 · Sectores nav + bug subtipus + audit pendents
 
 | Fix | Detall |

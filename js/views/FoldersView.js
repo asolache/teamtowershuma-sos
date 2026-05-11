@@ -50,7 +50,7 @@ export default class FoldersView {
             .fl-folder-tile .icon { font-size:1.05rem; }
             .fl-folder-tile .name { color:var(--text-main); font-size:0.85rem; flex:1; }
             .fl-folder-tile .count { color:var(--text-muted); font-family:monospace; font-size:0.7rem; }
-            .fl-folder-tile.system .name { color:#a5b4fc; }
+            .fl-folder-tile.system .name { color:var(--accent-indigo); }
 
             .fl-section-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; font-family:monospace; margin:0.8rem 0 0.4rem 0.3rem; }
 
@@ -61,7 +61,7 @@ export default class FoldersView {
             .fl-item h4 { margin:0; color:var(--text-main); font-size:0.9rem; font-weight:600; }
             .fl-item .meta { color:var(--text-muted); font-size:0.72rem; font-family:monospace; margin-top:0.25rem; }
             .fl-item .tags { display:flex; flex-wrap:wrap; gap:3px; margin-top:0.35rem; }
-            .fl-item .tag  { font-size:0.62rem; padding:1px 6px; border-radius:8px; background:rgba(99,102,241,0.12); color:#a5b4fc; font-family:monospace; }
+            .fl-item .tag  { font-size:0.62rem; padding:1px 6px; border-radius:8px; background:rgba(99,102,241,0.12); color:var(--accent-indigo); font-family:monospace; }
             .fl-item .tag.tax { background:rgba(56,189,248,0.12); color:#7dd3fc; }
         </style>
 

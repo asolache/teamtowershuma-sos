@@ -60,9 +60,9 @@ export default class EfficiencyView {
             .ef-list  { display:flex; flex-direction:column; gap:0.4rem; margin-top:1rem; }
             .ef-row   { display:grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1.2fr; gap:0.6rem; padding:0.6rem 0.8rem; background:var(--bg-panel); border:1px solid var(--border-default); border-radius:6px; font-size:0.78rem; align-items:center; }
             .ef-row .when     { color:var(--text-secondary); font-family:monospace; font-size:0.72rem; }
-            .ef-row .provider { color:#a5b4fc; font-family:monospace; }
-            .ef-row .tokens   { color:#86efac; font-family:monospace; text-align:right; }
-            .ef-row .saved    { color:#facc15; font-family:monospace; text-align:right; }
+            .ef-row .provider { color:var(--accent-indigo); font-family:monospace; }
+            .ef-row .tokens   { color:var(--accent-green); font-family:monospace; text-align:right; }
+            .ef-row .saved    { color:var(--accent-orange); font-family:monospace; text-align:right; }
             .ef-row .nodes    { color:#7dd3fc; font-family:monospace; text-align:right; }
 
             .ef-actions { margin-top:1rem; display:flex; gap:0.5rem; }

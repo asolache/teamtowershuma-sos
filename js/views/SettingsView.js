@@ -219,19 +219,19 @@ export default class SettingsView {
             </div>
 
             <div class="sv-card" style="border-top:3px solid #c084fc;">
-                <h3 style="color:#c084fc;margin-top:0;">📜 MAT-002-G · Manifesto SOS canónico</h3>
+                <h3 style="color:var(--accent-purple);margin-top:0;">📜 MAT-002-G · Manifesto SOS canónico</h3>
                 <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.6;margin-top:0;">
                     Texto de referencia que recoge la <strong>visión + 4 pilares + principios</strong>
                     de SOS V11 · persistido como nodo KB
                     <code>${SOS_MANIFESTO.nodeType}</code>/<code>${SOS_MANIFESTO.nodeKind}</code>.
-                    <br><strong style="color:#c084fc;">NO se inyecta automáticamente</strong>
+                    <br><strong style="color:var(--accent-purple);">NO se inyecta automáticamente</strong>
                     en <code>Orchestrator.callLLM</code> · preserva calidad/coste de tokens
                     (uno de los valores añadidos centrales de SOS). Es referencia consultable ·
                     no premisa inyectada. Sprint B futuro permitirá opt-in muy específico
                     en flujos donde el coste por token no es crítico.
                 </p>
                 <label class="sv-label" style="margin-top:var(--space-4);">Manifesto (editable)
-                    <span class="sv-key-status" style="margin-left:8px;${manifestoIsDef ? 'background:rgba(192,132,252,0.12);color:#c084fc;' : 'background:rgba(0,230,118,0.12);color:var(--accent-green);'}">${manifestoIsDef ? '◆ DEFAULT' : '✎ EDITED'}</span>
+                    <span class="sv-key-status" style="margin-left:8px;${manifestoIsDef ? 'background:rgba(192,132,252,0.12);color:var(--accent-purple);' : 'background:rgba(0,230,118,0.12);color:var(--accent-green);'}">${manifestoIsDef ? '◆ DEFAULT' : '✎ EDITED'}</span>
                     <span class="sv-key-status" style="margin-left:6px;${manifestoExists ? 'background:rgba(0,230,118,0.12);color:var(--accent-green);' : 'background:rgba(255,255,255,0.05);color:var(--text-muted);'}">${manifestoExists ? '✓ SAVED' : '— SEED'}</span>
                 </label>
                 <textarea id="svManifesto" rows="14" class="sv-input" style="font-family:var(--font-mono);font-size:var(--text-xs);line-height:1.5;resize:vertical;min-height:240px;">${escapeForTextarea(manifestoText)}</textarea>
@@ -275,13 +275,13 @@ export default class SettingsView {
                     Stripe Dashboard) · zero claus secret/restricted al codi.
                 </p>
 
-                <div style="background:rgba(255,82,82,0.08);border:1px solid rgba(255,82,82,0.3);border-radius:6px;padding:10px 12px;margin:14px 0;font-size:var(--text-xs);color:#fca5a5;">
+                <div style="background:rgba(255,82,82,0.08);border:1px solid rgba(255,82,82,0.3);border-radius:6px;padding:10px 12px;margin:14px 0;font-size:var(--text-xs);color:var(--accent-red);">
                     ⚠️ <strong>SEGURETAT</strong> · MAI posis aquí <code>sk_test_</code>,
                     <code>sk_live_</code>, <code>rk_test_</code> o <code>rk_live_</code>
                     · només la clau pública (<code>pk_test_</code> / <code>pk_live_</code>)
                     pot anar al frontend. Si has compartit una clau secret/restricted
                     accidentalment · revoca-la a
-                    <a href="https://dashboard.stripe.com/test/apikeys" target="_blank" rel="noopener noreferrer" style="color:#fca5a5;">dashboard.stripe.com/test/apikeys</a>.
+                    <a href="https://dashboard.stripe.com/test/apikeys" target="_blank" rel="noopener noreferrer" style="color:var(--accent-red);">dashboard.stripe.com/test/apikeys</a>.
                 </div>
 
                 <label class="sv-label">Plan SOS V11</label>

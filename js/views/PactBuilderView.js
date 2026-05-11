@@ -64,16 +64,16 @@ export default class PactBuilderView {
             <div style="font-size:2.4rem;">📜</div>
             <h2 class="mat-hero-h1">Falta el projecte a la URL</h2>
             <p style="color:var(--text-muted);font-size:0.9rem;">Aquesta vista necessita <code>?project={id}</code>.</p>
-            <a href="/dashboard" data-link style="color:#c084fc;">← Dashboard</a>
+            <a href="/dashboard" data-link style="color:var(--accent-purple);">← Dashboard</a>
         </div></div>`;
     }
 
     _htmlError(msg) {
         return `${this._renderStyle()}
         <div class="pb-shell"><div class="pb-empty">
-            <div style="font-size:2.4rem;color:#fca5a5;">✘</div>
+            <div style="font-size:2.4rem;color:var(--accent-red);">✘</div>
             <h2 class="mat-hero-h1">${escapeHtml(msg)}</h2>
-            <a href="/dashboard" data-link style="color:#c084fc;">← Dashboard</a>
+            <a href="/dashboard" data-link style="color:var(--accent-purple);">← Dashboard</a>
         </div></div>`;
     }
 
@@ -284,7 +284,7 @@ export default class PactBuilderView {
                             <td style="font-family:monospace;font-size:0.78rem;color:var(--text-muted);">${escapeHtml(pt.identityId)}</td>
                             <td>${escapeHtml(pt.role)}</td>
                             <td>${escapeHtml(pt.contributionType)}</td>
-                            <td style="text-align:right;font-family:'Instrument Serif',Georgia,serif;font-style:italic;color:#c084fc;font-size:1.1rem;">${(pt.initialShare * 100).toFixed(1)}%</td>
+                            <td style="text-align:right;font-family:'Instrument Serif',Georgia,serif;font-style:italic;color:var(--accent-purple);font-size:1.1rem;">${(pt.initialShare * 100).toFixed(1)}%</td>
                             <td style="text-align:center;font-family:monospace;color:#fbbf24;">${pt.multiplier ? '×' + pt.multiplier : '—'}</td>
                             <td>${signed ? `<span style="color:#4ade80;font-family:monospace;font-size:0.78rem;" title="${escapeHtml(signed.algorithm || 'symbolic')} · ${escapeHtml(signed.hashSnapshot || '')}">✓ ${new Date(signed.signedAt).toLocaleDateString('ca-ES')} ${signed.algorithm === 'ecdsa-p256-sha256' ? '🔐' : '·'}</span>` : '<button class="pb-btn-sign" data-sign="' + escapeHtml(pt.identityId) + '">Signar</button>'}</td>
                             <td><button class="pb-btn-remove" data-remove="${i}" title="Treure">🗑</button></td>
@@ -353,7 +353,7 @@ export default class PactBuilderView {
             .pb-checkbox { flex-direction: row !important; align-items: center !important; gap: 8px !important; text-transform: none !important; padding: 8px 12px; background: var(--bg-elevated); border-radius: 6px; cursor: pointer; }
 
             .pb-input { background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-main); padding: 10px 12px; border-radius: 6px; font-size: 0.88rem; outline: none; transition: border-color 0.15s; font-family: inherit; }
-            .pb-input:focus { border-color: #c084fc; }
+            .pb-input:focus { border-color: var(--accent-purple); }
             .pb-textarea { resize: vertical; min-height: 60px; font-family: inherit; line-height: 1.55; }
             .pb-hint { color: var(--text-muted); font-size: 0.75rem; margin-top: 6px; font-family: monospace; }
 
@@ -362,18 +362,18 @@ export default class PactBuilderView {
             .pb-table tbody td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #ddd; vertical-align: middle; }
 
             .pb-add-party { margin-top: 16px; }
-            .pb-add-party summary { color: #c084fc; cursor: pointer; padding: 8px 12px; background: rgba(192,132,252,0.06); border-radius: 6px; font-size: 0.85rem; }
+            .pb-add-party summary { color: var(--accent-purple); cursor: pointer; padding: 8px 12px; background: rgba(192,132,252,0.06); border-radius: 6px; font-size: 0.85rem; }
 
             .pb-actions { display: flex; gap: 12px; margin: 24px 0; flex-wrap: wrap; align-items: center; }
             .pb-btn { background: linear-gradient(135deg, #c084fc, #6366f1); color: var(--text-main); border: 0; padding: 10px 18px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: transform 0.15s; font-size: 0.85rem; }
             .pb-btn:hover { transform: translateY(-1px); }
             .pb-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
             .pb-btn-large { padding: 14px 28px; font-size: 0.95rem; }
-            .pb-btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #c084fc; padding: 9px 16px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; }
-            .pb-btn-secondary:hover { border-color: #c084fc; }
+            .pb-btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--accent-purple); padding: 9px 16px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; }
+            .pb-btn-secondary:hover { border-color: var(--accent-purple); }
             .pb-btn-sign { background: rgba(34,197,94,0.12); border: 1px solid #4ade80; color: #4ade80; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.78rem; }
             .pb-btn-sign:hover { background: rgba(34,197,94,0.2); }
-            .pb-btn-remove { background: transparent; border: 0; color: #fca5a5; cursor: pointer; font-size: 1rem; opacity: 0.6; }
+            .pb-btn-remove { background: transparent; border: 0; color: var(--accent-red); cursor: pointer; font-size: 1rem; opacity: 0.6; }
             .pb-btn-remove:hover { opacity: 1; }
 
             .pb-markdown { background: var(--bg-panel); padding: 16px; border-radius: 6px; color: #ddd; font-family: ui-monospace, monospace; font-size: 0.78rem; line-height: 1.6; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; border: 1px solid var(--border-default); }

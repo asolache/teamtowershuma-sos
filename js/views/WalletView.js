@@ -86,7 +86,7 @@ export default class WalletView {
             .w-btn:hover { background:var(--bg-elevated); }
             .w-btn-primary { background:#22c55e; border-color:#22c55e; color:var(--text-main); }
             .w-btn-primary:hover { background:#16a34a; }
-            .w-btn-warn { background:rgba(250,204,21,0.08); border-color:rgba(250,204,21,0.3); color:#facc15; }
+            .w-btn-warn { background:rgba(250,204,21,0.08); border-color:rgba(250,204,21,0.3); color:var(--accent-orange); }
 
             .w-mvts   { display:flex; flex-direction:column; gap:0.3rem; }
             .w-mvt    { display:grid; grid-template-columns:120px 100px 1fr 100px 110px; gap:0.6rem; padding:0.5rem 0.7rem; background:var(--bg-panel); border:1px solid var(--border-default); border-radius:6px; font-size:0.78rem; align-items:center; }
@@ -94,9 +94,9 @@ export default class WalletView {
             .w-mvt .kind    { font-family:monospace; font-size:0.72rem; padding:1px 7px; border-radius:8px; text-align:center; background:var(--glass-hover); }
             .w-mvt .ref     { color:var(--text-muted); font-family:monospace; font-size:0.72rem; word-break:break-all; }
             .w-mvt .amount  { color:var(--text-main); font-family:monospace; text-align:right; font-weight:600; }
-            .w-mvt .balance { color:#86efac; font-family:monospace; text-align:right; font-size:0.72rem; }
+            .w-mvt .balance { color:var(--accent-green); font-family:monospace; text-align:right; font-size:0.72rem; }
 
-            .w-banner { background:rgba(250,204,21,0.06); border:1px dashed rgba(250,204,21,0.3); border-radius:8px; padding:0.7rem 0.9rem; font-size:0.78rem; color:#facc15; margin-top:1rem; line-height:1.45; }
+            .w-banner { background:rgba(250,204,21,0.06); border:1px dashed rgba(250,204,21,0.3); border-radius:8px; padding:0.7rem 0.9rem; font-size:0.78rem; color:var(--accent-orange); margin-top:1rem; line-height:1.45; }
         </style>
 
         <div class="w-shell">

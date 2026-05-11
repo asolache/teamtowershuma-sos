@@ -79,8 +79,8 @@ export default class SavingsView {
             .sa-card .head .icon { font-size:1.5rem; }
             .sa-card .head .name { color:var(--text-main); font-weight:700; font-size:0.95rem; }
             .sa-card .range { color:var(--text-secondary); font-size:0.75rem; font-family:monospace; margin-bottom:0.3rem; }
-            .sa-card .saving-amt { color:#facc15; font-size:1.4rem; font-weight:700; font-family:monospace; }
-            .sa-card .saving-pct { color:#86efac; font-size:0.95rem; font-family:monospace; margin-top:0.2rem; }
+            .sa-card .saving-amt { color:var(--accent-orange); font-size:1.4rem; font-weight:700; font-family:monospace; }
+            .sa-card .saving-pct { color:var(--accent-green); font-size:0.95rem; font-family:monospace; margin-top:0.2rem; }
             .sa-card .sos-cost { color:#7dd3fc; font-size:0.78rem; font-family:monospace; margin-top:0.4rem; }
             .sa-card .bar { background:var(--bg-elevated); border-radius:4px; overflow:hidden; height:6px; margin-top:0.5rem; }
             .sa-card .bar > span { display:block; height:100%; background:linear-gradient(90deg,#22c55e,#86efac); }
@@ -90,12 +90,12 @@ export default class SavingsView {
             .sa-table td { padding:8px; border-bottom:1px solid #11111a; color:#ddd; font-family:monospace; }
             .sa-table td.num { text-align:right; }
             .sa-table tr:hover td { background:rgba(99,102,241,0.04); }
-            .sa-table a { color:#a5b4fc; text-decoration:none; }
+            .sa-table a { color:var(--accent-indigo); text-decoration:none; }
             .sa-table a:hover { text-decoration:underline; }
 
             .sa-empty { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed #2a2a35; border-radius:8px; }
 
-            .sa-banner { background:rgba(99,102,241,0.05); border:1px dashed rgba(99,102,241,0.3); border-radius:8px; padding:0.7rem 0.9rem; font-size:0.78rem; color:#a5b4fc; margin-top:1rem; line-height:1.5; }
+            .sa-banner { background:rgba(99,102,241,0.05); border:1px dashed rgba(99,102,241,0.3); border-radius:8px; padding:0.7rem 0.9rem; font-size:0.78rem; color:var(--accent-indigo); margin-top:1rem; line-height:1.5; }
         </style>
 
         <div class="sa-shell">

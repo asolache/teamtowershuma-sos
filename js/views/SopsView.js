@@ -50,7 +50,7 @@ export default class SopsView {
             .sv-btn:hover { background:var(--bg-elevated); }
             .sv-btn-primary { background:#6366f1; border-color:#6366f1; color:var(--text-main); }
             .sv-btn-primary:hover { background:#4f46e5; }
-            .sv-btn-warn { background:rgba(212,168,83,0.12); border-color:rgba(212,168,83,0.4); color:#facc15; }
+            .sv-btn-warn { background:rgba(212,168,83,0.12); border-color:rgba(212,168,83,0.4); color:var(--accent-orange); }
             .sv-btn-danger { background:rgba(255,82,82,0.08); border-color:rgba(255,82,82,0.4); color:#ff5252; }
 
             .sv-main   { padding:1.5rem; max-width:1300px; margin:0 auto; flex:1; overflow-y:auto; overflow-x:hidden; width:100%; }
@@ -63,8 +63,8 @@ export default class SopsView {
             .sv-card .summary { color:var(--text-secondary); font-size:0.78rem; margin:0.5rem 0; line-height:1.4; max-height:3.6em; overflow:hidden; }
             .sv-card .badges { display:flex; gap:0.3rem; flex-wrap:wrap; margin-top:0.4rem; }
             .sv-badge  { font-size:0.65rem; padding:1px 6px; border-radius:8px; background:var(--bg-elevated); color:var(--text-secondary); }
-            .sv-badge.ready  { background:rgba(34,197,94,0.18); color:#86efac; }
-            .sv-badge.solid  { background:rgba(99,102,241,0.18); color:#a5b4fc; }
+            .sv-badge.ready  { background:rgba(34,197,94,0.18); color:var(--accent-green); }
+            .sv-badge.solid  { background:rgba(99,102,241,0.18); color:var(--accent-indigo); }
             .sv-badge.tier2  { background:rgba(255,145,0,0.15); color:#fb923c; }
 
             .sv-modal  { position:fixed; inset:0; background:rgba(0,0,0,0.78); display:flex; align-items:flex-start; justify-content:center; z-index:1000; padding:2rem 1rem; overflow-y:auto; }
@@ -78,7 +78,7 @@ export default class SopsView {
             .sv-modal .actions { display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1.2rem; flex-wrap:wrap; }
 
             /* H1.10.5 · Indicador "IA pensando" reutilizable */
-            .sv-thinking { display:inline-flex; align-items:center; gap:0.5rem; color:#a5b4fc; font-size:0.85rem; }
+            .sv-thinking { display:inline-flex; align-items:center; gap:0.5rem; color:var(--accent-indigo); font-size:0.85rem; }
             .sv-thinking .dots { display:inline-flex; gap:3px; }
             .sv-thinking .dots span { width:6px; height:6px; border-radius:50%; background:#a5b4fc; animation:sv-pulse 1.2s infinite ease-in-out; }
             .sv-thinking .dots span:nth-child(2) { animation-delay:0.2s; }
@@ -281,7 +281,7 @@ export default class SopsView {
             this._render();
         } catch (err) {
             console.error('[H1.10.5] Bulk error:', err);
-            if (summary) summary.innerHTML = `<span style="color:#fca5a5;">Error fatal: ${this._esc(err.message)}</span>`;
+            if (summary) summary.innerHTML = `<span style="color:var(--accent-red);">Error fatal: ${this._esc(err.message)}</span>`;
         } finally {
             clearInterval(phaseTimer);
             if (cancel) cancel.style.display = 'none';
@@ -340,7 +340,7 @@ export default class SopsView {
                 <div class="badges">
                     <span class="sv-badge ${readiness}">${this._esc(c.readiness || 'solid').toUpperCase()}</span>
                     <span class="sv-badge">${stepCount} steps</span>
-                    ${aiSteps ? `<span class="sv-badge" style="background:rgba(99,102,241,0.18);color:#a5b4fc;">${aiSteps} IA</span>` : ''}
+                    ${aiSteps ? `<span class="sv-badge" style="background:rgba(99,102,241,0.18);color:var(--accent-indigo);">${aiSteps} IA</span>` : ''}
                     ${c.duration_minutes ? `<span class="sv-badge">${c.duration_minutes} min total</span>` : ''}
                 </div>
             </div>
@@ -388,7 +388,7 @@ export default class SopsView {
                     <label>Steps editables</label>
                     <div id="svdSteps">${stepsHtml || '<p style="color:var(--text-muted);font-size:0.78rem;">Sin steps. Regenera con feedback para añadirlos.</p>'}</div>
 
-                    ${c.regeneration_notes ? `<label>Notas de regeneración previa</label><div style="background:rgba(212,168,83,0.08);border-left:2px solid #d4a853;padding:0.5rem;border-radius:3px;color:#facc15;font-size:0.78rem;">${this._esc(c.regeneration_notes)}</div>` : ''}
+                    ${c.regeneration_notes ? `<label>Notas de regeneración previa</label><div style="background:rgba(212,168,83,0.08);border-left:2px solid #d4a853;padding:0.5rem;border-radius:3px;color:var(--accent-orange);font-size:0.78rem;">${this._esc(c.regeneration_notes)}</div>` : ''}
 
                     <div class="actions">
                         <button class="sv-btn sv-btn-danger" id="svdDel">🗑 Borrar</button>
@@ -495,7 +495,7 @@ export default class SopsView {
             this._renderRegenPreview(node, result);
         } catch (err) {
             console.error('[H1.10.4] Error regenerando SOP:', err);
-            preview.innerHTML = `<pre style="background:var(--bg-dark);padding:0.6rem;border-radius:5px;color:#fca5a5;white-space:pre-wrap;font-size:0.78rem;margin-top:1rem;max-height:300px;overflow:auto;">${this._esc(err.message)}</pre>`;
+            preview.innerHTML = `<pre style="background:var(--bg-dark);padding:0.6rem;border-radius:5px;color:var(--accent-red);white-space:pre-wrap;font-size:0.78rem;margin-top:1rem;max-height:300px;overflow:auto;">${this._esc(err.message)}</pre>`;
         }
     }
 
@@ -506,7 +506,7 @@ export default class SopsView {
         preview.innerHTML = `
             <div style="background:var(--bg-dark);border:1px solid var(--border-default);border-radius:6px;padding:0.8rem;margin-top:1rem;font-size:0.78rem;color:var(--text-main);">
                 <strong style="color:var(--text-main);">Versión propuesta: v${this._esc(sop.version || '?')}</strong>
-                ${sop.regeneration_notes ? `<p style="color:#facc15;margin:0.4rem 0;">${this._esc(sop.regeneration_notes)}</p>` : ''}
+                ${sop.regeneration_notes ? `<p style="color:var(--accent-orange);margin:0.4rem 0;">${this._esc(sop.regeneration_notes)}</p>` : ''}
                 <div style="color:var(--text-secondary);font-size:0.72rem;">${stepsCount} steps · Tokens ${(result.tokens.prompt_tokens||0)}+${(result.tokens.completion_tokens||0)} · ${result.latencyMs}ms</div>
                 <details style="margin-top:0.5rem;"><summary style="cursor:pointer;color:var(--text-secondary);">Ver JSON completo</summary>
                     <pre style="background:#000;padding:0.5rem;border-radius:4px;color:var(--text-secondary);font-size:0.7rem;max-height:240px;overflow:auto;margin-top:0.4rem;">${this._esc(JSON.stringify(sop, null, 2))}</pre>

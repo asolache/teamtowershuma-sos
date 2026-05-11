@@ -206,7 +206,7 @@ export function ensureExplainerStyle() {
     border-radius: 999px;
     background: rgba(192, 132, 252, 0.10);
     border: 1px solid rgba(192, 132, 252, 0.35);
-    color: #c084fc;
+    color: var(--accent-purple);
     font-size: 11px;
     font-weight: 600;
     line-height: 1;
@@ -247,7 +247,7 @@ export function ensureExplainerStyle() {
     display: block;
     font-size: 13px;
     font-weight: 800;
-    color: #c084fc;
+    color: var(--accent-purple);
     margin-bottom: 6px;
     line-height: 1.3;
 }
@@ -261,7 +261,7 @@ export function ensureExplainerStyle() {
     display: inline-block;
     margin-top: 8px;
     font-size: 11px;
-    color: #c084fc;
+    color: var(--accent-purple);
     text-decoration: none;
 }
 .sos-edu-tip-link:hover { text-decoration: underline; }
