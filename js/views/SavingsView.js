@@ -119,6 +119,59 @@ export default class SavingsView {
         await this._load();
         this._render();
         bindExplainerBadges(document);
+        // FUND-FLOW-001 sprint E · panell unified cost breakdown
+        if (this.projectId) {
+            this._renderUnifiedCostPanel().catch(e => console.warn('[savings] cost panel', e));
+        }
+    }
+
+    async _renderUnifiedCostPanel() {
+        const main = document.getElementById('saMain');
+        if (!main || !this.projectId) return;
+        const { computeUnifiedCostPanelData, CATEGORY_META } = await import('../core/costTrackingService.js');
+        const data = await computeUnifiedCostPanelData(this.projectId);
+        const all = data.summaries.all;
+        const today = data.summaries.today;
+        const week = data.summaries.week;
+
+        // Render per cada categoria una barra
+        const bars = Object.entries(CATEGORY_META).map(([cat, meta]) => {
+            const eurAll  = all.totals[cat]  || 0;
+            const eurWeek = week.totals[cat] || 0;
+            const eurToday = today.totals[cat] || 0;
+            const widthPct = all.total > 0 ? Math.max(2, (eurAll / all.total) * 100) : 0;
+            return `<div style="display:grid;grid-template-columns:120px 1fr 90px 90px 90px;gap:12px;align-items:center;padding:6px 0;font-size:0.85rem;border-bottom:1px solid var(--border-subtle);">
+                <span style="display:inline-flex;align-items:center;gap:6px;color:${meta.color};font-weight:600;">${meta.icon} ${meta.label}</span>
+                <div style="background:var(--bg-elevated);border-radius:6px;height:12px;position:relative;overflow:hidden;">
+                    <div style="background:${meta.color};height:100%;width:${widthPct}%;transition:width 0.3s;"></div>
+                </div>
+                <span style="color:${meta.color};font-family:var(--font-mono);font-weight:700;text-align:right;">${eurAll.toFixed(2)} €</span>
+                <span style="color:var(--text-muted);font-family:var(--font-mono);text-align:right;">${eurWeek.toFixed(2)} €</span>
+                <span style="color:var(--text-muted);font-family:var(--font-mono);text-align:right;">${eurToday.toFixed(2)} €</span>
+            </div>`;
+        }).join('');
+
+        let panel = document.getElementById('saCostPanel');
+        if (!panel) {
+            panel = document.createElement('section');
+            panel.id = 'saCostPanel';
+            panel.style.cssText = 'margin-top:1.6rem;background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:1.2rem;box-shadow:var(--shadow-sm);';
+            main.appendChild(panel);
+        }
+        panel.innerHTML = `
+            <h2 style="margin:0 0 0.4rem 0;color:var(--text-main);font-size:1.05rem;">📊 Consum unificat per categoria · sprint E</h2>
+            <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 0.8rem 0;">
+                Wallet del projecte · saldo actual <strong style="color:var(--text-main);">${Number(data.wallet.content.balanceEur || 0).toFixed(2)} €</strong> · total consumit <strong style="color:var(--text-main);">${all.total.toFixed(2)} €</strong> (${all.totalCount} moviments) classificat per categoria operativa.
+            </p>
+            <div style="display:grid;grid-template-columns:120px 1fr 90px 90px 90px;gap:12px;padding:6px 0;border-bottom:2px solid var(--border-default);font-size:0.72rem;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);font-weight:700;">
+                <span>Categoria</span>
+                <span>Distribució</span>
+                <span style="text-align:right;">Total</span>
+                <span style="text-align:right;">7 dies</span>
+                <span style="text-align:right;">Avui</span>
+            </div>
+            ${bars}
+        `;
     }
 
     async _load() {

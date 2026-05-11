@@ -1441,20 +1441,20 @@ async function testNavService() {
     const { NAV_DESTINATIONS, buildNavLinks, renderNavLinksHtml } = mod;
 
     assert(Object.isFrozen(NAV_DESTINATIONS),                       'NAV_DESTINATIONS frozen');
-    assert(NAV_DESTINATIONS.length === 21,                          '21 destinos canónicos (+ mywallet FUND-FLOW-001 sprint A)');
+    assert(NAV_DESTINATIONS.length === 22,                          '22 destinos canónicos (+ opportunities FUND-FLOW-001 sprint F)');
     assert(NAV_DESTINATIONS.some(d => d.id === 'dashboard' && d.global), 'dashboard es global');
     assert(NAV_DESTINATIONS.some(d => d.id === 'sops' && !d.global),     'sops NO es global (requiere projectId)');
 
     // sin projectId → omite los no-globales
     const linksGlobal = buildNavLinks({ active: 'dashboard' });
     assert(linksGlobal.every(l => l.id !== 'sops'),                 'sin projectId · sops omitido');
-    assert(linksGlobal.length === 17,                                'sin projectId · 17 links (21-4 globals=false)');
+    assert(linksGlobal.length === 18,                                'sin projectId · 18 links (22-4 globals=false)');
     assert(linksGlobal.find(l => l.id === 'dashboard').active === true, 'active flag funciona');
     assert(linksGlobal.find(l => l.id === 'map').href === '/map',   'sin projectId · map sin query');
 
     // con projectId → todos + query ?project= en los aplicables
     const linksProject = buildNavLinks({ active: 'kanban', projectId: 'proj-x' });
-    assert(linksProject.length === 21,                              'con projectId · 21 links (+ mywallet)');
+    assert(linksProject.length === 22,                              'con projectId · 22 links (+ opportunities)');
     assert(linksProject.find(l => l.id === 'wallet').href === '/wallet?project=proj-x', 'wallet con project query');
     assert(linksProject.find(l => l.id === 'savings').href === '/savings?project=proj-x', 'savings con project query');
     assert(linksProject.find(l => l.id === 'sops').href === '/sops?project=proj-x',     'sops con project query');
