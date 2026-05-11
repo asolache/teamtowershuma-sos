@@ -60,6 +60,13 @@ body {
    empujaba el `#app` por debajo de los 100dvh del body y
    `overflow:hidden` del body recortaba el contenido sin scroll
    posible (regresión detectada en /settings 2026-05-08). */
+#sos-global-nav-slot {
+    flex: 0 0 auto;
+    width: 100vw;
+    position: sticky;
+    top: 0;
+    z-index: 60;
+}
 #sos-breadcrumb-slot {
     flex: 0 0 auto;
     width: 100vw;

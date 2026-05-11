@@ -72,7 +72,7 @@ export default class FoldersView {
                 <a href="/" data-link class="fl-logo">🗼 Team<span>Towers</span></a>
                 <span class="fl-title">Folders · carpetas inteligentes ${renderExplainerBadge('folksonomy', { size: 'xs' })} ${renderExplainerBadge('taxonomy', { size: 'xs' })}</span>
                 <div class="fl-spacer"></div>
-                ${renderNavGroupedHtml({ active: '', className: 'fl-link' })}
+                
             </div>
 
             <div class="fl-main">

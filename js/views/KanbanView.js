@@ -266,7 +266,7 @@ export default class KanbanView {
                 <a href="/" data-link class="kb-logo">🗼 Team<span>Towers</span></a>
                 <span class="kb-title">Kanban · Work Orders · Antigravity Engine ${renderExplainerBadge('antigravity-engine', { size: 'xs' })}</span>
                 <div class="kb-spacer"></div>
-                ${renderNavGroupedHtml({ active: 'kanban', projectId: this.projectFilter, className: 'kb-link', activeClass: 'kb-link-active' })}
+                
                 <select id="kbProjectFilter" class="kb-btn" style="background:#1a1a22;border-color:#2a2a35;cursor:pointer;font-family:inherit;">
                     <option value="">📁 Todos los proyectos</option>
                 </select>

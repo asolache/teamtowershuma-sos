@@ -56,7 +56,7 @@ export default class TagsView {
                 <a href="/" data-link class="tg-logo">🗼 Team<span>Towers</span></a>
                 <span class="tg-title">Folksonomía · cloud de tags</span>
                 <div class="tg-spacer"></div>
-                ${renderNavGroupedHtml({ active: 'tags', className: 'tg-link' })}
+                
             </div>
             <div class="tg-main" id="tgMain">
                 <p style="color:var(--text-muted);">Cargando…</p>

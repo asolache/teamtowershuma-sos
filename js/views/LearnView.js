@@ -162,7 +162,7 @@ export default class LearnView {
                 <span style="color:#444;">·</span>
                 <span class="lr-title">Aprendre · UX-EDU-001</span>
                 <div class="lr-spacer"></div>
-                ${renderNavGroupedHtml({ active: '', className: 'lr-link' })}
+                
             </div>
 
             <div class="lr-progress">

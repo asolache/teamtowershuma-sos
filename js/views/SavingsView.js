@@ -105,7 +105,7 @@ export default class SavingsView {
                 <a href="/" data-link class="sa-logo">🗼 Team<span>Towers</span></a>
                 <span class="sa-title">Ahorro acumulado · cuadro comparativo ${renderExplainerBadge('triple-entry-accounting', { size: 'xs' })}</span>
                 <div class="sa-spacer"></div>
-                ${renderNavGroupedHtml({ active: '', projectId: this.projectId, className: 'sa-link' })}
+                
             </div>
             <div class="sa-main" id="saMain">
                 <p style="color:var(--text-muted);font-size:0.85rem;">Cargando…</p>

@@ -680,7 +680,7 @@ export default class DashboardView {
                 <span class="dash-topbar-version">SOS V11</span>
                 <a href="https://teamtowershuma.com" target="_blank" class="dash-topbar-web">teamtowershuma.com ↗</a>
                 <div class="dash-topbar-right">
-                    ${renderNavGroupedHtml({ active: 'dashboard', className: 'dash-btn' })}
+                    
                     <!-- UX-AUDIT-001 sprint H+ · botó "📚 Knowledge Base" mogut a la nav
                          categoria Coneixement com a enllaç "📚 Sectores" cap a /sectors.
                          Saturava la topbar i sortia idèntic a tot arreu. -->

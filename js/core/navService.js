@@ -395,6 +395,140 @@ export async function paintBreadcrumb({
     targetEl.innerHTML = renderBreadcrumbHtml({ items, phase });
 }
 
+// ─── UX-AUDIT-001 sprint H+ pass 5 · Global Nav al top ────────────────────
+// Reframe: la nav agrupada (5 categories) viu a una barra GLOBAL sticky al
+// top, fora dels topbars de cada vista. Abans cada view la incrustava dins
+// del seu propi topbar i quan feia flex-wrap, la nav podia caure a la 2a
+// fila — inconsistent. Ara sempre al top.
+
+// Mapping pathname → destination id · per detectar l'item actiu
+function _destinationForPath(pathname = '') {
+    if (!pathname || pathname === '/') return 'dashboard';
+    const path = pathname.split('?')[0].split('#')[0];
+    if (path.startsWith('/project/')) return 'dashboard';   // hub propi · home category
+    if (path.startsWith('/n/'))       return '';            // node view · sense actiu específic
+    if (path.startsWith('/matriu'))   return 'matriu';
+    // Match exacte amb NAV_DESTINATIONS · stripping params
+    const stripped = path.replace(/^\//, '').split('/')[0];
+    if (stripped === 'value-accounting') return 'value';
+    const dest = NAV_DESTINATIONS.find(d => d.id === stripped);
+    return dest ? dest.id : '';
+}
+
+// renderGlobalNavHtml · pura · genera el HTML de la nav global
+export function renderGlobalNavHtml({ pathname = '', projectId = null } = {}) {
+    const active = _destinationForPath(pathname);
+    return `<div class="sos-global-nav-inner">
+        <a href="/" data-link class="sos-global-nav-logo" title="Inicio · SOS V11">🗼 <span>SOS</span></a>
+        <div class="sos-global-nav-groups">${renderNavGroupedHtml({ active, projectId, className: 'sos-global-nav-link' })}</div>
+    </div>`;
+}
+
+// paintGlobalNav · injecta o actualitza la nav global · idempotent
+export function paintGlobalNav({
+    pathname = window.location.pathname,
+    search   = window.location.search,
+} = {}) {
+    if (typeof document === 'undefined' || !document.body) return;
+    ensureGlobalNavStyle();
+    const params = new URLSearchParams(search || '');
+    const projectId = params.get('project') || (pathname.startsWith('/project/') ? decodeURIComponent(pathname.slice(9)) : null);
+    let el = document.getElementById('sos-global-nav-slot');
+    if (!el) {
+        // El router crearà el slot, però per defensiva si no existeix el creem
+        el = document.createElement('div');
+        el.id = 'sos-global-nav-slot';
+        document.body.insertBefore(el, document.body.firstChild);
+    }
+    el.innerHTML = `<nav class="sos-global-nav" aria-label="Global navigation">${renderGlobalNavHtml({ pathname, projectId })}</nav>`;
+    // Re-bind dropdown handlers · nous botons emesos
+    bindNavGroupDropdowns(el);
+}
+
+const GLOBAL_NAV_STYLE_ID = 'sos-global-nav-style';
+const GLOBAL_NAV_CSS = `
+.sos-global-nav {
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-default);
+    padding: 0 16px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    z-index: 50;
+}
+.sos-global-nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+.sos-global-nav-logo {
+    font-weight: 800;
+    font-size: var(--text-sm);
+    color: var(--text-main);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    transition: background var(--dur-fast);
+}
+.sos-global-nav-logo:hover { background: var(--glass-hover); }
+.sos-global-nav-logo span { color: var(--accent-indigo); }
+.sos-global-nav-groups {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.sos-global-nav-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    transition: all var(--dur-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    line-height: 1.3;
+}
+.sos-global-nav-link:hover {
+    color: var(--text-main);
+    background: var(--glass-hover);
+}
+.sos-global-nav-link:focus-visible {
+    outline: 2px solid var(--accent-indigo);
+    outline-offset: 2px;
+}
+.sos-global-nav-link.sos-nav-active,
+.sos-global-nav-link[aria-current="page"] {
+    color: var(--accent-indigo);
+    background: rgba(99,102,241,0.10);
+}
+@media (max-width: 720px) {
+    .sos-global-nav { padding: 0 12px; }
+    .sos-global-nav-link { font-size: var(--text-xs); padding: 6px 8px; }
+    .sos-global-nav-logo { font-size: var(--text-xs); }
+}
+`;
+
+export function ensureGlobalNavStyle() {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById(GLOBAL_NAV_STYLE_ID)) return;
+    const el = document.createElement('style');
+    el.id = GLOBAL_NAV_STYLE_ID;
+    el.textContent = GLOBAL_NAV_CSS;
+    document.head.appendChild(el);
+}
+
 // ─── UX-AUDIT-001 sprint F · Bottom Nav mòbil (5 categories) ──────────────
 // Barra inferior tipus app mòbil amb les 5 categories canòniques de
 // NAV_CATEGORIES. Cada item enllaça a un destí representatiu de la categoria
