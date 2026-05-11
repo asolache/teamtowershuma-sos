@@ -681,7 +681,9 @@ export default class DashboardView {
                 <a href="https://teamtowershuma.com" target="_blank" class="dash-topbar-web">teamtowershuma.com ↗</a>
                 <div class="dash-topbar-right">
                     ${renderNavGroupedHtml({ active: 'dashboard', className: 'dash-btn' })}
-                    <button class="dash-btn dash-btn-kb" id="dashBtnKB">📚 Knowledge Base</button>
+                    <!-- UX-AUDIT-001 sprint H+ · botó "📚 Knowledge Base" mogut a la nav
+                         categoria Coneixement com a enllaç "📚 Sectores" cap a /sectors.
+                         Saturava la topbar i sortia idèntic a tot arreu. -->
                     <button class="dash-btn" id="dashBtnExport" title="Descargar snapshot firmado (ECDSA P-256)">💾 Export</button>
                     <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
                     <input type="file" id="dashImportFile" accept=".json,application/json" style="display:none;">
