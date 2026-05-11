@@ -2420,6 +2420,19 @@ Pendent Sprint H+: refinaments puntuals si apareixen regressions (Matriu skin vi
 | **Phase filter chips** | Sota el panell del membre · 5 chips (Tots · 🎨 DESIGN · 🛠 BUILD · ⚙ OPERATE · 💶 LEDGER) amb count per fase. Click → re-render in-place del project list filtrat per fase. `this._phaseFilter` persisteix dins l'instància. Default = 'all'. Empty state per fase si no hi ha projectes en aquesta fase. Sector grouping es manté DINS la fase seleccionada (no se substitueix · es complementa). |
 | **Reframe enfoque** | Dashboard ara obre amb identitat → impacte → projectes (com a "panell del membre", no com a "lista de projectes técnica"). Coherent amb input @alvaro "la Matriu son las personas". |
 
+### Sprint D fase A entregat 2026-05-10 · Multidioma · CA afegit + default ES + selector 3 botons
+
+| Fix | Detall |
+|---|---|
+| **Català (CA) afegit a `js/i18n.js`** | Diccionari CA amb ~120 keys traduïdes (app.* · dash.* · settings.* · vmap.* · insp.* · ai.* · save.*). Les keys no incloses cauen via fallback chain `ca → es → en → key`. |
+| **Default ES (era EN)** | Coherent amb la base d'usuaris actual i la Matriu cohort 0 hispanoparlant. `initLang` fallback també a ES. Actualitzat a `store.js`. |
+| **`SUPPORTED_LANGS` export** | `Object.freeze(['ca','es','en'])` · usat per `setLang` validation i `langSelectorHtml` iteration · garanteix consistència entre validació i UI. |
+| **Fallback chain `t(key)`** | `lang → es → en → key` · qualsevol key inexistent al CA cau a ES (llengua propera) abans de EN. Eviten "[key]" visible al usuari. |
+| **`langSelectorHtml` refactor · 3 botons** | CA / ES / EN com a pill toggle group · usa `var(--bg-elevated)` + `var(--border-default)` · botó actiu amb `#fff` color sobre `var(--accent-indigo)` bg + `aria-pressed`. Tooltips amb nom complet de la llengua. Letter-spacing 0.05em + font-mono per look Linear. |
+| **SettingsView · 🌐 Idioma card** | Nou card al `/settings` (era només `afterRender` cercant un `#settLangSel` inexistent) · border-top cyan `#06b6d4` · explicació breu dels 3 idiomes amb el seu propòsit (ES default · CA cohort 0 Matriu · EN xarxa ampliada). |
+
+Pendents Sprint D fase B+: traducció complerta de tots els strings (175→525) · marcar amb `t('key')` strings dispersos a totes les 17 vistes · extraure a `js/i18n/{ca,es,en}.json` separats per facilitar manteniment.
+
 ### Sprint F resta entregat 2026-05-10 · Bottom Nav mòbil + Information Scent
 
 | Fix | Detall |

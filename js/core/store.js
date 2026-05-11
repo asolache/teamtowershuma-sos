@@ -136,7 +136,8 @@ class Store {
         try { await injectSeeds(); } catch (e) { console.warn('[Store V11] Seeds fallback:', e.message); }
 
         // ─── Inicializar idioma desde KB ──────────────────────────────────
-        try { await initLang(); } catch (_) { window.__lang = 'en'; }
+        // UX-AUDIT-001 sprint D · default 'es' (era 'en') · ca/es/en suportats
+        try { await initLang(); } catch (_) { window.__lang = 'es'; }
 
         // ─── Exponer setLang en window para el selector HTML ──────────────
         const { setLang } = await import('../i18n.js');
