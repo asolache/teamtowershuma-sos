@@ -230,6 +230,16 @@ export default class ProjectHubView {
                         </div>
                     </div>
                 ` : ''}
+
+                <div class="ph-section">
+                    <h2>🚀 Federation · publica al permaweb</h2>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.6;margin:0 0 0.7rem 0;">
+                        Publica la "part pública" del projecte al permaweb perquè altres operadors SOS puguin descobrir-lo a <a href="/opportunities" data-link style="color:var(--accent-indigo);">/oportunitats</a>. Camps safe: nom · descripció · sector · skills/sectors que busques. <strong>NO</strong> es publica · workOrders · ledger · wallets · contributions. Cost <strong>${0.05.toFixed(2)}€</strong> · es descompta del wallet d'aquest projecte.
+                    </p>
+                    <div id="phPermawebBody" style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:0.85rem 1rem;">
+                        <div style="color:var(--text-muted);font-style:italic;">Carregant estat…</div>
+                    </div>
+                </div>
             </div>
         </div>`;
     }
@@ -244,6 +254,9 @@ export default class ProjectHubView {
                 });
             }
         });
+
+        // FUND-FLOW-001 sprint F · permaweb publish card
+        this._renderPermawebPublishCard().catch(e => console.warn('[ph] permaweb publish', e));
 
         // MAT-003 sprint F · handlers de la sección Enjambre
         document.getElementById('phSeedSeats')?.addEventListener('click', () => this._handleSeedSeats());
@@ -590,6 +603,113 @@ export default class ProjectHubView {
 
     _esc(s) {
         return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+    }
+
+    // FUND-FLOW-001 sprint F · publish project al permaweb
+    async _renderPermawebPublishCard() {
+        const body = document.getElementById('phPermawebBody');
+        if (!body || !this.projectId) return;
+        const {
+            PUBLIC_PROJECT_TYPE, projectRegistryEntryIdFor, buildPublicProjectEntry,
+            signProjectEntry, publishProjectToPermaweb, PROJECT_PRICING,
+        } = await import('../core/publicProjectService.js');
+        const { getCurrentIdentity }  = await import('../core/identityService.js');
+        const { getOrCreateSigningKey } = await import('../core/projectIO.js');
+        const { isPermawebMockEnabled } = await import('../core/publicRegistryService.js');
+        const { getOrCreateWalletForProject } = await import('../core/walletService.js');
+
+        let existing = null;
+        try { existing = await KB.getNode(projectRegistryEntryIdFor(this.projectId)); } catch (_) {}
+        const mockMode = await isPermawebMockEnabled();
+        const wallet   = await getOrCreateWalletForProject(this.projectId);
+        const balance  = Number(wallet.content.balanceEur || 0);
+        const isPublished = !!(existing && existing.type === PUBLIC_PROJECT_TYPE && existing.content?.arweaveTxId);
+
+        const mockPill = mockMode
+            ? '<span style="background:rgba(168,85,247,0.12);color:#a855f7;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;font-family:var(--font-mono);">🧪 MOCK MODE</span>'
+            : '';
+
+        if (isPublished) {
+            const tx = existing.content.arweaveTxId;
+            const isMockTx = tx.startsWith('MOCK_TX_');
+            const when = new Date(existing.content.permawebPublishedAt || 0).toLocaleDateString('ca-ES');
+            body.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-weight:700;color:${isMockTx ? '#a855f7' : 'var(--accent-green)'};">${isMockTx ? '🧪 Publicat (mock)' : '✓ Publicat al permaweb'}</div>
+                        <div style="color:var(--text-muted);font-size:0.78rem;font-family:var(--font-mono);margin-top:2px;">Tx · ${this._esc(tx.slice(0,16))}… · ${when}</div>
+                    </div>
+                    <div style="display:flex;gap:6px;">
+                        ${isMockTx
+                            ? '<span class="ph-link" style="opacity:0.6;cursor:default;">🧪 Mock · cap upload real</span>'
+                            : `<a href="https://arweave.net/${encodeURIComponent(tx)}" target="_blank" rel="noopener" class="ph-link">🔗 Veure tx</a>`}
+                        <a href="/opportunities" data-link class="ph-link">→ /opportunities</a>
+                    </div>
+                </div>
+                ${mockPill ? '<div style="margin-top:6px;">' + mockPill + '</div>' : ''}
+            `;
+            return;
+        }
+
+        // No publicat encara
+        const canPublish = mockMode || balance >= PROJECT_PRICING.publishEur;
+        const costStr = mockMode ? '0,00€ (mock)' : PROJECT_PRICING.publishEur.toFixed(2) + '€';
+        const balanceWarning = !mockMode && balance < PROJECT_PRICING.publishEur
+            ? `<div style="color:var(--accent-orange);font-size:0.78rem;margin-top:6px;">⚠ Saldo wallet projecte ${balance.toFixed(2)}€ · necessites ≥ ${PROJECT_PRICING.publishEur.toFixed(2)}€ · <a href="/wallet?project=${encodeURIComponent(this.projectId)}" data-link style="color:var(--accent-orange);">recarrega aquí →</a></div>`
+            : '';
+
+        body.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;">
+                <div>
+                    <div style="font-weight:700;color:var(--text-secondary);">— No publicat encara</div>
+                    <div style="color:var(--text-muted);font-size:0.78rem;margin-top:2px;">Saldo wallet projecte · <strong style="color:var(--text-main);">${balance.toFixed(2)}€</strong> · cost <strong style="color:var(--accent-indigo);">${costStr}</strong></div>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    ${mockPill}
+                    <button class="ph-link" id="phPubBtn" style="background:${canPublish ? 'var(--accent-indigo)' : 'var(--bg-panel)'};color:${canPublish ? '#fff' : 'var(--text-muted)'};border:1px solid ${canPublish ? 'var(--accent-indigo)' : 'var(--border-default)'};padding:6px 14px;border-radius:var(--radius-sm);cursor:${canPublish ? 'pointer' : 'not-allowed'};font-weight:700;${canPublish ? '' : 'opacity:0.6;'}" ${canPublish ? '' : 'disabled'}>${mockMode ? '🧪 Publicar (mock)' : '🚀 Publicar al permaweb'}</button>
+                </div>
+            </div>
+            ${balanceWarning}
+            <div id="phPubStatus" style="font-size:0.78rem;margin-top:6px;display:none;"></div>
+        `;
+
+        const setStatus = (msg, ok = true) => {
+            const s = document.getElementById('phPubStatus');
+            if (!s) return;
+            s.style.display = 'block';
+            s.textContent = msg;
+            s.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)';
+        };
+
+        document.getElementById('phPubBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('phPubBtn');
+            btn.disabled = true; btn.textContent = '⏳ Construint…';
+            setStatus('Construint entry · signant amb ECDSA P-256…', true);
+            try {
+                const identity = await getCurrentIdentity();
+                if (!identity?.primaryDid) {
+                    setStatus('✗ Necessites identitat · ves a /identity i clica Guardar', false);
+                    btn.disabled = false; btn.textContent = mockMode ? '🧪 Publicar (mock)' : '🚀 Publicar al permaweb';
+                    return;
+                }
+                const keyMeta = await getOrCreateSigningKey();
+                const entry = buildPublicProjectEntry({
+                    project:        this.project,
+                    ownerDid:       identity.primaryDid,
+                    ownerPublicJwk: keyMeta.publicJwk,
+                });
+                const signed = await signProjectEntry({ entry, privateJwk: keyMeta.privateJwk });
+                btn.textContent = '⏳ Pujant…';
+                setStatus('Pujant al permaweb…', true);
+                const result = await publishProjectToPermaweb({ entry: signed, projectId: this.projectId });
+                setStatus(`✓ Publicat · txId ${result.txId.slice(0,12)}… · cost ${result.costEur.toFixed(2)}€`, true);
+                setTimeout(() => this._renderPermawebPublishCard(), 700);
+            } catch (e) {
+                console.error('[ph] publish project', e);
+                setStatus('✗ ' + (e?.message || 'error desconegut'), false);
+                btn.disabled = false; btn.textContent = mockMode ? '🧪 Publicar (mock)' : '🚀 Publicar al permaweb';
+            }
+        });
     }
 
     destroy() {}

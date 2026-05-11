@@ -170,3 +170,156 @@ export function arweaveTagsForProjectEntry(entry) {
         { name: 'Content-Type', value: 'application/json' },
     ];
 }
+
+// ── Pricing · igual que el registry d'usuaris · 0.05€ flat (decisió #8) ──
+export const PROJECT_PRICING = Object.freeze({
+    publishEur: 0.05,
+    revokeEur:  0.05,
+});
+
+// ── Sign + verify · reutilitza les utilities crypto.subtle ──────────
+
+function _ensureSubtle() {
+    if (typeof crypto === 'undefined' || !crypto.subtle) {
+        throw new Error('crypto.subtle no disponible');
+    }
+    return crypto.subtle;
+}
+
+function _bytesToBase64(bytes) {
+    if (typeof Buffer !== 'undefined') return Buffer.from(bytes).toString('base64');
+    let binary = '';
+    const len = bytes.byteLength || bytes.length;
+    for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+}
+
+function _base64ToBytes(b64) {
+    if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(b64, 'base64'));
+    const binary = atob(b64);
+    const out = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+    return out;
+}
+
+export async function signProjectEntry({ entry, privateJwk } = {}) {
+    if (!entry || !entry.content) throw new Error('signProjectEntry requires entry');
+    if (!privateJwk || privateJwk.kty !== 'EC' || privateJwk.crv !== 'P-256' || !privateJwk.d) {
+        throw new Error('signProjectEntry requires ECDSA P-256 privateJwk with "d"');
+    }
+    const pub = entry.content.publicJwk;
+    if (pub && (pub.x !== privateJwk.x || pub.y !== privateJwk.y)) {
+        throw new Error('privateJwk does not match entry.content.publicJwk');
+    }
+    const subtle = _ensureSubtle();
+    const key = await subtle.importKey('jwk', privateJwk, { name:'ECDSA', namedCurve:'P-256' }, false, ['sign']);
+    const data = new TextEncoder().encode(canonicalizeProjectEntry(entry));
+    const sigBuf = await subtle.sign({ name:'ECDSA', hash:'SHA-256' }, key, data);
+    return {
+        ...entry,
+        content: { ...entry.content, signature: _bytesToBase64(new Uint8Array(sigBuf)), signatureFormat: 'ECDSA-P256-SHA256-base64' },
+        updatedAt: Date.now(),
+    };
+}
+
+export async function verifyProjectEntry(entry) {
+    if (!entry || !entry.content) return { valid: false, reason: 'no-content' };
+    const c = entry.content;
+    if (!c.signature)  return { valid: false, reason: 'no-signature' };
+    if (!c.publicJwk)  return { valid: false, reason: 'no-publicJwk' };
+    let subtle;
+    try { subtle = _ensureSubtle(); } catch (_) { return { valid:false, reason:'crypto-unavailable' }; }
+    let sigBytes;
+    try { sigBytes = _base64ToBytes(c.signature); } catch (_) { return { valid:false, reason:'invalid-signature-encoding' }; }
+    let pubKey;
+    try {
+        pubKey = await subtle.importKey('jwk', c.publicJwk, { name:'ECDSA', namedCurve:'P-256' }, false, ['verify']);
+    } catch (_) { return { valid:false, reason:'invalid-publicJwk' }; }
+    const data = new TextEncoder().encode(canonicalizeProjectEntry(entry));
+    const ok = await subtle.verify({ name:'ECDSA', hash:'SHA-256' }, pubKey, sigBytes, data);
+    return { valid: !!ok, reason: ok ? 'ok' : 'signature-mismatch' };
+}
+
+// ── Publish + revoke flow · descompta del wallet DEL PROJECTE (decisió #5) ──
+// Si mode mock actiu (PERM-USER-001 setPermawebMockEnabled), skip Turbo + wallet.
+
+export async function publishProjectToPermaweb({ entry, projectId } = {}) {
+    if (!entry || !entry.content) throw new Error('publishProjectToPermaweb requires entry');
+    if (!projectId) throw new Error('publishProjectToPermaweb requires projectId (font wallet · habitualment el mateix project que es publica)');
+    if (!entry.content.signature) throw new Error('must-sign-first');
+
+    const v = await verifyProjectEntry(entry);
+    if (!v.valid) throw new Error('publishProjectToPermaweb · invalid signature: ' + v.reason);
+
+    // MOCK MODE check (reutilitza flag de PERM-USER-001)
+    try {
+        const reg = await import('./publicRegistryService.js');
+        if (await reg.isPermawebMockEnabled()) {
+            const txId = 'MOCK_TX_PROJ_' + Math.random().toString(36).slice(2, 10);
+            const updated = {
+                ...entry,
+                content: { ...entry.content, arweaveTxId: txId, permawebPublishedAt: Date.now(), _mock: true },
+                updatedAt: Date.now(),
+            };
+            try { const { KB } = await import('./kb.js'); await KB.upsert(updated); } catch (_) {}
+            return { entry: updated, txId, costEur: 0, mock: true };
+        }
+    } catch (_) {}
+
+    const price = PROJECT_PRICING.publishEur;
+    const { consumeAndPersist, refundWallet, getOrCreateWalletForProject, persistWallet } = await import('./walletService.js');
+    const before = await getOrCreateWalletForProject(projectId);
+    if (Number(before.content.balanceEur) < price) {
+        throw new Error('insufficient-funds · saldo ' + before.content.balanceEur + '€ < preu ' + price + '€');
+    }
+    const walletAfter = await consumeAndPersist({
+        projectId, amountEur: price,
+        ref:    'permaweb-project-publish-' + entry.id,
+        source: 'public-project-publish',
+        note:   'FUND-FLOW-001 sprint F · publish project ' + entry.content.name,
+    });
+
+    let txId;
+    try {
+        const tags = arweaveTagsForProjectEntry(entry);
+        const body = canonicalizeProjectEntry(entry);
+        const payload = JSON.stringify({
+            ...JSON.parse(body),
+            signature:       entry.content.signature,
+            signatureFormat: entry.content.signatureFormat,
+        });
+        // Reusa el Turbo loader de publicRegistryService (afortunadament és el mateix endpoint)
+        const reg = await import('./publicRegistryService.js');
+        // Setejar Turbo loader necessita accés intern · usem la mateixa carrega
+        const mod = await import('https://cdn.jsdelivr.net/npm/@ardrive/turbo-sdk@latest/+esm');
+        const factory = mod.TurboFactory || mod.default || mod;
+        const client  = factory.unauthenticated ? factory.unauthenticated() : factory;
+        const result  = await client.uploadFile({
+            fileStreamFactory: () => new Blob([payload], { type: 'application/json' }).stream(),
+            fileSizeFactory:   () => payload.length,
+            dataItemOpts:      { tags },
+        });
+        txId = result?.id || result?.txId;
+        if (!txId) throw new Error('Turbo upload sense txId');
+    } catch (e) {
+        // Refund
+        try {
+            const refunded = refundWallet({
+                wallet: walletAfter, amountEur: price,
+                ref: 'permaweb-project-publish-refund-' + entry.id,
+                source: 'public-project-publish-refund',
+                note: 'refund · upload failed: ' + (e?.message || e),
+            });
+            await persistWallet(refunded);
+        } catch (_) {}
+        throw new Error('turbo-upload-failed: ' + (e?.message || e));
+    }
+
+    const updated = {
+        ...entry,
+        content: { ...entry.content, arweaveTxId: txId, permawebPublishedAt: Date.now() },
+        updatedAt: Date.now(),
+    };
+    try { const { KB } = await import('./kb.js'); await KB.upsert(updated); } catch (_) {}
+    return { entry: updated, txId, costEur: price, walletAfter };
+}
