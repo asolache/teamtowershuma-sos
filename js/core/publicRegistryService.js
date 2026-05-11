@@ -247,3 +247,132 @@ export function arweaveTagsForEntry(entry) {
         { name: 'Content-Type', value: 'application/json' },
     ];
 }
+
+// ── Sprint B · Signatura ECDSA P-256 over canonical JSON ─────────────
+//
+// Format: 'ECDSA-P256-SHA256-base64' · subtle.sign retorna 64 bytes
+// raw r||s · els codifiquem en base64 standard (no urlsafe) per que
+// estigui el JSON-friendly i compatible amb GraphQL Arweave tags.
+//
+// El payload signat és el output de `canonicalizeRegistryEntry(node)`
+// que OMET sempre content.signature i content.arweaveTxId. Així podem
+// re-signar després d'afegir l'arweaveTxId post-publish sense
+// invalidar la firma original.
+
+function _ensureSubtle() {
+    if (typeof crypto === 'undefined' || !crypto.subtle) {
+        throw new Error('crypto.subtle no disponible · necessari per signRegistryEntry (browser modern o node 19+ amb webcrypto)');
+    }
+    return crypto.subtle;
+}
+
+// Bytes → base64 (ASCII safe) · cross-platform (browser + node 19+).
+function _bytesToBase64(bytes) {
+    if (typeof Buffer !== 'undefined') return Buffer.from(bytes).toString('base64');
+    let binary = '';
+    const len = bytes.byteLength || bytes.length;
+    for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+}
+
+// base64 → Uint8Array.
+function _base64ToBytes(b64) {
+    if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(b64, 'base64'));
+    const binary = atob(b64);
+    const out = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+    return out;
+}
+
+// signRegistryEntry · async · clona l'entry · canonicaliza · signa amb
+// privateJwk (ECDSA P-256) · retorna entry amb content.signature filled
+// (base64). NO modifica l'entry original (return new object).
+//
+// Llença Error si:
+//   - entry invàlid
+//   - privateJwk no és ECDSA P-256 amb 'd'
+//   - crypto.subtle no disponible
+//   - publicJwk de l'entry no coincideix amb el derivat de privateJwk
+//     (defensive · evita signar amb una clau aliena)
+export async function signRegistryEntry({ entry, privateJwk } = {}) {
+    if (!entry || !entry.content) throw new Error('signRegistryEntry requires entry');
+    if (!privateJwk || typeof privateJwk !== 'object') {
+        throw new Error('signRegistryEntry requires privateJwk');
+    }
+    if (privateJwk.kty !== 'EC' || privateJwk.crv !== 'P-256') {
+        throw new Error('privateJwk must be ECDSA P-256');
+    }
+    if (!privateJwk.d) {
+        throw new Error('privateJwk lacks "d" (private scalar)');
+    }
+    // Defensive · privateJwk.{x,y} ha de coincidir amb entry.content.publicJwk.{x,y}
+    const pub = entry.content.publicJwk;
+    if (pub && (pub.x !== privateJwk.x || pub.y !== privateJwk.y)) {
+        throw new Error('privateJwk does not match entry.content.publicJwk · refusing to sign with foreign key');
+    }
+    const subtle = _ensureSubtle();
+    const key = await subtle.importKey(
+        'jwk', privateJwk,
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        false, ['sign']
+    );
+    const canonical = canonicalizeRegistryEntry(entry);
+    const data = new TextEncoder().encode(canonical);
+    const sigBuf = await subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, data);
+    const signature = _bytesToBase64(new Uint8Array(sigBuf));
+    return {
+        ...entry,
+        content: {
+            ...entry.content,
+            signature,
+            signatureFormat: SIGNATURE_FORMAT,
+        },
+        updatedAt: Date.now(),
+    };
+}
+
+// verifyRegistryEntry · async · re-canonicaliza · verify amb la
+// publicJwk de l'entry mateixa (auto-contained).
+// Retorna { valid: bool, reason: string }.
+//
+// Casos defensius:
+//   - signature absent → {valid:false, reason:'no-signature'}
+//   - publicJwk absent → {valid:false, reason:'no-publicJwk'}
+//   - signatureFormat inesperat → {valid:false, reason:'unsupported-format'}
+//   - crypto.subtle no disponible → {valid:false, reason:'crypto-unavailable'}
+//   - base64 invàlid → {valid:false, reason:'invalid-signature-encoding'}
+//   - signature no verifica → {valid:false, reason:'signature-mismatch'}
+//   - valid → {valid:true, reason:'ok'}
+export async function verifyRegistryEntry(entry) {
+    if (!entry || !entry.content) return { valid: false, reason: 'no-content' };
+    const c = entry.content;
+    if (!c.signature) return { valid: false, reason: 'no-signature' };
+    if (!c.publicJwk) return { valid: false, reason: 'no-publicJwk' };
+    if (c.signatureFormat && c.signatureFormat !== SIGNATURE_FORMAT) {
+        return { valid: false, reason: 'unsupported-format: ' + c.signatureFormat };
+    }
+    let subtle;
+    try { subtle = _ensureSubtle(); } catch (_) {
+        return { valid: false, reason: 'crypto-unavailable' };
+    }
+    let sigBytes;
+    try { sigBytes = _base64ToBytes(c.signature); }
+    catch (_) { return { valid: false, reason: 'invalid-signature-encoding' }; }
+    let pubKey;
+    try {
+        pubKey = await subtle.importKey(
+            'jwk', c.publicJwk,
+            { name: 'ECDSA', namedCurve: 'P-256' },
+            false, ['verify']
+        );
+    } catch (_) { return { valid: false, reason: 'invalid-publicJwk' }; }
+    const canonical = canonicalizeRegistryEntry(entry);
+    const data = new TextEncoder().encode(canonical);
+    let ok;
+    try {
+        ok = await subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, pubKey, sigBytes, data);
+    } catch (e) {
+        return { valid: false, reason: 'verify-threw: ' + (e?.message || e) };
+    }
+    return { valid: !!ok, reason: ok ? 'ok' : 'signature-mismatch' };
+}
