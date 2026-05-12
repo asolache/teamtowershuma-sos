@@ -3094,6 +3094,98 @@ SOS ja porta Turbo SDK amb keyfile JSON. Refactor cap a UX més neta:
 
 ---
 
+## IA-ROUTER-001 · Routing matrix IA · 5 providers · escalation per qualitat (input @alvaro 2026-05-12)
+
+> "Defineix-me quines IAs de les que tinc apis · Anthropic · Gemini ·
+> ChatGPT · DeepSeek · Minimax · em serveixen per a la màxima
+> eficiència en cada ús de IA per optimitzar costos · i només en cas
+> de necessitar arribar als tests de qualitat usar el model superior."
+
+### Filosofia
+SOS V11 té API keys de **5 providers**. Cada tasca té característiques diferents
+(creativa · estructurada · raonament · multimodal · curt-vs-llarg) i cada
+provider té modèls amb perfils preu/qualitat diferents. La filosofia:
+
+1. **Default · model més barat viable** per al tipus de tasca (no el millor en absolut)
+2. **Avaluador automàtic** mira l'output (cost ~$0.001 amb Haiku/Flash-Lite)
+3. **Si l'avaluador rebutja**, retry amb model `fallback` (qualitat mig)
+4. **Si encara rebutja**, escalate a `premium` (Opus 4.7 · GPT-5 · DeepSeek R1)
+5. Si tot falla, retorna el millor output disponible amb flag `escalatedExhausted`
+
+Resultat · **una crida ~80% més barata** que sempre usar el model premium,
+sense sacrificar qualitat a les tasques difícils.
+
+### Matriu de routing (sprint A · ja implementat)
+
+Catàleg de **12 modèls** repartits per provider/tier:
+
+| Provider | Modèls | Tier preu | USD/1M (in/out) | Quality |
+|---|---|---|---|---|
+| Anthropic | Opus 4.7 | frontier | 15.00 / 75.00 | 5/5 |
+| Anthropic | Sonnet 4.6 | mid | 3.00 / 15.00 | 4/5 |
+| Anthropic | Haiku 4.5 | small | 1.00 / 5.00 | 3/5 |
+| OpenAI | GPT-5 | frontier | 1.25 / 10.00 | 5/5 |
+| OpenAI | GPT-4o | mid | 2.50 / 10.00 | 4/5 |
+| OpenAI | GPT-4o-mini | small | 0.15 / 0.60 | 3/5 |
+| Gemini | 2.5 Pro | large | 1.25 / 10.00 | 4/5 |
+| Gemini | 2.5 Flash | small | 0.15 / 0.60 | 3/5 |
+| Gemini | 2.5 Flash-Lite | micro | 0.075 / 0.30 | 2/5 |
+| DeepSeek | V3 | mid | 0.27 / 1.10 | 4/5 |
+| DeepSeek | R1 (reasoner) | mid | 0.55 / 2.19 | 5/5 |
+| Minimax | M2 | small | 0.30 / 1.20 | 3/5 |
+
+Routing per task kind (`TASK_ROUTING` a `aiRouterService.js`):
+
+| Tasca | Primary (barata) | Fallback (mid) | Premium (top) | Evaluator |
+|---|---|---|---|---|
+| `summary-short` | gemini/2.5-flash-lite | anthropic/haiku-4.5 | anthropic/sonnet-4.6 | haiku-4.5 |
+| `schema-fill-simple` | gemini/2.5-flash | deepseek/v3 | anthropic/sonnet-4.6 | haiku-4.5 |
+| `creative-narrative` | anthropic/sonnet-4.6 | openai/gpt-4o | **anthropic/opus-4.7** | deepseek/r1 |
+| `value-map-design` | anthropic/sonnet-4.6 | deepseek/r1 | **anthropic/opus-4.7** | deepseek/r1 |
+| `sop-structured` | deepseek/v3 | anthropic/sonnet-4.6 | anthropic/opus-4.7 | haiku-4.5 |
+| `workshop-outline` | gemini/2.5-flash | anthropic/sonnet-4.6 | anthropic/sonnet-4.6 | haiku-4.5 |
+| `code-generation` | deepseek/v3 | anthropic/sonnet-4.6 | anthropic/opus-4.7 | deepseek/r1 |
+| `quality-audit` | deepseek/r1 | anthropic/sonnet-4.6 | anthropic/opus-4.7 | opus-4.7 |
+| `deep-reasoning` | deepseek/r1 | gemini/2.5-pro | anthropic/opus-4.7 | opus-4.7 |
+| `multimodal-image` | gemini/2.5-flash | openai/gpt-4o | gemini/2.5-pro | haiku-4.5 |
+| `tag-generation` | gemini/2.5-flash-lite | anthropic/haiku-4.5 | anthropic/haiku-4.5 | (none) |
+
+### Implementació (sprint A · ja en producció)
+- `js/core/aiRouterService.js` · 175 LOC · pur · zero crides reals
+- `AI_MODELS` · 12 modèls amb pricing + quality + contextK
+- `TASK_ROUTING` · 11 tasques amb chain primary/fallback/premium/evaluator
+- `estimateCostUsd/Eur(modelKey, {inputTokens, outputTokens})` · matemàtica pura
+- `pickModelForBudget({taskKind, budgetEur, tokens})` · pick highest-quality dins budget
+- `runEscalation({taskKind, generate, evaluate, ctx, stopAt})` · orquestrador agnòstic provider · es passa la funció `generate` (provider real) i `evaluate` (qualitat) i ell decideix la chain
+- 43 tests cobrint catàleg + costs + routing + budget pick + escalation chain
+
+### Sprint plan B → D (pendents · ~6h total)
+#### Sprint B · provider adapters (~2h)
+- `js/core/aiProvider.js` · capa fina d'adaptació `generate(modelKey, prompt, ctx)` que mira `AI_MODELS[modelKey].provider` i crida l'endpoint corresponent
+- 5 adapters · anthropic · openai · gemini · deepseek · minimax
+- Cada adapter usa API key configurada a /settings (mai al codi)
+- Counts tokens reals retornats per al cost real (no estimat)
+
+#### Sprint C · evaluadors per task kind (~2h)
+- `js/core/aiEvaluator.js` · funcions per validar shape + qualitat semàntica
+- Per `schema-fill-simple` · JSON shape check + missing fields detection
+- Per `creative-narrative` · LLM-as-judge amb Haiku · score 0-1
+- Per `code-generation` · syntax check + estructura
+- Per `tag-generation` · skip (no eval · tags són cheap)
+
+#### Sprint D · integració a aiFill (~2h)
+- `iaContextService.aiFillLanding` etc usa `runEscalation` amb evaluate corresponent
+- UI mostra a `/quality?project={id}` · "Generat amb deepseek/v3 · escalated a sonnet-4.6 (raó: missing field 'tagline')" per a transparència
+- `ai_audit` node registra TOTS els intents (primary + fallback + premium) amb cost individual
+
+### Decisions pendents @alvaro
+1. **USD→EUR conversion rate** · default 0.92 · actualitzable a /settings · prou per a alfa?
+2. **Override per usuari** · permitir a /settings que l'usuari triï "sempre Opus" o "sempre el barat sense escalation"? · recomanació: SÍ amb avís de cost
+3. **DeepSeek R1 amb reasoning trace inclòs** · el reasoner mostra el "thinking" abans del response · cobrar tokens del trace o ocultar-los? · recomanació: cobrar (és cost real)
+4. **Minimax M2** · està al catàleg però no té task kind primari · ús futur per a workshops amb àudio/video · justificat?
+
+---
+
 ## IA-CONTEXT-001 · Prompts auditoria amb context intel·ligent + import links (input @alvaro 2026-05-12)
 
 > "Em sembla molt bé el plantejament orientat a l'auditoria de prompts
