@@ -1,0 +1,206 @@
+// PROJ-VERSIONING-001 + FOUNDER-001 sprint A · tests stand-alone.
+// Ús: node js/tests/projectVersioning.test.js
+
+import * as svc from '../core/publicProjectService.js';
+import * as f from '../core/founderTemplate.js';
+
+let pass = 0, fail = 0;
+function t(cond, msg) {
+    if (cond) { pass++; console.log('✓ ' + msg); }
+    else      { fail++; console.error('✘ ' + msg); }
+}
+function eq(a, b, msg) { t(a === b, msg + ' (expected ' + JSON.stringify(b) + ', got ' + JSON.stringify(a) + ')'); }
+
+console.log('\n=== PROJ-VERSIONING-001 + FOUNDER-001 · tests ===\n');
+
+// ─── Fixtures ────────────────────────────────────────────────────────────
+const ownerDid = 'did:sos:abc1234567890abcdef';
+const ownerJwk = { kty:'EC', crv:'P-256', x:'AAAA', y:'BBBB' };
+const project  = {
+    id:           'proj-v1-test',
+    nombre:       'Test versioned',
+    sector_id:    'A',
+    description:  'desc',
+};
+
+// ─── A · buildPublicProjectEntry · default version=1 ─────────────────────
+const entry1 = svc.buildPublicProjectEntry({ project, ownerDid, ownerPublicJwk: ownerJwk });
+eq(entry1.content.entryVersion, 1,                                    'A · default entryVersion = 1');
+eq(entry1.content.previousTxId, null,                                 'A · v1 · previousTxId null');
+t(entry1.keywords.includes('entryVersion:1'),                         'A · keyword entryVersion:1');
+
+// ─── B · v2 sense previousTxId · throw ────────────────────────────────────
+let threw = null;
+try {
+    svc.buildPublicProjectEntry({ project, ownerDid, ownerPublicJwk: ownerJwk, entryVersion: 2 });
+} catch (e) { threw = e; }
+t(threw && /requires previousTxId/.test(threw.message),               'B · v2 sense previousTxId · throw');
+
+// ─── C · v2 amb previousTxId · OK ────────────────────────────────────────
+const entry2 = svc.buildPublicProjectEntry({
+    project, ownerDid, ownerPublicJwk: ownerJwk,
+    entryVersion: 2, previousTxId: 'TX_V1_FAKE_ABCDEF',
+});
+eq(entry2.content.entryVersion, 2,                                    'C · v2 · entryVersion 2');
+eq(entry2.content.previousTxId, 'TX_V1_FAKE_ABCDEF',                  'C · v2 · previousTxId enllaçat');
+t(entry2.keywords.includes('entryVersion:2'),                         'C · v2 · keyword entryVersion:2');
+t(entry2.keywords.some(k => k.startsWith('previousTxId:')),           'C · v2 · keyword previousTxId');
+
+// ─── D · entryVersion invàlid · throw ────────────────────────────────────
+threw = null;
+try { svc.buildPublicProjectEntry({ project, ownerDid, ownerPublicJwk: ownerJwk, entryVersion: 0 }); } catch (e) { threw = e; }
+t(threw && /positive integer/.test(threw.message),                    'D · entryVersion 0 · throw');
+threw = null;
+try { svc.buildPublicProjectEntry({ project, ownerDid, ownerPublicJwk: ownerJwk, entryVersion: 1.5 }); } catch (e) { threw = e; }
+t(threw && /positive integer/.test(threw.message),                    'D · entryVersion 1.5 · throw');
+
+// ─── E · arweaveTagsForProjectEntry inclou Version + Previous-TxId ──────
+const tags1 = svc.arweaveTagsForProjectEntry(entry1);
+const vTag = tags1.find(t => t.name === 'Version');
+t(vTag && vTag.value === '0001',                                      'E · v1 · tag Version=0001 (padded)');
+t(!tags1.find(t => t.name === 'Previous-TxId'),                       'E · v1 · sense Previous-TxId tag');
+
+const tags2 = svc.arweaveTagsForProjectEntry(entry2);
+const vTag2 = tags2.find(t => t.name === 'Version');
+const pTag2 = tags2.find(t => t.name === 'Previous-TxId');
+t(vTag2 && vTag2.value === '0002',                                    'E · v2 · tag Version=0002');
+t(pTag2 && pTag2.value === 'TX_V1_FAKE_ABCDEF',                       'E · v2 · tag Previous-TxId enllaçat');
+
+// ─── F · validateVersionChain · chain íntegre ────────────────────────────
+const chainOk = [
+    { txId:'TX_V1', entryVersion:1, previousTxId:null },
+    { txId:'TX_V2', entryVersion:2, previousTxId:'TX_V1' },
+    { txId:'TX_V3', entryVersion:3, previousTxId:'TX_V2' },
+];
+const okResult = svc.validateVersionChain(chainOk);
+t(okResult.valid,                                                     'F · chain íntegre · valid true');
+eq(okResult.issues.length, 0,                                         'F · chain íntegre · issues 0');
+
+// ─── G · validateVersionChain · gap detection ────────────────────────────
+const chainGap = [
+    { txId:'TX_V1', entryVersion:1, previousTxId:null },
+    { txId:'TX_V3', entryVersion:3, previousTxId:'TX_V2' },
+];
+const gapResult = svc.validateVersionChain(chainGap);
+t(!gapResult.valid,                                                   'G · chain amb gap · invalid');
+t(gapResult.issues.some(i => /gap/.test(i)),                          'G · gap reportat');
+
+// ─── H · validateVersionChain · fork detection ───────────────────────────
+const chainFork = [
+    { txId:'TX_V1',  entryVersion:1, previousTxId:null },
+    { txId:'TX_V2A', entryVersion:2, previousTxId:'TX_V1' },
+    { txId:'TX_V2B', entryVersion:2, previousTxId:'TX_V1' },
+];
+const forkResult = svc.validateVersionChain(chainFork);
+t(!forkResult.valid,                                                  'H · chain amb fork · invalid');
+t(forkResult.issues.some(i => /fork/.test(i)),                        'H · fork reportat');
+
+// ─── I · validateVersionChain · previousTxId mismatch ────────────────────
+const chainMismatch = [
+    { txId:'TX_V1', entryVersion:1, previousTxId:null },
+    { txId:'TX_V2', entryVersion:2, previousTxId:'WRONG_TX' },
+];
+const mismatchResult = svc.validateVersionChain(chainMismatch);
+t(!mismatchResult.valid,                                              'I · previousTxId wrong · invalid');
+t(mismatchResult.issues.some(i => /mismatch/.test(i)),                'I · mismatch reportat');
+
+// ─── J · validateVersionChain · v1 amb previousTxId · invalid ────────────
+const chainBadV1 = [
+    { txId:'TX_V1', entryVersion:1, previousTxId:'SHOULD_BE_NULL' },
+];
+const badV1 = svc.validateVersionChain(chainBadV1);
+t(!badV1.valid,                                                       'J · v1 amb previousTxId · invalid');
+t(badV1.issues.some(i => /v1-has-previousTxId/.test(i)),              'J · v1-has-previousTxId reportat');
+
+// ─── K · getProjectVersionHistory · mock fetch ───────────────────────────
+const mockGqlResponse = {
+    data: {
+        transactions: {
+            edges: [
+                { node: { id: 'TX_V2', block: { height: 1500001, timestamp: 1700001000 },
+                    tags: [
+                        { name: 'App-Name', value: 'SOS-V11' },
+                        { name: 'Entry-Type', value: 'public-project-entry' },
+                        { name: 'ProjectId', value: 'proj-x' },
+                        { name: 'Version', value: '0002' },
+                        { name: 'Previous-TxId', value: 'TX_V1' },
+                        { name: 'OwnerDid', value: 'did:sos:abc' },
+                        { name: 'SectorId', value: 'A' },
+                    ],
+                } },
+                { node: { id: 'TX_V1', block: { height: 1500000, timestamp: 1700000000 },
+                    tags: [
+                        { name: 'App-Name', value: 'SOS-V11' },
+                        { name: 'Entry-Type', value: 'public-project-entry' },
+                        { name: 'ProjectId', value: 'proj-x' },
+                        { name: 'Version', value: '0001' },
+                        { name: 'OwnerDid', value: 'did:sos:abc' },
+                        { name: 'SectorId', value: 'A' },
+                    ],
+                } },
+            ],
+        },
+    },
+};
+const mockFetch = async () => ({ ok: true, json: async () => mockGqlResponse });
+
+const history = await svc.getProjectVersionHistory({ projectId: 'proj-x', fetchFn: mockFetch });
+eq(history.length, 2,                                                 'K · history · 2 versions');
+eq(history[0].entryVersion, 1,                                        'K · history sorted ASC · v1 first');
+eq(history[1].entryVersion, 2,                                        'K · v2 second');
+eq(history[0].txId, 'TX_V1',                                          'K · v1 · txId TX_V1');
+eq(history[1].previousTxId, 'TX_V1',                                  'K · v2 · previousTxId TX_V1');
+
+const latest = await svc.getLatestProjectVersion({ projectId: 'proj-x', fetchFn: mockFetch });
+eq(latest.entryVersion, 2,                                            'K · latest · v2');
+eq(latest.txId, 'TX_V2',                                              'K · latest · txId TX_V2');
+
+// ─── L · getProjectVersionHistory · mock fetch fails ─────────────────────
+const failFetch = async () => ({ ok: false, status: 500 });
+threw = null;
+try { await svc.getProjectVersionHistory({ projectId: 'p', fetchFn: failFetch }); } catch (e) { threw = e; }
+t(threw && /gql-http-500/.test(threw.message),                        'L · fetch 500 · throw gql-http-500');
+
+// ─── M · FOUNDER-001 · buildFounderProject ───────────────────────────────
+const founderResult = f.buildFounderProject({ ts: 1700000000000 });
+t(founderResult.project && founderResult.project.id,                  'M · founder · project amb id');
+t(founderResult.project.id.startsWith('proj-founder-alvaro-'),        'M · founder · id format correcte');
+eq(founderResult.project.vna_roles.length, 9,                         'M · founder · 9 roles');
+eq(founderResult.project.vna_transactions.length, 12,                 'M · founder · 12 transactions');
+eq(founderResult.sops.length, 5,                                      'M · founder · 5 sops');
+eq(founderResult.workshops.length, 3,                                 'M · founder · 3 workshops');
+eq(founderResult.project.sector_id, 'A',                              'M · founder · sector A');
+eq(founderResult.project.cohortNumber, 0,                             'M · founder · cohort 0');
+t(founderResult.project.presentation_narrative_v1 && founderResult.project.presentation_narrative_v1.length > 100, 'M · founder · presentation narrative omplerta');
+
+// ─── N · founder SOPs porten projectId i roleId vinculats ────────────────
+const allSopsLinked = founderResult.sops.every(s =>
+    s.type === 'sop' && s.content.projectId === founderResult.project.id && s.content.roleId &&
+    Array.isArray(s.content.steps) && s.content.steps.length >= 5
+);
+t(allSopsLinked,                                                      'N · sops · type+projectId+roleId+steps tots OK');
+
+// ─── O · founder workshops · accessTier + audience ───────────────────────
+const allWorkshopsTiered = founderResult.workshops.every(w =>
+    w.type === 'workshop' && w.content.projectId === founderResult.project.id &&
+    w.content.audience && ['public', 'operator', 'matriu', 'cohort'].includes(w.content.accessTier)
+);
+t(allWorkshopsTiered,                                                 'O · workshops · tier vàlid (public/operator/matriu/cohort)');
+
+// ─── P · founder transactions · ≥1 intangible + cicle recíproc ───────────
+const hasIntangible = founderResult.project.vna_transactions.some(t => t.type === 'intangible');
+t(hasIntangible,                                                      'P · founder · ≥1 transacció intangible');
+// Check cycle · busca un parell A↔B
+const edges = new Set();
+founderResult.project.vna_transactions.forEach(t => edges.add(t.from + '→' + t.to));
+const hasCycle = founderResult.project.vna_transactions.some(t => edges.has(t.to + '→' + t.from));
+t(hasCycle,                                                           'P · founder · té cicle recíproc');
+
+// ─── Q · stats coherents ────────────────────────────────────────────────
+eq(founderResult.stats.roles,        9,                               'Q · stats.roles 9');
+eq(founderResult.stats.transactions, 12,                              'Q · stats.transactions 12');
+eq(founderResult.stats.sops,         5,                               'Q · stats.sops 5');
+eq(founderResult.stats.workshops,    3,                               'Q · stats.workshops 3');
+
+console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
+if (fail > 0) process.exit(1);
