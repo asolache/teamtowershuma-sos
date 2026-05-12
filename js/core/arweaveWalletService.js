@@ -133,13 +133,54 @@ const TURBO_CDN_FALLBACKS = [
     'https://cdn.skypack.dev/@ardrive/turbo-sdk@1.27.1',
 ];
 
+// UMD bundle pre-construit · es carrega via <script> tag · funciona al
+// browser sense polyfilling fs (té-ho tot inline). Plan B si tot ESM falla.
+const TURBO_UMD_BUNDLES = [
+    'https://unpkg.com/@ardrive/turbo-sdk@1.27.1/bundles/web.bundle.min.js',
+    'https://cdn.jsdelivr.net/npm/@ardrive/turbo-sdk@1.27.1/bundles/web.bundle.min.js',
+];
+
+async function _loadTurboUMD() {
+    if (typeof document === 'undefined') return null;
+    if (window.TurboFactory || (window.turboSdk && window.turboSdk.TurboFactory)) {
+        return window.turboSdk || { TurboFactory: window.TurboFactory };
+    }
+    for (const url of TURBO_UMD_BUNDLES) {
+        try {
+            await new Promise((resolve, reject) => {
+                const existing = document.querySelector(`script[src="${url}"]`);
+                if (existing) return resolve();
+                const s = document.createElement('script');
+                s.src = url;
+                s.async = true;
+                s.onload = () => resolve();
+                s.onerror = (e) => reject(new Error('script onerror ' + url));
+                document.head.appendChild(s);
+            });
+            // Donem temps a què el global aparegui
+            for (let i = 0; i < 20; i++) {
+                if (window.TurboFactory || (window.turboSdk && window.turboSdk.TurboFactory)) break;
+                await new Promise(r => setTimeout(r, 100));
+            }
+            if (window.TurboFactory || (window.turboSdk && window.turboSdk.TurboFactory)) {
+                console.info('[arweaveWalletService] Turbo SDK loaded as UMD from', url);
+                return window.turboSdk || { TurboFactory: window.TurboFactory };
+            }
+        } catch (e) {
+            console.warn('[arweaveWalletService] Turbo UMD fail at', url, '·', e?.message);
+        }
+    }
+    return null;
+}
+
 async function _tryLoadTurbo() {
     let lastError = null;
+    // Intent 1 · ESM imports cascada
     for (const url of TURBO_CDN_FALLBACKS) {
         try {
             const mod = await import(url);
             if (mod && (mod.TurboFactory || mod.default)) {
-                console.info('[arweaveWalletService] Turbo SDK loaded from', url);
+                console.info('[arweaveWalletService] Turbo SDK loaded from ESM', url);
                 return mod;
             }
         } catch (e) {
@@ -147,7 +188,14 @@ async function _tryLoadTurbo() {
             console.warn('[arweaveWalletService] Turbo SDK CDN fail at', url, '·', e?.message);
         }
     }
-    throw new Error('No CDN Turbo SDK working from browser · ' + (lastError?.message || 'unknown') + ' · use 🧪 Mode test mentre no es bundleja localment');
+    // Intent 2 · UMD via <script> tag (browser-only)
+    try {
+        const umd = await _loadTurboUMD();
+        if (umd) return umd;
+    } catch (e) {
+        lastError = e;
+    }
+    throw new Error('No CDN Turbo SDK working from browser (ESM ni UMD) · ' + (lastError?.message || 'unknown') + ' · use 🧪 Mode test mentre no es bundleja localment');
 }
 
 export async function getTurboBalance(jwk) {

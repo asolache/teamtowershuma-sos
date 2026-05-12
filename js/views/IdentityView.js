@@ -363,7 +363,18 @@ export default class IdentityView {
                 setTimeout(() => this._renderPermawebCard(), 800);
             } catch (e) {
                 console.error('[permaweb] publish failed', e);
-                setStatus('✗ ' + (e?.message || 'error desconegut'), 'var(--accent-red)');
+                const msg = e?.message || 'error desconegut';
+                // Si és el problema conegut de Turbo SDK no carregable
+                if (/turbo-sdk-no-browser|no-browser|loading dynamically/.test(msg)) {
+                    setStatus(
+                        '✗ Turbo SDK no es pot carregar al browser sense bundle local. ' +
+                        'Per provar tot el flux ara · ves a <a href="/settings" data-link style="color:var(--accent-purple);">/settings</a> i activa <strong>🧪 Mode test Permaweb</strong>. ' +
+                        'Publish real necessita sprint H · bundle local del SDK (~3h).',
+                        'var(--accent-orange)'
+                    );
+                } else {
+                    setStatus('✗ ' + msg, 'var(--accent-red)');
+                }
                 btn.disabled = false; btn.textContent = '🌐 Publicar';
             }
         });
