@@ -3094,6 +3094,313 @@ SOS ja porta Turbo SDK amb keyfile JSON. Refactor cap a UX més neta:
 
 ---
 
+## IA-ROUTER-001 · Routing matrix IA · 5 providers · escalation per qualitat (input @alvaro 2026-05-12)
+
+> "Defineix-me quines IAs de les que tinc apis · Anthropic · Gemini ·
+> ChatGPT · DeepSeek · Minimax · em serveixen per a la màxima
+> eficiència en cada ús de IA per optimitzar costos · i només en cas
+> de necessitar arribar als tests de qualitat usar el model superior."
+
+### Filosofia
+SOS V11 té API keys de **5 providers**. Cada tasca té característiques diferents
+(creativa · estructurada · raonament · multimodal · curt-vs-llarg) i cada
+provider té modèls amb perfils preu/qualitat diferents. La filosofia:
+
+1. **Default · model més barat viable** per al tipus de tasca (no el millor en absolut)
+2. **Avaluador automàtic** mira l'output (cost ~$0.001 amb Haiku/Flash-Lite)
+3. **Si l'avaluador rebutja**, retry amb model `fallback` (qualitat mig)
+4. **Si encara rebutja**, escalate a `premium` (Opus 4.7 · GPT-5 · DeepSeek R1)
+5. Si tot falla, retorna el millor output disponible amb flag `escalatedExhausted`
+
+Resultat · **una crida ~80% més barata** que sempre usar el model premium,
+sense sacrificar qualitat a les tasques difícils.
+
+### Matriu de routing (sprint A · ja implementat)
+
+Catàleg de **12 modèls** repartits per provider/tier:
+
+| Provider | Modèls | Tier preu | USD/1M (in/out) | Quality |
+|---|---|---|---|---|
+| Anthropic | Opus 4.7 | frontier | 15.00 / 75.00 | 5/5 |
+| Anthropic | Sonnet 4.6 | mid | 3.00 / 15.00 | 4/5 |
+| Anthropic | Haiku 4.5 | small | 1.00 / 5.00 | 3/5 |
+| OpenAI | GPT-5 | frontier | 1.25 / 10.00 | 5/5 |
+| OpenAI | GPT-4o | mid | 2.50 / 10.00 | 4/5 |
+| OpenAI | GPT-4o-mini | small | 0.15 / 0.60 | 3/5 |
+| Gemini | 2.5 Pro | large | 1.25 / 10.00 | 4/5 |
+| Gemini | 2.5 Flash | small | 0.15 / 0.60 | 3/5 |
+| Gemini | 2.5 Flash-Lite | micro | 0.075 / 0.30 | 2/5 |
+| DeepSeek | V3 | mid | 0.27 / 1.10 | 4/5 |
+| DeepSeek | R1 (reasoner) | mid | 0.55 / 2.19 | 5/5 |
+| Minimax | M2 | small | 0.30 / 1.20 | 3/5 |
+
+Routing per task kind (`TASK_ROUTING` a `aiRouterService.js`):
+
+| Tasca | Primary (barata) | Fallback (mid) | Premium (top) | Evaluator |
+|---|---|---|---|---|
+| `summary-short` | gemini/2.5-flash-lite | anthropic/haiku-4.5 | anthropic/sonnet-4.6 | haiku-4.5 |
+| `schema-fill-simple` | gemini/2.5-flash | deepseek/v3 | anthropic/sonnet-4.6 | haiku-4.5 |
+| `creative-narrative` | anthropic/sonnet-4.6 | openai/gpt-4o | **anthropic/opus-4.7** | deepseek/r1 |
+| `value-map-design` | anthropic/sonnet-4.6 | deepseek/r1 | **anthropic/opus-4.7** | deepseek/r1 |
+| `sop-structured` | deepseek/v3 | anthropic/sonnet-4.6 | anthropic/opus-4.7 | haiku-4.5 |
+| `workshop-outline` | gemini/2.5-flash | anthropic/sonnet-4.6 | anthropic/sonnet-4.6 | haiku-4.5 |
+| `code-generation` | deepseek/v3 | anthropic/sonnet-4.6 | anthropic/opus-4.7 | deepseek/r1 |
+| `quality-audit` | deepseek/r1 | anthropic/sonnet-4.6 | anthropic/opus-4.7 | opus-4.7 |
+| `deep-reasoning` | deepseek/r1 | gemini/2.5-pro | anthropic/opus-4.7 | opus-4.7 |
+| `multimodal-image` | gemini/2.5-flash | openai/gpt-4o | gemini/2.5-pro | haiku-4.5 |
+| `tag-generation` | gemini/2.5-flash-lite | anthropic/haiku-4.5 | anthropic/haiku-4.5 | (none) |
+
+### Implementació (sprint A · ja en producció)
+- `js/core/aiRouterService.js` · 175 LOC · pur · zero crides reals
+- `AI_MODELS` · 12 modèls amb pricing + quality + contextK
+- `TASK_ROUTING` · 11 tasques amb chain primary/fallback/premium/evaluator
+- `estimateCostUsd/Eur(modelKey, {inputTokens, outputTokens})` · matemàtica pura
+- `pickModelForBudget({taskKind, budgetEur, tokens})` · pick highest-quality dins budget
+- `runEscalation({taskKind, generate, evaluate, ctx, stopAt})` · orquestrador agnòstic provider · es passa la funció `generate` (provider real) i `evaluate` (qualitat) i ell decideix la chain
+- 43 tests cobrint catàleg + costs + routing + budget pick + escalation chain
+
+### Sprint plan B → D (pendents · ~6h total)
+#### Sprint B · provider adapters (~2h)
+- `js/core/aiProvider.js` · capa fina d'adaptació `generate(modelKey, prompt, ctx)` que mira `AI_MODELS[modelKey].provider` i crida l'endpoint corresponent
+- 5 adapters · anthropic · openai · gemini · deepseek · minimax
+- Cada adapter usa API key configurada a /settings (mai al codi)
+- Counts tokens reals retornats per al cost real (no estimat)
+
+#### Sprint C · evaluadors per task kind (~2h)
+- `js/core/aiEvaluator.js` · funcions per validar shape + qualitat semàntica
+- Per `schema-fill-simple` · JSON shape check + missing fields detection
+- Per `creative-narrative` · LLM-as-judge amb Haiku · score 0-1
+- Per `code-generation` · syntax check + estructura
+- Per `tag-generation` · skip (no eval · tags són cheap)
+
+#### Sprint D · integració a aiFill (~2h)
+- `iaContextService.aiFillLanding` etc usa `runEscalation` amb evaluate corresponent
+- UI mostra a `/quality?project={id}` · "Generat amb deepseek/v3 · escalated a sonnet-4.6 (raó: missing field 'tagline')" per a transparència
+- `ai_audit` node registra TOTS els intents (primary + fallback + premium) amb cost individual
+
+### Decisions pendents @alvaro
+1. **USD→EUR conversion rate** · default 0.92 · actualitzable a /settings · prou per a alfa?
+2. **Override per usuari** · permitir a /settings que l'usuari triï "sempre Opus" o "sempre el barat sense escalation"? · recomanació: SÍ amb avís de cost
+3. **DeepSeek R1 amb reasoning trace inclòs** · el reasoner mostra el "thinking" abans del response · cobrar tokens del trace o ocultar-los? · recomanació: cobrar (és cost real)
+4. **Minimax M2** · està al catàleg però no té task kind primari · ús futur per a workshops amb àudio/video · justificat?
+
+---
+
+## IA-CONTEXT-001 · Prompts auditoria amb context intel·ligent + import links (input @alvaro 2026-05-12)
+
+> "Em sembla molt bé el plantejament orientat a l'auditoria de prompts
+> amb eficiència de context intel·ligent i accés als nodes de context
+> actualitzats relacionats · per a la landing es pugui importar info o
+> links per a la IA i la seva creació de landing/products/map/sop/SOCs
+> que els tenim oblidats amb només els de TeamTowers desenvolupats."
+
+### Diagnosi · què passa avui
+- El KB té **corpus profund per al sector S** (Castellers · Fent Pinya · 108 places) i **resta de sectors són plantilles base poc enriquides**. Quan l'usuari crea un projecte d'un altre sector, la IA tira de prompts genèrics i el output és superficial.
+- A `js/core/sectorSubtypes.js` ja tenim 19 sectors amb 10-20 subtipus cadascun · però no estan connectats amb un corpus de SOPs · workshops · SOCs concrets per sector.
+- Els botons "🧠 Ompli amb IA" del `/quality?project={id}` són stubs · necessiten una capa de service per consumir context i generar drafts.
+
+### Aproximació
+Reframe l'IA fill-in com a **"auditoria de prompts amb context"** · 3 capes:
+
+| Capa | Què fa | Cost token |
+|---|---|---|
+| **1. Context collector** | Llegeix nodes KB relacionats: sector readiness · perfils similars · projectes públics del permaweb · workshops del coop/cohort · SOPs verificades del directori | 0 (lectura local) |
+| **2. Prompt builder** | Combina context + dim objectiu + user input opcional (URLs · text lliure · imatges) · genera prompt curt amb tot el que necessita | 0 |
+| **3. IA generador** | Crida al provider IA · usa el saldo del wallet del projecte · retorna draft per accept/edit/reject | ~150-400 tokens per dim |
+
+### Sprint plan A → D (~10h total)
+
+#### Sprint A · iaContextService.js pur (~2h)
+Service nou amb 5 funcions una per dim:
+- `buildLandingContext({ project, sector, marketItems, similarProjects })` · retorna prompt-ready text
+- `buildValueMapContext({ project, sector, similarProjects, criticalRoles })`
+- `buildDeliverablesContext({ project, valueMap })`
+- `buildSopsContext({ project, role, similarSops, sectorReadiness })`
+- `buildWorkshopsContext({ project, sector, similarWorkshops, audience })`
+
+Cada funció retorna:
+```js
+{ systemPrompt: string, userPrompt: string, contextTokens: number, refs: { nodeId: string, type: string }[] }
+```
+
+Tests · 25 asserts amb fixtures (sector A · sector M · sector S complet).
+
+#### Sprint B · URL/file import pre-fill (~2h)
+A `/quality?project={id}` afegir abans del botó "🧠 Ompli amb IA":
+- Input "📎 Afegeix context · URL · text · imatge"
+- Acceptable: URLs (es descarrega text via Cloudflare Workers proxy · 100KB max) · text lliure · PDF (sprint futur)
+- El contingut va al **userPrompt** de la dim corresponent · pesat amb cap de 2000 tokens (truncar amb sumari IA si supera)
+
+#### Sprint C · Generadors per dim (~4h)
+- `aiFillLanding({ project })` · genera description (60-200 chars) + 2 productes draft (al market) + presentation_narrative_v1
+- `aiFillValueMap({ project })` · suggereix roles + transactions amb proposta narrativa (no auto-persist · usuari accepta cada un)
+- `aiFillSops({ project, roleId })` · per role · 5-7 steps amb body markdown · accept/edit/persist
+- `aiFillWorkshops({ project })` · 2-3 workshops base amb outline + accessTier='public' (alineat WORKSHOPS-FED-001)
+- Cada generador consumeix saldo via `walletService.consumeAndPersist({ source:'ai-fill-{dim}' })` · refund automàtic si fail
+
+#### Sprint D · Audit log + cost tracking (~2h)
+- Cada draft IA genera un node `ai_audit` amb { dim, projectId, prompt, response, tokensUsed, costEur, refs, accepted:bool, timestamp }
+- Vista `/efficiency` · ja existeix · ampliem amb tab "Drafts IA" mostrant top 20 + budget per dim
+- Tradeoff IT: si l'usuari accepta el draft, costEur queda imputat al projecte · si refusa, queda imputat però marcat com a `wasted` (mètrica per refinar prompts)
+
+### Decisions pendents @alvaro
+1. **Proveïdor IA default** · Anthropic (Sonnet 4.6 · ~$0.003/1k input · $0.015/1k output) recomanat per qualitat narrativa
+2. **Token budget per dim** · proposat 400 input + 300 output = ~1¢ per crida · acceptable
+3. **Edit-before-accept vs auto-persist** · recomanació: SEMPRE edit-before-accept per a alfa · evita drafts dolents persistits
+4. **Cohort 0 / projectes Matriu poden compartir SOPs amb la xarxa?** · si SI · necessitem `publicSopService.js` futur (similar a publicProjectService)
+
+---
+
+## PERM-DISCO-001 · Discovery global · usuaris i dades SOS al permaweb (input @alvaro 2026-05-12)
+
+> "Vull tenir accés al llistat global de usuaris registrats al permaweb
+> · i en futurs sprints a altres dades de SOS · serà al backlog."
+
+### Què ja tenim
+- `publicRegistryService.queryPermawebRegistry({ entryType:'public-registry-entry' })` ja consulta GraphQL d'Arweave (`arweave.net/graphql`)
+- `syncFromPermaweb({ verifyOnSync })` fa el cicle complet: query → fetch → verify → cache KB
+- Vista `/registry` ja mostra cache local · sync manual + filtres per tipus (preparat per ampliar)
+
+### Què cal afegir
+1. **Sync automàtic en background** · primer load del SOS local · sync sense bloquejar UI · cache TTL 1h foreground · 24h background
+2. **Filtres avançats** a `/registry` · per skill · sector · cohort · "verificats per @alvaro" (Web of Trust simple)
+3. **Mapa visual** · `/matriu/network` ja existeix amb les 108 places cohort 0 · extends per superposar tots els operadors del permaweb (clustering per geo · ⚠ requeriria opt-in d'ubicació)
+4. **Public Project Index** (PERM-ALFA-001 sprint C avançat) · projectes públics indexats com a perfils
+5. **Public Workshop Index** (WORKSHOPS-FED-001 sprint C avançat)
+6. **Public SOP Index** (sprint Z futur) · operadors poden publicar SOPs reutilitzables amb peer-review
+7. **Trust scoring** (PERM-TRUST-001) · attestations signades + agregació ponderada
+
+### Sprint plan A → C
+#### Sprint A · Background sync + UX progress (~2h)
+- `syncFromPermaweb` cridada al boot del Dashboard amb `silent:true`
+- Status badge ↻ al breadcrumb ("Sincronitzant amb 1247 entries permaweb…")
+- Throttle a 1 sync/h (TTL `DEFAULT_TTL_MS` ja definit) per evitar abuse del gateway
+
+#### Sprint B · Filtres + mapa (~3h)
+- /registry · panel lateral amb filtres dinàmics (KB-derived facets)
+- Toggle "Veure al mapa" (geographic clustering) · cap geo data sense opt-in
+- Quick-link · click un operador → /n/{did} amb perfil ampliat
+
+#### Sprint C · Discovery API (~2h)
+- Helper `searchPermaweb({ query, entryType, since })` async que combina cache + sync incremental
+- Useable des de qualsevol vista (ex. "afegir stakeholder al projecte · cerca al permaweb")
+- Backlog per sprints futurs · Workshop · Project · SOP discovery
+
+### Decisions pendents @alvaro
+1. **Throttle del Arweave gateway** · arweave.net té rate limits soft · podem fer mirror via ardrive.io · permagate.io · turbo gateway?
+2. **Trust scoring**: només peer attestations o també activitat (commits · projects shipped · workshops compartits)?
+3. **GDPR**: alguns usuaris poden voler ser invisibles al public registry però seguir accessibles via cohort · cal "private cohort listing" futur
+
+---
+
+## BIZ-MODEL-001 · Auditoria del flow de venta + model de negoci Stripe/Wander (input @alvaro 2026-05-12)
+
+> "Vull auditoria del flow de venda del servei perquè els usuaris
+> carreguin saldo · i definim el model de negoci per a Stripe i
+> Arconnect/Wander."
+
+### Auditoria · què hi ha avui
+
+**Stripe**
+- `js/core/stripeService.js` · 235 LOC · 4 plans definits:
+  - **Free** · 0€/mes · API keys pròpies · zero saldo SOS · zero permaweb
+  - **Pro** · 9€/mes · saldo prepagat · proxy IA · permaweb writes
+  - **Cooperative** · 19€/mes · USDC al Gnosis Safe · multiplicador cohort × 1.5
+  - **Enterprise** · custom · self-hosted · SLA
+- Topup presets 10/25/50/100€ · gestionats via **Stripe Payment Links** (zero secret keys al client · gold-standard pattern)
+- L'usuari configura Payment Link URLs manualment a `/settings` per cada amount preset
+- **Confirmació MANUAL** post-pagament · usuari clica "✓ He pagat" · `WalletView` registra `topUpAndPersist({ source:'stripe-confirmed' })`
+- **BLOCKER**: no webhook · si l'usuari paga però no torna a SOS, el saldo no s'aplica · risc de fraud + UX dolent
+
+**Arconnect/Wander · Turbo Credits**
+- `js/core/arweaveWalletService.js` exposa `getTurboBalance(jwk)` · sols lectura
+- Els Credits de Turbo es compren DIRECTAMENT a turbo-sdk (credit card o crypto) · **fora del SOS wallet EUR**
+- Sprint A2 acabat de fer · publishes via Wander signen sense JSON · però la càrrega de Credits no està integrada a la UI SOS
+
+**Wallet personal + project**
+- `walletService.js` ja té `personalWalletIdFor()` + `getOrCreatePersonalWallet()` + `transferBetweenWallets()`
+- 6 categories de moviments: topup · consume · transfer · refund · income · adjust
+- Sense margin model · sense fee SOS
+
+### Conclusió de l'auditoria
+
+**Punts forts**
+1. ✅ Arquitectura "zero secret key al client" · publishable + payment links · canònic
+2. ✅ Wallet personal vs project separats · stakeholders + auto-distribució (FUND-FLOW-001)
+3. ✅ Mock mode (`setPermawebMockEnabled`) · permet testejar sense gastar
+4. ✅ Plans definits però NO enforced · qualsevol pot usar publish · cal afegir gating
+
+**Gaps crítics per a alfa pública**
+1. ❌ **Sense webhook Stripe** · risc de no captura · necessita Netlify Function
+2. ❌ **Sense margin model real** · les fees SOS no estan declarades · només els 0.05€ publish van íntegres a Turbo
+3. ❌ **Plans no enforced** · qualsevol pot fer publish · el plan check no està al `publishToPermaweb`
+4. ❌ **Turbo Credits NO connectats al wallet EUR** · l'usuari paga 2 vegades (subscripció SOS + Credits Turbo independents)
+5. ❌ **Sense receipts** · usuari paga però no rep PDF o equivalent · pre-alfa cal millorar
+
+### Proposta · Model de negoci alfa
+
+```
+Usuari paga 10€ via Stripe Payment Link
+    │
+    ▼
+┌──────────────────────────────────────────────────────┐
+│ Wallet PERSONAL del usuari · 10€ EUR entren           │
+└──────────────────────────────────────────────────────┘
+    │
+    ├─► Consum IA · directe (preu real + 5% marge SOS)
+    │     · ex. Sonnet 4.6 · ~$0.018 / 1k tokens output → 1¢ + 0.05¢ marge
+    │
+    ├─► Permaweb publish · 0.05€ fix
+    │     · de moment 100% va a Turbo Credits (SOS no en treu marge)
+    │     · futur: SOS compra Credits a l'engros · marge 10%
+    │
+    ├─► Transfer a wallet projecte · 0€ commissió interna
+    │     · usuari decideix quant funda el projecte com a stakeholder
+    │
+    └─► Withdraw a credit card via Stripe Connect · (Sprint X futur)
+          · 1.5% comissió + 0.25€ fix · cobreix la fee real de Stripe
+```
+
+**Marge mig estimat** · 7-10% sobre consum · cobreix costos plataforma + reinverteix a desenvolupament. **Plans subscripció** queden com a "premium UX" (Pro priority queue · enterprise SLA · etc.) NO com a paywall del consum bàsic · el saldo prepagat és la unitat principal de billing.
+
+### Sprint plan A → E
+#### Sprint A · Webhook Stripe via Netlify Function (~3h · ALFA-BLOCKER)
+- `netlify/functions/stripe-webhook.js` · receptor signat amb `stripe-signature` header verificat
+- Trigger event · `checkout.session.completed` · llegeix `client_reference_id` (= projectId o personalWalletId) i `amount_total`
+- Crida API local SOS (POST `/api/wallet/topup-confirm`) per actualitzar saldo
+- Idempotència via `event.id` cache 24h (evita duplicate processing)
+
+#### Sprint B · Margin model + cost auditing (~2h)
+- `js/core/billingService.js` · pur · `applyMargin({ baseCostEur, kind })` · retorna `{ totalEur, marginEur, marginPct }`
+- Definicions de marge per `kind`:
+  - `ai` · 5% sobre cost real provider
+  - `permaweb` · 0% sprint A · 10% futur
+  - `gnosis-tx` · 5% gas inclòs
+- `consumeAndPersist` accepta nou camp `marginEur` · 2 movements (cost + margin) per transparència
+
+#### Sprint C · Plans enforced (~2h)
+- `publishToPermaweb` · check `loadCurrentPlan` · si free + balance==0 → throw `plan-required`
+- UI · si l'usuari intenta publish sense plan/saldo → modal "Upgrade · top-up saldo" amb Payment Link a `/settings`
+- Free plan permet: tot el local-first + mode test (mock). Premium gating sols a operacions amb cost real.
+
+#### Sprint D · Turbo Credits autocompra (~3h · opt-in)
+- A `/settings` · slider "Cargar X € de Turbo Credits automàticament quan baixi de Y"
+- SOS proxy backend (sprint Z futur) compra Credits a l'engròs i els revén amb marge 10%
+- Mentre tant · enllaç directe a `https://turbo.ardrive.io/topup` amb pre-fill amount
+
+#### Sprint E · Receipts + facturació (~2h)
+- Cada `topUpAndPersist` amb source `stripe-confirmed` genera node `receipt` amb invoice ID
+- Vista nova `/receipts` (o tab a `/wallet`) · llista totes les recàrregues + permís de descarregar PDF (sprint futur · server-side jsPDF)
+
+### Decisions pendents @alvaro
+1. **Margin 5% IA · accepta?** · alternatives 3% (low-touch) · 10% (sustainable infra) · recomanació 5% per equilibri
+2. **Free plan tan generós?** · l'usuari amb API key pròpia no paga res a SOS · podem permetre-ho com a "loss leader" o introduir un "Free amb publish 3 permaweb/mes" gratis
+3. **Stripe vs Stripe Connect** · per a withdraw + cohort revenue split necessitem Connect · sprint blocker per a model coop complet · pot ajornar-se post-alfa
+4. **Plan Cooperative · USDC al Gnosis Safe** · aspiracional · cal Gnosis Safe SDK + custodia compartida · sprint Z futur
+5. **Receipts requerits per llei** (UE B2C) · al cost de 1-3€/mes podem usar Stripe Tax + Stripe Invoice API directament · o un proxy SOS
+
+---
+
 ## WORKSHOPS-FED-001 · Federació de workshops + model coop premium (input @alvaro 2026-05-12)
 
 > "Avalua si els workshops que van néixer per a TeamTowers podrien

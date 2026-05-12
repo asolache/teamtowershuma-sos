@@ -233,3 +233,88 @@ export async function openTopupPaymentLink({ kb = KB, amountEur } = {}) {
     }
     return url;
 }
+
+// =============================================================================
+// BIZ-MODEL-001 sprint A · verifyStripeSession() · auto-verify post-payment
+//
+// Quan l'usuari paga via Payment Link, Stripe redirigeix al success_url amb
+// `?session_id={CHECKOUT_SESSION_ID}` (cal configurar-ho al Payment Link
+// settings). WalletView llegeix el param, crida aquest helper, que via
+// Netlify Edge Function `/api/stripe-verify-session` confirma que el
+// pagament és real. Si verified=true, el client aplica el top-up al wallet.
+//
+// Setup · netlify/edge-functions/stripe-verify-session.js + STRIPE_SECRET_KEY
+// env var al Netlify dashboard.
+// =============================================================================
+
+const STRIPE_VERIFY_ENDPOINT = '/api/stripe-verify-session';
+
+export async function verifyStripeSession(sessionId, { endpoint = STRIPE_VERIFY_ENDPOINT, fetchFn = (typeof fetch !== 'undefined' ? fetch : null) } = {}) {
+    if (!sessionId || typeof sessionId !== 'string') {
+        throw new Error('verifyStripeSession requires sessionId');
+    }
+    if (!fetchFn) throw new Error('verifyStripeSession requires fetch (browser or node 18+)');
+    let res;
+    try {
+        res = await fetchFn(endpoint, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ sessionId }),
+        });
+    } catch (e) {
+        throw new Error('verify-fetch-failed: ' + (e?.message || 'unknown'));
+    }
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (!res.ok) {
+        const detail = (data && (data.error || data.detail)) || ('HTTP ' + res.status);
+        throw new Error('verify-failed: ' + detail);
+    }
+    if (!data || typeof data.verified !== 'boolean') {
+        throw new Error('verify-malformed-response');
+    }
+    return data;
+}
+
+// readSessionIdFromUrl · lee `?session_id=cs_...` del location actual.
+// Defensiu · retorna null si no existeix o té format invàlid.
+export function readSessionIdFromUrl(search = (typeof window !== 'undefined' ? window.location.search : '')) {
+    try {
+        const params = new URLSearchParams(search || '');
+        const id = params.get('session_id');
+        if (!id) return null;
+        if (!/^cs_(test|live)_[a-zA-Z0-9_]{10,}$/.test(id)) return null;
+        return id;
+    } catch (_) { return null; }
+}
+
+// claimedSessionIds · KB-bound · evita aplicar el mateix top-up dues vegades
+// si l'usuari recarrega la URL. Persistim al KB amb type='stripe_claim'.
+const STRIPE_CLAIM_TYPE = 'stripe_claim';
+
+export async function hasSessionBeenClaimed(sessionId, kb = KB) {
+    if (!sessionId) return true;
+    try {
+        const node = await kb.getNode('stripe-claim-' + sessionId);
+        return !!(node && node.type === STRIPE_CLAIM_TYPE);
+    } catch (_) { return false; }
+}
+
+export async function markSessionClaimed(sessionId, { amountEur, kb = KB } = {}) {
+    if (!sessionId) return null;
+    const now = Date.now();
+    const node = {
+        id:   'stripe-claim-' + sessionId,
+        type: STRIPE_CLAIM_TYPE,
+        content: {
+            sessionId,
+            amountEur: typeof amountEur === 'number' ? amountEur : null,
+            claimedAt: now,
+        },
+        keywords:  ['type:stripe-claim', 'session:' + sessionId.slice(0, 20)],
+        createdAt: now,
+        updatedAt: now,
+    };
+    try { await kb.upsert(node); } catch (_) {}
+    return node;
+}

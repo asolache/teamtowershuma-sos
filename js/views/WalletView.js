@@ -118,6 +118,9 @@ export default class WalletView {
     async afterRender() {
         ensureExplainerStyle();
         bindExplainerBadges(document);
+        // BIZ-MODEL-001 sprint A · detect ?session_id=cs_... post-Stripe redirect
+        // i auto-aplica el top-up al wallet del projecte (o personal)
+        this._autoClaimStripeSession().catch(e => console.warn('[wallet] stripe claim', e?.message));
         // FUND-FLOW-001 sprint A · si no hi ha projectId · obre el wallet personal
         if (!this.projectId) {
             try {
@@ -333,6 +336,80 @@ export default class WalletView {
 
     _esc(s) {
         return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+    }
+
+    // BIZ-MODEL-001 sprint A · auto-claim de Stripe Checkout Session
+    //
+    // Quan l'usuari paga via Payment Link i el success_url torna a /wallet
+    // amb ?session_id=cs_..., aquest helper:
+    //   1. Comprova que la sessió no s'ha reclamat abans (KB stripe_claim)
+    //   2. Verifica via Edge Function /api/stripe-verify-session amb la
+    //      secret key (server-side · zero secrets al client)
+    //   3. Si verified=true · aplica top-up al wallet del projecte (o
+    //      personal) i marca la sessió com reclamada
+    //   4. Mostra toast confirmant l'ingrés
+    async _autoClaimStripeSession() {
+        const { readSessionIdFromUrl, hasSessionBeenClaimed, verifyStripeSession, markSessionClaimed } = await import('../core/stripeService.js');
+        const sid = readSessionIdFromUrl();
+        if (!sid) return;
+        // Defensiu · primer lookup KB (evita doble cobrament si l'usuari recarrega)
+        if (await hasSessionBeenClaimed(sid)) {
+            this._toast('🛈 Aquesta Stripe session ja s\'ha reclamat anteriorment');
+            return;
+        }
+        let result;
+        try {
+            result = await verifyStripeSession(sid);
+        } catch (e) {
+            this._toast('✗ No s\'ha pogut verificar el pagament · ' + (e?.message || 'unknown'));
+            return;
+        }
+        if (!result || !result.verified) {
+            this._toast('⚠ Sessió Stripe sense pagar (status: ' + (result?.paymentStatus || 'unknown') + ')');
+            return;
+        }
+        // amount_total en cèntims · convertim a EUR
+        const amountEur = result.amountTotal ? (result.amountTotal / 100) : null;
+        if (!amountEur || amountEur <= 0) {
+            this._toast('⚠ Sessió Stripe verificada però sense amount vàlid');
+            return;
+        }
+        // Quin wallet rep? · client_reference_id pot indicar projectId · si no, wallet actiu
+        const targetWallet = result.clientReferenceId || this.projectId;
+        try {
+            const { topUpAndPersist } = await import('../core/walletService.js');
+            await topUpAndPersist({
+                projectId: targetWallet,
+                amountEur,
+                source: 'stripe-verified',
+                ref:    'stripe-session-' + sid.slice(0, 20),
+                note:   'Stripe Checkout · ' + (result.currency || 'eur').toUpperCase() + ' ' + amountEur.toFixed(2),
+            });
+            await markSessionClaimed(sid, { amountEur });
+            this._toast('✓ +' + amountEur.toFixed(2) + '€ verificats i aplicats al wallet');
+            // Neteja l'URL · evita re-claim si l'usuari recarrega la pestanya
+            try {
+                const u = new URL(window.location.href);
+                u.searchParams.delete('session_id');
+                window.history.replaceState({}, '', u.toString());
+            } catch (_) {}
+            // Re-render del wallet per mostrar el saldo nou
+            if (typeof this._load === 'function') {
+                try { await this._load(); this._render(); } catch (_) {}
+            }
+        } catch (e) {
+            this._toast('✗ Top-up va fallar · ' + (e?.message || 'unknown'));
+        }
+    }
+
+    _toast(msg) {
+        try {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg-panel);border:1px solid var(--accent-indigo);color:var(--text-main);padding:12px 18px;border-radius:8px;font-size:0.9rem;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,0.35);z-index:9999;';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 4200);
+        } catch (_) {}
     }
 
     // FUND-FLOW-001 sprint A · transferència UI ──────────────────────────
