@@ -580,7 +580,12 @@ export async function publishToPermaweb({
             const { KB } = await import('./kb.js');
             await KB.upsert(refunded);
         } catch (_) { /* best-effort refund */ }
-        throw new Error('turbo-upload-failed: ' + (e?.message || e));
+        const msg = e?.message || String(e);
+        // Si el problema és la càrrega del SDK · mensatge útil
+        if (/CDN Turbo SDK|loading dynamically|imports.*fs|Failed to bundle|Rollup/i.test(msg)) {
+            throw new Error('turbo-sdk-no-browser · activa 🧪 Mode test a /settings · publish real necessita sprint H · bundle local del SDK · (' + msg + ')');
+        }
+        throw new Error('turbo-upload-failed: ' + msg);
     }
 
     // 3. Actualitza l'entry amb arweaveTxId + persisteix al KB
