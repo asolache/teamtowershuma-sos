@@ -1,2 +1,8 @@
 .DS_Store
 **/.DS_Store
+
+# FUND-FLOW-001 sprint H · Turbo SDK bundle local
+# Cada operador fa `npm run setup:turbo` un cop · vendor és reproduïble
+node_modules/
+package-lock.json
+vendor/

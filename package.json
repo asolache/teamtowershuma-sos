@@ -7,7 +7,9 @@
     "scripts": {
         "test": "node js/tests/publicRegistry.test.js && node js/tests/fundFlow.test.js",
         "test:permaweb": "node js/tests/publicRegistry.test.js",
-        "test:fund-flow": "node js/tests/fundFlow.test.js"
+        "test:fund-flow": "node js/tests/fundFlow.test.js",
+        "build:turbo": "esbuild node_modules/@ardrive/turbo-sdk/lib/web/index.js --bundle --format=esm --outfile=vendor/turbo-sdk.js --define:process.env.NODE_ENV=\"\\\"production\\\"\" --target=es2022 --platform=browser",
+        "setup:turbo": "npm install --save-dev @ardrive/turbo-sdk@1.27.1 esbuild && npm run build:turbo"
     },
     "engines": {
         "node": ">=18.0.0"

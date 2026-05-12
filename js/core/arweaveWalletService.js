@@ -175,6 +175,19 @@ async function _loadTurboUMD() {
 
 async function _tryLoadTurbo() {
     let lastError = null;
+    // Intent 0 · bundle local pre-build a /vendor/turbo-sdk.js (sprint H)
+    //   Cal `npm install @ardrive/turbo-sdk esbuild --save-dev` i run
+    //   `npm run build:turbo` un cop · genera el bundle a /vendor/.
+    //   Si existeix, és el camí més fiable · zero deps externes runtime.
+    try {
+        const mod = await import('/vendor/turbo-sdk.js');
+        if (mod && (mod.TurboFactory || mod.default)) {
+            console.info('[arweaveWalletService] Turbo SDK loaded from LOCAL /vendor/turbo-sdk.js');
+            return mod;
+        }
+    } catch (e) {
+        // Local bundle no present · provem CDNs
+    }
     // Intent 1 · ESM imports cascada
     for (const url of TURBO_CDN_FALLBACKS) {
         try {
@@ -195,7 +208,7 @@ async function _tryLoadTurbo() {
     } catch (e) {
         lastError = e;
     }
-    throw new Error('No CDN Turbo SDK working from browser (ESM ni UMD) · ' + (lastError?.message || 'unknown') + ' · use 🧪 Mode test mentre no es bundleja localment');
+    throw new Error('No CDN Turbo SDK working from browser (ESM ni UMD) · ' + (lastError?.message || 'unknown') + ' · executa `npm run build:turbo` per al bundle local · o usa 🧪 Mode test mentre tant');
 }
 
 export async function getTurboBalance(jwk) {
