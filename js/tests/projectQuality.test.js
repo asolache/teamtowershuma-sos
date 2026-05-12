@@ -192,5 +192,56 @@ const someMissing = rPartial.missing.find(m => m.cta);
 t(someMissing && someMissing.cta.href && someMissing.cta.label,      'F · missing items porten cta href+label');
 t(someMissing && someMissing.dim,                                    'F · missing items porten dim id');
 
+// ─── Sprint C · suggestNextDim + renderProjectSubnavHtml (navService) ──
+import { suggestNextDim, renderProjectSubnavHtml, PROJECT_SUBNAV_ITEMS } from '../core/navService.js';
+
+// 23. suggestNextDim retorna la dim amb més gain
+const r23 = q.computeQualityScore(partialProject);
+const next23 = suggestNextDim(r23);
+t(next23 && next23.dim && typeof next23.gain === 'number',           'G · suggestNextDim retorna dim+gain');
+t(next23.gain > 0,                                                   'G · partial project · gain > 0');
+
+// 24. Tots a 100 · next null
+const next24 = suggestNextDim(rFull);
+t(next24 === null,                                                   'G · projecte complet · next = null');
+
+// 25. Gain calculation · weight 30% × (100-0)/100 = 30
+// valueMap (pes 30%) buit a 0 dona el màxim gain
+const projectOnlyLanding = q.computeQualityScore(onlyLanding, { marketItems: [{ id: 'm1', content: { projectId: 'p-l' } }] });
+const next25 = suggestNextDim(projectOnlyLanding);
+t(next25.dim.id === 'valueMap',                                      'G · only-landing · next = valueMap (pes max)');
+t(next25.gain === 30,                                                'G · only-landing · gain = 30 (weight×100%)');
+
+// 26. PROJECT_SUBNAV_ITEMS conté hub + 9 tabs
+t(Array.isArray(PROJECT_SUBNAV_ITEMS) && PROJECT_SUBNAV_ITEMS.length === 10, 'G · 10 tabs al subnav');
+t(PROJECT_SUBNAV_ITEMS[0].id === 'hub',                              'G · primera tab és hub');
+t(typeof PROJECT_SUBNAV_ITEMS[0].buildHref === 'function',           'G · cada tab té buildHref()');
+
+// 27. renderProjectSubnavHtml genera HTML amb el projecte
+const subnavHtml = renderProjectSubnavHtml({
+    project: fullProject,
+    quality: rFull,
+    pathname: '/map',
+});
+t(typeof subnavHtml === 'string' && subnavHtml.length > 100,         'G · renderProjectSubnavHtml retorna HTML no buit');
+t(subnavHtml.includes('Full Demo'),                                  'G · subnav conté nom del projecte');
+t(subnavHtml.includes('/map?project=p-full'),                        'G · subnav conté href map amb projectId');
+t(subnavHtml.includes('is-active'),                                  'G · subnav marca la tab activa');
+t(!subnavHtml.includes('Següent'),                                   'G · subnav score 100 NO mostra "Següent"');
+t(subnavHtml.includes('Excel'),                                      'G · subnav score ≥90 mostra "Excel·lent"');
+
+// 28. Subnav per projecte amb score baix · mostra cta "Següent"
+const subnavLow = renderProjectSubnavHtml({
+    project: partialProject,
+    quality: r23,
+    pathname: '/dashboard',
+});
+t(subnavLow.includes('Següent'),                                     'G · score baix · subnav mostra "Següent"');
+t(subnavLow.includes('+'),                                           'G · subnav mostra gain points');
+
+// 29. Subnav null project · retorna ""
+const subnavEmpty = renderProjectSubnavHtml({});
+t(subnavEmpty === '',                                                'G · sense projecte · subnav buit');
+
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

@@ -8,6 +8,7 @@ import { KB }    from './core/kb.js';
 import {
     ensureNavGroupStyle, bindNavGroupDropdowns,
     paintBreadcrumb, paintBottomNav, paintGlobalNav,
+    paintProjectSubnav,
 } from './core/navService.js';
 import { bootTheme } from './core/themeService.js';
 
@@ -167,6 +168,18 @@ async function router() {
                 projectStats,
             });
         } catch (e) { console.warn('[Router · breadcrumb]', e); }
+
+        // PROJ-QUALITY-001 sprint C · Project subnav · sub-barra contextual amb
+        // 10 tabs del projecte actiu + score qualitat + cta "Següent".
+        // Apareix sols si hi ha ?project= o /project/{id}. Idempotent.
+        try {
+            const projects = (store.getState().projects || []);
+            await paintProjectSubnav({
+                pathname: window.location.pathname,
+                search:   window.location.search,
+                projects,
+            });
+        } catch (e) { console.warn('[Router · project-subnav]', e); }
 
         // UX-AUDIT-001 sprint F · bottom nav mòbil · 5 categories canòniques
         try {
