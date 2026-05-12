@@ -239,3 +239,135 @@ export async function getTurboClient(jwk) {
     if (!factory.authenticated) return null;
     return factory.authenticated({ privateKey: jwk, token: 'arweave' });
 }
+
+// =============================================================================
+// WALLET-AUTH-001 sprint A · ArConnect/Wander extension auto-detect
+//
+// Permet a l'usuari connectar la seva extensió Wander/ArConnect en 1 click
+// (sense haver d'exportar i pujar el JSON keyfile). Per a la fase alfa, ens
+// limitem a:
+//   - Detectar `window.arweaveWallet` (API estàndard ArConnect/Wander)
+//   - Demanar permissions mínims (address + publicKey + signature + dispatch)
+//   - Guardar address + publicKey al KB com a node `arweave_wallet_ext`
+//   - Exposar `getActiveArweaveContext()` que retorna keyfile o extension
+//
+// L'upload via Turbo SDK amb signer extern (ArconnectSigner) queda per a
+// sprint A2 · cal afegir @dha-team/arbundles al bundle. De moment l'extension
+// és per LECTURA (mostrar address + saldo) i el keyfile JSON segueix sent
+// el camí canònic per a publishes reals.
+// =============================================================================
+
+export const ARWEAVE_WALLET_EXT_TYPE = 'arweave_wallet_ext';
+export const ARWEAVE_WALLET_EXT_ID   = 'sos-arweave-wallet-ext';   // singleton
+
+// Permissions canòniques de Wander/ArConnect.
+export const WANDER_PERMISSIONS = Object.freeze([
+    'ACCESS_ADDRESS',
+    'ACCESS_PUBLIC_KEY',
+    'SIGN_TRANSACTION',
+    'SIGNATURE',
+    'DISPATCH',
+]);
+
+// Adaptador injectable per a tests · per defecte usa `window.arweaveWallet`
+let _walletProvider = null;
+export function setArweaveExtensionProvider(p) { _walletProvider = p; }
+function _provider() {
+    if (_walletProvider) return _walletProvider;
+    if (typeof window !== 'undefined' && window.arweaveWallet) return window.arweaveWallet;
+    return null;
+}
+
+// Detect simple · true si hi ha `window.arweaveWallet` disponible
+export function isWanderAvailable() {
+    return !!_provider();
+}
+
+// Connect · demana permissions i retorna { address, publicKey } o llança
+export async function connectWander({ permissions = WANDER_PERMISSIONS, appInfo = { name: 'TeamTowers SOS V11' } } = {}) {
+    const w = _provider();
+    if (!w) throw new Error('Wander/ArConnect not available · install the extension first');
+    if (typeof w.connect !== 'function') throw new Error('arweaveWallet.connect not a function · unexpected provider');
+    await w.connect(permissions, appInfo);
+    const address   = await w.getActiveAddress();
+    let publicKey = null;
+    try { publicKey = await w.getActivePublicKey(); } catch (_) { /* optional · some wallets skip */ }
+    const now = Date.now();
+    const node = {
+        id:   ARWEAVE_WALLET_EXT_ID,
+        type: ARWEAVE_WALLET_EXT_TYPE,
+        content: {
+            kind:        'arweave-wallet-ext',
+            source:      'wander',
+            address,
+            publicKey,
+            permissions: permissions.slice(),
+            connectedAt: now,
+            isPrimary:   true,
+        },
+        keywords:  ['type:arweave-wallet-ext', 'address:' + address, 'source:wander'],
+        createdAt: now,
+        updatedAt: now,
+    };
+    try {
+        const { KB } = await import('./kb.js');
+        await KB.upsert(node);
+    } catch (e) {
+        // No bloquegem la UI si la cache KB falla · l'usuari segueix amb sessió activa
+        console.warn('[arweaveWalletService] persist connection failed', e?.message);
+    }
+    return { address, publicKey, source: 'wander', connectedAt: now };
+}
+
+// Disconnect · revoke permissions i esborra el node KB
+export async function disconnectWander() {
+    const w = _provider();
+    if (w && typeof w.disconnect === 'function') {
+        try { await w.disconnect(); } catch (_) {}
+    }
+    try {
+        const { KB } = await import('./kb.js');
+        await KB.deleteNode(ARWEAVE_WALLET_EXT_ID);
+    } catch (_) {}
+    return true;
+}
+
+// Recupera la connexió cacheada (sense tornar a demanar permissions)
+export async function getWanderConnection() {
+    try {
+        const { KB } = await import('./kb.js');
+        const node = await KB.getNode(ARWEAVE_WALLET_EXT_ID);
+        if (node && node.type === ARWEAVE_WALLET_EXT_TYPE && node.content?.address) {
+            return {
+                address:     node.content.address,
+                publicKey:   node.content.publicKey || null,
+                source:      node.content.source || 'wander',
+                connectedAt: node.content.connectedAt || null,
+            };
+        }
+    } catch (_) {}
+    return null;
+}
+
+// getActiveArweaveContext · resol l'identitat Arweave activa amb prioritat:
+//   1. Extensió Wander cacheada (connectedAt més recent guanya si tots dos hi ha)
+//   2. Keyfile JSON al KB
+//   3. null
+// El consumidor decideix què fer · per a publishes via Turbo SDK necessita jwk
+// (en sprint A2 afegirem signer-via-extension).
+export async function getActiveArweaveContext() {
+    const [ext, kf] = await Promise.all([
+        getWanderConnection(),
+        getArweaveKeyfile(),
+    ]);
+    if (ext && kf) {
+        // Triem el més recent
+        const extAt = ext.connectedAt || 0;
+        const kfAt  = kf.savedAt || 0;
+        if (extAt >= kfAt) return { source: 'extension', address: ext.address, publicKey: ext.publicKey, jwk: null };
+        return { source: 'keyfile', address: kf.address, publicKey: null, jwk: kf.jwk };
+    }
+    if (ext) return { source: 'extension', address: ext.address, publicKey: ext.publicKey, jwk: null };
+    if (kf)  return { source: 'keyfile',   address: kf.address,  publicKey: null, jwk: kf.jwk };
+    return null;
+}
