@@ -2796,4 +2796,321 @@ Comencem **avui** amb Sprint A · wallet personal + transferència. Té zero dep
 
 ---
 
+## PERM-ALFA-001 · Permaweb Index unificat + flow alfa creador/worker (input @alvaro 2026-05-12)
+
+> Petició literal · "haz un plan de ux superclaro y simple para el usuario
+> de todo lo registrable en la permaweb para empezar a generar la alfa
+> operativa que permite a personas trabajar de forma descentralizada y
+> desarrollar el flujo de trabajo de el creador de proyecto y del worker
+> que hace entregables · que en el registry salgan todos los elementos
+> registrados en la permaweb · que el flujo de comprar saldo con stripe
+> esté perfectamente integrado con el uso de apis de ia, en permaweb y
+> en blockchain o sistemas de timestamping · enseñar haciendo".
+
+### Decisió de scope
+
+Reframe del Registry com a **Permaweb Index** — una sola pantalla on
+l'usuari veu *tot* el que SOS pot pujar a permaweb: perfils, projectes,
+workshops, mercat, SOPs, work orders. Avui només els **perfils** tenen
+flow publish real (`PUBLIC_REGISTRY_TYPE`); la resta apareixen
+visualment al mateix índex com a **local · no publicat** amb borda
+discontínua i etiqueta "🛈 properament" perquè:
+1. L'usuari descobreix d'un cop què és registrable.
+2. Cada vista (Workshops, Mercat, SOPs, Kanban) sap on portar el botó
+   "Publica al permaweb" quan obrim el sprint corresponent.
+3. La feina de canalitzar al permaweb es fa **incremental** sense
+   trencar l'UX general.
+
+### Estat post-sprint (què queda després d'aquesta sessió)
+
+| Peça | Estat | On |
+|---|---|---|
+| `RegistryView` rebatejat com a *Permaweb Index* | ✅ | `js/views/RegistryView.js` |
+| `INDEX_TYPES` catalog (perfil + projecte + workshop + mercat + sop + wo) | ✅ | mateix fitxer |
+| Filtres per tipus + counts dinàmics | ✅ | chips `data-type-chip` |
+| Distinció visual real vs mock vs local · 6 stat cards | ✅ | `_renderStats` |
+| Badge per estat (verificada · mock · revocada · local) | ✅ | `_cardHtml` |
+| Llegenda explicativa "enseñar haciendo" inline | ✅ | `.rg-hint` |
+
+### Sprint plan A → E (alfa creador + worker)
+
+#### Sprint A · Permaweb Index unificat (✅ DONE · ~1.5h)
+Inclòs en aquesta entrega. Veure secció anterior.
+
+#### Sprint B · Dashboard onboarding 4 passes (~2h · pendent)
+Al Dashboard, card horitzontal nova `🌐 Activa la teva alfa permaweb`
+amb 4 steps detectats automàticament:
+- **1. Perfil signat** · check si `matriu_member` té DID+JWK · cta `/identity`
+- **2. Saldo carregat** · check si wallet personal > 0€ · cta `/wallet` (Stripe Payment Link 5€/10€/25€)
+- **3. Primer projecte creat** · check si l'usuari té algun projecte propi · cta `+ Nou projecte`
+- **4. Primer publish a permaweb** · check si `arweaveTxId` al perfil · cta `/identity` (toggle "Publicar")
+
+Progress bar de 0-4 + missatge contextual a cada step ("Et falten X€ per…").
+Disposem ja de tots els services (`walletService`, `identityService`,
+`publicRegistryService`). Sols cal un `dashboardOnboardingService.js` que
+calculi els 4 booleans i una card al `DashboardView`.
+
+#### Sprint C · Wizard projecte enriquit + flow Federation (~4h · pendent)
+Reescriu el modal de creació de projecte (avui simple) com a wizard de
+4 passes amb scrolls verticals discrets:
+1. **Sector + subsector** · selector sector (A-S KnowledgeLoader) + subtipus dinàmic (`sectorSubtypes.js` ja existeix)
+2. **Roles + deliverables** · plantilla pre-fill segons subsector · usuari ajusta amb +/-
+3. **Productes + workshops** · si el sector té oferta SOS-compatible (sector M, K, B…), pre-fill cataleg base
+4. **Mapa de valor** · 1-3 flows de valor associats als entregables (preview ValueMapView)
+
+Al final del wizard, oferir directament:
+- "Publica el projecte al permaweb" → necessita `publicProjectService.js` (encara per implementar · veure següent)
+- "Comparteix-lo amb el meu equip" → genera enllaç `#/project/{id}` signat
+
+Dep nou: `js/core/publicProjectService.js` amb
+`PUBLIC_PROJECT_TYPE='public_project_entry'`,
+`extractPublicFieldsFromProject()`, `publishProjectToPermaweb()` —
+mateix patró que `publicRegistryService` però amb camps de projecte
+(name · sector · subsector · purpose · roles[] · deliverables[]) i
+defensiu (refusa wallets · workOrders · ledger · contributions).
+
+#### Sprint D · Worker flow al `/kanban` (~3h · pendent)
+El worker entra al `/kanban`, veu work orders amb status `open`
+(claim-ables), els pot reclamar i passar per estats:
+`open → claimed → in-progress → evidence → done → ledger`. A "evidence"
+puja una prova (text + opcional file hash · ja tenim ECDSA sign).
+Quan passa a `ledger` es genera automàticament un `value_contribution`
+(VAL-001 ja ho fa parcialment · cal completar el cicle).
+
+Afegir 2 columnes noves al kanban: "Reclamar" (per workers que no són
+owners) i "Evidència" (workers han d'aportar abans de `done`).
+
+#### Sprint E · Stripe + categorització de despesa (~2h · pendent)
+Al header global, badge persistent `💳 Saldo · 12,40€` que:
+- Pots clicar i s'obre dropdown amb breakdown per categoria (IA · permaweb · blockchain · timestamping · stakeholder)
+- Si baixa de 1€, popup auto suau "Et queden 0,87€ · vols recarregar?" amb shortcut 5€/10€/25€
+- Cost històric: `costTrackingService.js` nou que llegeix `wallet_movement` i classifica per `category` (heuristica `source` field)
+
+Vincular a `ALPHA-STRIPE-001` (ja té Payment Links) i a `FUND-FLOW-001`
+(ja té wallet personal). Sols cal:
+1. Capa de **classificació** dels moviments existents (ja són etiquetats
+   amb `source` · sols cal taxonomia · 6-10 categories).
+2. Capa de **visualització** (badge + dropdown + popup recharge).
+3. **Webhook Stripe automàtic** (resta `FUND-FLOW-001 sprint B` · cal
+   Netlify Function que escolta `checkout.session.completed` i crida
+   l'API SOS local per actualitzar el saldo). Sense webhook l'usuari
+   ha de confirmar manualment ("✓ He pagat") · ja operatiu avui.
+
+### Cross-cutting · "Enseñar haciendo"
+- Cada step del Dashboard té un tooltip `🛈 Per què això?` que obre el
+  micro-explainer (~3 frases · DocsService).
+- El Permaweb Index té llegenda inline ja afegida.
+- Wizard de projecte: cada camp té placeholder amb exemple real del
+  sector seleccionat (pre-pre-fill amb el corpus KB).
+- Kanban worker: tooltips a cada estat ("Què passa quan reclamo? Pago
+  res? No · sols et compromets a entregar X dies").
+
+### Capes futures (no en aquesta alfa)
+- **PERM-AGENT-001** · prompts d'agent al permaweb · cada agent SOS és un
+  registre signat amb la seva system prompt + model + temperatura ·
+  qualsevol SOS local pot importar-lo i executar-lo amb el seu saldo.
+- **PERM-LEGAL-001** · ancoratge OpenTimestamps + eIDAS · cada tx
+  Arweave porta un OTS anchor per validesa legal probada.
+- **PERM-TRUST-001** · trust scoring · els SOS locals signen
+  attestations de la fiabilitat dels altres operadors · agregació
+  ponderada del permaweb (Web of Trust simplificat).
+
+### Decisions pendents @alvaro
+1. **Ordre B-E** · default proposat: B (dashboard onboarding) primer per
+   guiar usuaris nous · després E (Stripe + cost tracking) per donar
+   visibilitat real · després C (wizard projecte) · finalment D (worker
+   flow). Justificació: B i E són transversals · C i D són profundes
+   per rol.
+2. **Mock mode default en alfa pública?** · Recomanació: SÍ ·
+   `setPermawebMockEnabled(true)` per defecte · l'usuari ha d'opt-out
+   activament quan carrega saldo Turbo real.
+3. **Worker pot crear projectes?** · Recomanació: SÍ · cada operador
+   SOS és sempre creator+worker (la distinció és per rol dins d'un
+   projecte concret, no a nivell d'usuari).
+
+---
+
+## PROJ-QUALITY-001 · Project completeness tracker al Dashboard (input @alvaro 2026-05-12)
+
+> "Vull poder veure al Dashboard el seguiment del grau de qualitat i
+> completat d'un projecte · si té una bona landing amb presentació i
+> productes, mapa de valor amb roles/transaccions/entregables adaptats
+> de forma òptima, totes les SOPs operatives, i el contingut formatiu
+> / workshops."
+
+### Estat actual (què ja existeix)
+- `projectHealth(proj)` a `DashboardView.js:43` · calcula score 0-100 a
+  partir de roles + transactions + intangibles + neighbors. **Útil pero
+  parcial** · sols cobreix el mapa de valor.
+- `healthColor(score)` · llindar 75/50/<50 (verd/taronja/vermell).
+- Cada card de projecte ja mostra `score` color-coded a la dash.
+
+### Què cal afegir
+Un score multidimensional · 5 capes ponderades · cada capa retorna
+{score, missing[], cta} perquè la UI guiï l'usuari "què et falta".
+
+| Dim | Pes | Check | Senyal "complet" |
+|---|---|---|---|
+| 🎨 **Landing** | 20% | té `purpose` (≥60 chars) · ≥1 product/service al market · presentation IA generada (`presentationCache`) | landing pot ser pública |
+| 🗺 **Value map** | 30% | `projectHealth` (l'existent) · ≥3 roles · ≥5 transactions · ≥1 intangible · ≥1 cicle | mapa narratiu coherent |
+| 🚚 **Deliverables** | 15% | cada role té ≥1 deliverable associat · cada deliverable té owner declarat | flux d'entregables traçable |
+| 📋 **SOPs** | 20% | cada role té SOP (`type:'sop'` amb `roleId` match) · cap SOP draft sense contingut | operativa replicable |
+| 🎓 **Workshops** | 15% | ≥1 workshop per audience type del projecte · ≥1 workshop públic (federable) | contingut formatiu mínim |
+
+**Score total** = Σ (capaScore × pes) · 0-100 · mateixos llindars
+75/50 que avui.
+
+### Sprint plan A → C (~5h total)
+
+#### Sprint A · `projectQualityService.js` pur (~1.5h)
+- Nou `js/core/projectQualityService.js`:
+  - `QUALITY_DIMS = [{id, weight, label, icon}…]` const exportada
+  - `computeQualityScore(project, { sops, workshops, marketItems })` pur · retorna `{ total, byDim:{landing, valueMap, deliverables, sops, workshops}, missing:[…] }`
+  - Cada `byDim[X]` és `{score:0-100, missing:[{label, cta:{href, label}}…]}`
+  - **Pur** · zero KB.query · l'arg `{sops, workshops, marketItems}` ja arriba pre-carregat
+- Tests · ~25 asserts amb projectes mock (`js/tests/projectQuality.test.js`)
+- Integració package.json scripts.test
+
+#### Sprint B · Card al Dashboard per cada projecte (~2h)
+- Modificar `_renderProjects()` a `DashboardView.js`:
+  - Pre-carregar workshops + sops + market amb 3 KB.query batched
+  - Per a cada project card, calcular `computeQualityScore` i renderitzar:
+    - Score gran (substitueix l'`projectHealth` actual o el complementa)
+    - Mini radar (5 punts · CSS gradient sense D3) amb les 5 dims
+    - Hover → tooltip llista els 3 missing principals + cta
+- Filtre nou "Qualitat" al phase chips (`🌟 ≥75 · ⚠ 50-74 · ❌ <50`)
+
+#### Sprint C · Vista detall `/quality?project={id}` (~1.5h)
+- Nova vista `ProjectQualityView.js` que expandeix les 5 capes:
+  - Una secció per dim · llista missing[] amb cta directa a la vista correcta
+  - Botó "Ompli amb IA" per dim (cost ~150 tokens · genera draft que usuari pot acceptar/editar)
+  - Botó "Marcar com a no aplicable" per dim (algunes orgs no necessiten Workshops)
+- Link "Veure detall →" a cada card del Dashboard
+- Tests · 10 asserts UI binding
+
+### Tradeoffs i decisions pendents @alvaro
+1. **Pesos** · proposats 20/30/15/20/15 · podem revisar després de veure projectes reals. Recomanació: començar així, ajustar a Ola 21.
+2. **Substitueix o complementa `projectHealth`?** · Recomanació: **el substitueix** · la nova `valueMap` dim equival a l'existent.
+3. **"No aplicable" per dim** · ¿permitir-ho? · Recomanació: SÍ · alguns projectes no tenen workshops (ex. consultoria 1:1).
+4. **IA fill-in cost** · 5 dims × 150 tokens = ~750 tokens per "auto-completar" un projecte. Acceptable amb saldo prepagat.
+
+---
+
+## WORKSHOPS-FED-001 · Federació de workshops + model coop premium (input @alvaro 2026-05-12)
+
+> "Avalua si els workshops que van néixer per a TeamTowers podrien
+> incloure tots els workshops de projectes i que aquests també puguin
+> ser model de negoci donant un accés premium tipus coops."
+>
+> **Refinament 2026-05-12 · alineació amb la Matriu** · La Matriu **ÉS**
+> ja la coop · no inventem una entitat coop nova · les cohorts (i el
+> seu wallet derivat) fan de unitat coop. Cohort 0 la dirigeix
+> @alvaro durant l'alfa amb el seu consell, equip, inversors i
+> comunitat inicial. Workshops són la formació transversal que
+> el paquet d'incubació incorpora.
+
+### Avaluació tècnica
+- Els workshops ja viuen a KB amb schema `type:'workshop'` i camp
+  `projectId` nullable (`WorkshopsView.js:185`). Per tant la **federació
+  tècnica és trivial** · sols cal:
+  1. Treure el filtre implícit per projecte que avui aplica WorkshopsView
+  2. Afegir un selector "Aquest projecte | Tots els projectes | Xarxa SOS (permaweb)"
+  3. Per la 3a opció, query a `queryPermawebRegistry({ entryType: 'public-workshop-entry' })` (futur · necessita `publicWorkshopService.js`)
+- El que **NO és trivial** és el model d'accés/monetització · cal
+  definir taxonomia abans d'implementar.
+
+### Tiers d'accés · alineats amb Matriu
+
+| Tier | Qui hi accedeix | Cost típic | Quan s'usa |
+|---|---|---|---|
+| `public` | Qualsevol persona | Gratis | Workshops d'evangelització · trailer del que ofereix SOS |
+| `operator` | Cal DID SOS signat al permaweb | Gratis · barrera "perfil públic" | Onboarding tècnic · CTA per registrar-se |
+| `matriu` | Cal `matriu_member` actiu (qualsevol cohort) | Gratis com a part del paquet | Formació transversal · base comuna de la xarxa |
+| `cohort` | Cal pertànyer a una cohort específica (`cohortNumber === X`) | Gratis si ets membre · 2,50€ si no | **Programes d'incubadora · contingut premium per cohort** |
+
+La Cohort 0 actua com a **coop fundadora** durant l'alfa · 108 places ·
+@alvaro com a director · consell + equip + inversors + comunitat inicial.
+
+### Revenue split per unlock extern (2,50€ default)
+
+```
+2,50€ pagats per @externa  →
+ ├─ 1,75€  (70%) wallet personal del creador del workshop
+ ├─ 0,50€  (20%) wallet del projecte d'origen (stakeholders FairShares)
+ └─ 0,25€  (10%) wallet de la cohort (cohortNumber)
+```
+
+El **wallet de la cohort** és nou (un per cada `cohortNumber`) i el seu
+saldo finança costos d'IA compartits · workshops nous encarregats
+col·lectivament · activitats d'incubadora (mentories · revisions ·
+presentacions). Tanca el cercle **incubadora ↔ formació**.
+
+Casos especials:
+- Workshop sense `cohortNumber` (workshop personal o de projecte sense Matriu) · el 10% va al projecte → split **70/30/0**
+- Workshop sense projecte (standalone d'un autor) · el 20% va al creator → split **90/0/10** (o **100/0/0** si tampoc té cohort)
+
+### Sprint plan A → D
+
+#### Sprint A · Federació visual local · capa 1 (~1.5h)
+- `WorkshopsView` · selector top "Aquest projecte | Tots projectes locals" (radio chips)
+- Card amb badge `🏷 Projecte: X` per fer evident l'origen
+- Filtres: sector · audience · projecte · `accessTier` (preparem el camp tot i no actuar-hi encara)
+- Camps nous al schema workshop:
+  - `content.accessTier` (default `'public'`)
+  - `content.cohortNumber` (opcional · nullable)
+- **Sense permaweb encara · sense pricing · sols visibilitat cross-projecte**
+
+#### Sprint B · `accessTier` semàntic + paywall · capa 2 (~2h)
+- Lògica de visibilitat segons tier:
+  - `public` · qualsevol
+  - `operator` · cal `matriu_member` amb DID signat al permaweb
+  - `matriu` · cal `matriu_member` actiu (qualsevol cohort)
+  - `cohort` · cal `matriu_member.cohortNumber === workshop.cohortNumber`
+- Per a workshops bloquejats:
+  - Preview gratuït (descripció + outline) sempre visible
+  - Contingut bloquejat amb cta "Desbloquejar · 2,50€ · es paga al wallet del creador"
+  - Si l'usuari té accés per membership → unlock automàtic
+- Editor del workshop · radio "public | operator | matriu | cohort" + selector cohortNumber si triat cohort
+- **Sense Stripe encara · simulació de pagament amb saldo personal**
+
+#### Sprint C · Federació permaweb · capa 3 (~3h · depèn de PERM-ALFA-001 sprint C)
+- `js/core/publicWorkshopService.js`:
+  - `PUBLIC_WORKSHOP_TYPE='public_workshop_entry'` · build/sign/verify igual que `publicRegistryService`
+  - Camps públics: id · title · sector · audience · outline · author DID · accessTier · price · cohortNumber (si cohort)
+  - **Mai inclou** el contingut íntegre del workshop (cobrir-ho mantè el premium gating)
+- `publishWorkshopToPermaweb({workshopId})` · 0,05€ via Turbo SDK · igual flow que perfil
+- `RegistryView` (Permaweb Index) · ara mostra workshops reals amb badge `🌐` quan són del permaweb
+- Discovery: usuari fa click → preview gratuït · contingut íntegre requereix unlock (genera tx local de pagament al wallet del creador)
+
+#### Sprint D · Wallet flow del creador + cohort revenue split (~2h)
+- `cohortWalletIdFor(cohortNumber)` · helper a `walletService.js` · retorna id determinístic (ex. `__cohort_0__`)
+- `getOrCreateCohortWallet(cohortNumber)` · crea wallet si no existeix
+- Quan un usuari paga per unlock:
+  - 70% wallet personal del creador
+  - 20% wallet del projecte d'origen
+  - 10% wallet de la cohort (si `cohortNumber` informat) · si no, va al projecte
+- `recordWorkshopUnlock({workshopId, payerId, priceEur})` a `workshopRevenueService.js` nou
+- Generen 3 `wallet_movement` atomic (best-effort amb refund si fall) · log al ledger del projecte
+- Cobertura tests · 12 asserts amb mocks de wallets
+
+### Decisions confirmades (2026-05-12)
+1. **Tiers** · `public / operator / matriu / cohort` (4 tiers escala compromís) ✅
+2. **Split** · `70/20/10` creator / project / cohort ✅
+3. **NO crear `type:'cooperative'`** · usem `matriu_member.cohortNumber` + wallet derivat per cohort ✅
+4. **Cohort 0** · dirigida per @alvaro durant alfa amb consell + equip + inversors + comunitat inicial ✅
+5. **Pricing default** · 2,50€/unlock · creador pot ajustar rang 1-50€
+6. **Revoke** · contingut roman accessible per a qui ja va pagar (cache local) · noves vendes blocades
+
+### Decisions encara pendents @alvaro
+- ¿`matriu` tier costa res als no-membres? · proposta: **no és desbloquejable** sense ser membre · cas d'ús "incentivar entrada a Matriu"
+- ¿Workshops d'una cohort visibles per altres cohorts? · proposta: **preview sí · contingut íntegre cal pagar 2,50€** (evita silos)
+- ¿Cohort 0 genera workshops automàticament en signar les 108 places? · proposta: **no** · cada cohort decideix quin contingut publica · SOS pre-fill amb plantilles base
+
+### Visió a llarg termini (no en aquesta alfa)
+- **Marketplace cross-cohort** · cohorts poden subscriure's a "feeds" d'altres cohorts · revenue cross-pollination
+- **Quality-staked workshops** · creadors posen stake en EUR/token; si rebut <X% rating, perd stake; si >Y%, multiplicador
+- **Auto-translation IA** · cada workshop pot ser auto-traduït a N idiomes · cost amortitzat amb les primeres vendes
+
+---
+
 *Documento vivo · actualizar al cierre de cada Ola.*

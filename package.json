@@ -5,9 +5,10 @@
     "type": "module",
     "private": true,
     "scripts": {
-        "test": "node js/tests/publicRegistry.test.js && node js/tests/fundFlow.test.js",
+        "test": "node js/tests/publicRegistry.test.js && node js/tests/fundFlow.test.js && node js/tests/projectQuality.test.js",
         "test:permaweb": "node js/tests/publicRegistry.test.js",
         "test:fund-flow": "node js/tests/fundFlow.test.js",
+        "test:quality": "node js/tests/projectQuality.test.js",
         "build:turbo": "node build/turbo-build.mjs",
         "setup:turbo": "npm install --save-dev @ardrive/turbo-sdk@1.41.2 esbuild esbuild-plugin-polyfill-node && mkdir -p vendor && npm run build:turbo"
     },
