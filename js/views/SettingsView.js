@@ -422,16 +422,19 @@ export default class SettingsView {
                 getTurboBalance(stored.jwk).then(bal => {
                     const balEl = document.getElementById('svTurboBal');
                     if (!balEl) return;
-                    if (bal && bal.winc > 0) {
+                    if (bal && bal.error) {
+                        balEl.innerHTML = '⚠ SDK no carregable · obre <code style="color:var(--accent-indigo);">/vendor/turbo-sdk.js</code> per verificar · consulta saldo a <a href="https://turbo-topup.com" target="_blank" style="color:var(--accent-indigo);">turbo-topup.com</a>';
+                        balEl.style.color = 'var(--accent-orange)';
+                    } else if (bal && bal.winc > 0) {
                         balEl.textContent = bal.usdEquivalent.toFixed(2) + ' USD (winc ' + bal.winc + ')';
                         balEl.style.color = 'var(--accent-green)';
                     } else {
-                        balEl.textContent = '0 · recarrega a turbo-topup.com';
+                        balEl.innerHTML = 'saldo 0 · recarrega a <a href="https://turbo-topup.com" target="_blank" style="color:var(--accent-indigo);">turbo-topup.com</a> · o el bundle SDK no s\'ha carregat · verifica <code>/vendor/turbo-sdk.js</code>';
                         balEl.style.color = 'var(--accent-orange)';
                     }
                 }).catch(() => {
                     const balEl = document.getElementById('svTurboBal');
-                    if (balEl) { balEl.textContent = '— no disponible'; balEl.style.color = 'var(--text-muted)'; }
+                    if (balEl) { balEl.textContent = '— no disponible · verifica /vendor/turbo-sdk.js'; balEl.style.color = 'var(--text-muted)'; }
                 });
             };
             await renderState();
