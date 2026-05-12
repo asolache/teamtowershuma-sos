@@ -2796,4 +2796,138 @@ Comencem **avui** amb Sprint A · wallet personal + transferència. Té zero dep
 
 ---
 
+## PERM-ALFA-001 · Permaweb Index unificat + flow alfa creador/worker (input @alvaro 2026-05-12)
+
+> Petició literal · "haz un plan de ux superclaro y simple para el usuario
+> de todo lo registrable en la permaweb para empezar a generar la alfa
+> operativa que permite a personas trabajar de forma descentralizada y
+> desarrollar el flujo de trabajo de el creador de proyecto y del worker
+> que hace entregables · que en el registry salgan todos los elementos
+> registrados en la permaweb · que el flujo de comprar saldo con stripe
+> esté perfectamente integrado con el uso de apis de ia, en permaweb y
+> en blockchain o sistemas de timestamping · enseñar haciendo".
+
+### Decisió de scope
+
+Reframe del Registry com a **Permaweb Index** — una sola pantalla on
+l'usuari veu *tot* el que SOS pot pujar a permaweb: perfils, projectes,
+workshops, mercat, SOPs, work orders. Avui només els **perfils** tenen
+flow publish real (`PUBLIC_REGISTRY_TYPE`); la resta apareixen
+visualment al mateix índex com a **local · no publicat** amb borda
+discontínua i etiqueta "🛈 properament" perquè:
+1. L'usuari descobreix d'un cop què és registrable.
+2. Cada vista (Workshops, Mercat, SOPs, Kanban) sap on portar el botó
+   "Publica al permaweb" quan obrim el sprint corresponent.
+3. La feina de canalitzar al permaweb es fa **incremental** sense
+   trencar l'UX general.
+
+### Estat post-sprint (què queda després d'aquesta sessió)
+
+| Peça | Estat | On |
+|---|---|---|
+| `RegistryView` rebatejat com a *Permaweb Index* | ✅ | `js/views/RegistryView.js` |
+| `INDEX_TYPES` catalog (perfil + projecte + workshop + mercat + sop + wo) | ✅ | mateix fitxer |
+| Filtres per tipus + counts dinàmics | ✅ | chips `data-type-chip` |
+| Distinció visual real vs mock vs local · 6 stat cards | ✅ | `_renderStats` |
+| Badge per estat (verificada · mock · revocada · local) | ✅ | `_cardHtml` |
+| Llegenda explicativa "enseñar haciendo" inline | ✅ | `.rg-hint` |
+
+### Sprint plan A → E (alfa creador + worker)
+
+#### Sprint A · Permaweb Index unificat (✅ DONE · ~1.5h)
+Inclòs en aquesta entrega. Veure secció anterior.
+
+#### Sprint B · Dashboard onboarding 4 passes (~2h · pendent)
+Al Dashboard, card horitzontal nova `🌐 Activa la teva alfa permaweb`
+amb 4 steps detectats automàticament:
+- **1. Perfil signat** · check si `matriu_member` té DID+JWK · cta `/identity`
+- **2. Saldo carregat** · check si wallet personal > 0€ · cta `/wallet` (Stripe Payment Link 5€/10€/25€)
+- **3. Primer projecte creat** · check si l'usuari té algun projecte propi · cta `+ Nou projecte`
+- **4. Primer publish a permaweb** · check si `arweaveTxId` al perfil · cta `/identity` (toggle "Publicar")
+
+Progress bar de 0-4 + missatge contextual a cada step ("Et falten X€ per…").
+Disposem ja de tots els services (`walletService`, `identityService`,
+`publicRegistryService`). Sols cal un `dashboardOnboardingService.js` que
+calculi els 4 booleans i una card al `DashboardView`.
+
+#### Sprint C · Wizard projecte enriquit + flow Federation (~4h · pendent)
+Reescriu el modal de creació de projecte (avui simple) com a wizard de
+4 passes amb scrolls verticals discrets:
+1. **Sector + subsector** · selector sector (A-S KnowledgeLoader) + subtipus dinàmic (`sectorSubtypes.js` ja existeix)
+2. **Roles + deliverables** · plantilla pre-fill segons subsector · usuari ajusta amb +/-
+3. **Productes + workshops** · si el sector té oferta SOS-compatible (sector M, K, B…), pre-fill cataleg base
+4. **Mapa de valor** · 1-3 flows de valor associats als entregables (preview ValueMapView)
+
+Al final del wizard, oferir directament:
+- "Publica el projecte al permaweb" → necessita `publicProjectService.js` (encara per implementar · veure següent)
+- "Comparteix-lo amb el meu equip" → genera enllaç `#/project/{id}` signat
+
+Dep nou: `js/core/publicProjectService.js` amb
+`PUBLIC_PROJECT_TYPE='public_project_entry'`,
+`extractPublicFieldsFromProject()`, `publishProjectToPermaweb()` —
+mateix patró que `publicRegistryService` però amb camps de projecte
+(name · sector · subsector · purpose · roles[] · deliverables[]) i
+defensiu (refusa wallets · workOrders · ledger · contributions).
+
+#### Sprint D · Worker flow al `/kanban` (~3h · pendent)
+El worker entra al `/kanban`, veu work orders amb status `open`
+(claim-ables), els pot reclamar i passar per estats:
+`open → claimed → in-progress → evidence → done → ledger`. A "evidence"
+puja una prova (text + opcional file hash · ja tenim ECDSA sign).
+Quan passa a `ledger` es genera automàticament un `value_contribution`
+(VAL-001 ja ho fa parcialment · cal completar el cicle).
+
+Afegir 2 columnes noves al kanban: "Reclamar" (per workers que no són
+owners) i "Evidència" (workers han d'aportar abans de `done`).
+
+#### Sprint E · Stripe + categorització de despesa (~2h · pendent)
+Al header global, badge persistent `💳 Saldo · 12,40€` que:
+- Pots clicar i s'obre dropdown amb breakdown per categoria (IA · permaweb · blockchain · timestamping · stakeholder)
+- Si baixa de 1€, popup auto suau "Et queden 0,87€ · vols recarregar?" amb shortcut 5€/10€/25€
+- Cost històric: `costTrackingService.js` nou que llegeix `wallet_movement` i classifica per `category` (heuristica `source` field)
+
+Vincular a `ALPHA-STRIPE-001` (ja té Payment Links) i a `FUND-FLOW-001`
+(ja té wallet personal). Sols cal:
+1. Capa de **classificació** dels moviments existents (ja són etiquetats
+   amb `source` · sols cal taxonomia · 6-10 categories).
+2. Capa de **visualització** (badge + dropdown + popup recharge).
+3. **Webhook Stripe automàtic** (resta `FUND-FLOW-001 sprint B` · cal
+   Netlify Function que escolta `checkout.session.completed` i crida
+   l'API SOS local per actualitzar el saldo). Sense webhook l'usuari
+   ha de confirmar manualment ("✓ He pagat") · ja operatiu avui.
+
+### Cross-cutting · "Enseñar haciendo"
+- Cada step del Dashboard té un tooltip `🛈 Per què això?` que obre el
+  micro-explainer (~3 frases · DocsService).
+- El Permaweb Index té llegenda inline ja afegida.
+- Wizard de projecte: cada camp té placeholder amb exemple real del
+  sector seleccionat (pre-pre-fill amb el corpus KB).
+- Kanban worker: tooltips a cada estat ("Què passa quan reclamo? Pago
+  res? No · sols et compromets a entregar X dies").
+
+### Capes futures (no en aquesta alfa)
+- **PERM-AGENT-001** · prompts d'agent al permaweb · cada agent SOS és un
+  registre signat amb la seva system prompt + model + temperatura ·
+  qualsevol SOS local pot importar-lo i executar-lo amb el seu saldo.
+- **PERM-LEGAL-001** · ancoratge OpenTimestamps + eIDAS · cada tx
+  Arweave porta un OTS anchor per validesa legal probada.
+- **PERM-TRUST-001** · trust scoring · els SOS locals signen
+  attestations de la fiabilitat dels altres operadors · agregació
+  ponderada del permaweb (Web of Trust simplificat).
+
+### Decisions pendents @alvaro
+1. **Ordre B-E** · default proposat: B (dashboard onboarding) primer per
+   guiar usuaris nous · després E (Stripe + cost tracking) per donar
+   visibilitat real · després C (wizard projecte) · finalment D (worker
+   flow). Justificació: B i E són transversals · C i D són profundes
+   per rol.
+2. **Mock mode default en alfa pública?** · Recomanació: SÍ ·
+   `setPermawebMockEnabled(true)` per defecte · l'usuari ha d'opt-out
+   activament quan carrega saldo Turbo real.
+3. **Worker pot crear projectes?** · Recomanació: SÍ · cada operador
+   SOS és sempre creator+worker (la distinció és per rol dins d'un
+   projecte concret, no a nivell d'usuari).
+
+---
+
 *Documento vivo · actualizar al cierre de cada Ola.*
