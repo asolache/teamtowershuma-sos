@@ -632,8 +632,13 @@ export async function revokeFromPermaweb({
     const price = Number(pricing?.revokeEur ?? PRICING.revokeEur);
     if (!(price >= 0)) throw new Error('revokeFromPermaweb · invalid pricing');
 
+    // FIX 2026-05-12 · si la tx original és MOCK (no és real Arweave),
+    // el revoke també ha de ser mock · no té sentit pujar revocation
+    // real per a una entry que mai va arribar a Arweave.
+    const isMockTx = typeof revokesTxId === 'string' && revokesTxId.startsWith('MOCK_TX_');
+
     // MOCK MODE · skip wallet + Turbo · fake revocation txId
-    if (await isPermawebMockEnabled()) {
+    if (isMockTx || await isPermawebMockEnabled()) {
         const revocationTxId = _mockTxIdFor('revoke-' + revokesTxId + '-' + Date.now());
         return { revocationTxId, costEur: 0, walletAfter: null, mock: true };
     }

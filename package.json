@@ -7,9 +7,16 @@
     "scripts": {
         "test": "node js/tests/publicRegistry.test.js && node js/tests/fundFlow.test.js",
         "test:permaweb": "node js/tests/publicRegistry.test.js",
-        "test:fund-flow": "node js/tests/fundFlow.test.js"
+        "test:fund-flow": "node js/tests/fundFlow.test.js",
+        "build:turbo": "node build/turbo-build.mjs",
+        "setup:turbo": "npm install --save-dev @ardrive/turbo-sdk@1.41.2 esbuild esbuild-plugin-polyfill-node && mkdir -p vendor && npm run build:turbo"
     },
     "engines": {
         "node": ">=18.0.0"
+    },
+    "devDependencies": {
+        "@ardrive/turbo-sdk": "^1.41.2",
+        "esbuild": "^0.28.0",
+        "esbuild-plugin-polyfill-node": "^0.3.0"
     }
 }
