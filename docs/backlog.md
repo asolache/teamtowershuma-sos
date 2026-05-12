@@ -2930,4 +2930,139 @@ Vincular a `ALPHA-STRIPE-001` (ja té Payment Links) i a `FUND-FLOW-001`
 
 ---
 
+## PROJ-QUALITY-001 · Project completeness tracker al Dashboard (input @alvaro 2026-05-12)
+
+> "Vull poder veure al Dashboard el seguiment del grau de qualitat i
+> completat d'un projecte · si té una bona landing amb presentació i
+> productes, mapa de valor amb roles/transaccions/entregables adaptats
+> de forma òptima, totes les SOPs operatives, i el contingut formatiu
+> / workshops."
+
+### Estat actual (què ja existeix)
+- `projectHealth(proj)` a `DashboardView.js:43` · calcula score 0-100 a
+  partir de roles + transactions + intangibles + neighbors. **Útil pero
+  parcial** · sols cobreix el mapa de valor.
+- `healthColor(score)` · llindar 75/50/<50 (verd/taronja/vermell).
+- Cada card de projecte ja mostra `score` color-coded a la dash.
+
+### Què cal afegir
+Un score multidimensional · 5 capes ponderades · cada capa retorna
+{score, missing[], cta} perquè la UI guiï l'usuari "què et falta".
+
+| Dim | Pes | Check | Senyal "complet" |
+|---|---|---|---|
+| 🎨 **Landing** | 20% | té `purpose` (≥60 chars) · ≥1 product/service al market · presentation IA generada (`presentationCache`) | landing pot ser pública |
+| 🗺 **Value map** | 30% | `projectHealth` (l'existent) · ≥3 roles · ≥5 transactions · ≥1 intangible · ≥1 cicle | mapa narratiu coherent |
+| 🚚 **Deliverables** | 15% | cada role té ≥1 deliverable associat · cada deliverable té owner declarat | flux d'entregables traçable |
+| 📋 **SOPs** | 20% | cada role té SOP (`type:'sop'` amb `roleId` match) · cap SOP draft sense contingut | operativa replicable |
+| 🎓 **Workshops** | 15% | ≥1 workshop per audience type del projecte · ≥1 workshop públic (federable) | contingut formatiu mínim |
+
+**Score total** = Σ (capaScore × pes) · 0-100 · mateixos llindars
+75/50 que avui.
+
+### Sprint plan A → C (~5h total)
+
+#### Sprint A · `projectQualityService.js` pur (~1.5h)
+- Nou `js/core/projectQualityService.js`:
+  - `QUALITY_DIMS = [{id, weight, label, icon}…]` const exportada
+  - `computeQualityScore(project, { sops, workshops, marketItems })` pur · retorna `{ total, byDim:{landing, valueMap, deliverables, sops, workshops}, missing:[…] }`
+  - Cada `byDim[X]` és `{score:0-100, missing:[{label, cta:{href, label}}…]}`
+  - **Pur** · zero KB.query · l'arg `{sops, workshops, marketItems}` ja arriba pre-carregat
+- Tests · ~25 asserts amb projectes mock (`js/tests/projectQuality.test.js`)
+- Integració package.json scripts.test
+
+#### Sprint B · Card al Dashboard per cada projecte (~2h)
+- Modificar `_renderProjects()` a `DashboardView.js`:
+  - Pre-carregar workshops + sops + market amb 3 KB.query batched
+  - Per a cada project card, calcular `computeQualityScore` i renderitzar:
+    - Score gran (substitueix l'`projectHealth` actual o el complementa)
+    - Mini radar (5 punts · CSS gradient sense D3) amb les 5 dims
+    - Hover → tooltip llista els 3 missing principals + cta
+- Filtre nou "Qualitat" al phase chips (`🌟 ≥75 · ⚠ 50-74 · ❌ <50`)
+
+#### Sprint C · Vista detall `/quality?project={id}` (~1.5h)
+- Nova vista `ProjectQualityView.js` que expandeix les 5 capes:
+  - Una secció per dim · llista missing[] amb cta directa a la vista correcta
+  - Botó "Ompli amb IA" per dim (cost ~150 tokens · genera draft que usuari pot acceptar/editar)
+  - Botó "Marcar com a no aplicable" per dim (algunes orgs no necessiten Workshops)
+- Link "Veure detall →" a cada card del Dashboard
+- Tests · 10 asserts UI binding
+
+### Tradeoffs i decisions pendents @alvaro
+1. **Pesos** · proposats 20/30/15/20/15 · podem revisar després de veure projectes reals. Recomanació: començar així, ajustar a Ola 21.
+2. **Substitueix o complementa `projectHealth`?** · Recomanació: **el substitueix** · la nova `valueMap` dim equival a l'existent.
+3. **"No aplicable" per dim** · ¿permitir-ho? · Recomanació: SÍ · alguns projectes no tenen workshops (ex. consultoria 1:1).
+4. **IA fill-in cost** · 5 dims × 150 tokens = ~750 tokens per "auto-completar" un projecte. Acceptable amb saldo prepagat.
+
+---
+
+## WORKSHOPS-FED-001 · Federació de workshops + model coop premium (input @alvaro 2026-05-12)
+
+> "Avalua si els workshops que van néixer per a TeamTowers podrien
+> incloure tots els workshops de projectes i que aquests també puguin
+> ser model de negoci donant un accés premium tipus coops."
+
+### Avaluació tècnica
+- Els workshops ja viuen a KB amb schema `type:'workshop'` i camp
+  `projectId` nullable (`WorkshopsView.js:185`). Per tant la **federació
+  tècnica és trivial** · sols cal:
+  1. Treure el filtre implícit per projecte que avui aplica WorkshopsView
+  2. Afegir un selector "Aquest projecte | Tots els projectes | Xarxa SOS (permaweb)"
+  3. Per la 3a opció, query a `queryPermawebRegistry({ entryType: 'public-workshop-entry' })` (futur · necessita `publicWorkshopService.js`)
+- El que **NO és trivial** és el model d'accés/monetització · cal
+  definir taxonomia abans d'implementar.
+
+### Sprint plan A → D
+
+#### Sprint A · Federació visual local · capa 1 (~1.5h)
+- `WorkshopsView` · selector top "Aquest projecte | Tots projectes locals" (radio chips)
+- Card amb badge `🏷 Projecte: X` per fer evident l'origen
+- Filtres: sector · audience · projecte · `accessTier` (preparem el camp tot i no actuar-hi encara)
+- Camp nou `content.accessTier` al schema workshop (default `'public'`)
+- **Sense permaweb encara · sense pricing · sols visibilitat cross-projecte**
+
+#### Sprint B · `accessTier` semàntic + UI · capa 2 (~2h)
+- Taxonomia 3 tiers (validar amb @alvaro):
+  - `public` · qualsevol · gratis · default
+  - `operator` · cal ser operador SOS (DID signat al permaweb) · gratis si verificat
+  - `coop` · cal pertànyer a una cooperativa · paywall: saldo o subscripció
+- Per a workshops `coop`:
+  - Preview gratuït (descripció + outline) sempre visible
+  - Contingut bloquejat amb cta "Desbloquejar · 2,50€ · es paga al wallet del creador"
+  - Si l'usuari té `matriu_member.cooperatives[]` que conté el coop ID del workshop → unlock automàtic
+- Editor del workshop · radio "public | operator | coop" + selector coop si triat coop
+- **Sense Stripe encara · simulació de pagament amb saldo personal**
+
+#### Sprint C · Federació permaweb · capa 3 (~3h · depèn de PERM-ALFA-001 sprint C)
+- `js/core/publicWorkshopService.js`:
+  - `PUBLIC_WORKSHOP_TYPE='public_workshop_entry'` · build/sign/verify igual que `publicRegistryService`
+  - Camps públics: id · title · sector · audience · outline · author DID · accessTier · price · coopId (si coop)
+  - **Mai inclou** el contingut íntegre del workshop (cobrir-ho mantè el premium gating)
+- `publishWorkshopToPermaweb({workshopId})` · 0,05€ via Turbo SDK · igual flow que perfil
+- `RegistryView` (Permaweb Index) · ara mostra workshops reals amb badge `🌐` quan són del permaweb
+- Discovery: usuari fa click → preview gratuït · contingut íntegre requereix unlock (genera tx local de pagament al wallet del creador)
+
+#### Sprint D · Wallet flow del creador + coop revenue split (~2h)
+- Quan un usuari paga per unlock:
+  - 70% wallet personal del creador
+  - 20% wallet del projecte d'origen
+  - 10% wallet del coop (si coop) · si no, va al projecte
+- `recordWorkshopUnlock({workshopId, payerId, priceEur})` a `workshopRevenueService.js` nou
+- Generen 3 `wallet_movement` atomic (best-effort amb refund si fall) · log al ledger del projecte
+- Cobertura tests · 12 asserts amb mocks de wallets
+
+### Tradeoffs i decisions pendents @alvaro
+1. **Pricing default** · 2,50€/unlock proposat · ajustable per creador (rang 1-50€). Recomanació: 2,50€ default · sweet spot impulse purchase.
+2. **Revenue split 70/20/10** · negociable · recomanació: 70 creator / 20 project / 10 coop és coherent amb Slicing Pie (qui posa contingut · qui posa context · qui posa xarxa).
+3. **Què passa si un coop revoca un workshop?** · proposta: el contingut roman accessible per a qui ja va pagar (cache local) · noves vendes blocades.
+4. **Workshops "freemium"** · ¿permitir que un workshop tingui outline gratis + N seccions premium? · recomanació: NO en capa 1 · KIS · un workshop = un preu únic.
+5. **Coops com a entitat al SOS** · ¿crear `type:'cooperative'` amb membres? · recomanació: SÍ · piscina pròpia · es vincula a `matriu_member` via `cooperatives:[coopId]`.
+
+### Visió a llarg termini (no en aquesta alfa)
+- **Marketplace cross-coop** · coops poden subscriure's a "feeds" d'altres coops · revenue cross-pollination
+- **Quality-staked workshops** · creadors posen stake en EUR/token; si rebut rebut <X% rating, perd stake; si >Y%, multiplicador
+- **Auto-translation IA** · cada workshop pot ser auto-traduït a N idiomes · cost amortitzat amb les primeres vendes
+
+---
+
 *Documento vivo · actualizar al cierre de cada Ola.*
