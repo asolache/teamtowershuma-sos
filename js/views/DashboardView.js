@@ -23,6 +23,8 @@ import { SKILL_TAXONOMY } from '../core/skillTaxonomy.js';
 // UX-AUDIT-001 sprint B · subtipus de sector + PROJECT_TYPES Matriu per al wizard
 import { getSubtypesForSector, buildIaContextHint } from '../core/sectorSubtypes.js';
 import { PROJECT_TYPES } from '../core/critical108Roles.js';
+// PROJ-QUALITY-001 sprint B · score multidimensional al Dashboard
+import { computeQualityScore, QUALITY_DIMS, statusColor as qualityColor, statusIcon as qualityIcon, QUALITY_THRESHOLDS } from '../core/projectQualityService.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function uid() { return 'proj-' + Math.random().toString(36).slice(2, 9); }
@@ -430,6 +432,21 @@ export default class DashboardView {
             }
             .dash-card-node-dot {
                 width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+            }
+            /* PROJ-QUALITY-001 sprint B · mini-radar 5 dims (EQ-style) */
+            .dash-card-qradar {
+                display: flex; gap: 4px; align-items: flex-end; height: 28px;
+                margin: 4px 0 2px; padding: 2px 0;
+            }
+            .dash-card-qbar {
+                flex: 1; height: 100%;
+                background: var(--glass-border); border-radius: 2px;
+                display: flex; align-items: flex-end; overflow: hidden;
+                cursor: help;
+            }
+            .dash-card-qbar-fill {
+                width: 100%; min-height: 4px;
+                border-radius: 2px; transition: height .4s ease;
             }
             .dash-card-date-rel {
                 font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);
@@ -886,18 +903,31 @@ export default class DashboardView {
         // MAT-002-F · strip Matriu Cohort 0 (visible solo si hay proyectos cohort 0)
         this._renderMatriuStrip(projects);
 
-        // Stats v2 con health global y barras
-        const totalRoles = projects.reduce(function(acc, p) { return acc + (p.vna_roles || []).length; }, 0);
-        const totalTxs   = projects.reduce(function(acc, p) { return acc + (p.vna_transactions || []).length; }, 0);
-        const healthScores = projects.map(function(p) { return projectHealth(p); }).filter(function(s) { return s !== null; });
-        const avgHealth  = healthScores.length > 0 ? Math.round(healthScores.reduce(function(a, b) { return a + b; }, 0) / healthScores.length) : null;
-        const hColor     = avgHealth !== null ? healthColor(avgHealth) : 'var(--text-muted)';
+        // PROJ-QUALITY-001 sprint B · pre-càrrega batched de SOPs / workshops / market_items
+        // perquè computeQualityScore és pur i necessita les llistes pre-carregades.
+        let allSops = [], allWorkshops = [], allMarket = [];
+        try { allSops      = await KB.query({ type: 'sop' });          } catch (_) {}
+        try { allWorkshops = await KB.query({ type: 'workshop' });     } catch (_) {}
+        try { allMarket    = await KB.query({ type: 'market_item' });  } catch (_) {}
+        const qualityById = {};
+        projects.forEach(function(p) {
+            qualityById[p.id] = computeQualityScore(p, { sops: allSops, workshops: allWorkshops, marketItems: allMarket });
+        });
+        this._qualityById = qualityById;  // cache per altres mètodes (filter chips, tooltip)
+
+        // Stats v2 · roles + tx + qualitat mitja (substitueix Ecosystem health)
+        const totalRoles    = projects.reduce(function(acc, p) { return acc + (p.vna_roles || []).length; }, 0);
+        const totalTxs      = projects.reduce(function(acc, p) { return acc + (p.vna_transactions || []).length; }, 0);
+        const qualityScores = Object.values(qualityById).map(function(q) { return q.total; });
+        const avgQuality    = qualityScores.length > 0 ? Math.round(qualityScores.reduce(function(a, b) { return a + b; }, 0) / qualityScores.length) : null;
+        const qStatus       = avgQuality === null ? null : (avgQuality >= QUALITY_THRESHOLDS.high ? 'high' : (avgQuality >= QUALITY_THRESHOLDS.medium ? 'medium' : 'low'));
+        const qColor        = qStatus ? qualityColor(qStatus) : 'var(--text-muted)';
 
         document.getElementById('dashStats').innerHTML =
             '<div class="dash-stat"><div class="dash-stat-label">Projects</div><div class="dash-stat-value">' + projects.length + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:100%;background:var(--accent-indigo);"></div></div></div>' +
             '<div class="dash-stat"><div class="dash-stat-label">Total roles</div><div class="dash-stat-value">' + totalRoles + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:' + Math.min(totalRoles * 4, 100) + '%;background:var(--accent-blue);"></div></div></div>' +
             '<div class="dash-stat"><div class="dash-stat-label">Transactions</div><div class="dash-stat-value">' + totalTxs + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:' + Math.min(totalTxs * 2, 100) + '%;background:var(--accent-green);"></div></div></div>' +
-            (avgHealth !== null ? '<div class="dash-stat"><div class="dash-stat-label">Ecosystem health</div><div class="dash-stat-value" style="color:' + hColor + '">' + avgHealth + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:' + avgHealth + '%;background:' + hColor + ';"></div></div></div>' : '');
+            (avgQuality !== null ? '<div class="dash-stat" title="Mitjana ponderada de Landing+ValueMap+Deliverables+SOPs+Workshops"><div class="dash-stat-label">' + qualityIcon(qStatus) + ' Project quality</div><div class="dash-stat-value" style="color:' + qColor + '">' + avgQuality + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:' + avgQuality + '%;background:' + qColor + ';"></div></div></div>' : '');
 
         document.getElementById('dashHeroSub').textContent =
             projects.length === 0
@@ -951,10 +981,37 @@ export default class DashboardView {
             }).join('')
             + '</div>';
 
-        // Aplica filtre · 'all' deixa la llista sencera
-        const filteredProjects = activeFilter === 'all'
+        // PROJ-QUALITY-001 sprint B3 · filtre de qualitat (independent del phase filter)
+        const qualityFilter = this._qualityFilter || 'all';
+        const qCounts = { high: 0, medium: 0, low: 0 };
+        projects.forEach(function(p) {
+            const st = qualityById[p.id] ? qualityById[p.id].status : 'low';
+            if (qCounts[st] !== undefined) qCounts[st]++;
+        });
+        const qualityChipsHtml = '<div class="dash-phase-bar" style="margin-top:4px;">'
+            + '<button class="dash-phase-chip' + (qualityFilter === 'all' ? ' is-active' : '') + '" data-quality="all" title="Mostra tots els projectes">'
+            +   '<span>📋 Qualitat · tots</span><span class="count">' + projects.length + '</span>'
+            + '</button>'
+            + '<button class="dash-phase-chip' + (qualityFilter === 'high' ? ' is-active' : '') + '" data-quality="high" title="Score ≥ 75">'
+            +   '<span>🌟 Alta</span><span class="count">' + qCounts.high + '</span>'
+            + '</button>'
+            + '<button class="dash-phase-chip' + (qualityFilter === 'medium' ? ' is-active' : '') + '" data-quality="medium" title="Score 50-74">'
+            +   '<span>⚠ Mitjana</span><span class="count">' + qCounts.medium + '</span>'
+            + '</button>'
+            + '<button class="dash-phase-chip' + (qualityFilter === 'low' ? ' is-active' : '') + '" data-quality="low" title="Score < 50">'
+            +   '<span>❌ Baixa</span><span class="count">' + qCounts.low + '</span>'
+            + '</button>'
+            + '</div>';
+
+        // Aplica filtres · primer phase · després qualitat
+        let filteredProjects = activeFilter === 'all'
             ? projects
             : (phaseGroups[activeFilter] || []);
+        if (qualityFilter !== 'all') {
+            filteredProjects = filteredProjects.filter(function(p) {
+                return qualityById[p.id] && qualityById[p.id].status === qualityFilter;
+            });
+        }
 
         // Agrupar por sector (després del filtre per phase)
         const groups = {};
@@ -970,7 +1027,7 @@ export default class DashboardView {
             return found ? found.name : (id === 'general' ? 'General' : id);
         };
 
-        let html = chipsHtml;
+        let html = chipsHtml + qualityChipsHtml;
         var self = this;
 
         if (filteredProjects.length === 0) {
@@ -996,18 +1053,32 @@ export default class DashboardView {
                 const isDemo = p.id === 'proj-colla-demo-v11';
                 const roles  = (p.vna_roles        || []).length;
                 const txs    = (p.vna_transactions || []).length;
-                const score  = projectHealth(p);
-                const hColor = score !== null ? healthColor(score) : 'var(--text-muted)';
-                const hLabel = score !== null ? score + '' : '—';
+                // PROJ-QUALITY-001 sprint B · score multidimensional
+                const q      = qualityById[p.id] || { total: 0, byDim: {}, missing: [], status: 'low' };
+                const hColor = qualityColor(q.status);
+                const hLabel = q.total + '';
                 const rel    = self._relativeDate(p.updatedAt || p.createdAt);
 
-                // Mini preview de nodos — puntos de color por nivel
-                var nodeDots = '';
-                (p.vna_roles || []).slice(0, 12).forEach(function(r) {
-                    nodeDots += '<div class="dash-card-node-dot" style="background:' + self._levelColor(r.castell_level) + ';opacity:.7;"></div>';
+                // Mini-radar · 5 dims com a barres verticals (EQ-style)
+                let dimBars = '';
+                let dimTooltipLines = [];
+                QUALITY_DIMS.forEach(function(d) {
+                    const s = q.byDim[d.id] ? q.byDim[d.id].score : 0;
+                    const dimSt = s >= QUALITY_THRESHOLDS.high ? 'high' : (s >= QUALITY_THRESHOLDS.medium ? 'medium' : 'low');
+                    const dColor = qualityColor(dimSt);
+                    dimBars += '<div class="dash-card-qbar" title="' + d.icon + ' ' + d.label + ' · ' + s + '/100">'
+                        +   '<div class="dash-card-qbar-fill" style="height:' + Math.max(s, 4) + '%;background:' + dColor + ';"></div>'
+                        + '</div>';
+                    dimTooltipLines.push(d.icon + ' ' + d.label + ': ' + s);
                 });
 
-                html += '<a class="dash-card' + (isDemo ? ' dash-card-demo' : '') + '" href="/map?project=' + p.id + '" data-link>' +
+                // Top 3 missing per tooltip (titol nativ)
+                const top3 = (q.missing || []).slice(0, 3).map(function(m) { return '• ' + m.label; }).join('\n');
+                const cardTooltip = 'Project quality · ' + q.total + '/100 (' + q.status + ')\n\n'
+                    + dimTooltipLines.join('\n')
+                    + (top3 ? '\n\n📌 Falten:\n' + top3 : '');
+
+                html += '<a class="dash-card' + (isDemo ? ' dash-card-demo' : '') + '" href="/map?project=' + p.id + '" data-link title="' + cardTooltip.replace(/"/g, '&quot;') + '">' +
                     '<div class="dash-card-top">' +
                         '<div class="dash-card-name">' + (p.nombre || p.name || 'Unnamed') + '</div>' +
                         '<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">' +
@@ -1015,19 +1086,19 @@ export default class DashboardView {
                             (sectorId !== 'general' ? '<div class="dash-card-sector-badge">' + sectorId + '</div>' : '') +
                         '</div>' +
                     '</div>' +
-                    (nodeDots ? '<div class="dash-card-nodes">' + nodeDots + '</div>' : '') +
+                    '<div class="dash-card-qradar">' + dimBars + '</div>' +
                     '<div class="dash-card-meta">' +
                         '<span>' + roles + ' roles</span>' +
                         '<span>' + txs + ' transactions</span>' +
                     '</div>' +
                     '<div style="margin-top:2px;">' +
                         '<div class="dash-card-health-bar">' +
-                            '<div class="dash-card-health-fill" style="width:' + (score || 0) + '%;background:' + hColor + ';"></div>' +
+                            '<div class="dash-card-health-fill" style="width:' + q.total + '%;background:' + hColor + ';"></div>' +
                         '</div>' +
                     '</div>' +
                     '<div class="dash-card-footer">' +
                         '<div class="dash-card-date-rel">' + rel + '</div>' +
-                        '<div class="dash-card-health" style="background:' + hColor + '18;color:' + hColor + ';">' + hLabel + '</div>' +
+                        '<div class="dash-card-health" style="background:' + hColor + '18;color:' + hColor + ';">' + qualityIcon(q.status) + ' ' + hLabel + '</div>' +
                     '</div>' +
                     '<div class="dash-card-actions">' +
                         '<button class="dash-card-action-btn" data-archive="' + p.id + '">Archive</button>' +
@@ -1145,8 +1216,10 @@ export default class DashboardView {
         const self = this;
         document.querySelectorAll('.dash-phase-chip').forEach(function(chip) {
             chip.addEventListener('click', function() {
-                const phase = chip.getAttribute('data-phase');
-                self._phaseFilter = phase;
+                const phase   = chip.getAttribute('data-phase');
+                const quality = chip.getAttribute('data-quality');
+                if (phase)   self._phaseFilter   = phase;
+                if (quality) self._qualityFilter = quality;
                 // Re-render in-place · zero navigateTo
                 self._renderProjects();
             });
