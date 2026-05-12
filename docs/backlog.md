@@ -3094,6 +3094,156 @@ SOS ja porta Turbo SDK amb keyfile JSON. Refactor cap a UX més neta:
 
 ---
 
+## FOUNDER-001 · Plantilla projecte fundacional · @alvaro com a founder (input @alvaro 2026-05-12)
+
+> "Aclareix com configurar SOS perquè hi hagi un pas que es faci com el
+> founder i creador del projecte · m'agradaria que generessis com a una
+> altra plantilla dinàmica amb accés des de permaweb."
+
+### Tesi
+SOS necessita un projecte "manifest" que actua com a:
+1. **Bootstrap** · seed clonable per a nous operadors que volen entendre
+   què és el mètode (vegen un projecte ben omplert · poden veure cada
+   secció amb dades reals)
+2. **Llinatge** · projecte signat per @alvaro que es publica al permaweb
+   amb versionat · el "founder commit" del moviment
+3. **Demostració d'auto-referent** · el SOS és un projecte SOS · el
+   founderTemplate genera el projecte que descriu com es manté el SOS
+
+### Estat post-sprint A (ja a producció)
+`js/core/founderTemplate.js` (~180 LOC · pur) genera:
+  - 1 project amb sector A · cohort 0 · projectType `foundational-network`
+  - **9 roles** (visioner · arquitecte · narrador · matriuger · sentinel ·
+    curator · token-econ · connector · founder-anchor) amb castell_level
+    i typical_actor
+  - **12 transactions** descrivint els flows essencials del moviment ·
+    inclou 5 intangibles + 2 cicles recíprocs (per puntuar 90+ a /quality)
+  - **5 SOPs** operatius (onboard cohort · publish · audit · pricing · cohort)
+    cadascun amb 5-7 steps i roleId vinculat
+  - **3 workshops** amb accessTier (public · operator · cohort) alineats
+    amb WORKSHOPS-FED-001
+  - Camps top-level pre-omplerts (purpose · description · presentation_narrative_v1)
+    perquè el projectQuality doni score ≥85 de partida
+
+### Sprint plan B → D (pendents · ~5h)
+
+#### Sprint B · UI "Clonar founder template" al wizard (~1.5h)
+- Modal `+ Nou Projecte` · nova opció radio "🌟 Founder bootstrap"
+- Després de triar, mostra preview · l'usuari pot canviar el handle + sector
+- A acceptar · `buildFounderProject()` + `store.dispatch(addProject)` +
+  KB.upsert dels sops + workshops
+- Score immediat ≥85 al Dashboard
+
+#### Sprint C · publish del founder template al permaweb (~2h)
+- A `/project/{id}` (Hub) · botó "🌟 Publish as founder template" especial
+- Tags Arweave extra · `Template: founder` · `TemplateClonable: true`
+- Quan un altre usuari fa `syncFromPermaweb`, veu el founder template a
+  `/registry` amb un badge especial · click → "Clone aquest template"
+  importa al seu KB local com a nou projecte propi
+- Tracking · qui clona el template? Genera un node `template_clone` que
+  permet a @alvaro veure adopció
+
+#### Sprint D · Cohort 0 attestations (~1.5h)
+- Cohort 0 té 108 places · cada membre signa una attestation `attests` al
+  founder template ("aquest és el meu founder · m'identifico amb el moviment")
+- Attestation té format propi · publicat al permaweb · construeix Web of Trust
+- Vista `/matriu/network` · llista membres amb attestations actives + count
+
+### Decisions pendents @alvaro
+1. **Hi pot haver més d'un founder?** · recomanació: SÍ · cada operador pot
+   crear el seu propi founder template (sector M · sector A · etc.). El
+   `@alvaro` és el founder canònic del moviment SOS, però altres founders
+   regionals/sectorials són benvinguts.
+2. **Founder template és immutable o pot evolucionar?** · recomanació: amb
+   PROJ-VERSIONING-001 cada update genera v+1 enllaçada · els clones poden
+   "subscriure's" a updates o quedar-se fixats a una versió.
+
+---
+
+## PROJ-VERSIONING-001 · Versionat de projectes al permaweb (input @alvaro 2026-05-12)
+
+> "En permaweb un projecte pot ser actualitzat amb un control de
+> versions per tenir la última versió on-line de les dades i poder
+> consultar l'històric."
+
+### Schema (ja implementat sprint A)
+Cada publish d'un `public_project_entry` ara incorpora:
+```js
+content: {
+    entryVersion: 1,                   // monotonic increasing (1, 2, 3, …)
+    previousTxId: null,                // null per v1 · txId de v-1 altrament
+    // … resta de camps signables …
+}
+```
+Tags Arweave:
+```
+App-Name:      SOS-V11
+Entry-Type:    public-project-entry
+ProjectId:     {id}
+Version:       0001          ← padded a 4 dígits per ordre lexicogràfic
+Previous-TxId: {txId v-1}    ← absent per v1
+```
+El padded `Version: 0001` permet que el GraphQL gateway d'Arweave faci
+sort lexicogràfic = sort numèric · fins v9999 (sprint X+ ampliem a 6 dígits).
+
+### Helpers (ja implementats sprint A)
+
+```js
+// Pure validation · detecta gaps · forks · previousTxId mismatch
+validateVersionChain(versions)  →  { valid, issues:[…] }
+
+// Query GraphQL · retorna [v1, v2, …, vN] ordenat ASC
+await getProjectVersionHistory({ projectId, gqlUrl, first, fetchFn })
+
+// Convenience · agafa l'últim element del history
+await getLatestProjectVersion({ projectId, … })
+```
+
+### Defenses
+1. **Build defensive** · `buildPublicProjectEntry({ entryVersion:2 })` sense
+   `previousTxId` llança · evita orphan versions
+2. **Validation defensive** · `entryVersion` ha de ser enter positiu ·
+   1.5 o 0 throws
+3. **Chain integrity** · `validateVersionChain` detecta gaps · forks ·
+   previousTxId mismatch · v1 amb previousTxId
+
+### Sprint plan B → D (pendents · ~5h)
+
+#### Sprint B · UI versionat al ProjectHubView (~1.5h)
+- Botó "📝 Publish update" (enlloc de "Publish" si ja és v>1)
+- Mostra "v3 → v4" amb diff preview · usuari confirma · auto-incrementa
+- Després de publish reeixit · actualitza store amb `arweaveTxId` nou +
+  `entryVersion` nou + `previousTxId` apuntant a l'anterior
+
+#### Sprint C · Historial visual al /quality o /project (~1.5h)
+- Card nova "📜 Historial permaweb" amb timeline · click v3 obre preview
+- Diff entre versions amb highlight de canvis (per dim · landing · valueMap · etc.)
+- Botó "Rollback to v2" · genera v4 amb mateix contingut de v2 (no destructiu)
+
+#### Sprint D · Discovery latest automàtic (~2h)
+- `RegistryView` · per a cada public_project_entry, fetcha automàticament
+  el latest version (cache 15min)
+- Badge "v3 (last update fa 2 dies)" sobre la card
+- Si l'usuari ha clonat la v1 i ara hi ha v3 disponible, banner "🛈 Versió
+  nova del template disponible · veure canvis"
+
+### Decisions pendents @alvaro
+1. **Revoke d'una versió** · revoke v2 sense afectar v3? · recomanació:
+   revoke porta tag `Entry-Type=revocation` apuntant al txId · l'usuari
+   pot revoke versions concretes
+2. **Schema migration entre versions** · si v3 afegeix un camp nou,
+   què passa amb els clones de v2? · recomanació: schema additiu sempre ·
+   camps nous null als clones · defensive parsing
+3. **Cost** · cada publish costa 0,05€ · projectes amb 10+ versions
+   acumulen 0,50€ · acceptable? · recomanació: SÍ · és barat i el valor
+   d'historial real > cost
+4. **Mutable references** · com referenciar "el founder template a la
+   v latest" sense haver d'actualitzar el txId? · recomanació: ANS-104
+   Bundlr permet "named references" futur · de moment usar /api/latest-version
+   endpoint a Netlify Function (sprint X)
+
+---
+
 ## IA-ROUTER-001 · Routing matrix IA · 5 providers · escalation per qualitat (input @alvaro 2026-05-12)
 
 > "Defineix-me quines IAs de les que tinc apis · Anthropic · Gemini ·
