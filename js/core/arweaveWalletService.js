@@ -111,25 +111,61 @@ export async function clearArweaveKeyfile() {
 }
 
 // ── Turbo Credits balance ──────────────────────────────────────────
+//
+// NOTA TÈCNICA · 2026-05-10 · El SDK @ardrive/turbo-sdk és Node-targeted
+// i importa mòduls built-in (fs, path). Cap CDN universal (jsDelivr,
+// esm.sh, unpkg, skypack) pot polyfillejar fs de manera fiable al browser.
+//
+// Estat actual:
+//   - getTurboBalance/getTurboClient FALLEN silenciosament al browser
+//   - getArweaveKeyfile + validate + save FUNCIONEN (puro crypto.subtle)
+//   - El sprint pendent és bundlejar Turbo SDK localment via esbuild
+//     i servir-lo com a /vendor/turbo-bundle.js
+//
+// MENTRESTANT · el publish real fallarà al browser · només funciona el
+// 🧪 Mode test (mock) que ja existeix. Documentar a l'UI.
+
+// Llista de fallbacks · provarem CDNs múltiples · el primer que funcioni
+const TURBO_CDN_FALLBACKS = [
+    'https://esm.sh/@ardrive/turbo-sdk@1.27.1?bundle&target=es2022',
+    'https://esm.sh/@ardrive/turbo-sdk@1.27.1/web',
+    'https://cdn.jsdelivr.net/npm/@ardrive/turbo-sdk@1.27.1/lib/web/index.js',
+    'https://cdn.skypack.dev/@ardrive/turbo-sdk@1.27.1',
+];
+
+async function _tryLoadTurbo() {
+    let lastError = null;
+    for (const url of TURBO_CDN_FALLBACKS) {
+        try {
+            const mod = await import(url);
+            if (mod && (mod.TurboFactory || mod.default)) {
+                console.info('[arweaveWalletService] Turbo SDK loaded from', url);
+                return mod;
+            }
+        } catch (e) {
+            lastError = e;
+            console.warn('[arweaveWalletService] Turbo SDK CDN fail at', url, '·', e?.message);
+        }
+    }
+    throw new Error('No CDN Turbo SDK working from browser · ' + (lastError?.message || 'unknown') + ' · use 🧪 Mode test mentre no es bundleja localment');
+}
 
 export async function getTurboBalance(jwk) {
     if (!jwk) return null;
     try {
-        const mod = await import('https://esm.sh/@ardrive/turbo-sdk@1.27.1/web');
+        const mod = await _tryLoadTurbo();
         const factory = mod.TurboFactory || mod.default || mod;
         const client  = factory.authenticated
             ? factory.authenticated({ privateKey: jwk, token: 'arweave' })
             : null;
         if (!client) return null;
-        // L'API de Turbo retorna winc (winston credits · 1 USD ≈ 10^12 winc)
         const balance = await client.getBalance();
         const winc = Number(balance?.winc || balance || 0);
-        // Conversió aproximada · 1 GiB ≈ ~$8 segons preu Arweave actual
-        const usdEquivalent = winc / 1e12;   // simplificació · TBD ratio exacte
+        const usdEquivalent = winc / 1e12;
         return { winc, usdEquivalent: Math.round(usdEquivalent * 100) / 100 };
     } catch (e) {
-        console.warn('[arweaveWalletService] getTurboBalance failed', e);
-        return null;
+        console.warn('[arweaveWalletService] getTurboBalance failed', e?.message);
+        return { winc: 0, usdEquivalent: 0, error: e?.message || 'Turbo SDK no carregable al browser' };
     }
 }
 
@@ -137,7 +173,7 @@ export async function getTurboBalance(jwk) {
 
 export async function getTurboClient(jwk) {
     if (!jwk) return null;
-    const mod = await import('https://esm.sh/@ardrive/turbo-sdk@1.27.1/web');
+    const mod = await _tryLoadTurbo();
     const factory = mod.TurboFactory || mod.default || mod;
     if (!factory.authenticated) return null;
     return factory.authenticated({ privateKey: jwk, token: 'arweave' });
