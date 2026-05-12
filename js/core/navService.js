@@ -759,6 +759,7 @@ import { computeQualityScore, QUALITY_DIMS, QUALITY_THRESHOLDS, statusColor, sta
 // `dims:[]` significa "no influeix al score" (operativa pura · kanban, wallet…).
 export const PROJECT_SUBNAV_ITEMS = Object.freeze([
     { id: 'hub',          icon: '🚀', label: 'Hub',          dims: [],                          buildHref: (pid) => '/project/' + encodeURIComponent(pid) },
+    { id: 'quality',      icon: '🌟', label: 'Qualitat',     dims: [],                          buildHref: (pid) => '/quality?project=' + encodeURIComponent(pid) },
     { id: 'presentation', icon: '🎤', label: 'Presentació',  dims: ['landing'],                 buildHref: (pid) => '/presentation?project=' + encodeURIComponent(pid) },
     { id: 'map',          icon: '🗺',  label: 'Mapa',         dims: ['valueMap', 'deliverables'],buildHref: (pid) => '/map?project=' + encodeURIComponent(pid) },
     { id: 'sops',         icon: '📜', label: 'SOPs',         dims: ['sops'],                    buildHref: (pid) => '/sops?project=' + encodeURIComponent(pid) },
@@ -774,6 +775,7 @@ export const PROJECT_SUBNAV_ITEMS = Object.freeze([
 function _subnavActiveId(pathname = '') {
     const path = (pathname || '').split('?')[0].split('#')[0];
     if (path.startsWith('/project/'))   return 'hub';
+    if (path === '/quality')            return 'quality';
     if (path === '/presentation')       return 'presentation';
     if (path === '/map')                return 'map';
     if (path === '/sops')               return 'sops';

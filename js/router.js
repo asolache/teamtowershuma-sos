@@ -62,6 +62,8 @@ const ROUTES = [
     { path: '/presentation', view: () => import('./views/PresentationView.js') },
     // UX-AUDIT-001 sprint A2 · mockup mobile app (Work Orders + temps + permaweb + IA + saldo)
     { path: '/mobile',       view: () => import('./views/MobileMockupView.js') },
+    // PROJ-QUALITY-001 sprint E · vista detall qualitat del projecte
+    { path: '/quality',      view: () => import('./views/ProjectQualityView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
