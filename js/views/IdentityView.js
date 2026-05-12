@@ -139,7 +139,7 @@ export default class IdentityView {
 
                 <div class="id-card" id="idWanderCard" style="border-left-color:#a855f7;">
                     <h2>🦊 Wander · Arweave wallet</h2>
-                    <div class="id-meta">Connecta l'extensió <strong>Wander</strong> (o ArConnect) per usar la teva clau Arweave sense pujar el JSON. Necessària per a publicar al permaweb i veure el saldo Turbo. Si encara no la tens, instal·la-la des de <a href="https://www.wander.app/" target="_blank" style="color:var(--accent-indigo);">wander.app ↗</a> · alternativament fes servir el flow keyfile JSON tradicional (sprint G).</div>
+                    <div class="id-meta">Connecta l'extensió <strong>Wander</strong> (o ArConnect) per signar publishes al permaweb directament des de la teva clau Arweave · zero JWK en memòria. Cada upload demanarà aprovació explícita al popup de l'extensió. Si encara no la tens, instal·la-la des de <a href="https://www.wander.app/" target="_blank" style="color:var(--accent-indigo);">wander.app ↗</a> · alternativament fes servir el flow keyfile JSON tradicional. <strong>Sprint A2 actiu</strong> · els publishes preferits per extensió quan està connectada.</div>
                     <div id="idWanderBody" style="margin-top:0.8rem;">
                         <div class="id-meta" style="font-style:italic;">Detectant extensió…</div>
                     </div>

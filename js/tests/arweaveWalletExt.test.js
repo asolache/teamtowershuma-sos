@@ -124,5 +124,16 @@ const conn2 = await svc.connectWander();
 eq(conn2.address,    mockAddress,                                     'F · sense pubKey · address ok');
 eq(conn2.publicKey,  null,                                            'F · sense pubKey · publicKey null');
 
+// ─── Sprint A2 · getTurboClientForExtension export + null safety ─────────
+// El test real (carregar /vendor/turbo-sdk.js · construir ArconnectSigner ·
+// connect a Turbo) requereix browser · aquí validem el contracte i el fail
+// path quan no hi ha provider.
+t(typeof svc.getTurboClientForExtension === 'function',               'G · getTurboClientForExtension exportat');
+
+// 11 · Sense provider · getTurboClientForExtension retorna null (no throw)
+svc.setArweaveExtensionProvider(null);
+const clientNull = await svc.getTurboClientForExtension();
+eq(clientNull,     null,                                              'G · sense provider · getTurboClientForExtension = null');
+
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

@@ -371,3 +371,29 @@ export async function getActiveArweaveContext() {
     if (kf)  return { source: 'keyfile',   address: kf.address,  publicKey: null, jwk: kf.jwk };
     return null;
 }
+
+// WALLET-AUTH-001 sprint A2 · Turbo client via ArconnectSigner (Wander extension)
+// El bundle local `/vendor/turbo-sdk.js` exposa ArconnectSigner re-exportat
+// d'arbundles. La signer wrap `window.arweaveWallet` per signar transactions
+// via l'extensió · zero JWK en memòria · l'usuari aprova cada signatura
+// al popup de Wander.
+export async function getTurboClientForExtension() {
+    const w = _provider();
+    if (!w) return null;
+    const mod = await _tryLoadTurbo();
+    const factory = mod.TurboFactory || mod.default || mod;
+    if (!factory || !factory.authenticated) return null;
+    const ArconnectSigner = mod.ArconnectSigner || (mod.default && mod.default.ArconnectSigner);
+    if (!ArconnectSigner) {
+        throw new Error('vendor/turbo-sdk.js no exposa ArconnectSigner · re-bundle amb sprint A2 entry');
+    }
+    const signer = new ArconnectSigner(w);
+    // setPublicKey · ArconnectSigner ho fa lazy al primer sign, però ho avancem
+    // per detectar errors aviat (extensió sense permission ACCESS_PUBLIC_KEY)
+    if (typeof signer.setPublicKey === 'function') {
+        try { await signer.setPublicKey(); } catch (e) {
+            throw new Error('ArconnectSigner.setPublicKey failed · ' + (e?.message || 'unknown') + ' · confirma els permissions a Wander');
+        }
+    }
+    return factory.authenticated({ signer, token: 'arweave' });
+}

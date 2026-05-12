@@ -289,17 +289,35 @@ export async function publishProjectToPermaweb({ entry, projectId } = {}) {
             signatureFormat: entry.content.signatureFormat,
         });
         // Sprint G · 2026-05-10 · usa keyfile Arweave si configurada al /settings
-        const { getArweaveKeyfile, getTurboClient } = await import('./arweaveWalletService.js');
-        const stored = await getArweaveKeyfile();
+        // Sprint A2 (WALLET-AUTH-001) · 2026-05-12 · prefereix Wander extension
+        const {
+            getArweaveKeyfile, getTurboClient,
+            isWanderAvailable, getWanderConnection, getTurboClientForExtension,
+        } = await import('./arweaveWalletService.js');
         let client;
-        if (stored?.jwk) {
-            client = await getTurboClient(stored.jwk);
+        // Prioritat 1 · Wander extension (signer-based · zero JWK)
+        if (isWanderAvailable()) {
+            try {
+                const conn = await getWanderConnection();
+                if (conn && conn.address) {
+                    client = await getTurboClientForExtension();
+                }
+            } catch (e) {
+                console.warn('[publicProject] extension turbo client failed · fallback keyfile', e?.message);
+            }
+        }
+        // Prioritat 2 · Keyfile JSON cacheat al KB
+        if (!client) {
+            const stored = await getArweaveKeyfile();
+            if (stored?.jwk) {
+                client = await getTurboClient(stored.jwk);
+            }
         }
         if (!client) {
             const mod = await import('https://esm.sh/@ardrive/turbo-sdk@1.27.1/web');
             const factory = mod.TurboFactory || mod.default || mod;
             client = factory.unauthenticated ? factory.unauthenticated() : factory;
-            console.warn('[publicProject] publishing unauthenticated · cap keyfile Arweave configurada');
+            console.warn('[publicProject] publishing unauthenticated · cap keyfile Arweave configurada · cap extension connectada');
         }
         const result  = await client.uploadFile({
             fileStreamFactory: () => new Blob([payload], { type: 'application/json' }).stream(),
