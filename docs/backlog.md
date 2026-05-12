@@ -2996,6 +2996,104 @@ Un score multidimensional · 5 capes ponderades · cada capa retorna
 
 ---
 
+## WALLET-AUTH-001 · Wallet connect + OAuth · identificació "des de qualsevol lloc" (input @alvaro 2026-05-12)
+
+> "Vull que un usuari es pugui identificar des d'on sigui amb un
+> criptomoneder per WalletConnect o similar, tenint en compte que al
+> usar permaweb i possiblement blockchains hem de buscar la màxima
+> usabilitat per usar wallets per signatures i identificació; però
+> també hem de permetre OAuth que tenim pendent."
+
+### Tesis · 3 camins compatibles
+SOS V11 ja té AUTH-001 sprint A verd (identitat local-first ECDSA P-256
++ DID `did:sos:{32hex}`). Sprints B (wallet binding) i C (OAuth) estan
+groc · això és el plà concret per tancar-los amb la millor UX possible:
+
+1. **Local-first** (ja existeix) · usuari arriba al SOS i té DID al
+   instant · firma local · per a operadors offline
+2. **Wallet cripto** (sprint B refinat) · ArConnect/Wander per permaweb
+   + WalletConnect v2 per EVM (Ethereum, Gnosis, Optimism, Arbitrum,
+   Polygon, Base) · per a operadors que volen control complet de claus
+3. **OAuth** (sprint C) · GitHub/Google/email magic-link · per onboarding
+   ràpid de stakeholders no-cripto (subscriptors workshops, comentaris
+   community, etc.)
+
+Els tres alimenten el **mateix node `user_identity`** ampliant
+`wallets[]` i `oauthProviders[]`. La firma del DID local és la canònica
+per a publicació al permaweb (signa entries) · els wallets externs i
+OAuth són signatures complementàries que afegeixen capes de verificació.
+
+### Sprint A · ArConnect/Wander auto-detect (1.5h · alfa-blocker)
+SOS ja porta Turbo SDK amb keyfile JSON. Refactor cap a UX més neta:
+- Detecció auto de l'extensió `window.arweaveWallet` (ArConnect ·
+  Wander). Si està disponible, mostrar "🦊 Connect Wander" enlloc
+  d'arrossegar JSON
+- `arweaveWalletService.connectExtension()` · crida `wallet.connect([
+  'ACCESS_ADDRESS','ACCESS_PUBLIC_KEY','SIGN_TRANSACTION'])`
+- Reutilitza `wallet.dispatch(tx)` per a uploads · Turbo SDK ja pot
+  treballar amb signers externs
+- Keyfile JSON segueix vivint com a fallback per a Catalina/Safari vell
+
+### Sprint B · WalletConnect v2 + Web3Modal · EVM (3h)
+- Dependència `@reown/appkit` (anteriorment Web3Modal v5) · ESM compatible
+  · WalletConnect v2 nativament · suporta 150+ wallets EVM
+- `js/core/walletConnectService.js` nou:
+  - `initAppKit({ projectId, chains })` · projectId obtingut a cloud.reown.com
+  - `openModal()` · trigger del modal de selecció wallet (MetaMask, Rainbow,
+    Coinbase Wallet, Trust, Ledger Live…)
+  - `signMessage(msg)` · EIP-191 personal_sign · per vincular wallet al DID
+  - `getConnectedAddress()` · accessor amb cache + watch reconnect
+- Vinculació wallet → identity:
+  1. Usuari clica "Connect wallet" a /identity
+  2. AppKit modal apareix · usuari escull
+  3. SOS demana signar nonce `"SOS V11 link · DID=did:sos:XXX · ts=YYY"`
+  4. Si signatura verifica (recover address == connected), s'afegeix al `wallets[]` amb `verifiedAt: ts`
+  5. Si l'usuari prové d'una URL d'invitació (cohort · Matriu · projecte), s'auto-vincula també l'`invitedBy`
+- Per a la firma de publicació permaweb · seguim usant la clau ECDSA
+  local · el wallet EVM és per "owner attestation" no per signar entries
+  (Arweave necessita RSA-4096, EVM no)
+
+### Sprint C · OAuth amb Netlify Functions (2.5h)
+- Netlify Function `auth/oauth-callback.js` · gestió generic OAuth
+- 3 providers en alfa: GitHub · Google · Magic-link (email + Resend.com)
+- Frontend:
+  - "Connect with GitHub/Google" buttons a /identity
+  - Magic-link: input email · "Send link" · click email → torna amb token de sessió
+  - Token rebut s'usa per:
+    - Afegir `oauthProviders[]` al user_identity (storage local)
+    - Generar un `verifiedAt` que pot servir com a proof of identity
+      (signat amb la clau local SOS)
+- **NO és identitat principal** · sols verificació opcional ("aquest DID
+  pertany al GitHub @x"). El DID segueix sent l'identificador canònic.
+
+### Sprint D · UX unificada · botó únic "Identifica't" (1.5h)
+- A /identity (i a un widget top-right de la global-nav), botó únic
+  "🔑 Identifica't" obre modal amb 3 tabs:
+  - **🦊 Wallet** (Wander · WalletConnect · MetaMask)
+  - **🪪 OAuth** (GitHub · Google · Magic-link)
+  - **💾 Local-first** (DID generat al teu dispositiu · default si no fas res)
+- Cada tab té copies explicatives ("Per què triar això?") amb tradeoffs
+  privacitat/portabilitat/funcionalitat
+- Després de connectar, modal mostra ✓ verd + DID actiu + wallets/providers vinculats
+
+### Decisions pendents @alvaro
+1. **WalletConnect projectId** · cal registrar a cloud.reown.com (free tier ok)
+   o usem un placeholder en alfa? · recomanació: registrar avui (1 min) i
+   guardar a settings local
+2. **OAuth scope mínim** · GitHub: `read:user` · Google: `profile email` ·
+   Magic-link: sols email. Recomanació: scope mínim · zero permís d'escriure
+3. **Quin wallet és canònic per signatures permaweb?** · l'Arweave RSA
+   wallet (Wander/ArConnect) · els EVM són complementaris
+4. **Recuperació de DID** · si l'usuari perd el dispositiu, recupera
+   via OAuth + signatura wallet? · recomanació: SI · "tens 2 de 3" recuperes
+
+### Visió futura (no en aquesta alfa)
+- **DID en lloc · Ceramic Network · ENS subdomain** · `alvaro.sos.eth` resol al DID
+- **Passkey/WebAuthn** · firma biometricament al mòbil sense wallet ni OAuth
+- **Verificable Credentials** · cohort 0 emet VC signada per @alvaro · l'usuari guarda al seu wallet
+
+---
+
 ## WORKSHOPS-FED-001 · Federació de workshops + model coop premium (input @alvaro 2026-05-12)
 
 > "Avalua si els workshops que van néixer per a TeamTowers podrien
