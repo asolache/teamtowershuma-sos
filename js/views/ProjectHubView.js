@@ -606,12 +606,14 @@ export default class ProjectHubView {
     }
 
     // FUND-FLOW-001 sprint F · publish project al permaweb
+    // PROJ-VERSIONING-001 sprint B+C · publish update (v+1) + history visual
     async _renderPermawebPublishCard() {
         const body = document.getElementById('phPermawebBody');
         if (!body || !this.projectId) return;
         const {
             PUBLIC_PROJECT_TYPE, projectRegistryEntryIdFor, buildPublicProjectEntry,
             signProjectEntry, publishProjectToPermaweb, PROJECT_PRICING,
+            getProjectVersionHistory,
         } = await import('../core/publicProjectService.js');
         const { getCurrentIdentity }  = await import('../core/identityService.js');
         const { getOrCreateSigningKey } = await import('../core/projectIO.js');
@@ -633,21 +635,78 @@ export default class ProjectHubView {
             const tx = existing.content.arweaveTxId;
             const isMockTx = tx.startsWith('MOCK_TX_');
             const when = new Date(existing.content.permawebPublishedAt || 0).toLocaleDateString('ca-ES');
+            const currentVersion = Number.isInteger(existing.content.entryVersion) ? existing.content.entryVersion : 1;
+            const canUpdate = mockMode || balance >= PROJECT_PRICING.publishEur;
+            const balanceWarning = !mockMode && balance < PROJECT_PRICING.publishEur
+                ? `<div style="color:var(--accent-orange);font-size:0.78rem;margin-top:6px;">⚠ Saldo ${balance.toFixed(2)}€ · necessites ≥ ${PROJECT_PRICING.publishEur.toFixed(2)}€ per a publicar update · <a href="/wallet?project=${encodeURIComponent(this.projectId)}" data-link style="color:var(--accent-orange);">recarrega →</a></div>`
+                : '';
             body.innerHTML = `
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;">
                     <div>
-                        <div style="font-weight:700;color:${isMockTx ? '#a855f7' : 'var(--accent-green)'};">${isMockTx ? '🧪 Publicat (mock)' : '✓ Publicat al permaweb'}</div>
+                        <div style="font-weight:700;color:${isMockTx ? '#a855f7' : 'var(--accent-green)'};">${isMockTx ? '🧪 Publicat (mock)' : '✓ Publicat al permaweb'} <span style="background:rgba(99,102,241,0.15);color:var(--accent-indigo);padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;margin-left:6px;">v${currentVersion}</span></div>
                         <div style="color:var(--text-muted);font-size:0.78rem;font-family:var(--font-mono);margin-top:2px;">Tx · ${this._esc(tx.slice(0,16))}… · ${when}</div>
                     </div>
-                    <div style="display:flex;gap:6px;">
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                         ${isMockTx
                             ? '<span class="ph-link" style="opacity:0.6;cursor:default;">🧪 Mock · cap upload real</span>'
                             : `<a href="https://arweave.net/${encodeURIComponent(tx)}" target="_blank" rel="noopener" class="ph-link">🔗 Veure tx</a>`}
                         <a href="/opportunities" data-link class="ph-link">→ /opportunities</a>
+                        <button class="ph-link" id="phPubUpdateBtn" style="background:${canUpdate ? 'rgba(99,102,241,0.15)' : 'var(--bg-panel)'};color:${canUpdate ? 'var(--accent-indigo)' : 'var(--text-muted)'};border:1px solid ${canUpdate ? 'var(--accent-indigo)' : 'var(--border-default)'};padding:6px 12px;border-radius:var(--radius-sm);font-weight:700;cursor:${canUpdate ? 'pointer' : 'not-allowed'};${canUpdate ? '' : 'opacity:0.6;'}" ${canUpdate ? '' : 'disabled'} title="Publica una nova versió v${currentVersion + 1} enllaçada amb la v${currentVersion}">📝 Publica update (v${currentVersion + 1})</button>
                     </div>
                 </div>
                 ${mockPill ? '<div style="margin-top:6px;">' + mockPill + '</div>' : ''}
+                ${balanceWarning}
+                <div id="phPubStatus" style="font-size:0.78rem;margin-top:6px;display:none;"></div>
+                <div id="phVersionHistory" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--glass-border);">
+                    <div style="font-size:0.72rem;color:var(--text-muted);font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px;">📜 Historial</div>
+                    <div id="phVersionHistoryBody" style="font-size:0.78rem;color:var(--text-muted);">Carregant…</div>
+                </div>
             `;
+
+            const setStatus = (msg, ok = true) => {
+                const s = document.getElementById('phPubStatus');
+                if (!s) return;
+                s.style.display = 'block';
+                s.textContent = msg;
+                s.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)';
+            };
+
+            document.getElementById('phPubUpdateBtn')?.addEventListener('click', async () => {
+                const btn = document.getElementById('phPubUpdateBtn');
+                btn.disabled = true; btn.textContent = '⏳ Construint v' + (currentVersion + 1) + '…';
+                setStatus('Construint nova versió · signant…', true);
+                try {
+                    const identity = await getCurrentIdentity();
+                    if (!identity?.primaryDid) {
+                        setStatus('✗ Necessites identitat · ves a /identity', false);
+                        btn.disabled = false; btn.textContent = '📝 Publica update (v' + (currentVersion + 1) + ')';
+                        return;
+                    }
+                    const keyMeta = await getOrCreateSigningKey();
+                    const entry = buildPublicProjectEntry({
+                        project:        this.project,
+                        ownerDid:       identity.primaryDid,
+                        ownerPublicJwk: keyMeta.publicJwk,
+                        entryVersion:   currentVersion + 1,
+                        previousTxId:   tx,
+                    });
+                    const signed = await signProjectEntry({ entry, privateJwk: keyMeta.privateJwk });
+                    btn.textContent = '⏳ Pujant v' + (currentVersion + 1) + '…';
+                    const result = await publishProjectToPermaweb({ entry: signed, projectId: this.projectId });
+                    setStatus(`✓ v${currentVersion + 1} publicada · ${result.txId.slice(0,12)}… · cost ${result.costEur.toFixed(2)}€`, true);
+                    setTimeout(() => this._renderPermawebPublishCard(), 800);
+                } catch (e) {
+                    console.error('[ph] publish update', e);
+                    setStatus('✗ ' + (e?.message || 'error desconegut'), false);
+                    btn.disabled = false; btn.textContent = '📝 Publica update (v' + (currentVersion + 1) + ')';
+                }
+            });
+
+            // Sprint C · render history async (no bloqueja la UI)
+            this._renderVersionHistory(tx, isMockTx, getProjectVersionHistory).catch(e => {
+                const hb = document.getElementById('phVersionHistoryBody');
+                if (hb) hb.textContent = 'No s\'ha pogut carregar l\'historial · ' + (e?.message || 'unknown');
+            });
             return;
         }
 
@@ -710,6 +769,39 @@ export default class ProjectHubView {
                 btn.disabled = false; btn.textContent = mockMode ? '🧪 Publicar (mock)' : '🚀 Publicar al permaweb';
             }
         });
+    }
+
+    // PROJ-VERSIONING-001 sprint C · historial visual del versionat permaweb
+    async _renderVersionHistory(currentTx, isMockTx, getProjectVersionHistory) {
+        const body = document.getElementById('phVersionHistoryBody');
+        if (!body) return;
+        if (isMockTx) {
+            body.innerHTML = '<div style="color:var(--text-muted);font-style:italic;">🧪 Mode mock · historial no disponible · publicat localment</div>';
+            return;
+        }
+        let versions = [];
+        try {
+            versions = await getProjectVersionHistory({ projectId: this.projectId });
+        } catch (e) {
+            body.innerHTML = '<div style="color:var(--accent-orange);">⚠ ' + this._esc(e?.message || 'gateway no accessible') + '</div>';
+            return;
+        }
+        if (!versions || versions.length === 0) {
+            body.innerHTML = '<div style="color:var(--text-muted);font-style:italic;">Cap versió indexada al permaweb encara · pot trigar uns minuts a aparèixer després del publish</div>';
+            return;
+        }
+        // Sort DESC per a mostrar més recent primer
+        const sorted = versions.slice().sort((a, b) => b.entryVersion - a.entryVersion);
+        body.innerHTML = sorted.map(v => {
+            const isCurrent = v.txId === currentTx;
+            const date = v.blockTimestamp ? new Date(v.blockTimestamp * 1000).toLocaleString('ca-ES') : '—';
+            return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:${isCurrent ? 'rgba(99,102,241,0.10)' : 'var(--bg-elevated)'};border:1px solid ${isCurrent ? 'var(--accent-indigo)' : 'var(--border-subtle)'};margin-bottom:4px;">
+                <span style="background:${isCurrent ? 'var(--accent-indigo)' : 'var(--bg-panel)'};color:${isCurrent ? '#fff' : 'var(--text-secondary)'};padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;font-family:var(--font-mono);min-width:42px;text-align:center;">v${v.entryVersion}</span>
+                <span style="flex:1;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._esc(v.txId.slice(0,20))}…</span>
+                <span style="font-size:10px;color:var(--text-muted);font-style:italic;">${date}</span>
+                <a href="https://arweave.net/${encodeURIComponent(v.txId)}" target="_blank" rel="noopener" style="color:var(--accent-indigo);text-decoration:none;font-size:11px;font-weight:700;">🔗</a>
+            </div>`;
+        }).join('');
     }
 
     destroy() {}
