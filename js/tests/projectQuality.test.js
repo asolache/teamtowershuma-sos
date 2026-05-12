@@ -212,9 +212,10 @@ const next25 = suggestNextDim(projectOnlyLanding);
 t(next25.dim.id === 'valueMap',                                      'G · only-landing · next = valueMap (pes max)');
 t(next25.gain === 30,                                                'G · only-landing · gain = 30 (weight×100%)');
 
-// 26. PROJECT_SUBNAV_ITEMS conté hub + 9 tabs
-t(Array.isArray(PROJECT_SUBNAV_ITEMS) && PROJECT_SUBNAV_ITEMS.length === 10, 'G · 10 tabs al subnav');
+// 26. PROJECT_SUBNAV_ITEMS conté hub + 10 tabs (sprint E afegeix Qualitat)
+t(Array.isArray(PROJECT_SUBNAV_ITEMS) && PROJECT_SUBNAV_ITEMS.length === 11, 'G · 11 tabs al subnav');
 t(PROJECT_SUBNAV_ITEMS[0].id === 'hub',                              'G · primera tab és hub');
+t(PROJECT_SUBNAV_ITEMS[1].id === 'quality',                          'G · segona tab és quality');
 t(typeof PROJECT_SUBNAV_ITEMS[0].buildHref === 'function',           'G · cada tab té buildHref()');
 
 // 27. renderProjectSubnavHtml genera HTML amb el projecte

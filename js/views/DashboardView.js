@@ -25,6 +25,7 @@ import { getSubtypesForSector, buildIaContextHint } from '../core/sectorSubtypes
 import { PROJECT_TYPES } from '../core/critical108Roles.js';
 // PROJ-QUALITY-001 sprint B · score multidimensional al Dashboard
 import { computeQualityScore, QUALITY_DIMS, statusColor as qualityColor, statusIcon as qualityIcon, QUALITY_THRESHOLDS } from '../core/projectQualityService.js';
+import { suggestNextDim } from '../core/navService.js';
 // PROJ-QUALITY-001 sprint D · onboarding service · 5 passes guiats
 import { ONBOARDING_STEPS, computeOnboardingState, onboardingCompletion, nextOnboardingStep } from '../core/dashboardOnboardingService.js';
 
@@ -352,39 +353,78 @@ export default class DashboardView {
                 transform: translateY(-2px);
                 box-shadow: var(--shadow-indigo);
             }
-            .dash-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-            .dash-card-name { font-size: var(--text-sm); font-weight: 900; color: var(--text-main); line-height: 1.3; }
-            .dash-card-sector-badge {
-                font-size: 9px; font-family: var(--font-mono); padding: 2px 7px;
-                border-radius: 3px; background: rgba(99,102,241,0.15);
-                color: var(--accent-indigo); flex-shrink: 0; font-weight: 700;
+            /* ── PROJ-QUALITY-001 sprint E · card refactor més comprensible ── */
+            .dash-card-link { text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 8px; }
+            .dash-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+            .dash-card-name {
+                font-size: var(--text-sm); font-weight: 900; color: var(--text-main);
+                line-height: 1.25; flex: 1; min-width: 0;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             }
+            .dash-card-score {
+                font-size: 0.95rem; font-weight: 900; font-family: var(--font-mono);
+                padding: 3px 9px; border-radius: var(--radius-md); flex-shrink: 0;
+                display: inline-flex; gap: 4px; align-items: center; min-width: 56px; justify-content: center;
+            }
+            .dash-card-purpose {
+                font-size: 11px; color: var(--text-secondary); line-height: 1.45;
+                overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            }
+            .dash-card-purpose-empty { color: var(--text-muted); font-style: italic; }
             .dash-card-meta {
                 font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);
-                display: flex; gap: 10px; flex-wrap: wrap;
+                display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
             }
-            .dash-card-meta span { display: flex; align-items: center; gap: 3px; }
-            .dash-card-footer {
-                display: flex; align-items: center; justify-content: space-between;
+            .dash-card-meta span { display: inline-flex; align-items: center; gap: 3px; }
+            .dash-card-tag-demo {
+                background: rgba(201,168,83,0.15); color: var(--accent-claude);
+                padding: 1px 6px; border-radius: 3px; font-weight: 700; letter-spacing: 0.05em;
+            }
+            .dash-card-tag-sector {
+                background: rgba(99,102,241,0.15); color: var(--accent-indigo);
+                padding: 1px 6px; border-radius: 3px; font-weight: 700;
+            }
+            .dash-card-date-rel { font-style: italic; }
+            .dash-card-footer-row {
+                display: flex; align-items: center; gap: 6px;
                 padding-top: 8px; border-top: 1px solid var(--glass-border);
             }
-            .dash-card-date { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
-            .dash-card-health {
-                font-size: 10px; font-weight: 700; font-family: var(--font-mono);
-                padding: 2px 7px; border-radius: 3px;
+            .dash-card-next {
+                flex: 1; display: inline-flex; align-items: center; gap: 5px;
+                padding: 5px 9px; border-radius: var(--radius-sm);
+                background: linear-gradient(135deg, rgba(99,102,241,0.10), rgba(168,85,247,0.08));
+                border: 1px solid rgba(99,102,241,0.30);
+                color: var(--text-main); text-decoration: none;
+                font-size: 11px; font-weight: 700; transition: all var(--dur-fast);
+                min-width: 0;
             }
-            .dash-card-actions {
-                position: absolute; top: 10px; right: 10px;
-                display: none; gap: 4px;
+            .dash-card-next:hover { border-color: var(--accent-indigo); }
+            .dash-card-next-icon { font-size: 13px; }
+            .dash-card-next-lbl { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .dash-card-next-gain {
+                font-family: var(--font-mono); font-size: 10px; padding: 1px 6px;
+                border-radius: 10px; background: rgba(99,102,241,0.20); color: var(--accent-indigo);
             }
-            .dash-card:hover .dash-card-actions { display: flex; }
+            .dash-card-next-done {
+                background: rgba(0,230,118,0.08); border-color: rgba(0,230,118,0.30);
+                color: #00e676;
+            }
+            .dash-card-next-done:hover { border-color: #00e676; }
             .dash-card-action-btn {
                 background: var(--bg-panel); border: 1px solid var(--border-default);
-                color: var(--text-muted); font-size: 10px; padding: 3px 8px;
+                color: var(--text-muted); font-size: 13px; padding: 4px 8px;
                 border-radius: var(--radius-sm); cursor: pointer; transition: all var(--dur-fast);
-                font-family: var(--font-base); font-weight: 700;
+                font-family: var(--font-base); font-weight: 700; flex-shrink: 0;
             }
             .dash-card-action-btn:hover { color: var(--accent-red); border-color: rgba(255,82,82,0.4); }
+            .dash-card-health-bar { height: 4px; border-radius: 2px; background: var(--glass-border); overflow: hidden; }
+            .dash-card-health-fill { height: 100%; border-radius: 2px; transition: width .5s ease; }
+            .dash-card-qbar-lbl {
+                font-size: 9px; opacity: 0.6; text-align: center;
+                margin-top: 2px; line-height: 1;
+            }
+            .dash-card-qbar { flex-direction: column; }
+            .dash-card-qradar { height: auto; padding: 4px 0 2px; }
 
             /* ── New project card ── */
             .dash-card-new {
@@ -855,12 +895,6 @@ export default class DashboardView {
                         <div class="dash-helper-onb" id="dashHelperOnb"></div>
                     </div>
 
-                    <!-- UX-AUDIT-001 sprint C · Panell del membre · perfil + impacte -->
-                    <div id="dashMemberPanel"></div>
-
-                    <!-- MAT-002-F · strip Matriu Cohort 0 (visible solo si hay proyectos cohort 0) -->
-                    <div id="dashMatriuStrip"></div>
-
                     <div class="dash-stats" id="dashStats"></div>
                     <div id="dashProjectList"></div>
                 </div>
@@ -1024,11 +1058,10 @@ export default class DashboardView {
         const state    = store.getState();
         const projects = visibleProjects(state.projects);
 
-        // UX-AUDIT-001 sprint C · Panell del membre · identitat + impacte
-        await this._renderMemberPanel(projects);
-
-        // MAT-002-F · strip Matriu Cohort 0 (visible solo si hay proyectos cohort 0)
-        this._renderMatriuStrip(projects);
+        // PROJ-QUALITY-001 sprint E · Member panel + Matriu strip retirats del top.
+        // L'identitat de l'usuari viu a /identity · la Matriu té el seu landing
+        // /matriu i el directori /matriu/network. El Dashboard queda focalitzat
+        // a "helper + estadístiques + projectes".
 
         // PROJ-QUALITY-001 sprint B · pre-càrrega batched de SOPs / workshops / market_items
         // perquè computeQualityScore és pur i necessita les llistes pre-carregades.
@@ -1185,57 +1218,63 @@ export default class DashboardView {
                 const isDemo = p.id === 'proj-colla-demo-v11';
                 const roles  = (p.vna_roles        || []).length;
                 const txs    = (p.vna_transactions || []).length;
-                // PROJ-QUALITY-001 sprint B · score multidimensional
+                // PROJ-QUALITY-001 sprint E · card refactor · score gran + next-action clar
                 const q      = qualityById[p.id] || { total: 0, byDim: {}, missing: [], status: 'low' };
                 const hColor = qualityColor(q.status);
-                const hLabel = q.total + '';
                 const rel    = self._relativeDate(p.updatedAt || p.createdAt);
+                const next   = suggestNextDim(q);
 
                 // Mini-radar · 5 dims com a barres verticals (EQ-style)
                 let dimBars = '';
-                let dimTooltipLines = [];
                 QUALITY_DIMS.forEach(function(d) {
                     const s = q.byDim[d.id] ? q.byDim[d.id].score : 0;
                     const dimSt = s >= QUALITY_THRESHOLDS.high ? 'high' : (s >= QUALITY_THRESHOLDS.medium ? 'medium' : 'low');
                     const dColor = qualityColor(dimSt);
                     dimBars += '<div class="dash-card-qbar" title="' + d.icon + ' ' + d.label + ' · ' + s + '/100">'
                         +   '<div class="dash-card-qbar-fill" style="height:' + Math.max(s, 4) + '%;background:' + dColor + ';"></div>'
+                        +   '<div class="dash-card-qbar-lbl">' + d.icon + '</div>'
                         + '</div>';
-                    dimTooltipLines.push(d.icon + ' ' + d.label + ': ' + s);
                 });
 
-                // Top 3 missing per tooltip (titol nativ)
-                const top3 = (q.missing || []).slice(0, 3).map(function(m) { return '• ' + m.label; }).join('\n');
-                const cardTooltip = 'Project quality · ' + q.total + '/100 (' + q.status + ')\n\n'
-                    + dimTooltipLines.join('\n')
-                    + (top3 ? '\n\n📌 Falten:\n' + top3 : '');
+                const nameStr = p.nombre || p.name || 'Unnamed';
+                const purpose = (p.description || p.projectIdea || '').toString().trim();
+                const purposeShort = purpose.length > 90 ? purpose.slice(0, 88) + '…' : purpose;
 
-                html += '<a class="dash-card' + (isDemo ? ' dash-card-demo' : '') + '" href="/map?project=' + p.id + '" data-link title="' + cardTooltip.replace(/"/g, '&quot;') + '">' +
-                    '<div class="dash-card-top">' +
-                        '<div class="dash-card-name">' + (p.nombre || p.name || 'Unnamed') + '</div>' +
-                        '<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">' +
-                            (isDemo ? '<div class="dash-card-demo-badge">DEMO</div>' : '') +
-                            (sectorId !== 'general' ? '<div class="dash-card-sector-badge">' + sectorId + '</div>' : '') +
+                // Next-action chip · porta directament a la vista que aporta més punts
+                const nextChip = next && next.gain > 0
+                    ? '<a class="dash-card-next" href="/quality?project=' + p.id + '" data-link title="Següent acció · veure detall de qualitat">'
+                        + '<span class="dash-card-next-icon">' + next.dim.icon + '</span>'
+                        + '<span class="dash-card-next-lbl">' + next.dim.label + '</span>'
+                        + '<span class="dash-card-next-gain">+' + next.gain + '</span>'
+                      + '</a>'
+                    : '<a class="dash-card-next dash-card-next-done" href="/quality?project=' + p.id + '" data-link>'
+                        + '<span>🌟 Excel·lent</span>'
+                      + '</a>';
+
+                html += '<div class="dash-card' + (isDemo ? ' dash-card-demo' : '') + '">' +
+                    '<a class="dash-card-link" href="/project/' + p.id + '" data-link title="Obrir el hub del projecte">' +
+                        '<div class="dash-card-top">' +
+                            '<div class="dash-card-name">' + nameStr + '</div>' +
+                            '<div class="dash-card-score" style="background:' + hColor + '18;color:' + hColor + ';" title="Qualitat global · click per detall">' +
+                                qualityIcon(q.status) + ' ' + q.total +
+                            '</div>' +
                         '</div>' +
-                    '</div>' +
-                    '<div class="dash-card-qradar">' + dimBars + '</div>' +
-                    '<div class="dash-card-meta">' +
-                        '<span>' + roles + ' roles</span>' +
-                        '<span>' + txs + ' transactions</span>' +
-                    '</div>' +
-                    '<div style="margin-top:2px;">' +
-                        '<div class="dash-card-health-bar">' +
-                            '<div class="dash-card-health-fill" style="width:' + q.total + '%;background:' + hColor + ';"></div>' +
+                        (purposeShort ? '<div class="dash-card-purpose">' + purposeShort + '</div>' : '<div class="dash-card-purpose dash-card-purpose-empty">— sense descripció —</div>') +
+                        '<div class="dash-card-qradar">' + dimBars + '</div>' +
+                        '<div class="dash-card-health-bar"><div class="dash-card-health-fill" style="width:' + q.total + '%;background:' + hColor + ';"></div></div>' +
+                        '<div class="dash-card-meta">' +
+                            '<span>👥 ' + roles + ' roles</span>' +
+                            '<span>🔁 ' + txs + ' tx</span>' +
+                            (isDemo ? '<span class="dash-card-tag-demo">DEMO</span>' : '') +
+                            (sectorId !== 'general' ? '<span class="dash-card-tag-sector">' + sectorId + '</span>' : '') +
+                            '<span class="dash-card-date-rel" style="margin-left:auto;">' + rel + '</span>' +
                         '</div>' +
+                    '</a>' +
+                    '<div class="dash-card-footer-row">' +
+                        nextChip +
+                        '<button class="dash-card-action-btn" data-archive="' + p.id + '" title="Archivar">📦</button>' +
                     '</div>' +
-                    '<div class="dash-card-footer">' +
-                        '<div class="dash-card-date-rel">' + rel + '</div>' +
-                        '<div class="dash-card-health" style="background:' + hColor + '18;color:' + hColor + ';">' + qualityIcon(q.status) + ' ' + hLabel + '</div>' +
-                    '</div>' +
-                    '<div class="dash-card-actions">' +
-                        '<button class="dash-card-action-btn" data-archive="' + p.id + '">Archive</button>' +
-                    '</div>' +
-                '</a>';
+                '</div>';
             });
 
             // Tarjeta "Nuevo proyecto" al final de cada grupo
