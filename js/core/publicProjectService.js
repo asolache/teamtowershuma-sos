@@ -288,12 +288,19 @@ export async function publishProjectToPermaweb({ entry, projectId } = {}) {
             signature:       entry.content.signature,
             signatureFormat: entry.content.signatureFormat,
         });
-        // Reusa el Turbo loader de publicRegistryService (afortunadament és el mateix endpoint)
-        const reg = await import('./publicRegistryService.js');
-        // Setejar Turbo loader necessita accés intern · usem la mateixa carrega
-        const mod = await import('https://cdn.jsdelivr.net/npm/@ardrive/turbo-sdk@latest/+esm');
-        const factory = mod.TurboFactory || mod.default || mod;
-        const client  = factory.unauthenticated ? factory.unauthenticated() : factory;
+        // Sprint G · 2026-05-10 · usa keyfile Arweave si configurada al /settings
+        const { getArweaveKeyfile, getTurboClient } = await import('./arweaveWalletService.js');
+        const stored = await getArweaveKeyfile();
+        let client;
+        if (stored?.jwk) {
+            client = await getTurboClient(stored.jwk);
+        }
+        if (!client) {
+            const mod = await import('https://cdn.jsdelivr.net/npm/@ardrive/turbo-sdk@latest/+esm');
+            const factory = mod.TurboFactory || mod.default || mod;
+            client = factory.unauthenticated ? factory.unauthenticated() : factory;
+            console.warn('[publicProject] publishing unauthenticated · cap keyfile Arweave configurada');
+        }
         const result  = await client.uploadFile({
             fileStreamFactory: () => new Blob([payload], { type: 'application/json' }).stream(),
             fileSizeFactory:   () => payload.length,

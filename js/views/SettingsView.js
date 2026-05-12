@@ -242,6 +242,21 @@ export default class SettingsView {
                 <div id="svManifestoStatus" class="sv-test-result"></div>
             </div>
 
+            <div class="sv-card" style="border-top:3px solid #14b8a6;">
+                <h3 style="color:#14b8a6;margin-top:0;">🟣 Arweave wallet · Turbo Credits</h3>
+                <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.6;margin-top:0;">
+                    PERM-USER-001 sprint G · carrega la teva <strong>keyfile JSON</strong> de Wander/ArConnect (exportada des de l'app) per habilitar publish real al permaweb. Saldo Turbo (carregat a <a href="https://turbo-topup.com" target="_blank" rel="noopener" style="color:var(--accent-indigo);">turbo-topup.com</a>) cobreix els uploads.
+                    <br><br>
+                    <strong style="color:var(--accent-orange);">⚠ Pre-alfa · keyfile sense xifrar a IndexedDB</strong> · qui té accés al navegador té els fons. Abans d'alfa pública · cifrar amb passphrase. <strong>NO carreguis la keyfile principal · usa una de dedicada amb saldo mínim per al SOS</strong> (ex. 5-10 USD Turbo).
+                </p>
+                <div style="margin-top:14px;">
+                    <input type="file" id="svArweaveFile" accept=".json,application/json" style="display:none;">
+                    <button class="sv-btn" id="svArweaveLoad" style="background:#14b8a6;border-color:#14b8a6;color:#fff;">📂 Carregar keyfile JSON</button>
+                    <button class="sv-btn-test" id="svArweaveClear" style="display:none;border-color:var(--accent-red);color:var(--accent-red);">🗑 Esborrar wallet</button>
+                </div>
+                <div id="svArweaveStatus" class="sv-test-result" style="margin-top:10px;"></div>
+            </div>
+
             <div class="sv-card" style="border-top:3px solid #a855f7;">
                 <h3 style="color:#a855f7;margin-top:0;">🧪 Mode test · Permaweb (mock)</h3>
                 <p style="color:var(--text-muted);font-size:var(--text-xs);line-height:1.6;margin-top:0;">
@@ -373,6 +388,79 @@ export default class SettingsView {
                 });
             }
         } catch (e) { console.warn('[settings] permaweb mock init', e); }
+
+        // PERM-USER-001 sprint G · Arweave keyfile loader + Turbo balance
+        try {
+            const {
+                validateArweaveKeyfile, saveArweaveKeyfile, getArweaveKeyfile,
+                clearArweaveKeyfile, getTurboBalance,
+            } = await import('../core/arweaveWalletService.js');
+            const loadBtn   = document.getElementById('svArweaveLoad');
+            const clearBtn  = document.getElementById('svArweaveClear');
+            const fileInput = document.getElementById('svArweaveFile');
+            const statusEl  = document.getElementById('svArweaveStatus');
+            const setStatus = (msg, ok = true) => {
+                if (!statusEl) return;
+                statusEl.innerHTML = msg;
+                statusEl.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)';
+            };
+            const renderState = async () => {
+                const stored = await getArweaveKeyfile();
+                if (!stored) {
+                    setStatus('— Cap keyfile configurada · els publish reals fallaran sense aquesta. Mentrestant pots usar 🧪 mode test més avall.', true);
+                    statusEl.style.color = 'var(--text-muted)';
+                    if (clearBtn) clearBtn.style.display = 'none';
+                    return;
+                }
+                if (clearBtn) clearBtn.style.display = '';
+                setStatus(
+                    '✓ Wallet carregada · address <code style="color:var(--accent-indigo);">' + stored.address.slice(0, 16) + '…</code>'
+                    + ' · saldo Turbo · <span id="svTurboBal" style="color:var(--text-muted);">consultant…</span>',
+                    true
+                );
+                // Async · fetch balance
+                getTurboBalance(stored.jwk).then(bal => {
+                    const balEl = document.getElementById('svTurboBal');
+                    if (!balEl) return;
+                    if (bal && bal.winc > 0) {
+                        balEl.textContent = bal.usdEquivalent.toFixed(2) + ' USD (winc ' + bal.winc + ')';
+                        balEl.style.color = 'var(--accent-green)';
+                    } else {
+                        balEl.textContent = '0 · recarrega a turbo-topup.com';
+                        balEl.style.color = 'var(--accent-orange)';
+                    }
+                }).catch(() => {
+                    const balEl = document.getElementById('svTurboBal');
+                    if (balEl) { balEl.textContent = '— no disponible'; balEl.style.color = 'var(--text-muted)'; }
+                });
+            };
+            await renderState();
+            loadBtn?.addEventListener('click', () => fileInput?.click());
+            fileInput?.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    const text = await file.text();
+                    const jwk  = JSON.parse(text);
+                    const v = validateArweaveKeyfile(jwk);
+                    if (!v.valid) {
+                        setStatus('✗ Keyfile invàlida: ' + v.errors.join(' · '), false);
+                        return;
+                    }
+                    const { address } = await saveArweaveKeyfile(jwk);
+                    setStatus('✓ Keyfile guardada · address <code>' + address.slice(0, 16) + '…</code>', true);
+                    await renderState();
+                } catch (err) {
+                    setStatus('✗ Error parsejant JSON: ' + (err?.message || err), false);
+                }
+                e.target.value = '';   // reset input
+            });
+            clearBtn?.addEventListener('click', async () => {
+                if (!confirm('Esborrar la keyfile Arweave del KB?\n\nEls fons Turbo segueixen a la wallet · només esborra la copia local. Pots tornar a carregar-la en qualsevol moment.')) return;
+                await clearArweaveKeyfile();
+                await renderState();
+            });
+        } catch (e) { console.warn('[settings] arweave init', e); }
 
 
         // UX-AUDIT-001 sprint A2 · al cambiar provider, guardar in-place SIN

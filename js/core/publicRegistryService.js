@@ -450,6 +450,27 @@ async function _loadTurbo() {
     return mod;
 }
 
+// _resolveTurboClient · auth si hi ha keyfile · unauthenticated altrament.
+// Sprint G · 2026-05-10 · si l'usuari ha configurat `arweave_wallet` al KB,
+// usa client autenticat (cobra Turbo Credits del wallet de l'usuari).
+async function _resolveTurboClient() {
+    try {
+        const { getArweaveKeyfile, getTurboClient } = await import('./arweaveWalletService.js');
+        const stored = await getArweaveKeyfile();
+        if (stored && stored.jwk) {
+            const client = await getTurboClient(stored.jwk);
+            if (client) return { client, authenticated: true };
+        }
+    } catch (e) {
+        console.warn('[publicRegistry] no Arweave keyfile · fallback unauthenticated', e?.message);
+    }
+    // Fallback · unauthenticated (Turbo demanarà metodes alternatius de pagament)
+    const turbo = await _loadTurbo();
+    const factory = turbo.TurboFactory || turbo.default || turbo;
+    const client  = factory.unauthenticated ? factory.unauthenticated() : factory;
+    return { client, authenticated: false };
+}
+
 // publishToPermaweb · async · descompta del wallet del projecte (decisió
 // @alvaro #1) · puja al permaweb · actualitza entry amb arweaveTxId ·
 // retorna { entry, txId, costEur, walletAfter }.
@@ -533,9 +554,10 @@ export async function publishToPermaweb({
             signature:       entry.content.signature,
             signatureFormat: entry.content.signatureFormat,
         });
-        const turbo = await _loadTurbo();
-        const factory = turbo.TurboFactory || turbo.default || turbo;
-        const client  = factory.unauthenticated ? factory.unauthenticated() : factory;
+        const { client, authenticated } = await _resolveTurboClient();
+        if (!authenticated) {
+            console.warn('[publicRegistry] publishing unauthenticated · cap keyfile Arweave configurada al /settings');
+        }
         const result  = await client.uploadFile({
             fileStreamFactory: () => new Blob([payload], { type: 'application/json' }).stream(),
             fileSizeFactory:   () => payload.length,
@@ -642,9 +664,7 @@ export async function revokeFromPermaweb({
             revokesTxId,
             revokedAt:   Date.now(),
         });
-        const turbo = await _loadTurbo();
-        const factory = turbo.TurboFactory || turbo.default || turbo;
-        const client  = factory.unauthenticated ? factory.unauthenticated() : factory;
+        const { client } = await _resolveTurboClient();
         const result  = await client.uploadFile({
             fileStreamFactory: () => new Blob([payload], { type: 'application/json' }).stream(),
             fileSizeFactory:   () => payload.length,
