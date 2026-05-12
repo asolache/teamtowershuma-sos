@@ -25,6 +25,8 @@ import { getSubtypesForSector, buildIaContextHint } from '../core/sectorSubtypes
 import { PROJECT_TYPES } from '../core/critical108Roles.js';
 // PROJ-QUALITY-001 sprint B · score multidimensional al Dashboard
 import { computeQualityScore, QUALITY_DIMS, statusColor as qualityColor, statusIcon as qualityIcon, QUALITY_THRESHOLDS } from '../core/projectQualityService.js';
+// PROJ-QUALITY-001 sprint D · onboarding service · 5 passes guiats
+import { ONBOARDING_STEPS, computeOnboardingState, onboardingCompletion, nextOnboardingStep } from '../core/dashboardOnboardingService.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function uid() { return 'proj-' + Math.random().toString(36).slice(2, 9); }
@@ -158,7 +160,128 @@ export default class DashboardView {
             .dash-hero h1 span { color: var(--accent-indigo); }
             .dash-hero-sub { font-size: var(--text-sm); color: var(--text-muted); font-family: var(--font-mono); }
 
-            /* ── UX-DASH-001 · onboarding flow + áreas ── */
+            /* ── PROJ-QUALITY-001 sprint D · Helper Hero unificat ── */
+            .dash-helper {
+                background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.06));
+                border: 1px solid var(--border-default);
+                border-radius: var(--radius-lg);
+                padding: 22px 24px 18px;
+                margin-bottom: 24px;
+                box-shadow: var(--shadow-sm);
+            }
+            .dash-helper-head {
+                display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;
+                justify-content: space-between; margin-bottom: 14px;
+            }
+            .dash-helper-titles { flex: 1; min-width: 280px; }
+            .dash-helper-h1 {
+                font-size: 1.8rem; font-weight: 800; color: var(--text-main);
+                margin: 0 0 6px 0; letter-spacing: -0.02em; line-height: 1.1;
+            }
+            .dash-helper-h1 strong { color: var(--accent-indigo); }
+            .dash-helper-tagline {
+                font-size: var(--text-sm); color: var(--text-secondary);
+                line-height: 1.5; margin-bottom: 6px;
+            }
+            .dash-helper-sub {
+                font-size: var(--text-xs); color: var(--text-muted);
+                font-family: var(--font-mono);
+            }
+            .dash-helper-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; flex-wrap: wrap; }
+            .dash-btn-lg { padding: 9px 16px; font-size: var(--text-sm); }
+            .dash-btn-ghost {
+                background: transparent; color: var(--text-secondary);
+                border: 1px solid var(--border-default); padding: 7px 14px;
+                border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 600;
+                text-decoration: none; transition: all var(--dur-fast);
+                display: inline-flex; align-items: center;
+            }
+            .dash-btn-ghost:hover { border-color: var(--accent-indigo); color: var(--text-main); }
+            .dash-helper-onb {
+                display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 10px;
+                padding-top: 14px; border-top: 1px solid var(--border-subtle);
+            }
+            .dash-helper-step {
+                display: flex; gap: 10px; align-items: flex-start;
+                padding: 10px 12px; border-radius: var(--radius-md);
+                background: var(--bg-panel);
+                border: 1px solid var(--border-default);
+                text-decoration: none; color: var(--text-main);
+                transition: all var(--dur-fast);
+                position: relative;
+            }
+            .dash-helper-step:hover { border-color: var(--accent-indigo); transform: translateY(-1px); }
+            .dash-helper-step.is-done {
+                background: rgba(0,230,118,0.05);
+                border-color: rgba(0,230,118,0.25);
+                opacity: 0.85;
+            }
+            .dash-helper-step.is-next {
+                background: rgba(99,102,241,0.10);
+                border-color: var(--accent-indigo);
+                box-shadow: 0 0 0 2px rgba(99,102,241,0.20);
+            }
+            .dash-helper-step-icon {
+                width: 32px; height: 32px; border-radius: 8px;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 16px; flex-shrink: 0;
+                background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+            }
+            .dash-helper-step.is-done .dash-helper-step-icon {
+                background: rgba(0,230,118,0.15); border-color: rgba(0,230,118,0.40);
+            }
+            .dash-helper-step.is-next .dash-helper-step-icon {
+                background: rgba(99,102,241,0.20); border-color: rgba(99,102,241,0.50);
+            }
+            .dash-helper-step-body { min-width: 0; flex: 1; }
+            .dash-helper-step-num {
+                font-size: 9px; color: var(--text-muted); font-family: var(--font-mono);
+                letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;
+            }
+            .dash-helper-step-label {
+                font-size: var(--text-xs); font-weight: 800; color: var(--text-main);
+                line-height: 1.25; margin: 2px 0 3px;
+                display: flex; align-items: center; gap: 6px;
+            }
+            .dash-helper-step.is-done .dash-helper-step-label { color: #00e676; }
+            .dash-helper-step-tick { color: #00e676; font-size: 11px; }
+            .dash-helper-step-hint {
+                font-size: 10px; color: var(--text-muted); line-height: 1.4;
+                margin-bottom: 4px;
+            }
+            .dash-helper-step-cta {
+                font-size: 10px; color: var(--accent-indigo); font-weight: 700;
+                margin-top: auto;
+            }
+            .dash-helper-step.is-done .dash-helper-step-cta { color: var(--text-muted); }
+            .dash-helper-progress {
+                display: flex; align-items: center; gap: 10px;
+                font-size: var(--text-xs); color: var(--text-secondary);
+                margin-bottom: 12px; font-weight: 600;
+            }
+            .dash-helper-progress-bar {
+                flex: 1; height: 6px; border-radius: 999px;
+                background: var(--border-default); overflow: hidden;
+                max-width: 240px;
+            }
+            .dash-helper-progress-fill {
+                height: 100%; border-radius: 999px;
+                background: linear-gradient(90deg, var(--accent-indigo), var(--accent-purple));
+                transition: width 0.6s ease;
+            }
+            .dash-helper-progress-pct { font-family: var(--font-mono); color: var(--accent-indigo); font-weight: 800; }
+            .dash-helper.is-complete .dash-helper-onb { display: none; }
+            .dash-helper-complete-badge {
+                display: none; align-items: center; gap: 8px;
+                font-size: var(--text-sm); font-weight: 700; color: #00e676;
+                padding: 10px 14px; border-radius: var(--radius-md);
+                background: rgba(0,230,118,0.08); border: 1px solid rgba(0,230,118,0.30);
+                margin-top: 8px;
+            }
+            .dash-helper.is-complete .dash-helper-complete-badge { display: inline-flex; }
+
+            /* ── UX-DASH-001 · onboarding flow + áreas (legacy · mantingut per compat) ── */
             .dash-section-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.12em; font-family: var(--font-mono); margin: 0 0 10px 0; font-weight: 700; }
             .dash-onboard {
                 display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
@@ -690,26 +813,16 @@ export default class DashboardView {
 
         <div class="dash-shell">
 
-            <!-- TOPBAR -->
+            <!-- PROJ-QUALITY-001 sprint D · Topbar slim · global-nav ja porta logo i nav,
+                 aquí només controls utilitaris (Export/Import/Lang). El + Nou Projecte
+                 viu a la helper card per evitar duplicació visual. -->
             <div class="dash-topbar">
-                <a href="/" data-link class="dash-logo">🗼 Team<span>Towers</span></a>
-                <div class="dash-topbar-sep"></div>
-                <span class="dash-topbar-version">SOS V11</span>
+                <span class="dash-topbar-version">SOS V11 · Value Network Dashboard</span>
                 <a href="https://teamtowershuma.com" target="_blank" class="dash-topbar-web">teamtowershuma.com ↗</a>
                 <div class="dash-topbar-right">
-                    
-                    <!-- UX-AUDIT-001 sprint H+ · botó "📚 Knowledge Base" mogut a la nav
-                         categoria Coneixement com a enllaç "📚 Sectores" cap a /sectors.
-                         Saturava la topbar i sortia idèntic a tot arreu. -->
                     <button class="dash-btn" id="dashBtnExport" title="Descargar snapshot firmado (ECDSA P-256)">💾 Export</button>
                     <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
                     <input type="file" id="dashImportFile" accept=".json,application/json" style="display:none;">
-                    <button class="dash-btn dash-btn-primary" id="dashBtnNew">＋ New Project</button>
-                    <!-- UX-AUDIT-001 sprint A2 · botón "🎓 Cohort 0 Matriu" retirado ·
-                         el flujo Matriu ya está integrado en el wizard de New Project
-                         + en el menú "Matriu" del topbar (categoría home) y en
-                         /matriu/network. Mantenerlo aquí duplicaba acción y
-                         visualmente saturaba el topbar. -->
                     <div id="dashLangSelector"></div>
                 </div>
             </div>
@@ -719,27 +832,27 @@ export default class DashboardView {
 
                 <!-- CONTENT -->
                 <div class="dash-content" id="dashContent">
-                    <div class="dash-hero">
-                        <div class="dash-hero-bg">
-                            <svg viewBox="0 0 800 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-                                <line x1="100" y1="60" x2="400" y2="60" stroke="rgba(99,102,241,1)" stroke-width="1"/>
-                                <line x1="400" y1="60" x2="700" y2="30" stroke="rgba(99,102,241,1)" stroke-width="1"/>
-                                <line x1="400" y1="60" x2="600" y2="90" stroke="rgba(201,168,83,1)" stroke-width="1" stroke-dasharray="4 5"/>
-                                <line x1="100" y1="60" x2="250" y2="20" stroke="rgba(201,168,83,1)" stroke-width="1" stroke-dasharray="4 5"/>
-                                <circle cx="100" cy="60" r="5" fill="rgba(99,102,241,0.6)"/>
-                                <circle cx="400" cy="60" r="7" fill="rgba(99,102,241,0.8)"/>
-                                <circle cx="700" cy="30" r="5" fill="rgba(99,102,241,0.5)"/>
-                                <circle cx="600" cy="90" r="4" fill="rgba(201,168,83,0.6)"/>
-                                <circle cx="250" cy="20" r="4" fill="rgba(201,168,83,0.5)"/>
-                                <circle r="2.5" fill="rgba(99,102,241,0.8)"><animateMotion dur="3s" repeatCount="indefinite" path="M100,60 L400,60"/></circle>
-                                <circle r="2" fill="rgba(201,168,83,0.7)"><animateMotion dur="4s" repeatCount="indefinite" begin="1s" path="M400,60 L600,90"/></circle>
-                            </svg>
+
+                    <!-- PROJ-QUALITY-001 sprint D · Helper Hero unificat ·
+                         capçalera + copies clau + checklist 5 passes guiats +
+                         stats inline + cta + Nou Projecte. Substitueix els
+                         antics blocs "¿Cómo funciona? 4 pasos" + "Áreas del sistema"
+                         per evitar duplicació amb el sub-navbar de projecte +
+                         global-nav ja existents. -->
+                    <div class="dash-helper" id="dashHelper">
+                        <div class="dash-helper-head">
+                            <div class="dash-helper-titles">
+                                <h1 class="dash-helper-h1">Value <strong>Network</strong> Dashboard</h1>
+                                <div class="dash-helper-tagline">Every organization has two structures · this maps the real one.</div>
+                                <div class="dash-helper-sub" id="dashHeroSub">Loading projects…</div>
+                            </div>
+                            <div class="dash-helper-actions">
+                                <button class="dash-btn dash-btn-primary dash-btn-lg" id="dashBtnNew" title="Crea o clona un projecte">＋ Nou projecte</button>
+                                <a class="dash-btn dash-btn-ghost" href="/map?project=proj-colla-demo-v11" data-link title="Veure el projecte demo Castellers">✦ Veure demo</a>
+                            </div>
                         </div>
-                        <div class="dash-hero-inner">
-                            <h1 class="mat-hero-h1">Value <strong>Network</strong> Dashboard</h1>
-                            <div class="dash-hero-sub" id="dashHeroSub">Loading projects…</div>
-                            <div class="dash-hero-tagline">Every organization has two structures. This maps the real one.</div>
-                        </div>
+                        <!-- Onboarding checklist · 5 passes auto-detectats -->
+                        <div class="dash-helper-onb" id="dashHelperOnb"></div>
                     </div>
 
                     <!-- UX-AUDIT-001 sprint C · Panell del membre · perfil + impacte -->
@@ -747,42 +860,6 @@ export default class DashboardView {
 
                     <!-- MAT-002-F · strip Matriu Cohort 0 (visible solo si hay proyectos cohort 0) -->
                     <div id="dashMatriuStrip"></div>
-
-                    <!-- UX-DASH-001 · ¿qué puedes hacer aquí? · 4 pasos del flujo SOS -->
-                    <div class="dash-section-title">¿Cómo funciona SOS? · 4 pasos</div>
-                    <div class="dash-onboard">
-                        <a class="dash-onboard-tile" id="dashStep1" style="--ob-c:#a855f7;">
-                            <span class="dash-onboard-step">Paso 1</span>
-                            <span class="dash-onboard-title">🧬 Crea o clona un proyecto</span>
-                            <span class="dash-onboard-desc">Vacío, plantilla del sector, o cliente personalizado con IA. Un solo wizard.</span>
-                        </a>
-                        <a class="dash-onboard-tile" href="/map" data-link style="--ob-c:#6366f1;">
-                            <span class="dash-onboard-step">Paso 2</span>
-                            <span class="dash-onboard-title">🗺 Diseña la red de valor</span>
-                            <span class="dash-onboard-desc">Roles, transacciones tangibles e intangibles. Edición inline + sugerencias IA.</span>
-                        </a>
-                        <a class="dash-onboard-tile" href="/sops" data-link style="--ob-c:#22c55e;">
-                            <span class="dash-onboard-step">Paso 3</span>
-                            <span class="dash-onboard-title">📜 Genera SOPs por rol con IA</span>
-                            <span class="dash-onboard-desc">Cada rol → procedimiento operativo con steps auto-convertibles en WOs.</span>
-                        </a>
-                        <a class="dash-onboard-tile" href="/kanban" data-link style="--ob-c:#facc15;">
-                            <span class="dash-onboard-step">Paso 4</span>
-                            <span class="dash-onboard-title">⚙ Ejecuta y contabiliza</span>
-                            <span class="dash-onboard-desc">WOs por humano o IA → Ledger triple-entry con ahorro acumulado del cliente.</span>
-                        </a>
-                    </div>
-
-                    <!-- UX-DASH-001 · áreas del sistema (siempre accesibles) -->
-                    <div class="dash-section-title">Áreas del sistema</div>
-                    <div class="dash-areas">
-                        <a class="dash-area-tile" href="/map" data-link><span class="dash-area-icon">🗺</span><div><div class="dash-area-label">Mapa</div><div class="dash-area-hint">Mapa de valor del proyecto activo</div></div></a>
-                        <a class="dash-area-tile" href="/kanban" data-link><span class="dash-area-icon">📋</span><div><div class="dash-area-label">Kanban</div><div class="dash-area-hint">WOs · backlog → ledger</div></div></a>
-                        <a class="dash-area-tile" href="/market" data-link><span class="dash-area-icon">🛒</span><div><div class="dash-area-label">Mercado</div><div class="dash-area-hint">Productos y servicios</div></div></a>
-                        <a class="dash-area-tile" href="/tags" data-link><span class="dash-area-icon">🏷</span><div><div class="dash-area-label">Tags</div><div class="dash-area-hint">Folksonomía cloud</div></div></a>
-                        <a class="dash-area-tile" href="/workshops" data-link><span class="dash-area-icon">🎯</span><div><div class="dash-area-label">Workshops</div><div class="dash-area-hint">Talleres Fent Pinya</div></div></a>
-                        <a class="dash-area-tile" href="/settings" data-link><span class="dash-area-icon">⚙</span><div><div class="dash-area-label">Settings</div><div class="dash-area-hint">API keys · IA</div></div></a>
-                    </div>
 
                     <div class="dash-stats" id="dashStats"></div>
                     <div id="dashProjectList"></div>
@@ -875,6 +952,56 @@ export default class DashboardView {
     }
 
     // ── Render projects v2 ───────────────────────────────────────────────────
+    // PROJ-QUALITY-001 sprint D · helper hero · pinta checklist 5 passes
+    _renderHelper({ identityNode, projects, qualityById } = {}) {
+        const slot = document.getElementById('dashHelper');
+        const onb  = document.getElementById('dashHelperOnb');
+        if (!slot || !onb) return;
+        const state = computeOnboardingState({ identityNode, projects, qualityById });
+        const comp  = onboardingCompletion(state);
+        const next  = nextOnboardingStep(state);
+        if (comp.done === comp.total) slot.classList.add('is-complete');
+        else                          slot.classList.remove('is-complete');
+
+        let html = `<div class="dash-helper-progress">
+            <span>🎯 Onboarding alfa</span>
+            <div class="dash-helper-progress-bar"><div class="dash-helper-progress-fill" style="width:${comp.pct}%;"></div></div>
+            <span class="dash-helper-progress-pct">${comp.done}/${comp.total}</span>
+        </div>`;
+
+        ONBOARDING_STEPS.forEach((step, idx) => {
+            const done   = !!state[step.id];
+            const isNext = !done && next && next.id === step.id;
+            const cls    = 'dash-helper-step' + (done ? ' is-done' : '') + (isNext ? ' is-next' : '');
+            // Pas "project" amb cta #new obre el modal en comptes de navegar
+            const isNewProject = step.cta.href === '#new';
+            const href = isNewProject ? 'javascript:void(0)' : step.cta.href;
+            const dataLink = isNewProject ? '' : 'data-link';
+            const dataAction = isNewProject ? 'data-action="new-project"' : '';
+            html += `<a class="${cls}" href="${href}" ${dataLink} ${dataAction} title="${step.hint}">
+                <div class="dash-helper-step-icon">${done ? '✓' : step.icon}</div>
+                <div class="dash-helper-step-body">
+                    <div class="dash-helper-step-num">Pas ${idx + 1}${isNext ? ' · ARA' : ''}</div>
+                    <div class="dash-helper-step-label">${step.label}${done ? ' <span class="dash-helper-step-tick">✓</span>' : ''}</div>
+                    <div class="dash-helper-step-hint">${step.hint}</div>
+                    <div class="dash-helper-step-cta">${done ? '✓ Completat' : step.cta.label + ' →'}</div>
+                </div>
+            </a>`;
+        });
+
+        html += `<div class="dash-helper-complete-badge">🌟 Onboarding alfa completat · ja pots dur projectes a la xarxa Matriu</div>`;
+        onb.innerHTML = html;
+
+        // Bind cta #new per obrir el modal
+        const self = this;
+        onb.querySelectorAll('[data-action="new-project"]').forEach(el => {
+            el.addEventListener('click', () => {
+                const m = document.getElementById('dashModalNew');
+                if (m) { m.classList.add('open'); document.getElementById('newProjName')?.focus(); }
+            });
+        });
+    }
+
     _relativeDate(ts) {
         if (!ts) return '';
         const diff = Date.now() - ts;
@@ -905,15 +1032,20 @@ export default class DashboardView {
 
         // PROJ-QUALITY-001 sprint B · pre-càrrega batched de SOPs / workshops / market_items
         // perquè computeQualityScore és pur i necessita les llistes pre-carregades.
-        let allSops = [], allWorkshops = [], allMarket = [];
-        try { allSops      = await KB.query({ type: 'sop' });          } catch (_) {}
-        try { allWorkshops = await KB.query({ type: 'workshop' });     } catch (_) {}
-        try { allMarket    = await KB.query({ type: 'market_item' });  } catch (_) {}
+        let allSops = [], allWorkshops = [], allMarket = [], allIdentities = [];
+        try { allSops       = await KB.query({ type: 'sop' });             } catch (_) {}
+        try { allWorkshops  = await KB.query({ type: 'workshop' });        } catch (_) {}
+        try { allMarket     = await KB.query({ type: 'market_item' });     } catch (_) {}
+        try { allIdentities = await KB.query({ type: 'user_identity' });   } catch (_) {}
         const qualityById = {};
         projects.forEach(function(p) {
             qualityById[p.id] = computeQualityScore(p, { sops: allSops, workshops: allWorkshops, marketItems: allMarket });
         });
         this._qualityById = qualityById;  // cache per altres mètodes (filter chips, tooltip)
+
+        // PROJ-QUALITY-001 sprint D · onboarding helper (5 passes)
+        const identityNode = (allIdentities || []).find(n => n && (n.content?.isPrimary || n.isPrimary)) || (allIdentities && allIdentities[0]) || null;
+        this._renderHelper({ identityNode, projects, qualityById });
 
         // Stats v2 · roles + tx + qualitat mitja (substitueix Ecosystem health)
         const totalRoles    = projects.reduce(function(acc, p) { return acc + (p.vna_roles || []).length; }, 0);
@@ -1568,8 +1700,8 @@ export default class DashboardView {
             document.getElementById('newProjName').focus();
         };
         document.getElementById('dashBtnNew')?.addEventListener('click', openNewProjectModal);
-        // UX-DASH-001 · "Paso 1" del onboarding abre el mismo wizard
-        document.getElementById('dashStep1')?.addEventListener('click', openNewProjectModal);
+        // PROJ-QUALITY-001 sprint D · helper card bind delegat via data-action
+        // (es fa a _renderHelper · evita binding orphan si la card no està al DOM)
         // MAT-002-A · botón Cohort 0 Matriu retirado del topbar (UX-AUDIT-001 sprint A2).
         // El método _openMatriuCohortModal sigue disponible y se invoca desde el
         // wizard de New Project + desde la landing /matriu (CTA "Sumar-me a Cohort 0").
