@@ -296,7 +296,7 @@ export async function publishProjectToPermaweb({ entry, projectId } = {}) {
             client = await getTurboClient(stored.jwk);
         }
         if (!client) {
-            const mod = await import('https://cdn.jsdelivr.net/npm/@ardrive/turbo-sdk@latest/+esm');
+            const mod = await import('https://esm.sh/@ardrive/turbo-sdk@1.27.1/web');
             const factory = mod.TurboFactory || mod.default || mod;
             client = factory.unauthenticated ? factory.unauthenticated() : factory;
             console.warn('[publicProject] publishing unauthenticated · cap keyfile Arweave configurada');

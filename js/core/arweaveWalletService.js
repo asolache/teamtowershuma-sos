@@ -115,7 +115,7 @@ export async function clearArweaveKeyfile() {
 export async function getTurboBalance(jwk) {
     if (!jwk) return null;
     try {
-        const mod = await import('https://cdn.jsdelivr.net/npm/@ardrive/turbo-sdk@latest/+esm');
+        const mod = await import('https://esm.sh/@ardrive/turbo-sdk@1.27.1/web');
         const factory = mod.TurboFactory || mod.default || mod;
         const client  = factory.authenticated
             ? factory.authenticated({ privateKey: jwk, token: 'arweave' })
@@ -137,7 +137,7 @@ export async function getTurboBalance(jwk) {
 
 export async function getTurboClient(jwk) {
     if (!jwk) return null;
-    const mod = await import('https://cdn.jsdelivr.net/npm/@ardrive/turbo-sdk@latest/+esm');
+    const mod = await import('https://esm.sh/@ardrive/turbo-sdk@1.27.1/web');
     const factory = mod.TurboFactory || mod.default || mod;
     if (!factory.authenticated) return null;
     return factory.authenticated({ privateKey: jwk, token: 'arweave' });

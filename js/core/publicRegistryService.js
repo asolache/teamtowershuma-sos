@@ -446,7 +446,7 @@ export function setTurboLoader(loader) {
 async function _loadTurbo() {
     if (_turboLoader) return _turboLoader();
     // Real load · jsDelivr ESM
-    const mod = await import('https://cdn.jsdelivr.net/npm/@ardrive/turbo-sdk@latest/+esm');
+    const mod = await import('https://esm.sh/@ardrive/turbo-sdk@1.27.1/web');
     return mod;
 }
 
