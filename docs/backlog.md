@@ -3001,6 +3001,13 @@ Un score multidimensional · 5 capes ponderades · cada capa retorna
 > "Avalua si els workshops que van néixer per a TeamTowers podrien
 > incloure tots els workshops de projectes i que aquests també puguin
 > ser model de negoci donant un accés premium tipus coops."
+>
+> **Refinament 2026-05-12 · alineació amb la Matriu** · La Matriu **ÉS**
+> ja la coop · no inventem una entitat coop nova · les cohorts (i el
+> seu wallet derivat) fan de unitat coop. Cohort 0 la dirigeix
+> @alvaro durant l'alfa amb el seu consell, equip, inversors i
+> comunitat inicial. Workshops són la formació transversal que
+> el paquet d'incubació incorpora.
 
 ### Avaluació tècnica
 - Els workshops ja viuen a KB amb schema `type:'workshop'` i camp
@@ -3012,55 +3019,96 @@ Un score multidimensional · 5 capes ponderades · cada capa retorna
 - El que **NO és trivial** és el model d'accés/monetització · cal
   definir taxonomia abans d'implementar.
 
+### Tiers d'accés · alineats amb Matriu
+
+| Tier | Qui hi accedeix | Cost típic | Quan s'usa |
+|---|---|---|---|
+| `public` | Qualsevol persona | Gratis | Workshops d'evangelització · trailer del que ofereix SOS |
+| `operator` | Cal DID SOS signat al permaweb | Gratis · barrera "perfil públic" | Onboarding tècnic · CTA per registrar-se |
+| `matriu` | Cal `matriu_member` actiu (qualsevol cohort) | Gratis com a part del paquet | Formació transversal · base comuna de la xarxa |
+| `cohort` | Cal pertànyer a una cohort específica (`cohortNumber === X`) | Gratis si ets membre · 2,50€ si no | **Programes d'incubadora · contingut premium per cohort** |
+
+La Cohort 0 actua com a **coop fundadora** durant l'alfa · 108 places ·
+@alvaro com a director · consell + equip + inversors + comunitat inicial.
+
+### Revenue split per unlock extern (2,50€ default)
+
+```
+2,50€ pagats per @externa  →
+ ├─ 1,75€  (70%) wallet personal del creador del workshop
+ ├─ 0,50€  (20%) wallet del projecte d'origen (stakeholders FairShares)
+ └─ 0,25€  (10%) wallet de la cohort (cohortNumber)
+```
+
+El **wallet de la cohort** és nou (un per cada `cohortNumber`) i el seu
+saldo finança costos d'IA compartits · workshops nous encarregats
+col·lectivament · activitats d'incubadora (mentories · revisions ·
+presentacions). Tanca el cercle **incubadora ↔ formació**.
+
+Casos especials:
+- Workshop sense `cohortNumber` (workshop personal o de projecte sense Matriu) · el 10% va al projecte → split **70/30/0**
+- Workshop sense projecte (standalone d'un autor) · el 20% va al creator → split **90/0/10** (o **100/0/0** si tampoc té cohort)
+
 ### Sprint plan A → D
 
 #### Sprint A · Federació visual local · capa 1 (~1.5h)
 - `WorkshopsView` · selector top "Aquest projecte | Tots projectes locals" (radio chips)
 - Card amb badge `🏷 Projecte: X` per fer evident l'origen
 - Filtres: sector · audience · projecte · `accessTier` (preparem el camp tot i no actuar-hi encara)
-- Camp nou `content.accessTier` al schema workshop (default `'public'`)
+- Camps nous al schema workshop:
+  - `content.accessTier` (default `'public'`)
+  - `content.cohortNumber` (opcional · nullable)
 - **Sense permaweb encara · sense pricing · sols visibilitat cross-projecte**
 
-#### Sprint B · `accessTier` semàntic + UI · capa 2 (~2h)
-- Taxonomia 3 tiers (validar amb @alvaro):
-  - `public` · qualsevol · gratis · default
-  - `operator` · cal ser operador SOS (DID signat al permaweb) · gratis si verificat
-  - `coop` · cal pertànyer a una cooperativa · paywall: saldo o subscripció
-- Per a workshops `coop`:
+#### Sprint B · `accessTier` semàntic + paywall · capa 2 (~2h)
+- Lògica de visibilitat segons tier:
+  - `public` · qualsevol
+  - `operator` · cal `matriu_member` amb DID signat al permaweb
+  - `matriu` · cal `matriu_member` actiu (qualsevol cohort)
+  - `cohort` · cal `matriu_member.cohortNumber === workshop.cohortNumber`
+- Per a workshops bloquejats:
   - Preview gratuït (descripció + outline) sempre visible
   - Contingut bloquejat amb cta "Desbloquejar · 2,50€ · es paga al wallet del creador"
-  - Si l'usuari té `matriu_member.cooperatives[]` que conté el coop ID del workshop → unlock automàtic
-- Editor del workshop · radio "public | operator | coop" + selector coop si triat coop
+  - Si l'usuari té accés per membership → unlock automàtic
+- Editor del workshop · radio "public | operator | matriu | cohort" + selector cohortNumber si triat cohort
 - **Sense Stripe encara · simulació de pagament amb saldo personal**
 
 #### Sprint C · Federació permaweb · capa 3 (~3h · depèn de PERM-ALFA-001 sprint C)
 - `js/core/publicWorkshopService.js`:
   - `PUBLIC_WORKSHOP_TYPE='public_workshop_entry'` · build/sign/verify igual que `publicRegistryService`
-  - Camps públics: id · title · sector · audience · outline · author DID · accessTier · price · coopId (si coop)
+  - Camps públics: id · title · sector · audience · outline · author DID · accessTier · price · cohortNumber (si cohort)
   - **Mai inclou** el contingut íntegre del workshop (cobrir-ho mantè el premium gating)
 - `publishWorkshopToPermaweb({workshopId})` · 0,05€ via Turbo SDK · igual flow que perfil
 - `RegistryView` (Permaweb Index) · ara mostra workshops reals amb badge `🌐` quan són del permaweb
 - Discovery: usuari fa click → preview gratuït · contingut íntegre requereix unlock (genera tx local de pagament al wallet del creador)
 
-#### Sprint D · Wallet flow del creador + coop revenue split (~2h)
+#### Sprint D · Wallet flow del creador + cohort revenue split (~2h)
+- `cohortWalletIdFor(cohortNumber)` · helper a `walletService.js` · retorna id determinístic (ex. `__cohort_0__`)
+- `getOrCreateCohortWallet(cohortNumber)` · crea wallet si no existeix
 - Quan un usuari paga per unlock:
   - 70% wallet personal del creador
   - 20% wallet del projecte d'origen
-  - 10% wallet del coop (si coop) · si no, va al projecte
+  - 10% wallet de la cohort (si `cohortNumber` informat) · si no, va al projecte
 - `recordWorkshopUnlock({workshopId, payerId, priceEur})` a `workshopRevenueService.js` nou
 - Generen 3 `wallet_movement` atomic (best-effort amb refund si fall) · log al ledger del projecte
 - Cobertura tests · 12 asserts amb mocks de wallets
 
-### Tradeoffs i decisions pendents @alvaro
-1. **Pricing default** · 2,50€/unlock proposat · ajustable per creador (rang 1-50€). Recomanació: 2,50€ default · sweet spot impulse purchase.
-2. **Revenue split 70/20/10** · negociable · recomanació: 70 creator / 20 project / 10 coop és coherent amb Slicing Pie (qui posa contingut · qui posa context · qui posa xarxa).
-3. **Què passa si un coop revoca un workshop?** · proposta: el contingut roman accessible per a qui ja va pagar (cache local) · noves vendes blocades.
-4. **Workshops "freemium"** · ¿permitir que un workshop tingui outline gratis + N seccions premium? · recomanació: NO en capa 1 · KIS · un workshop = un preu únic.
-5. **Coops com a entitat al SOS** · ¿crear `type:'cooperative'` amb membres? · recomanació: SÍ · piscina pròpia · es vincula a `matriu_member` via `cooperatives:[coopId]`.
+### Decisions confirmades (2026-05-12)
+1. **Tiers** · `public / operator / matriu / cohort` (4 tiers escala compromís) ✅
+2. **Split** · `70/20/10` creator / project / cohort ✅
+3. **NO crear `type:'cooperative'`** · usem `matriu_member.cohortNumber` + wallet derivat per cohort ✅
+4. **Cohort 0** · dirigida per @alvaro durant alfa amb consell + equip + inversors + comunitat inicial ✅
+5. **Pricing default** · 2,50€/unlock · creador pot ajustar rang 1-50€
+6. **Revoke** · contingut roman accessible per a qui ja va pagar (cache local) · noves vendes blocades
+
+### Decisions encara pendents @alvaro
+- ¿`matriu` tier costa res als no-membres? · proposta: **no és desbloquejable** sense ser membre · cas d'ús "incentivar entrada a Matriu"
+- ¿Workshops d'una cohort visibles per altres cohorts? · proposta: **preview sí · contingut íntegre cal pagar 2,50€** (evita silos)
+- ¿Cohort 0 genera workshops automàticament en signar les 108 places? · proposta: **no** · cada cohort decideix quin contingut publica · SOS pre-fill amb plantilles base
 
 ### Visió a llarg termini (no en aquesta alfa)
-- **Marketplace cross-coop** · coops poden subscriure's a "feeds" d'altres coops · revenue cross-pollination
-- **Quality-staked workshops** · creadors posen stake en EUR/token; si rebut rebut <X% rating, perd stake; si >Y%, multiplicador
+- **Marketplace cross-cohort** · cohorts poden subscriure's a "feeds" d'altres cohorts · revenue cross-pollination
+- **Quality-staked workshops** · creadors posen stake en EUR/token; si rebut <X% rating, perd stake; si >Y%, multiplicador
 - **Auto-translation IA** · cada workshop pot ser auto-traduït a N idiomes · cost amortitzat amb les primeres vendes
 
 ---
