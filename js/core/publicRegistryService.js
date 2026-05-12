@@ -453,13 +453,29 @@ async function _loadTurbo() {
 // _resolveTurboClient · auth si hi ha keyfile · unauthenticated altrament.
 // Sprint G · 2026-05-10 · si l'usuari ha configurat `arweave_wallet` al KB,
 // usa client autenticat (cobra Turbo Credits del wallet de l'usuari).
+// Sprint A2 (WALLET-AUTH-001) · 2026-05-12 · si Wander/ArConnect està
+// connectat, prefereix ArconnectSigner (zero JWK · l'extensió signa).
 async function _resolveTurboClient() {
+    // Prioritat 1 · Wander extension (signer-based)
+    try {
+        const { isWanderAvailable, getWanderConnection, getTurboClientForExtension } = await import('./arweaveWalletService.js');
+        if (isWanderAvailable()) {
+            const conn = await getWanderConnection();
+            if (conn && conn.address) {
+                const client = await getTurboClientForExtension();
+                if (client) return { client, authenticated: true, source: 'extension' };
+            }
+        }
+    } catch (e) {
+        console.warn('[publicRegistry] extension turbo client failed · fallback keyfile', e?.message);
+    }
+    // Prioritat 2 · Keyfile JSON cacheat al KB (sprint G)
     try {
         const { getArweaveKeyfile, getTurboClient } = await import('./arweaveWalletService.js');
         const stored = await getArweaveKeyfile();
         if (stored && stored.jwk) {
             const client = await getTurboClient(stored.jwk);
-            if (client) return { client, authenticated: true };
+            if (client) return { client, authenticated: true, source: 'keyfile' };
         }
     } catch (e) {
         console.warn('[publicRegistry] no Arweave keyfile · fallback unauthenticated', e?.message);
@@ -468,7 +484,7 @@ async function _resolveTurboClient() {
     const turbo = await _loadTurbo();
     const factory = turbo.TurboFactory || turbo.default || turbo;
     const client  = factory.unauthenticated ? factory.unauthenticated() : factory;
-    return { client, authenticated: false };
+    return { client, authenticated: false, source: 'anonymous' };
 }
 
 // publishToPermaweb · async · descompta del wallet del projecte (decisió
