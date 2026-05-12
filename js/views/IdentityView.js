@@ -254,8 +254,11 @@ export default class IdentityView {
         // Cerca entry ja publicat al KB
         let entry = null;
         try {
-            const existing = await KB.getNode(registryEntryIdFor(id.primaryDid));
-            if (existing && existing.type === PUBLIC_REGISTRY_TYPE) entry = existing;
+            const did0 = id?.content?.primaryDid || id?.primaryDid;
+            if (did0) {
+                const existing = await KB.getNode(registryEntryIdFor(did0));
+                if (existing && existing.type === PUBLIC_REGISTRY_TYPE) entry = existing;
+            }
         } catch (_) {}
 
         const projects = visibleProjects(store.getState().projects);
@@ -329,18 +332,28 @@ export default class IdentityView {
             btn.disabled = true; btn.textContent = '⏳ Signant…';
             setStatus('Construint entry · signant amb ECDSA P-256…', 'var(--text-muted)');
             try {
-                const id = this.identity;
+                // FIX 2026-05-10 · l'identity al KB és {id, type, content:{primaryDid,...}}
+                // El sprint E+ refinement usava id.primaryDid (no existeix) · els camps
+                // viuen dins content.
+                const idNode = this.identity || {};
+                const c = idNode.content || idNode;
+                const did = c.primaryDid || idNode.primaryDid;
+                if (!did) {
+                    setStatus('✗ Identitat sense DID · pulsa 💾 Guardar més amunt primer', 'var(--accent-red)');
+                    btn.disabled = false; btn.textContent = '🌐 Publicar';
+                    return;
+                }
                 const keyMeta = await getOrCreateSigningKey();
                 // Build entry des de la identitat actual
                 const entry = buildPublicRegistryEntry({
-                    did:         id.primaryDid,
-                    handle:      id.handle || null,
-                    displayName: id.displayName || 'Operador',
-                    bio:         id.bio || '',
-                    avatar:      id.avatar || null,
+                    did,
+                    handle:      c.handle      || null,
+                    displayName: c.displayName || 'Operador',
+                    bio:         c.bio         || '',
+                    avatar:      c.avatar      || null,
                     publicJwk:   keyMeta.publicJwk,
-                    skillsDeclared: id.skillsDeclared || [],
-                    sectorsExperience: id.sectorsExperience || [],
+                    skillsDeclared:    c.skillsDeclared    || [],
+                    sectorsExperience: c.sectorsExperience || [],
                 });
                 const signed = await signRegistryEntry({ entry, privateJwk: keyMeta.privateJwk });
                 btn.textContent = '⏳ Pujant al permaweb…';
