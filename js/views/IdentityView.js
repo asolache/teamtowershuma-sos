@@ -23,6 +23,11 @@ import {
 import { KB } from '../core/kb.js';
 import { visibleProjects } from '../core/projectFilter.js';
 import { getOrCreateSigningKey } from '../core/projectIO.js';
+// WALLET-AUTH-001 sprint A · Wander/ArConnect auto-detect
+import {
+    isWanderAvailable, connectWander, disconnectWander,
+    getWanderConnection,
+} from '../core/arweaveWalletService.js';
 
 export default class IdentityView {
     constructor() {
@@ -132,6 +137,14 @@ export default class IdentityView {
                     <div id="idWalletErr" style="display:none;margin-top:0.4rem;font-size:0.78rem;color:var(--accent-red);"></div>
                 </div>
 
+                <div class="id-card" id="idWanderCard" style="border-left-color:#a855f7;">
+                    <h2>🦊 Wander · Arweave wallet</h2>
+                    <div class="id-meta">Connecta l'extensió <strong>Wander</strong> (o ArConnect) per usar la teva clau Arweave sense pujar el JSON. Necessària per a publicar al permaweb i veure el saldo Turbo. Si encara no la tens, instal·la-la des de <a href="https://www.wander.app/" target="_blank" style="color:var(--accent-indigo);">wander.app ↗</a> · alternativament fes servir el flow keyfile JSON tradicional (sprint G).</div>
+                    <div id="idWanderBody" style="margin-top:0.8rem;">
+                        <div class="id-meta" style="font-style:italic;">Detectant extensió…</div>
+                    </div>
+                </div>
+
                 <div class="id-card" id="idPermawebCard" style="border-left-color:#06b6d4;">
                     <h2>🌐 Registre públic · Permaweb</h2>
                     <div class="id-meta">Publica el teu perfil al permaweb Arweave perquè altres operadors SOS puguin descobrir-te i verificar la teva identitat amb ECDSA P-256. <strong>Cost ${PRICING.publishEur.toFixed(2)}€</strong> una sola vegada · es descompta del wallet del projecte triat (no credit card). Verify és free per a tothom · publicat = visible al <a href="/registry" data-link style="color:var(--accent-indigo);">/registre</a> de qualsevol SOS local.</div>
@@ -158,6 +171,8 @@ export default class IdentityView {
         ensureExplainerStyle();
         bindExplainerBadges(document);
         this._renderWalletList();
+        // WALLET-AUTH-001 sprint A · render Wander card (async · llegeix KB)
+        this._renderWanderCard().catch(e => console.warn('[identity] wander card', e));
         // PERM-USER-001 sprint E+ · render permaweb card (async · llegeix KB)
         this._renderPermawebCard().catch(e => console.warn('[identity] permaweb card', e));
 
@@ -206,6 +221,95 @@ export default class IdentityView {
             const did = this.identity?.content?.primaryDid || '';
             try { await navigator.clipboard.writeText(did); alert('DID copiado: ' + did); }
             catch (_) { alert('No se pudo copiar (permiso denegado).'); }
+        });
+    }
+
+    // WALLET-AUTH-001 sprint A · render Wander card amb estat detect/connect
+    async _renderWanderCard() {
+        const root = document.getElementById('idWanderBody');
+        if (!root) return;
+        const available = isWanderAvailable();
+        const existing  = await getWanderConnection();
+
+        if (!available) {
+            root.innerHTML = `
+                <div style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.8rem;border-radius:8px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.20);">
+                    <span style="font-size:1.1rem;">🛈</span>
+                    <span class="id-meta">Wander/ArConnect <strong>no detectat</strong> en aquest navegador. Instal·la l'extensió i recarrega la pàgina · o fes servir el flow keyfile JSON tradicional.</span>
+                </div>
+                <a href="https://www.wander.app/" target="_blank" class="id-btn id-btn-primary" style="margin-top:0.6rem;display:inline-block;text-decoration:none;">⬇ Instal·lar Wander</a>
+            `;
+            return;
+        }
+
+        if (existing && existing.address) {
+            const shortAddr = existing.address.slice(0, 8) + '…' + existing.address.slice(-6);
+            const when = existing.connectedAt ? new Date(existing.connectedAt).toLocaleString() : '—';
+            root.innerHTML = `
+                <div style="display:flex;align-items:center;gap:0.8rem;padding:0.7rem 0.9rem;border-radius:8px;background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.30);">
+                    <span style="font-size:1.3rem;">✓</span>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:700;color:#00e676;font-size:0.85rem;">Wander connectat</div>
+                        <div class="id-meta" style="font-family:var(--font-mono);font-size:0.72rem;">${shortAddr}</div>
+                        <div class="id-meta" style="font-size:0.68rem;">Connectat el ${when}</div>
+                    </div>
+                </div>
+                <div style="margin-top:0.6rem;display:flex;gap:0.4rem;flex-wrap:wrap;">
+                    <button id="idWanderReconnect" class="id-btn">↻ Reconnectar</button>
+                    <button id="idWanderDisconnect" class="id-btn" style="border-color:rgba(239,68,68,0.4);color:var(--accent-red);">✕ Desconnectar</button>
+                    <button id="idWanderCopyAddr" class="id-btn" title="Copia l'adreça">📋 Copia adreça</button>
+                </div>
+                <div id="idWanderStatus" class="id-status" style="margin-top:0.5rem;"></div>
+            `;
+        } else {
+            root.innerHTML = `
+                <div style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.8rem;border-radius:8px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.30);">
+                    <span style="font-size:1.3rem;">🦊</span>
+                    <span class="id-meta"><strong>Wander detectat</strong> · prem el botó per connectar i poder publicar al permaweb sense JSON keyfile.</span>
+                </div>
+                <button id="idWanderConnect" class="id-btn id-btn-primary" style="margin-top:0.6rem;">🦊 Connect Wander</button>
+                <div id="idWanderStatus" class="id-status" style="margin-top:0.5rem;"></div>
+            `;
+        }
+
+        const setStatus = (msg, color) => {
+            const s = document.getElementById('idWanderStatus');
+            if (!s) return;
+            s.textContent = msg;
+            s.style.color = color || '';
+        };
+
+        document.getElementById('idWanderConnect')?.addEventListener('click', async () => {
+            setStatus('⏳ Demanant permissions a Wander…', 'var(--accent-orange)');
+            try {
+                const conn = await connectWander();
+                setStatus('✓ Connectat · ' + conn.address.slice(0, 8) + '…', 'var(--accent-green)');
+                this._renderWanderCard();
+            } catch (e) {
+                setStatus('✗ ' + (e?.message || 'connexió cancel·lada'), 'var(--accent-red)');
+            }
+        });
+
+        document.getElementById('idWanderReconnect')?.addEventListener('click', async () => {
+            setStatus('⏳ Reconnectant…', 'var(--accent-orange)');
+            try {
+                await connectWander();
+                this._renderWanderCard();
+            } catch (e) {
+                setStatus('✗ ' + (e?.message || 'reconnect cancel·lat'), 'var(--accent-red)');
+            }
+        });
+
+        document.getElementById('idWanderDisconnect')?.addEventListener('click', async () => {
+            await disconnectWander();
+            this._renderWanderCard();
+        });
+
+        document.getElementById('idWanderCopyAddr')?.addEventListener('click', async () => {
+            if (existing && existing.address && navigator.clipboard) {
+                try { await navigator.clipboard.writeText(existing.address); setStatus('✓ Copiat al portapapers', 'var(--accent-green)'); }
+                catch (_) { setStatus('✗ No s\'ha pogut copiar', 'var(--accent-red)'); }
+            }
         });
     }
 
