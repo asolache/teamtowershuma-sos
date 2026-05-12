@@ -28,6 +28,8 @@ import { computeQualityScore, QUALITY_DIMS, statusColor as qualityColor, statusI
 import { suggestNextDim } from '../core/navService.js';
 // PROJ-QUALITY-001 sprint D · onboarding service · 5 passes guiats
 import { ONBOARDING_STEPS, computeOnboardingState, onboardingCompletion, nextOnboardingStep } from '../core/dashboardOnboardingService.js';
+// FOUNDER-001 sprint B · plantilla founder clonable
+import { buildFounderProject, FOUNDER_PROJECT_DEFAULTS } from '../core/founderTemplate.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function uid() { return 'proj-' + Math.random().toString(36).slice(2, 9); }
@@ -920,7 +922,18 @@ export default class DashboardView {
         <div class="dash-modal-bg" id="dashModalNew">
             <div class="dash-modal" style="max-width:540px;">
                 <h2>＋ Nuevo proyecto</h2>
-                <div class="dash-modal-sub">Un solo wizard · 3 caminos según lo que rellenes</div>
+                <div class="dash-modal-sub">Un solo wizard · 4 caminos según lo que rellenes</div>
+
+                <!-- FOUNDER-001 sprint B · clonar founder template -->
+                <div class="dash-form-group" style="background:linear-gradient(135deg,rgba(168,85,247,0.06),rgba(99,102,241,0.04));border:1px solid rgba(168,85,247,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.8rem;">
+                    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-size:0.88rem;font-weight:700;color:var(--text-main);">
+                        <input type="checkbox" id="newProjFounder" style="cursor:pointer;">
+                        <span>🌟 Clonar plantilla <strong>Founder bootstrap</strong></span>
+                    </label>
+                    <div style="font-size:0.74rem;color:var(--text-muted);margin-top:4px;line-height:1.45;">
+                        Genera un projecte amb 9 roles · 12 transactions · 5 SOPs · 3 workshops · presentation IA pre-omplerta. Score automàtic ~85/100 al /quality. Pots adaptar tot després.
+                    </div>
+                </div>
 
                 <div class="dash-form-group">
                     <label class="dash-form-label">Nombre del proyecto *</label>
@@ -2083,8 +2096,20 @@ export default class DashboardView {
         const refreshModeHint = () => {
             const sector = document.getElementById('newProjSector')?.value || '';
             const desc   = (document.getElementById('newProjDesc')?.value || '').trim();
+            const founder = !!document.getElementById('newProjFounder')?.checked;
             const hint   = document.getElementById('newProjModeHint');
+            const btn    = document.getElementById('newProjConfirm');
             if (!hint) return;
+            // FOUNDER-001 sprint B · si checkbox actiu, salta tota la resta
+            if (founder) {
+                hint.style.background = 'rgba(168,85,247,0.10)';
+                hint.style.borderLeftColor = '#a855f7';
+                hint.style.color = '#d8b4fe';
+                hint.innerHTML = '🌟 <strong>Founder bootstrap</strong> · clona el manifest SOS · 9 roles + 12 transactions + 5 SOPs + 3 workshops + presentation IA. Sector i descripció seran ignorats. Pots adaptar tot després.';
+                if (btn) btn.textContent = '🌟 Clonar founder';
+                return;
+            }
+            if (btn) btn.textContent = 'Crear & abrir mapa';
             if (!sector && !desc) {
                 hint.style.background = 'rgba(99,102,241,0.08)';
                 hint.style.borderLeftColor = '#6366f1';
@@ -2147,6 +2172,8 @@ export default class DashboardView {
         document.getElementById('newProjSubtype')?.addEventListener('change', () => { refreshSubtypeHint(); refreshModeHint(); });
         document.getElementById('newProjType')?.addEventListener('change',   refreshTypeHint);
         document.getElementById('newProjDesc')?.addEventListener('input',  refreshModeHint);
+        // FOUNDER-001 sprint B · toggle founder bootstrap
+        document.getElementById('newProjFounder')?.addEventListener('change', refreshModeHint);
 
         document.getElementById('newProjConfirm')?.addEventListener('click', async function() {
             const btn  = this;
@@ -2155,8 +2182,45 @@ export default class DashboardView {
             const subtypeId   = document.getElementById('newProjSubtype')?.value || null;
             const projectType = document.getElementById('newProjType')?.value || null;
             const description = (document.getElementById('newProjDesc').value || '').trim();
+            const founderMode = !!document.getElementById('newProjFounder')?.checked;
             const status      = document.getElementById('newProjStatus');
             if (!name) { document.getElementById('newProjName').focus(); return; }
+
+            // FOUNDER-001 sprint B · clonar founder bootstrap · prioritari · usa
+            // el handle de l'usuari actual (matriu_member resolts) o '@alvaro' fallback
+            if (founderMode) {
+                btn.disabled = true; btn.textContent = '⏳ Clonant founder…';
+                status.style.display = 'block';
+                status.style.color = 'var(--accent-indigo)';
+                status.textContent = '🌟 Generant founder template…';
+                try {
+                    let creatorHandle = FOUNDER_PROJECT_DEFAULTS.creatorHandle;
+                    try {
+                        const members = await KB.query({ type: 'matriu_member' });
+                        const primary = (members || []).find(m => m && (m.content?.isPrimary || m.isPrimary));
+                        if (primary && primary.content?.handle) creatorHandle = primary.content.handle;
+                    } catch (_) {}
+                    const { project, sops, workshops, stats } = buildFounderProject({ creatorHandle });
+                    // El nom escrit per l'usuari prevaleix sobre el default
+                    project.nombre = name;
+                    project.name   = name;
+                    await store.dispatch({ type: 'CREATE_PROJECT', payload: project });
+                    for (const s of sops)      await KB.upsert(s);
+                    for (const w of workshops) await KB.upsert(w);
+                    status.style.color = 'var(--accent-green)';
+                    status.textContent = '✓ Founder clonat · ' + stats.roles + ' roles · ' + stats.transactions + ' tx · ' + stats.sops + ' SOPs · ' + stats.workshops + ' workshops';
+                    document.getElementById('dashModalNew').classList.remove('open');
+                    btn.disabled = false; btn.textContent = 'Crear & abrir mapa';
+                    window.navigateTo('/project/' + project.id);
+                    return;
+                } catch (err) {
+                    console.error('[FOUNDER-001] clone failed', err);
+                    status.style.color = '#ff5252';
+                    status.textContent = '✗ ' + (err?.message || 'error inesperat');
+                    btn.disabled = false; btn.textContent = 'Crear & abrir mapa';
+                    return;
+                }
+            }
 
             // UX-AUDIT-001 sprint B · construir hint context-rich per a la IA
             // (només s'usa al camí IA · els altres camins el guarden a project)
