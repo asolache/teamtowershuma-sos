@@ -850,7 +850,8 @@ export default class ValueMapView {
                     <button class="vmap-btn" id="vmapBtnAnim" title="H_ANIM_001 · animar flujo de valor por sequence_order de las transactions">▶ Animar flujo</button>
                     <button class="vmap-btn" id="vmapBtnInferOrder" title="H_ANIM_001 sprint C · IA infiere sequence_order y phase de todas las transactions">🤖 Inferir orden IA</button>
                     <button class="vmap-btn" id="vmapBtnFlowLine" title="H_ANIM_001 sprint B · ver el flujo como timeline lineal">📜 Vista lineal</button>
-                    <button class="vmap-btn" id="vmapBtnCastell" title="VMAP-CASTELL-001 · vista castell · 3 nivells (pinya / tronc / pom de dalt) amb roles ordenats per lògica de procés">🏛 Castell</button>
+                    <button class="vmap-btn" id="vmapBtnCastell" title="VMAP-CASTELL-001 · vista castell · 3 nivells (pinya / tronc / pom de dalt) amb roles ordenats per lògica de procés · modal fullscreen">🏛 Castell</button>
+                    <button class="vmap-btn" id="vmapBtnCastellInline" title="VMAP-CASTELL-INLINE-001 · vista castell sobreposada al canvas · click per togglar amb graph">🏛✦ Inline</button>
                     <button class="vmap-btn" id="vmapBtnFit">⊡ ${t('vmap.fit')}</button>
                     <button class="vmap-btn" id="vmapBtnReset">↺ ${t('vmap.reset')}</button>
                     <button class="vmap-btn vmap-btn-save" id="vmapBtnSave">💾 ${t('vmap.save')}</button>
@@ -1245,6 +1246,7 @@ export default class ValueMapView {
         document.getElementById('vmapBtnInferOrder')?.addEventListener('click', () => this._inferFlowOrderIA());
         document.getElementById('vmapBtnFlowLine')?.addEventListener('click',   () => this._openFlowLineModal());
         document.getElementById('vmapBtnCastell')?.addEventListener('click',    () => this._openCastellModal());
+        document.getElementById('vmapBtnCastellInline')?.addEventListener('click', () => this._toggleCastellInline());
         document.getElementById('vmapAddRole')?.addEventListener('click',   () => this._openRoleModal());
         document.getElementById('vmapAddTx')?.addEventListener('click',     () => this._openTxModal());
         document.getElementById('vmapZoomIn')?.addEventListener('click',    () => this._zoom(1.25));
@@ -2907,21 +2909,33 @@ ${ctxResult.systemPrompt}`;
             return;
         }
         if (!this._state.transactions || !this._state.transactions.length) {
-            alert('No hay transacciones para animar.');
+            this._toast('No hi ha transactions per animar. Afegeix-ne al mapa primer.', false);
             return;
         }
-        // Si ninguna transaction tiene sequence_order, ofrece auto-rellenar
+        // VMAP-ANIM-FIX · auto-fill silenciós (sense confirm OS) · UX cleaner.
+        // Si no hi ha cap sequence_order, l'omple amb l'ordre actual (1,2,3,…).
         const anyOrdered = this._state.transactions.some(t => typeof t?.sequence_order === 'number');
         if (!anyOrdered) {
-            const ok = confirm('Ninguna transacción tiene `sequence_order` definido. ¿Quieres que SOS asigne orden automático (1, 2, 3…) según el orden actual? Puedes ajustarlo después en el inspector de cada transacción.');
-            if (!ok) return;
             this._state.transactions = autoFillSequenceOrder(this._state.transactions);
+            this._toast('Ordre auto-assignat per a animar · usa 🤖 Inferir orden IA per a refinar-ho.');
         }
         this._startFlowAnim();
     }
 
     _startFlowAnim() {
-        if (!window.d3) return;
+        // VMAP-ANIM-FIX · si D3 encara no està carregat, espera (retry max 5 cops)
+        if (!window.d3) {
+            this._state._animD3Retries = (this._state._animD3Retries || 0) + 1;
+            if (this._state._animD3Retries > 5) {
+                this._toast('D3 no s\'ha pogut carregar · animació indisponible. Refresca la pàgina.', false);
+                this._state._animD3Retries = 0;
+                return;
+            }
+            this._toast('Carregant D3 · esperant…');
+            setTimeout(() => this._startFlowAnim(), 400);
+            return;
+        }
+        this._state._animD3Retries = 0;
         this._state.flowAnim = true;
         const btn = document.getElementById('vmapBtnAnim');
         if (btn) { btn.textContent = '⏸ Pausar'; btn.style.background = 'rgba(99,102,241,0.15)'; }
@@ -3219,6 +3233,86 @@ ${ctxResult.systemPrompt}`;
             el.addEventListener('click', () => {
                 const rid = el.getAttribute('data-castell-role');
                 close();
+                this._selectItem(rid, 'role');
+            });
+        });
+    }
+
+    // VMAP-CASTELL-INLINE-001 · toggle vista castell sobreposada al canvas.
+    // No substitueix el graph · l'overlay té background semi-translúcid que
+    // bloca interaccions amb el SVG · click "✕" tanca o re-clic al botó.
+    _toggleCastellInline() {
+        const canvas = document.getElementById('vmapCanvas');
+        if (!canvas) return;
+        const existing = document.getElementById('vmapCastellInlineOverlay');
+        if (existing) { existing.remove(); return; }
+        if (!this._state.roles || !this._state.roles.length) {
+            this._toast('Encara no hi ha rols al mapa · afegeix-ne abans.', false);
+            return;
+        }
+        const LEVEL_DEFS = [
+            { id: 'pom_de_dalt', label: 'Pom de dalt', color: '#e040fb' },
+            { id: 'tronc',       label: 'Tronc',       color: '#6366f1' },
+            { id: 'pinya',       label: 'Pinya',       color: '#00b0ff' },
+        ];
+        const txs = this._state.transactions || [];
+        const seqByRole = new Map();
+        for (const r of this._state.roles) {
+            const outgoing = txs.filter(t => t.from === r.id && typeof t.sequence_order === 'number');
+            const minSeq = outgoing.length ? Math.min(...outgoing.map(t => t.sequence_order)) : 999;
+            seqByRole.set(r.id, minSeq);
+        }
+        const rolesByLevel = {};
+        for (const def of LEVEL_DEFS) {
+            rolesByLevel[def.id] = this._state.roles
+                .filter(r => (r.castell_level || 'tronc') === def.id)
+                .sort((a, b) => (seqByRole.get(a.id) || 999) - (seqByRole.get(b.id) || 999));
+        }
+        const orphan = this._state.roles.filter(r => !LEVEL_DEFS.some(d => d.id === (r.castell_level || 'tronc')));
+        if (orphan.length) rolesByLevel.pinya = (rolesByLevel.pinya || []).concat(orphan);
+
+        const renderCard = (r, color) => {
+            const outCount = txs.filter(t => t.from === r.id).length;
+            const inCount  = txs.filter(t => t.to   === r.id).length;
+            return `<div style="background:rgba(5,5,7,0.9);border:1px solid #1a1a22;border-left:3px solid ${color};border-radius:6px;padding:6px 9px;flex:0 0 auto;min-width:140px;cursor:pointer;backdrop-filter:blur(4px);" data-castell-inline-role="${this._escHtml(r.id)}">
+                <div style="color:#fff;font-size:0.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${this._escHtml(r.name || r.id)}</div>
+                <div style="color:#aaa;font-size:0.66rem;font-family:monospace;margin-top:2px;">${outCount}↗ · ${inCount}↙</div>
+            </div>`;
+        };
+
+        const rows = LEVEL_DEFS.map(def => {
+            const list = rolesByLevel[def.id] || [];
+            return `<div style="margin-bottom:0.7rem;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${def.color};"></span>
+                    <span style="color:${def.color};font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">${def.label}</span>
+                    <span style="color:#666;font-size:0.66rem;font-family:monospace;">${list.length}</span>
+                </div>
+                ${list.length === 0
+                    ? `<div style="color:#444;font-size:0.7rem;font-style:italic;padding-left:18px;">— buit —</div>`
+                    : `<div style="display:flex;gap:6px;overflow-x:auto;padding-left:18px;padding-bottom:4px;">${list.map(r => renderCard(r, def.color)).join('')}</div>`}
+            </div>`;
+        }).join('');
+
+        const overlay = document.createElement('div');
+        overlay.id = 'vmapCastellInlineOverlay';
+        overlay.style.cssText = 'position:absolute;inset:0;background:rgba(5,5,7,0.55);backdrop-filter:blur(2px);overflow-y:auto;padding:14px;z-index:5;';
+        overlay.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <h3 style="margin:0;color:#fff;font-size:0.95rem;">🏛✦ Castell inline · ${this._state.roles.length} rols</h3>
+                <button id="vmapCastellInlineClose" class="vmap-btn" style="padding:3px 10px;font-size:0.72rem;">✕ Tancar inline</button>
+            </div>
+            ${rows}
+        `;
+        // Ensure canvas has relative positioning to anchor overlay
+        if (window.getComputedStyle(canvas).position === 'static') {
+            canvas.style.position = 'relative';
+        }
+        canvas.appendChild(overlay);
+        document.getElementById('vmapCastellInlineClose')?.addEventListener('click', () => overlay.remove());
+        overlay.querySelectorAll('[data-castell-inline-role]').forEach(el => {
+            el.addEventListener('click', () => {
+                const rid = el.getAttribute('data-castell-inline-role');
                 this._selectItem(rid, 'role');
             });
         });
