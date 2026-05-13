@@ -47,6 +47,23 @@ t(landing.userPrompt.includes('Mentoria'),                            'B · user
 t(landing.contextTokens > 0,                                          'B · contextTokens estimat > 0');
 eq(landing.dim, 'landing',                                            'B · dim = landing');
 t(Array.isArray(landing.refs) && landing.refs.length >= 1,            'B · refs array no buit');
+// LANDING-UNIFY-001 · el prompt ha de demanar heroTitle/heroTag/heroMantra
+t(landing.userPrompt.includes('heroTitle'),                           'B · prompt demana heroTitle');
+t(landing.userPrompt.includes('heroTag'),                             'B · prompt demana heroTag');
+t(landing.userPrompt.includes('heroMantra'),                          'B · prompt demana heroMantra');
+t(landing.userPrompt.includes('bodyMarkdown'),                        'B · prompt demana bodyMarkdown');
+t(landing.userPrompt.includes('roleDescriptions'),                    'B · prompt demana roleDescriptions');
+// roles del projecte injectats al prompt per roleDescriptions
+t(landing.userPrompt.includes('"r1"') || landing.userPrompt.includes("r1 ·"), 'B · roles incloses al prompt per roleDescriptions');
+
+// LANDING-UNIFY-001 · audienceId propaga to específic
+const landingFund = ctx.buildLandingContext({ project, marketItems: market, audienceId: 'fundadors' });
+t(landingFund.userPrompt.includes('Fundadors'),                       'B · audienceId=fundadors · prompt nomena audiència');
+t(landingFund.systemPrompt.includes('Fundadors'),                     'B · audienceId=fundadors · system prompt adapta to');
+
+const landingUser = ctx.buildLandingContext({ project, marketItems: market, audienceId: 'usuaris' });
+t(landingUser.userPrompt.includes('Usuaris'),                         'B · audienceId=usuaris · prompt nomena audiència');
+t(landingUser.userPrompt !== landingFund.userPrompt,                  'B · diferents audiences · prompts diferents');
 
 // ─── C · buildValueMapContext · roles+tx incloses ────────────────────────
 const vmap = ctx.buildValueMapContext({ project });
@@ -64,7 +81,7 @@ eq(deliv.dim, 'deliverables',                                         'D · dim 
 const sopsCtx = ctx.buildSopsContext({ project, sops });
 // r1 té SOP · r2 no → ha de sortir r2 al prompt
 t(sopsCtx.userPrompt.includes('r2'),                                  'E · sops · role sense SOP detectat');
-t(sopsCtx.userPrompt.includes('r1') === false || sopsCtx.userPrompt.includes('Roles que necessiten SOP (1)'), 'E · sops · counts coherents');
+t(/Roles que necessiten SOP \(1\/2\)|Roles que necessiten SOP \(1\)/.test(sopsCtx.userPrompt), 'E · sops · counts coherents (1 missing / 2 totals)');
 eq(sopsCtx.dim, 'sops',                                               'E · dim = sops');
 
 // ─── F · buildWorkshopsContext ──────────────────────────────────────────
@@ -89,8 +106,9 @@ t(threw && /requires project/.test(threw.message),                    'H · land
 const mockProvider = async (modelKey, payload) => ({
     text: JSON.stringify({
         description: 'Generated description longer than 60 characters for landing dim test fixture.',
+        heroTag: 'Test Tag', heroTitle: 'Test Project', heroMantra: 'Frase potent del test.',
+        bodyMarkdown: '## Que oferim\nQualitat.',
         productSuggestions: [],
-        presentationNarrative: '# Hero\n\nGenerated.',
     }),
     usage: { inputTokens: 500, outputTokens: 200 },
     modelKey,
@@ -130,7 +148,7 @@ const escalatingProvider = async (modelKey, payload) => {
         return { text: 'not valid json', usage: { inputTokens: 100, outputTokens: 20 }, modelKey, finishReason: 'end_turn' };
     }
     return {
-        text: JSON.stringify({ description: 'd'.repeat(80), productSuggestions: [], presentationNarrative: 'x' }),
+        text: JSON.stringify({ description: 'd'.repeat(80), heroTitle: 'Test Project Name', heroTag: 'Tag', heroMantra: 'Mantra', productSuggestions: [] }),
         usage: { inputTokens: 100, outputTokens: 20 },
         modelKey, finishReason: 'end_turn',
     };
@@ -169,6 +187,26 @@ t(r6.ok,                                                              'L · fenc
 
 const r7 = await evOk(null);
 t(!r7.ok && /empty/.test(r7.reason),                                  'L · null output · empty-output');
+
+// IA-CONTEXT-001 sprint C · spec objecte amb minStringLength/minArrayLength
+const evStrict = prov.makeJsonShapeEvaluator([{ name: 'description', minStringLength: 60 }]);
+const tooShort = await evStrict({ text: JSON.stringify({ description: 'too short' }) });
+t(!tooShort.ok && /string-too-short/.test(tooShort.reason),           'L · spec · minStringLength rebutja string curta');
+
+const longEnough = await evStrict({ text: JSON.stringify({ description: 'x'.repeat(80) }) });
+t(longEnough.ok,                                                      'L · spec · minStringLength acceptat amb 80 chars');
+
+const evArr = prov.makeJsonShapeEvaluator([{ name: 'newSops', minArrayLength: 1 }]);
+const emptyArr = await evArr({ text: JSON.stringify({ newSops: [] }) });
+t(!emptyArr.ok && /array-too-short/.test(emptyArr.reason),            'L · spec · minArrayLength rebutja array buit');
+
+const filledArr = await evArr({ text: JSON.stringify({ newSops: [{ roleId: 'r1' }] }) });
+t(filledArr.ok,                                                       'L · spec · minArrayLength acceptat amb 1 element');
+
+// IA-CONTEXT-001 sprint C · evaluator robust a markdown extra al voltant del JSON
+const evRobust = prov.makeJsonShapeEvaluator(['description']);
+const wrapped = await evRobust({ text: 'Aquí tens el JSON:\n\n{"description":"valid"}\n\nEspero ajudi.' });
+t(wrapped.ok,                                                         'L · spec · extreu JSON envoltat de text');
 
 // ─── M · setApiKeyResolver injectable ───────────────────────────────────
 prov._resetApiKeyCache();

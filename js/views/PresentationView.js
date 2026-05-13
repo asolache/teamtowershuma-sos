@@ -15,7 +15,8 @@ import { store } from '../core/store.js';
 import { KB }    from '../core/kb.js';
 import { renderNavGroupedHtml } from '../core/navService.js';
 import { getProjectTypeById, getGuardianById } from '../core/critical108Roles.js';
-import { Orchestrator } from '../core/Orchestrator.js';
+// LANDING-UNIFY-001 · usem aiFillService (escalation chain · 5 providers ·
+// marge SOS + audit log) en lloc de Orchestrator.callLLM (Anthropic-only legacy)
 // UX-AUDIT-001 sprint F · PUBLIC_AUDIENCES per al selector de la narrativa IA
 import { PUBLIC_AUDIENCES } from '../core/skillTaxonomyExtension.js';
 import { getSubtypeById } from '../core/sectorSubtypes.js';
@@ -128,12 +129,21 @@ export default class PresentationView {
         const txIntangibles = (transactions || []).filter(t => (t.kind || t.tipo) === 'intangible');
 
         // UX-AUDIT-001 sprint F · narrativa IA persistida (si existeix · sobreescriu hero + role descs)
-        const narrative = project.presentation_narrative_v1 || null;
+        // LANDING-UNIFY-001 · retro-compat · si està guardat com a string legacy
+        // (versions <2026-05) el tractem com a bodyMarkdown · zero pèrdua dades.
+        let narrative = project.presentation_narrative_v1 || null;
+        if (typeof narrative === 'string') {
+            narrative = { bodyMarkdown: narrative, audienceId: null, generatedAt: null, roleDescriptions: {} };
+        }
         const heroTitle = (narrative && narrative.heroTitle)  ? narrative.heroTitle  : (project.nombre || project.name || 'Projecte');
         const heroMantra = (narrative && narrative.heroMantra) ? narrative.heroMantra : hero.mantra;
         const heroTag    = (narrative && narrative.heroTag)    ? narrative.heroTag    : hero.tag;
         const narrativeAudience = narrative?.audienceId || null;
         const narrativeAt       = narrative?.generatedAt || null;
+        // LANDING-UNIFY-001 · description visible · prioritza la d'al projecte
+        // (s'omple amb /quality "Ompli amb IA" landing) · fallback purpose
+        const projectDescription = (project.description || project.purpose || '').toString().trim();
+        const bodyMarkdown = (narrative && typeof narrative.bodyMarkdown === 'string') ? narrative.bodyMarkdown : null;
         // Subtipus llegit per pintar al meta
         const subtype = (project.sectorId && project.subtypeId) ? getSubtypeById(project.sectorId, project.subtypeId) : null;
 
@@ -215,11 +225,18 @@ export default class PresentationView {
                 </div>
             </div>
 
-            <!-- UX-AUDIT-001 sprint F · IA narrativa adaptable per audiència -->
+            ${projectDescription || bodyMarkdown ? `
+            <!-- LANDING-UNIFY-001 · description + bodyMarkdown generats des de /quality fill IA -->
+            <div class="pv-section" style="max-width:760px;margin-left:auto;margin-right:auto;">
+                ${projectDescription ? `<p style="font-size:var(--text-md);color:var(--text-main);line-height:1.6;margin:0 0 var(--space-4);">${esc(projectDescription)}</p>` : ''}
+                ${bodyMarkdown ? `<div class="pv-body-md" style="color:var(--text-secondary);font-size:var(--text-sm);line-height:1.7;">${this._renderMarkdown(bodyMarkdown)}</div>` : ''}
+            </div>` : ''}
+
+            <!-- LANDING-UNIFY-001 · regeneració per audiència · usa escalation chain · BIZ-MODEL marges + audit log -->
             <div class="pv-section pv-print-hide-mobile" style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:var(--space-6);">
                 <div style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;">
-                    <span style="font-weight:800;color:var(--accent-purple);">🤖 Narrativa IA</span>
-                    <span class="pv-mut" style="font-size:var(--text-xs);color:var(--text-muted);flex:1;min-width:200px;">Genera el hero + descripcions de rols adaptat al projectType + audiència seleccionada.</span>
+                    <span style="font-weight:800;color:var(--accent-purple);">🤖 Narrativa IA per audiència</span>
+                    <span class="pv-mut" style="font-size:var(--text-xs);color:var(--text-muted);flex:1;min-width:200px;">Regenera la landing adaptant el to a l'audiència triada · usa l'escalation chain (5 providers · cost auditat).</span>
                     <select id="pvAudience" class="pv-back" style="background:var(--bg-panel);color:var(--text-main);border:1px solid var(--border-default);padding:6px 10px;border-radius:var(--radius-sm);font-size:var(--text-xs);">
                         ${PUBLIC_AUDIENCES.map(a => `<option value="${a.id}" ${narrativeAudience === a.id ? 'selected' : ''}>${a.icon} ${esc(a.label)}</option>`).join('')}
                     </select>
@@ -227,6 +244,10 @@ export default class PresentationView {
                     ${narrative ? `<button id="pvBtnClearNarrative" class="pv-back" style="background:transparent;color:var(--accent-red);border:1px solid var(--accent-red);padding:8px 12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:var(--text-xs);">✕ Esborrar</button>` : ''}
                 </div>
                 <div id="pvNarrativeStatus" style="margin-top:var(--space-3);font-size:var(--text-xs);color:var(--text-muted);font-family:var(--font-mono);min-height:18px;"></div>
+                <div style="margin-top:var(--space-2);font-size:11px;color:var(--text-muted);">
+                    Es genera <strong>tota la landing</strong> · hero + description + body + roleDescriptions ·
+                    omplible inicialment des de <a href="/quality?project=${encodeURIComponent(project.id)}" data-link style="color:var(--accent-indigo);">📊 /quality → 🎨 Landing → 🧠 Ompli amb IA</a>.
+                </div>
             </div>
 
             <div class="pv-stat-strip">
@@ -300,119 +321,99 @@ export default class PresentationView {
         </div>`;
     }
 
+    // LANDING-UNIFY-001 · render mínim de markdown · sols #/##/###, **bold**,
+    // *italic*, llistes - · paràgrafs separats per \n\n · escapa HTML primer.
+    _renderMarkdown(md) {
+        if (!md || typeof md !== 'string') return '';
+        // 1 · escape HTML
+        const escaped = md.replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+        // 2 · process per blocs separats per \n\n
+        const blocks = escaped.split(/\n{2,}/);
+        const out = blocks.map(block => {
+            const trimmed = block.trim();
+            if (!trimmed) return '';
+            // Headings
+            if (trimmed.startsWith('### ')) return '<h3 style="margin:14px 0 6px;color:var(--text-main);font-size:1rem;">' + this._mdInline(trimmed.slice(4)) + '</h3>';
+            if (trimmed.startsWith('## '))  return '<h2 style="margin:18px 0 8px;color:var(--text-main);font-size:1.1rem;font-weight:800;">' + this._mdInline(trimmed.slice(3)) + '</h2>';
+            if (trimmed.startsWith('# '))   return '<h1 style="margin:22px 0 10px;color:var(--text-main);font-size:1.25rem;font-weight:900;">' + this._mdInline(trimmed.slice(2)) + '</h1>';
+            // Llista · totes les línies comencen per "- "
+            const lines = trimmed.split('\n');
+            if (lines.every(l => /^[-*]\s/.test(l.trim()))) {
+                return '<ul style="margin:6px 0;padding-left:1.4em;">' + lines.map(l => '<li>' + this._mdInline(l.trim().replace(/^[-*]\s+/, '')) + '</li>').join('') + '</ul>';
+            }
+            // Paràgraf normal
+            return '<p style="margin:8px 0;">' + this._mdInline(trimmed.replace(/\n/g, '<br>')) + '</p>';
+        }).filter(Boolean);
+        return out.join('\n');
+    }
+    _mdInline(s) {
+        // bold **x** · italic *x*
+        return s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    }
+
     async afterRender() {
         document.getElementById('pvBtnPrint')?.addEventListener('click', () => {
             window.print();
         });
 
-        // UX-AUDIT-001 sprint F · generar narrativa IA adaptada per audiència
+        // LANDING-UNIFY-001 · generar narrativa IA via aiFillService (escalation
+        // chain · 5 providers · marge SOS · audit log) · audienceId opcional.
         document.getElementById('pvBtnGenerateNarrative')?.addEventListener('click', async () => {
             const btn      = document.getElementById('pvBtnGenerateNarrative');
             const status   = document.getElementById('pvNarrativeStatus');
             const audience = document.getElementById('pvAudience')?.value || 'fundadors';
             if (!btn || !this._project) return;
-            const apiKey = await Orchestrator.getApiKey('anthropic');
-            if (!apiKey) {
-                if (status) {
-                    status.style.color = 'var(--accent-red)';
-                    status.innerHTML = 'Falta API key Anthropic · <a href="/settings" data-link style="color:var(--accent-indigo);text-decoration:underline;">obrir Settings</a>';
-                }
-                return;
-            }
             const audienceMeta = PUBLIC_AUDIENCES.find(a => a.id === audience);
-            const ptype = this._project.projectType ? getProjectTypeById(this._project.projectType) : null;
-            const subtype = (this._project.sectorId && this._project.subtypeId) ? getSubtypeById(this._project.sectorId, this._project.subtypeId) : null;
             const orig = btn.textContent;
             btn.disabled = true;
             btn.textContent = '⏳ Generant…';
             if (status) {
                 status.style.color = 'var(--text-muted)';
-                status.textContent = 'Cridant Claude · ~5-12s · cost ~150 tokens.';
+                status.textContent = 'Escalation chain · primary → fallback → premium · ~5-15s.';
             }
-
-            // System prompt · CONCISE · zero verbositat
-            const systemPrompt = `Ets un copywriter expert en projectes cooperatius i d'economia social. Generes textos breus, directes, motivadors, sense floritures, en català.
-Adapta tot el text al públic destinatari indicat. Sigues concret i basa't en les dades reals del projecte.
-Format obligatori · respon NOMÉS amb un objecte JSON vàlid amb aquesta forma exacta · sense markdown ni explicacions:
-{"heroTag":"3-6 paraules","heroTitle":"el mateix nom del projecte o un que el reflecteixi","heroMantra":"1 frase potent · max 18 paraules","roleDescriptions":{"<roleId>":"1 frase concisa adaptada a l'audiència seleccionada · max 20 paraules"}}`;
-
-            const rolesShort = (this._roles || []).map(r => ({
-                id: r.id,
-                label: r.label || r.name || r.id,
-                desc:  r.description || '',
-            }));
-
-            const userPrompt = `PROJECTE:
-- Nom: ${this._project.nombre || this._project.name || this._project.id}
-- Sector: ${this._project.sectorId || 'sense sector'}
-- Subtipus: ${subtype ? subtype.label + ' · ' + subtype.hint : 'genèric'}
-- Tipus Matriu: ${ptype ? ptype.label + ' · ' + ptype.hint : 'sense tipus Matriu'}
-- Audiència destinatària: ${audienceMeta?.label || audience} · ${audienceMeta?.desc || ''}
-
-ROLS DEL PROJECTE (necessites generar 1 frase per cada un):
-${rolesShort.map(r => `- ${r.id}: ${r.label}${r.desc ? ' (actual: ' + r.desc.slice(0, 80) + ')' : ''}`).join('\n')}
-
-INSTRUCCIONS:
-1. heroTag = etiqueta curta tipus "Cooperativa de cures" / "DAO regenerativa" / "Plataforma cooperativa".
-2. heroTitle = el nom del projecte (no l'inventis).
-3. heroMantra = 1 frase potent que captura el propòsit per a l'audiència ${audienceMeta?.label}.
-4. roleDescriptions = mapping {roleId: "1 frase"} explicant què fa el rol des del punt de vista de l'audiència ${audienceMeta?.label}.
-
-Respon NOMÉS el JSON.`;
-
             try {
-                const response = await Orchestrator.callLLM({
-                    preferredEngine: 'anthropic',
-                    systemPrompt,
-                    userPrompt,
-                    responseFormat:  'json_object',
+                const { aiFillDim, markAuditAccepted } = await import('../core/aiFillService.js');
+                const { commitApply } = await import('../core/aiApplyService.js');
+                const result = await aiFillDim({
+                    projectId:       this._project.id,
+                    dimId:           'landing',
+                    audienceId:      audience,
+                    maxOutputTokens: 1400,
                     temperature:     0.4,
-                    maxTokens:       2048,
                 });
-                // Extract JSON
-                const { extractJsonFromLlmOutput } = await import('../core/Orchestrator.js');
-                let parsed;
-                try {
-                    parsed = extractJsonFromLlmOutput(response.text || response.content || response);
-                } catch (_) {
-                    parsed = JSON.parse(response.text || response.content || response);
+                if (!result.draft || !result.parsedDraft) {
+                    throw new Error('La IA no ha retornat JSON parseable · ' + (result.escalatedExhausted ? 'chain exhaurida' : 'desconegut'));
                 }
-                if (!parsed || typeof parsed !== 'object') throw new Error('JSON invàlid retornat per la IA');
-                const narrative = {
-                    heroTag:          String(parsed.heroTag || '').slice(0, 80),
-                    heroTitle:        String(parsed.heroTitle || this._project.nombre || '').slice(0, 120),
-                    heroMantra:       String(parsed.heroMantra || '').slice(0, 240),
-                    roleDescriptions: parsed.roleDescriptions && typeof parsed.roleDescriptions === 'object'
-                        ? Object.fromEntries(Object.entries(parsed.roleDescriptions).slice(0, 50).map(([k, v]) => [k, String(v).slice(0, 240)]))
-                        : {},
-                    audienceId:       audience,
-                    generatedAt:      Date.now(),
-                };
-                // Persistir al projecte · UPDATE_PROJECT preserva la resta de camps
-                await store.dispatch({
-                    type: 'UPDATE_PROJECT_INFO',
-                    payload: {
-                        projectId: this._project.id,
-                        updates:   { presentation_narrative_v1: narrative, updatedAt: Date.now() },
-                    }
+                const apply = await commitApply({
+                    projectId:   this._project.id,
+                    dimId:       'landing',
+                    parsedDraft: result.parsedDraft,
+                    store, kb: KB,
                 });
+                await markAuditAccepted(result.auditId).catch(() => {});
                 if (status) {
                     status.style.color = 'var(--accent-green)';
-                    status.textContent = '✓ Narrativa generada · re-renderitzant…';
+                    status.innerHTML = `✓ ${apply.applied ? apply.summary : 'aplicat'} · model <code>${esc(result.modelKey || '?')}</code> · ` +
+                        `${(result.totalWithMarginEur || result.totalCostEur).toFixed(4)}€ · re-renderitzant…`;
                 }
-                // Re-render in-place sense navegar (evita races · idèntic patró sprint A2)
                 setTimeout(async () => {
                     const app = document.getElementById('app');
                     if (app) {
                         app.innerHTML = await this.getHtml();
                         await this.afterRender();
                     }
-                }, 250);
+                }, 350);
             } catch (err) {
-                console.error('[UX-AUDIT-001 sprint F] generar narrativa:', err);
+                console.error('[LANDING-UNIFY-001] generar narrativa:', err);
                 if (status) {
                     status.style.color = 'var(--accent-red)';
-                    status.textContent = '✗ ' + ((err?.message || 'error desconegut').slice(0, 140));
+                    if (err?.code === 'no-api-key') {
+                        const provs = (err.providers && err.providers.length) ? err.providers.join(', ') : 'els providers';
+                        status.innerHTML = '✗ Falta API key (' + esc(provs) + ') · <a href="/settings" data-link style="color:var(--accent-indigo);text-decoration:underline;">obrir Settings</a>';
+                    } else {
+                        status.textContent = '✗ ' + ((err?.message || 'error desconegut').slice(0, 200));
+                    }
                 }
                 btn.disabled = false;
                 btn.textContent = orig;

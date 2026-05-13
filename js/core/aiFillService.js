@@ -19,12 +19,19 @@ import { applyMarginWithOverride } from './billingService.js';
 const USD_EUR = 0.92;
 
 // Camps JSON mínims esperats per cada dim · pel default evaluator
+// Spec objecte permet validar minArrayLength + minStringLength · evita
+// que provider retorni `{ "newSops": [] }` i compti com a "ok"
+// LANDING-UNIFY-001 · landing requereix description + heroTitle perquè
+// la sortida es renderitzi a /presentation com a landing completa
 const REQUIRED_FIELDS_BY_DIM = Object.freeze({
-    landing:      ['description'],
-    valueMap:     ['addRoles'],
-    deliverables: ['addTransactions'],
-    sops:         ['newSops'],
-    workshops:    ['newWorkshops'],
+    landing:      [
+        { name: 'description', minStringLength: 60 },
+        { name: 'heroTitle',   minStringLength: 3 },
+    ],
+    valueMap:     [{ name: 'addRoles',        minArrayLength: 1 }],
+    deliverables: [{ name: 'addTransactions', minArrayLength: 1 }],
+    sops:         [{ name: 'newSops',         minArrayLength: 1 }],
+    workshops:    [{ name: 'newWorkshops',    minArrayLength: 1 }],
 });
 
 // loadProjectContext · default · llegeix KB i project per omplir l'context
@@ -103,6 +110,7 @@ export async function aiFillDim({
     similarProjects = [],
     criticalRoles   = [],
     extraContext    = null,    // IA-CONTEXT-001 sprint B · user input opcional
+    audienceId      = null,    // LANDING-UNIFY-001 · per a regenerar landings per audiència
     maxOutputTokens = 800,
     temperature     = 0.4,
     stopAt          = 'premium',
@@ -123,6 +131,7 @@ export async function aiFillDim({
         project, sops, workshops, marketItems,
         sectorReadiness, similarProjects, criticalRoles,
         extraContext,
+        audienceId,   // LANDING-UNIFY-001 · propagat al builder (landing l'usa)
     });
 
     // 3 · Setup generate + evaluate per runEscalation
@@ -178,15 +187,24 @@ export async function aiFillDim({
         billing: margin,
     });
 
+    // LANDING-UNIFY-001 · si el caller passa audienceId i el draft té camps
+    // landing-specific, els persistim com a part del parsedDraft (l'applier ja
+    // els consumirà · zero canvi addicional).
+    const parsedDraftLocal = result.output && result.output.text
+        ? _safeParseJson(result.output.text)
+        : null;
+    if (parsedDraftLocal && audienceId && dimId === 'landing') {
+        parsedDraftLocal.audienceId = audienceId;
+    }
+
     return {
         auditId,
         dimId,
         taskKind,
+        audienceId,
         modelKey:    result.modelKey,
         draft:       result.output ? result.output.text : null,
-        parsedDraft: result.output && result.output.text
-            ? _safeParseJson(result.output.text)
-            : null,
+        parsedDraft: parsedDraftLocal,
         attempts:    result.attempts,
         attemptCosts,
         totalCostUsd,

@@ -169,5 +169,41 @@ eq(r.AI_MODELS['gemini/2.5-flash-lite'].quality, 2,                   'F · flas
 // 22 · Context window màxim · Gemini 2.5 Pro · 2M tokens
 t(r.AI_MODELS['gemini/2.5-pro'].contextK >= 1000,                     'F · gemini-pro context ≥1M');
 
+// 23 · runEscalation surface `no-api-key` quan TOTS els providers fallen amb code
+//     Aquest cas és el bug "Ompli amb IA · error desconegut" · el caller pot
+//     ara distingir-ho amb e.code === 'no-api-key' i mostrar CTA a /settings
+const noKeyGen = async (modelKey) => {
+    const provider = r.AI_MODELS[modelKey].provider;
+    const e = new Error('no-api-key · ' + provider);
+    e.code = 'no-api-key'; e.provider = provider;
+    throw e;
+};
+let nkErr = null;
+try {
+    await r.runEscalation({ taskKind: 'sop-structured', generate: noKeyGen, evaluate: async () => ({ ok: true }) });
+} catch (e) { nkErr = e; }
+t(nkErr !== null,                                                     'G · no-api-key chain · throw');
+eq(nkErr?.code,        'no-api-key',                                  'G · throw amb code no-api-key');
+t(Array.isArray(nkErr?.providers) && nkErr.providers.length >= 1,     'G · providers array poblat');
+t(Array.isArray(nkErr?.attempts) && nkErr.attempts.length === 3,      'G · 3 attempts loggats');
+t(nkErr.attempts.every(a => a.errorCode === 'no-api-key'),            'G · cada attempt té errorCode');
+
+// 24 · Mix · alguns no-api-key + altres errors generals → NO surfaces no-api-key
+let mixCount = 0;
+const mixGen = async (modelKey) => {
+    mixCount++;
+    if (mixCount === 1) {
+        const e = new Error('no-api-key'); e.code = 'no-api-key'; e.provider = 'foo';
+        throw e;
+    }
+    throw new Error('http 500');
+};
+let mixErr = null;
+try {
+    await r.runEscalation({ taskKind: 'sop-structured', generate: mixGen, evaluate: async () => ({ ok: true }) });
+} catch (e) { mixErr = e; }
+t(mixErr !== null,                                                    'G · mix errors · throw');
+t(mixErr?.code !== 'no-api-key',                                      'G · mix · NO surface com a no-api-key (no és única causa)');
+
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

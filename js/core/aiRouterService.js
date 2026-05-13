@@ -163,10 +163,13 @@ export async function runEscalation({
     if (r.fallback && stopAt !== 'primary') order.push(r.fallback);
     if (r.premium  && stopAt === 'premium') order.push(r.premium);
     const attempts = [];
+    const missingKeyProviders = new Set();
     let lastErr = null;
+    let anyGenerateSucceeded = false;
     for (const modelKey of order) {
         try {
             const output = await generate(modelKey, ctx);
+            anyGenerateSucceeded = true;
             if (!evaluate) {
                 attempts.push({ modelKey, evalOk: true });
                 return { output, modelKey, attempts };
@@ -179,15 +182,34 @@ export async function runEscalation({
             // continua la cadena
         } catch (e) {
             lastErr = e;
-            attempts.push({ modelKey, evalOk: false, evalReason: 'generate-failed: ' + (e?.message || e) });
+            // Track per-provider · si totes les claus falten, surface-them al caller
+            if (e?.code === 'no-api-key' && e.provider) missingKeyProviders.add(e.provider);
+            attempts.push({
+                modelKey,
+                evalOk:     false,
+                evalReason: 'generate-failed: ' + (e?.message || e),
+                errorCode:  e?.code || null,
+                provider:   e?.provider || null,
+            });
         }
     }
     // Cap modèl ha passat l'avaluador · si tenim almenys un output, retornem-lo
-    // amb un flag · si tots han fallat en throw, llencem.
+    // amb un flag · si tots han fallat en throw, llencem un error informatiu.
     const lastAttempt = attempts[attempts.length - 1];
     if (!lastAttempt) throw new Error('runEscalation · no attempts (chain buida)');
-    if (lastErr && !attempts.some(a => a.evalOk)) {
-        throw new Error('runEscalation · all models failed · last: ' + (lastErr?.message || lastErr));
+    if (lastErr && !attempts.some(a => a.evalOk) && !anyGenerateSucceeded) {
+        // Tots els intents han llançat. Si la causa única és "no-api-key", surface
+        // codi específic perquè la UI mostri CTA cap a /settings amb providers.
+        if (missingKeyProviders.size && attempts.every(a => a.errorCode === 'no-api-key')) {
+            const err = new Error('runEscalation · no API keys configurades · ' + Array.from(missingKeyProviders).join(', '));
+            err.code = 'no-api-key';
+            err.providers = Array.from(missingKeyProviders);
+            err.attempts = attempts;
+            throw err;
+        }
+        const err = new Error('runEscalation · all models failed · last: ' + (lastErr?.message || lastErr));
+        err.attempts = attempts;
+        throw err;
     }
     return { output: null, modelKey: null, attempts, escalatedExhausted: true };
 }
