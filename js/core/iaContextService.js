@@ -84,12 +84,23 @@ export function buildLandingContext({
         '\n## Projectes similars descobrits al permaweb\n' + (peerLines.length ? peerLines.join('\n') : '— cap encara —') + '\n' +
         _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
-        'Genera DRAFT JSON per a la dim "Landing" amb camps:\n' +
-        '  description (≥60 chars · narratiu directe · sense buzzwords)\n' +
-        '  productSuggestions [{title, kind, oneLiner}]  (1-2 items)\n' +
-        '  presentationNarrative (markdown ~150 paraules · # hero · 2 paràgrafs)\n' +
-        'Retorna SOLS JSON · zero text fora.';
-    const systemPrompt = COMMON_SYSTEM_HEADER + '\nDim activa · 🎨 Landing · pes 20% al projectQualityService.';
+        'Genera el contingut clau de la landing del projecte. Format ESTRICTE JSON:\n' +
+        '{\n' +
+        '  "description": "<70-180 chars · qui són, què fan, per qui · sense buzzwords>",\n' +
+        '  "productSuggestions": [\n' +
+        '    { "title": "<≤60 chars>", "kind": "service|product|workshop|membership",\n' +
+        '      "oneLiner": "<≤140 chars · valor concret · sense fluff>" }\n' +
+        '  ],\n' +
+        '  "presentationNarrative": "# <Hero title accionable>\\n\\n<paràgraf 1 · problema/audiència>\\n\\n<paràgraf 2 · solució + diferenciador>"\n' +
+        '}\n' +
+        'REGLES estrictes:\n' +
+        '- description ≥60 chars · directa · idioma català · zero "innovador", "revolucionari", "best-in-class"\n' +
+        '- 1-2 productSuggestions · alineats amb el sector i el purpose\n' +
+        '- presentationNarrative ~120-180 paraules · # hero + 2 paràgrafs · markdown vàlid\n' +
+        '- Retorna SOLS JSON · zero text fora dels braços {}.';
+    const systemPrompt = COMMON_SYSTEM_HEADER +
+        '\nDim activa · 🎨 Landing · pes 20% · primer punt de contacte amb el client.' +
+        '\nPRIORITZA · claredat sobre creativitat · qui paga vol entendre què guanya.';
     return {
         systemPrompt,
         userPrompt,
@@ -118,8 +129,10 @@ export function buildValueMapContext({
         if (p && p.id) _addRef(refs, p);
         return '- ' + (p.name || p.id) + ' · ' + (p.sectorId || '?') + ' · ' + (p.rolesCount || '?') + ' roles';
     });
+    const hasIntangible = (project.vna_transactions || []).some(t => t && t.type === 'intangible');
     const userPrompt =
         '## Projecte\n' +
+        'Id · ' + project.id + '\n' +
         'Nom · ' + (project.nombre || project.name) + '\n' +
         'Sector · ' + (project.sector_id || '—') + '\n' +
         'Purpose · ' + ((project.purpose || project.description || '').slice(0, 240)) + '\n' +
@@ -130,12 +143,29 @@ export function buildValueMapContext({
         '\n## Projectes similars\n' + (peerLines.join('\n') || '—') + '\n' +
         _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
-        'Suggereix EXTENSIONS · NO replaces · al value map. Format JSON:\n' +
-        '  addRoles    [{id, name, castell_level, description, typical_actor, tags}]\n' +
-        '  addTransactions [{id, from, to, deliverable, type (tangible|intangible), is_must}]\n' +
-        'Garanteix ≥1 intangible nova si encara no n\'hi ha · ≥1 cicle recíproc.\n' +
-        'Retorna SOLS JSON · ids amb prefix "ai-" per identificar.';
-    const systemPrompt = COMMON_SYSTEM_HEADER + '\nDim activa · 🗺 Value map · pes 30% (la més important · cor del SOS).';
+        'Suggereix EXTENSIONS al value map · NO substitueixis res existent. Format ESTRICTE JSON:\n' +
+        '{\n' +
+        '  "addRoles": [\n' +
+        '    { "id": "ai-<slug-curt>", "name": "<≤40 chars>",\n' +
+        '      "castell_level": "base|tronc|cim", "description": "<≤200 chars · què fa concretament>",\n' +
+        '      "typical_actor": "<perfil real ex. Designer Sr.>", "tags": ["sector:x", "skill:y"] }\n' +
+        '  ],\n' +
+        '  "addTransactions": [\n' +
+        '    { "id": "ai-tx-<n>", "from": "<roleId existent o nou>", "to": "<roleId>",\n' +
+        '      "deliverable": "<què flueix concretament · ex. \\"feedback estructurat\\">",\n' +
+        '      "type": "tangible|intangible", "is_must": true }\n' +
+        '  ]\n' +
+        '}\n' +
+        'REGLES estrictes:\n' +
+        '- Genera 1-4 addRoles + 2-6 addTransactions\n' +
+        '- ' + (hasIntangible ? 'Ja hi ha intangibles · pots afegir-ne més' : '⚠ NO hi ha intangibles · cal MINIM 1 transaction type:"intangible" (ex. confiança, reputació, feedback)') + '\n' +
+        '- Cal ≥1 cicle recíproc · si A→B està definida, afegeix B→A o un triangle A→B→C→A\n' +
+        '- ids amb prefix "ai-" per identificar drafts\n' +
+        '- Roles existents pots referenciar-los per id sense duplicar-los a addRoles\n' +
+        '- Retorna SOLS JSON · zero text fora dels braços {}.';
+    const systemPrompt = COMMON_SYSTEM_HEADER +
+        '\nDim activa · 🗺 Value map · pes 30% · cor sistèmic del projecte.' +
+        '\nPRIORITZA · transactions concrets sobre roles abstractes · qui dóna què a qui i per què.';
     return {
         systemPrompt,
         userPrompt,
@@ -156,16 +186,32 @@ export function buildDeliverablesContext({ project, extraContext = null } = {}) 
     const rolesLines = rolesWithoutDeliver.slice(0, 10).map(r => '- ' + r.id + ' · ' + r.name + (r.description ? ' · ' + r.description.slice(0, 80) : ''));
     const userPrompt =
         '## Projecte\n' +
+        'Id · ' + project.id + '\n' +
         'Nom · ' + (project.nombre || project.name) + '\n' +
         'Sector · ' + (project.sector_id || '—') + '\n' +
+        'Purpose · ' + ((project.purpose || project.description || '').slice(0, 200)) + '\n' +
         '\n## Roles SENSE entregable declarat (' + rolesWithoutDeliver.length + '/' + roles.length + ')\n' +
         (rolesLines.join('\n') || '— tots tenen entregable · cap a omplir —') + '\n' +
         _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
-        'Per a cada role sense entregable, suggereix 1-2 transactions tangibles + 1 intangible. Format JSON:\n' +
-        '  addTransactions [{id (prefix "ai-"), from (roleId), to (roleId · pot ser nou ad-hoc tipus client/usuari/comunitat), deliverable, type, is_must}]\n' +
-        'Si cal inventar un destí extern, usa "@client" "@usuari" "@comunitat" com a from/to.';
-    const systemPrompt = COMMON_SYSTEM_HEADER + '\nDim activa · 🚚 Deliverables · pes 15%.';
+        'Per a CADA role pendent, suggereix 1-2 transactions tangibles + opcionalment 1 intangible.\n' +
+        'Format ESTRICTE JSON:\n' +
+        '{\n' +
+        '  "addTransactions": [\n' +
+        '    { "id": "ai-tx-<roleId>-1", "from": "<roleId existent>",\n' +
+        '      "to": "@client|@usuari|@comunitat|<altre roleId>",\n' +
+        '      "deliverable": "<què lliura concretament · ≤140 chars · sense \\"servei\\" genèric>",\n' +
+        '      "type": "tangible|intangible", "is_must": true }\n' +
+        '  ]\n' +
+        '}\n' +
+        'REGLES estrictes:\n' +
+        '- from · sempre id EXACTE del role pendent · zero invenció\n' +
+        '- to · pot ser un role existent o destí extern @client/@usuari/@comunitat\n' +
+        '- deliverable · concret i observable (no "valor", "experiència" sense més)\n' +
+        '- Generar 1-2 addTransactions per role · max 8 totals\n' +
+        '- Retorna SOLS JSON · zero text fora.';
+    const systemPrompt = COMMON_SYSTEM_HEADER +
+        '\nDim activa · 🚚 Deliverables · pes 15% · cada role ha de tenir un output mesurable.';
     return {
         systemPrompt,
         userPrompt,
@@ -177,31 +223,66 @@ export function buildDeliverablesContext({ project, extraContext = null } = {}) 
 }
 
 // ─── Dim 4 · SOPs context ─────────────────────────────────────────────────
+// _getSopRoleRef · accepta `roleId` (founderTemplate) i `role_ref`
+// (SopsView · ValueMapView · matriuTemplate) per identificar el role al qual
+// pertany el SOP. Mantè coherència amb projectQualityService._getRoleRef.
+function _getSopRoleRef(s) {
+    if (!s) return null;
+    const c = s.content || {};
+    return c.roleId || c.role_ref || c.roleRef || c.role_id
+        || s.roleId  || s.role_ref || s.roleRef || s.role_id
+        || null;
+}
 export function buildSopsContext({ project, sops = [], sectorReadiness = null, extraContext = null } = {}) {
     if (!project || !project.id) throw new Error('buildSopsContext requires project');
     const refs = [{ nodeId: project.id, type: 'project' }];
     const roles = project.vna_roles || [];
     const projSops = (sops || []).filter(s => (s.content?.projectId || s.projectId) === project.id);
     projSops.forEach(s => _addRef(refs, s));
-    const rolesWithoutSop = roles.filter(r => !projSops.some(s => (s.content?.roleId || s.roleId) === r.id));
-    const rolesLines = rolesWithoutSop.slice(0, 6).map(r => '- ' + r.id + ' · ' + r.name + (r.typical_actor ? ' · actor: ' + r.typical_actor : ''));
-    const examples = projSops.slice(0, 2).map(s => {
+    const rolesWithoutSop = roles.filter(r => !projSops.some(s => _getSopRoleRef(s) === r.id));
+    const rolesLines = rolesWithoutSop.slice(0, 6).map(r => '- ' + r.id + ' · ' + r.name + (r.typical_actor ? ' · actor: ' + r.typical_actor : '') + (r.description ? ' · ' + r.description.slice(0, 70) : ''));
+    const examples = projSops.slice(0, 3).map(s => {
         const c = s.content || s;
-        return '- "' + (c.title || '?').slice(0, 50) + '" (role ' + (c.roleId || '?') + ')';
+        const title = (c.title || c.name || '?').toString().slice(0, 50);
+        const role  = _getSopRoleRef(s) || '?';
+        const stepCount = Array.isArray(c.steps) ? c.steps.length : 0;
+        return '- "' + title + '" (role ' + role + (stepCount ? ' · ' + stepCount + ' steps' : '') + ')';
     });
+    const purpose = (project.purpose || project.description || '').slice(0, 240);
     const userPrompt =
         '## Projecte\n' +
+        'Id · ' + project.id + '\n' +
         'Nom · ' + (project.nombre || project.name) + '\n' +
-        'Sector · ' + (project.sector_id || '—') + '\n' +
+        'Sector · ' + (project.sector_id || project.sectorId || '—') + '\n' +
+        (purpose ? 'Purpose · ' + purpose + '\n' : '') +
         '\n## SOPs ja existents (' + projSops.length + ')\n' + (examples.join('\n') || '— cap encara —') + '\n' +
-        '\n## Roles que necessiten SOP (' + rolesWithoutSop.length + ')\n' + (rolesLines.join('\n') || '— tots cobertats —') + '\n' +
+        '\n## Roles que necessiten SOP (' + rolesWithoutSop.length + '/' + roles.length + ')\n' + (rolesLines.join('\n') || '— tots cobertats —') + '\n' +
         '\n## Context sector\n' + (sectorReadiness || '—') + '\n' +
         _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
-        'Per cada role pendent, draftea un SOP. Format JSON:\n' +
-        '  newSops [{roleId, title (≤60 chars), steps [5-7 strings d\'acció directa · imperatiu]}]\n' +
-        'Cada step ha de començar amb verb d\'acció · ordre cronològic. Idioma · català.';
-    const systemPrompt = COMMON_SYSTEM_HEADER + '\nDim activa · 📋 SOPs · pes 20%.';
+        'Per a CADA role pendent (max 5), draftea un SOP operatiu, executable.\n' +
+        'Format ESTRICTE JSON (sense text addicional ni markdown):\n' +
+        '{\n' +
+        '  "newSops": [\n' +
+        '    {\n' +
+        '      "roleId": "<id exacte del role · sense prefix ai->",\n' +
+        '      "title": "<≤60 chars · descriu funció clau · verb implícit>",\n' +
+        '      "steps": [\n' +
+        '        "<verb imperatiu> <objecte> <criteri d\'èxit>",\n' +
+        '        "... 4-6 steps més, ordre cronològic, sense pleonasmes"\n' +
+        '      ]\n' +
+        '    }\n' +
+        '  ]\n' +
+        '}\n' +
+        'REGLES estrictes:\n' +
+        '- 5-7 steps per SOP · cada step ≤140 chars · idioma català\n' +
+        '- Cada step comença amb verb imperatiu (Verificar, Documentar, Coordinar…)\n' +
+        '- Inclou ≥1 step amb mètrica/criteri d\'èxit (ex. "fins assolir >90% NPS")\n' +
+        '- roleId · referència EXACTA al id del role pendent (no inventar)\n' +
+        '- Si no hi ha roles pendents, retorna {"newSops":[]}';
+    const systemPrompt = COMMON_SYSTEM_HEADER +
+        '\nDim activa · 📋 SOPs · pes 20% · cor de l\'execució operativa.' +
+        '\nPRIORITZA · steps accionables sobre descripcions abstractes.';
     return {
         systemPrompt,
         userPrompt,
@@ -221,19 +302,37 @@ export function buildWorkshopsContext({ project, workshops = [], sectorReadiness
     const existingAudiences = new Set(projWorkshops.map(w => w.content?.audience || w.audience).filter(Boolean));
     const userPrompt =
         '## Projecte\n' +
+        'Id · ' + project.id + '\n' +
         'Nom · ' + (project.nombre || project.name) + '\n' +
         'Sector · ' + (project.sector_id || '—') + '\n' +
         'Purpose · ' + ((project.purpose || project.description || '').slice(0, 200)) + '\n' +
         '\n## Workshops existents (' + projWorkshops.length + ')\n' +
-        projWorkshops.slice(0, 3).map(w => '- ' + (w.content?.title || '?').slice(0, 50) + ' · audience: ' + (w.content?.audience || '—')).join('\n') + '\n' +
+        (projWorkshops.length
+            ? projWorkshops.slice(0, 3).map(w => '- ' + (w.content?.title || '?').slice(0, 50) + ' · audience: ' + (w.content?.audience || '—') + ' · tier: ' + (w.content?.accessTier || 'public')).join('\n')
+            : '— cap encara —') + '\n' +
         '\n## Context sector\n' + (sectorReadiness || '—') + '\n' +
         _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
-        'Si l\'estat és buit · genera 2-3 workshops base. Si ja n\'hi ha · suggereix 1-2 que cobreixin audiences que falten. Format JSON:\n' +
-        '  newWorkshops [{title (≤60 chars), audience (founders|operators|cohort|clients|comunitat), accessTier (public|operator|matriu|cohort), outline (2-4 línies markdown amb llista de continguts)}]\n' +
-        'Existing audiences detectades · ' + (Array.from(existingAudiences).join(', ') || '—') + '\n' +
-        'Triar accessTier coherent · "public" per descoberta · "cohort" per programes premium.';
-    const systemPrompt = COMMON_SYSTEM_HEADER + '\nDim activa · 🎓 Workshops · pes 15%.';
+        (projWorkshops.length
+            ? 'Hi ha ' + projWorkshops.length + ' workshop(s). Suggereix 1-2 NOUS que cobreixin audiences que falten.'
+            : 'Estat buit · genera 2-3 workshops base que reflecteixin el purpose del projecte.') + '\n' +
+        'Format ESTRICTE JSON:\n' +
+        '{\n' +
+        '  "newWorkshops": [\n' +
+        '    { "title": "<≤60 chars · accionable · sense «curs de»>",\n' +
+        '      "audience": "founders|operators|cohort|clients|comunitat",\n' +
+        '      "accessTier": "public|operator|matriu|cohort",\n' +
+        '      "outline": "## Que aprendràs\\n- punt 1\\n- punt 2\\n- punt 3\\n\\n## Format\\n<durada · síncron/asíncron · cohorts>" }\n' +
+        '  ]\n' +
+        '}\n' +
+        'REGLES estrictes:\n' +
+        '- 2-3 workshops si llista buida · 1-2 si ja n\'hi ha\n' +
+        '- Audiences ja cobertes · ' + (Array.from(existingAudiences).join(', ') || '—') + ' · prioritza les NO cobertes\n' +
+        '- accessTier · "public" per descoberta · "operator/matriu" per intermedi · "cohort" per programa pagat\n' +
+        '- outline · markdown amb llista 3-6 bullets concrets + format (durada + síncron/asíncron)\n' +
+        '- Retorna SOLS JSON · zero text fora.';
+    const systemPrompt = COMMON_SYSTEM_HEADER +
+        '\nDim activa · 🎓 Workshops · pes 15% · canal d\'expansió i monetització.';
     return {
         systemPrompt,
         userPrompt,

@@ -64,7 +64,7 @@ eq(deliv.dim, 'deliverables',                                         'D · dim 
 const sopsCtx = ctx.buildSopsContext({ project, sops });
 // r1 té SOP · r2 no → ha de sortir r2 al prompt
 t(sopsCtx.userPrompt.includes('r2'),                                  'E · sops · role sense SOP detectat');
-t(sopsCtx.userPrompt.includes('r1') === false || sopsCtx.userPrompt.includes('Roles que necessiten SOP (1)'), 'E · sops · counts coherents');
+t(/Roles que necessiten SOP \(1\/2\)|Roles que necessiten SOP \(1\)/.test(sopsCtx.userPrompt), 'E · sops · counts coherents (1 missing / 2 totals)');
 eq(sopsCtx.dim, 'sops',                                               'E · dim = sops');
 
 // ─── F · buildWorkshopsContext ──────────────────────────────────────────
@@ -169,6 +169,26 @@ t(r6.ok,                                                              'L · fenc
 
 const r7 = await evOk(null);
 t(!r7.ok && /empty/.test(r7.reason),                                  'L · null output · empty-output');
+
+// IA-CONTEXT-001 sprint C · spec objecte amb minStringLength/minArrayLength
+const evStrict = prov.makeJsonShapeEvaluator([{ name: 'description', minStringLength: 60 }]);
+const tooShort = await evStrict({ text: JSON.stringify({ description: 'too short' }) });
+t(!tooShort.ok && /string-too-short/.test(tooShort.reason),           'L · spec · minStringLength rebutja string curta');
+
+const longEnough = await evStrict({ text: JSON.stringify({ description: 'x'.repeat(80) }) });
+t(longEnough.ok,                                                      'L · spec · minStringLength acceptat amb 80 chars');
+
+const evArr = prov.makeJsonShapeEvaluator([{ name: 'newSops', minArrayLength: 1 }]);
+const emptyArr = await evArr({ text: JSON.stringify({ newSops: [] }) });
+t(!emptyArr.ok && /array-too-short/.test(emptyArr.reason),            'L · spec · minArrayLength rebutja array buit');
+
+const filledArr = await evArr({ text: JSON.stringify({ newSops: [{ roleId: 'r1' }] }) });
+t(filledArr.ok,                                                       'L · spec · minArrayLength acceptat amb 1 element');
+
+// IA-CONTEXT-001 sprint C · evaluator robust a markdown extra al voltant del JSON
+const evRobust = prov.makeJsonShapeEvaluator(['description']);
+const wrapped = await evRobust({ text: 'Aquí tens el JSON:\n\n{"description":"valid"}\n\nEspero ajudi.' });
+t(wrapped.ok,                                                         'L · spec · extreu JSON envoltat de text');
 
 // ─── M · setApiKeyResolver injectable ───────────────────────────────────
 prov._resetApiKeyCache();

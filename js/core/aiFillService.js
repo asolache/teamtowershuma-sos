@@ -19,12 +19,14 @@ import { applyMarginWithOverride } from './billingService.js';
 const USD_EUR = 0.92;
 
 // Camps JSON mínims esperats per cada dim · pel default evaluator
+// Spec objecte permet validar minArrayLength + minStringLength · evita
+// que provider retorni `{ "newSops": [] }` i compti com a "ok"
 const REQUIRED_FIELDS_BY_DIM = Object.freeze({
-    landing:      ['description'],
-    valueMap:     ['addRoles'],
-    deliverables: ['addTransactions'],
-    sops:         ['newSops'],
-    workshops:    ['newWorkshops'],
+    landing:      [{ name: 'description', minStringLength: 60 }],
+    valueMap:     [{ name: 'addRoles',        minArrayLength: 1 }],
+    deliverables: [{ name: 'addTransactions', minArrayLength: 1 }],
+    sops:         [{ name: 'newSops',         minArrayLength: 1 }],
+    workshops:    [{ name: 'newWorkshops',    minArrayLength: 1 }],
 });
 
 // loadProjectContext · default · llegeix KB i project per omplir l'context

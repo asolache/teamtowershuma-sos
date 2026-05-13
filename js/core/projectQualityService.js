@@ -31,6 +31,17 @@ function _get(node, key) {
     return node[key];
 }
 
+// Util · alguns nodes SOP utilitzen `role_ref` (SopsView, ValueMapView,
+// matriuTemplate) i d'altres `roleId` (founderTemplate, tests). Acceptem
+// ambdós variants per evitar el bug "score sops · 0 tot i tenir SOPs creats".
+function _getRoleRef(sop) {
+    return _get(sop, 'roleId')
+        || _get(sop, 'role_ref')
+        || _get(sop, 'roleRef')
+        || _get(sop, 'role_id')
+        || null;
+}
+
 // ─── Dim 1 · Landing ─────────────────────────────────────────────────────
 function scoreLanding(project, { marketItems }) {
     const missing = [];
@@ -185,7 +196,7 @@ function scoreSops(project, { sops }) {
     const projectSops = (sops || []).filter(s => _get(s, 'projectId') === project.id);
     let rolesWithSop = 0;
     for (const r of roles) {
-        if (projectSops.some(s => _get(s, 'roleId') === r.id && _hasSopContent(s))) {
+        if (projectSops.some(s => _getRoleRef(s) === r.id && _hasSopContent(s))) {
             rolesWithSop++;
         }
     }

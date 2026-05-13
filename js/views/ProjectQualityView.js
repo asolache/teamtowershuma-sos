@@ -333,9 +333,17 @@ export default class ProjectQualityView {
             btn.disabled = false;
             btn.textContent = origText;
             if (e?.code === 'no-api-key') {
-                this._toast('⚠ Cal API key de ' + (e.provider || 'el provider') + ' · ves a /settings');
+                // IA-CONTEXT-001 sprint C · si la chain completa ha fallat per
+                // claus absents, el router posa `providers:[...]` per indicar
+                // qualsevol d'aquests serveix per desbloquejar la dim.
+                const provs = (e.providers && e.providers.length)
+                    ? e.providers.join(', ')
+                    : (e.provider || 'el provider');
+                this._showNoApiKeyModal(provs, e);
             } else {
-                this._toast('✗ ' + (e?.message || 'error desconegut'));
+                // Detall expandit · sovint la causa real està als `attempts`
+                const detail = this._summarizeAttempts(e?.attempts);
+                this._toast('✗ ' + (e?.message || 'error desconegut') + (detail ? ' · ' + detail : ''));
             }
             return;
         }
@@ -436,6 +444,45 @@ export default class ProjectQualityView {
         t.className = 'pq-aitoast';
         t.textContent = msg;
         document.body.appendChild(t);
-        setTimeout(() => t.remove(), 3200);
+        setTimeout(() => t.remove(), 4500);
+    }
+
+    // IA-CONTEXT-001 sprint C · resum compacte de la chain quan fail no és no-api-key
+    _summarizeAttempts(attempts) {
+        if (!Array.isArray(attempts) || attempts.length === 0) return '';
+        return attempts.map(a => (a.modelKey || '?') + ' ✗ ' + (a.evalReason || '?')).join(' | ').slice(0, 240);
+    }
+
+    // Modal · explica al usuari que ha de configurar 1+ API key per fer servir
+    // l'escalation chain de la dim · llista providers acceptats + CTA cap a /settings
+    _showNoApiKeyModal(providersStr, err) {
+        const bg = document.createElement('div');
+        bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9990;display:flex;align-items:center;justify-content:center;padding:20px;';
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--bg-panel);border:1px solid var(--accent-orange);border-radius:var(--radius-lg);padding:1.5rem;max-width:520px;width:100%;color:var(--text-main);';
+        card.innerHTML = `
+            <div style="font-size:1.6rem;margin-bottom:8px;">🔑</div>
+            <h2 style="margin:0 0 8px 0;font-size:1.15rem;color:var(--text-main);">Falta API key</h2>
+            <p style="font-size:13px;color:var(--text-secondary);line-height:1.55;margin:0 0 12px;">
+                Per fer servir <strong>🧠 Ompli amb IA</strong> cal almenys una API key
+                configurada d'un dels providers de la <em>chain</em> d'aquesta dim:
+            </p>
+            <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:8px 12px;font-family:var(--font-mono);font-size:12px;color:var(--accent-indigo);margin-bottom:14px;">
+                ${_esc(providersStr)}
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);line-height:1.5;margin:0 0 14px;">
+                Els teus tokens es guarden encriptats localment · cada cèntim consumit
+                queda registrat a l'<code>ai_audit</code> del KB per a transparència.
+            </p>
+            <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+                <button class="pq-dim-noapp" id="pqNkClose">Tancar</button>
+                <a href="/settings" data-link class="pq-dim-aibtn" style="display:inline-block;text-decoration:none;text-align:center;">⚙ Anar a /settings</a>
+            </div>
+        `;
+        bg.appendChild(card);
+        document.body.appendChild(bg);
+        const close = () => bg.remove();
+        bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+        document.getElementById('pqNkClose')?.addEventListener('click', close);
     }
 }
