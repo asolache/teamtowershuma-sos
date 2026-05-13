@@ -64,6 +64,8 @@ const ROUTES = [
     { path: '/mobile',       view: () => import('./views/MobileMockupView.js') },
     // PROJ-QUALITY-001 sprint E · vista detall qualitat del projecte
     { path: '/quality',      view: () => import('./views/ProjectQualityView.js') },
+    // NEURAL-PATH-001 sprint B · timeline d'activitat + bundle builder
+    { path: '/path',         view: () => import('./views/NeuralPathView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 

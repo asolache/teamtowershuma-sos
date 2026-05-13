@@ -318,6 +318,20 @@ const rNoSeed = await fill.aiFillDim({
 t(rNoSeed.sectorSeed === null,                                         'K4 · loader fail · sectorSeed null · no throw');
 t(promptReceived && !promptReceived.includes('REFERÈNCIA · roles típics'), 'K4 · loader fail · prompt sense secció REFERÈNCIA');
 
+// ─── K5 · NEURAL-PATH-001 sprint B · bundleId · result inclou bundleInfo
+// (degrade silenciós si KB no està · sols verifica que la propietat existeix
+// al return shape · l'integració real necessita un KB amb un bundle persistit)
+prefProviderCalls = [];
+const rNoBundle = await fill.aiFillDim({
+    projectId:    'proj-test-1',
+    dimId:        'landing',
+    loadContext:  mockLoad,
+    provider:     mockProvider,
+    persistAudit: async () => 'a',
+});
+t('bundleInfo' in rNoBundle,                                          'K5 · result conté bundleInfo (null per defecte)');
+t(rNoBundle.bundleInfo === null,                                      'K5 · bundleInfo=null quan no es passa bundleId');
+
 // ─── L · makeJsonShapeEvaluator ─────────────────────────────────────────
 import * as prov from '../core/aiProviderService.js';
 const evOk = prov.makeJsonShapeEvaluator(['description']);
