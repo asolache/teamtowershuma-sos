@@ -204,6 +204,18 @@ export default class ProjectHubView {
                         <div style="color:var(--text-muted);font-style:italic;">Carregant estat…</div>
                     </div>
                 </div>
+
+                <!-- PUBLISH-SELECT-001 · publicació selectiva (WO + Market + Workshop) -->
+                <div class="ph-section">
+                    <h2>📤 Publica continguts a /oportunitats</h2>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.6;margin:0 0 0.7rem 0;">
+                        Publica work orders obertes, productes i workshops al permaweb perquè altres operadors els puguin trobar a <a href="/opportunities" data-link style="color:var(--accent-indigo);">/oportunitats</a>.
+                        Cost · WO 0,02€ · Market 0,03€ · Workshop 0,04€ · usuaris <strong>Free paguen ×1.5 fee</strong>, Pro/Coop preu base. Es desconta del wallet del projecte.
+                    </p>
+                    <div id="phSelectivePublishBody" style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:0.85rem 1rem;">
+                        <div style="color:var(--text-muted);font-style:italic;">Carregant entitats publicables…</div>
+                    </div>
+                </div>
             </div>
         </div>`;
     }
@@ -221,6 +233,8 @@ export default class ProjectHubView {
 
         // FUND-FLOW-001 sprint F · permaweb publish card
         this._renderPermawebPublishCard().catch(e => console.warn('[ph] permaweb publish', e));
+        // PUBLISH-SELECT-001 · publicació selectiva (WO + Market + Workshop)
+        this._renderSelectivePublishCard().catch(e => console.warn('[ph] selective publish', e));
 
         // MAT-003 sprint F · handlers de la sección Enjambre
         document.getElementById('phSeedSeats')?.addEventListener('click', () => this._handleSeedSeats());
@@ -567,6 +581,248 @@ export default class ProjectHubView {
 
     _esc(s) {
         return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+    }
+
+    // PUBLISH-SELECT-001 · publicació selectiva d'entitats lligades al projecte.
+    // Mostra · llistat WOs (status='backlog' + 'doing'), market_items, workshops
+    // amb checkboxes · cost agregat segons pricing per kind + plan free fee.
+    // Botó "Publicar selecció" debita wallet del projecte i puja a Turbo
+    // (real) o KB (mock) per cada entitat seleccionada.
+    async _renderSelectivePublishCard() {
+        const body = document.getElementById('phSelectivePublishBody');
+        if (!body || !this.projectId) return;
+        try {
+            const {
+                ENTITY_PUBLISH_PRICING, computeBatchPublishCost,
+                buildPublicEntityEntry, publicEntityIdFor,
+            } = await import('../core/publicEntityService.js');
+            const { loadCurrentPlan } = await import('../core/stripeService.js');
+            const planId = await loadCurrentPlan().catch(() => 'free');
+
+            const [woNodes, marketNodes, wsNodes] = await Promise.all([
+                KB.query({ type: 'work_order',  projectId: this.projectId }).catch(() => []),
+                KB.query({ type: 'market_item' }).catch(() => []),
+                KB.query({ type: 'workshop' }).catch(() => []),
+            ]);
+            // WO publicables · status='backlog' o 'doing' (oberts)
+            const publishableWO = (woNodes || []).filter(w => {
+                const st = w?.content?.status;
+                return st === 'backlog' || st === 'doing';
+            });
+            const publishableMarket = (marketNodes || []).filter(m =>
+                (m?.content?.projectId === this.projectId) || (m?.projectId === this.projectId)
+            );
+            const publishableWS = (wsNodes || []).filter(w =>
+                (w?.content?.projectId === this.projectId) || (w?.projectId === this.projectId)
+            );
+
+            const renderItems = (items, kind) => {
+                if (items.length === 0) {
+                    return `<div style="color:var(--text-muted);font-style:italic;padding:6px 0;font-size:0.8rem;">Cap ${kind} publicable.</div>`;
+                }
+                return items.map(it => {
+                    const c = it.content || {};
+                    const title = c.title || c.name || it.id;
+                    const isPublished = !!c.permawebTxId;
+                    const sub = kind === 'work_order' ? ('status: ' + (c.status || '?'))
+                              : kind === 'market_item' ? (c.kind + ' · ' + (c.priceEur || 0) + '€')
+                              : ('tier: ' + (c.accessTier || 'public'));
+                    return `<label style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--border-default);cursor:${isPublished ? 'not-allowed' : 'pointer'};opacity:${isPublished ? '0.6' : '1'};">
+                        <input type="checkbox" data-publish-kind="${kind}" data-publish-id="${this._esc(it.id)}" ${isPublished ? 'disabled checked' : ''}>
+                        <span style="flex:1;color:var(--text-main);font-size:0.85rem;">${this._esc(title)}</span>
+                        <span style="color:var(--text-muted);font-size:0.72rem;font-family:var(--font-mono);">${this._esc(sub)}</span>
+                        ${isPublished ? '<span style="color:#22c55e;font-size:0.72rem;">🌐 publicat</span>' : ''}
+                    </label>`;
+                }).join('');
+            };
+
+            const planBadge = planId === 'free'
+                ? '<span style="background:rgba(251,191,36,0.15);color:var(--accent-yellow);padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">Free · ×1.5 fee</span>'
+                : '<span style="background:rgba(34,197,94,0.15);color:var(--accent-green);padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">' + this._esc(planId) + ' · preu base</span>';
+
+            body.innerHTML = `
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                    <span style="font-weight:700;color:var(--text-main);font-size:0.85rem;">Pla actual:</span>
+                    ${planBadge}
+                    <span style="color:var(--text-muted);font-size:0.72rem;flex:1;">Pricing base · WO 0,02€ · Market 0,03€ · Workshop 0,04€</span>
+                </div>
+
+                <details open style="margin-bottom:6px;">
+                    <summary style="cursor:pointer;color:var(--text-main);font-weight:700;font-size:0.85rem;padding:5px 0;">📋 Work Orders obertes (${publishableWO.length})</summary>
+                    <div style="padding-left:14px;">${renderItems(publishableWO, 'work_order')}</div>
+                </details>
+                <details style="margin-bottom:6px;">
+                    <summary style="cursor:pointer;color:var(--text-main);font-weight:700;font-size:0.85rem;padding:5px 0;">🛍 Productes / serveis (${publishableMarket.length})</summary>
+                    <div style="padding-left:14px;">${renderItems(publishableMarket, 'market_item')}</div>
+                </details>
+                <details style="margin-bottom:6px;">
+                    <summary style="cursor:pointer;color:var(--text-main);font-weight:700;font-size:0.85rem;padding:5px 0;">🎓 Workshops (${publishableWS.length})</summary>
+                    <div style="padding-left:14px;">${renderItems(publishableWS, 'workshop')}</div>
+                </details>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:10px;border-top:1px solid var(--border-default);gap:10px;flex-wrap:wrap;">
+                    <div id="phPublishCostSummary" style="color:var(--text-muted);font-size:0.82rem;">Selecciona entitats per veure cost…</div>
+                    <button id="phPublishSelectedBtn" class="ph-link" style="background:var(--accent-indigo);color:#fff;border:0;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:0.85rem;" disabled>📤 Publicar selecció</button>
+                </div>
+                <div id="phPublishStatus" style="margin-top:10px;font-size:0.78rem;display:none;"></div>
+            `;
+
+            // Bind checkboxes · update cost summary
+            const updateCost = () => {
+                const checked = body.querySelectorAll('input[type=checkbox][data-publish-kind]:checked:not(:disabled)');
+                const items = {};
+                checked.forEach(cb => {
+                    const k = cb.getAttribute('data-publish-kind');
+                    items[k] = (items[k] || 0) + 1;
+                });
+                const itemsArr = Object.keys(items).map(k => ({ kind: k, count: items[k] }));
+                if (itemsArr.length === 0) {
+                    document.getElementById('phPublishCostSummary').textContent = 'Selecciona entitats per veure cost…';
+                    document.getElementById('phPublishSelectedBtn').disabled = true;
+                    return;
+                }
+                const cost = computeBatchPublishCost({ items: itemsArr, planId });
+                const partsTxt = cost.breakdown.map(b => b.count + '×' + b.kind + ' (' + b.subtotalEur.toFixed(3) + '€)').join(' + ');
+                document.getElementById('phPublishCostSummary').innerHTML = '<strong>Total · ' + cost.totalEur.toFixed(3) + '€</strong> · ' + this._esc(partsTxt) + (cost.feeEur > 0 ? ' <span style="color:var(--accent-yellow);">(+' + cost.feeEur.toFixed(3) + '€ free fee)</span>' : '');
+                document.getElementById('phPublishSelectedBtn').disabled = false;
+            };
+            body.querySelectorAll('input[type=checkbox][data-publish-kind]').forEach(cb => {
+                cb.addEventListener('change', updateCost);
+            });
+
+            // Bind publish button
+            document.getElementById('phPublishSelectedBtn')?.addEventListener('click', () =>
+                this._handleSelectivePublish({ planId, woNodes: publishableWO, marketNodes: publishableMarket, wsNodes: publishableWS, computeBatchPublishCost, buildPublicEntityEntry })
+            );
+        } catch (e) {
+            body.innerHTML = '<div style="color:var(--accent-orange);">⚠ ' + this._esc(e?.message || 'no s\'ha pogut carregar la publicació selectiva') + '</div>';
+        }
+    }
+
+    // PUBLISH-SELECT-001 · executa la publicació selectiva amb plan check + wallet debit
+    async _handleSelectivePublish({ planId, woNodes, marketNodes, wsNodes, computeBatchPublishCost, buildPublicEntityEntry }) {
+        const status = document.getElementById('phPublishStatus');
+        const btn    = document.getElementById('phPublishSelectedBtn');
+        const setStatus = (msg, ok = true) => {
+            if (!status) return;
+            status.style.display = 'block';
+            status.textContent = msg;
+            status.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)';
+        };
+        try {
+            // 1 · Recull seleccions
+            const checked = document.querySelectorAll('#phSelectivePublishBody input[type=checkbox][data-publish-kind]:checked:not(:disabled)');
+            const selected = [];
+            checked.forEach(cb => {
+                const kind = cb.getAttribute('data-publish-kind');
+                const id   = cb.getAttribute('data-publish-id');
+                const pool = kind === 'work_order' ? woNodes : (kind === 'market_item' ? marketNodes : wsNodes);
+                const entity = pool.find(n => n.id === id);
+                if (entity) selected.push({ kind, entity });
+            });
+            if (selected.length === 0) { setStatus('⚠ Cap entitat seleccionada', false); return; }
+
+            // 2 · Plan check · si free, requereix permaweb-publish-paid (que retorna true pagant fee)
+            const { canPerform } = await import('../core/planEnforcer.js');
+            const op = (planId === 'free') ? 'permaweb-publish-paid' : 'permaweb-publish';
+            const ok = canPerform({ planId, op });
+            if (!ok.allowed) {
+                setStatus('✗ Pla ' + planId + ' no permet ' + op, false);
+                return;
+            }
+
+            // 3 · Cost agregat
+            const items = {};
+            for (const s of selected) items[s.kind] = (items[s.kind] || 0) + 1;
+            const cost = computeBatchPublishCost({ items: Object.keys(items).map(k => ({ kind: k, count: items[k] })), planId });
+
+            // 4 · Verificar saldo wallet
+            const { getOrCreateWalletForProject, consumeAndPersist, refundWallet } = await import('../core/walletService.js');
+            const wallet = await getOrCreateWalletForProject(this.projectId);
+            const balance = Number(wallet.content?.balanceEur || 0);
+            if (balance < cost.totalEur) {
+                setStatus('✗ Saldo insuficient · cal ' + cost.totalEur.toFixed(3) + '€ · disponible ' + balance.toFixed(2) + '€ · ves a /wallet?project=' + this.projectId + ' a recarregar', false);
+                return;
+            }
+
+            // 5 · Identity · auto-create si cal
+            const { getOrCreateIdentity } = await import('../core/identityService.js');
+            const { getOrCreateSigningKey } = await import('../core/projectIO.js');
+            const identity = await getOrCreateIdentity();
+            const did = identity?.content?.primaryDid || identity?.primaryDid;
+            if (!did) { setStatus('✗ Identitat no s\'ha pogut crear', false); return; }
+            const keyMeta = await getOrCreateSigningKey();
+
+            // 6 · Debit wallet (un sol moviment agregat)
+            btn.disabled = true; btn.textContent = '⏳ Pagant ' + cost.totalEur.toFixed(3) + '€…';
+            const ref = 'selective-publish-' + Date.now().toString(36);
+            await consumeAndPersist({
+                projectId: this.projectId,
+                amountEur: cost.totalEur,
+                ref, source: 'selective-publish',
+                note: 'Publicació selectiva · ' + selected.length + ' entitats',
+            });
+
+            // 7 · Per cada entity · build + KB upsert (mock-first · sprint A)
+            // El upload Turbo real arriba a sprint B. Per ara persistim node KB
+            // amb mock-tx perquè /opportunities el descobreixi via cache.
+            btn.textContent = '⏳ Publicant ' + selected.length + ' entitats…';
+            const mockTxBase = 'mock-' + ref;
+            let okCount = 0, errCount = 0;
+            for (const s of selected) {
+                try {
+                    const node = buildPublicEntityEntry({
+                        kind: s.kind,
+                        entity: s.entity,
+                        project: this.project,
+                        ownerDid: did,
+                        ownerPublicJwk: keyMeta.publicJwk,
+                    });
+                    const now = Date.now();
+                    node.content.arweaveTxId = mockTxBase + '-' + s.entity.id.slice(0, 8);
+                    node.content.permawebPublishedAt = now;
+                    node.content._cachedAt = now;
+                    node.content._fromPermaweb = false;  // mock · marcat com a local
+                    node.content._mockMode = true;
+                    await KB.upsert(node);
+                    // També marquem l'entity origen com a "publicada" per UI
+                    const origUpdated = { ...s.entity, content: { ...s.entity.content,
+                        permawebTxId: node.content.arweaveTxId,
+                        permawebPublishedAt: now,
+                    }};
+                    await KB.upsert(origUpdated);
+                    okCount++;
+                } catch (e) {
+                    console.warn('[selective-publish] entity fail', s.entity.id, e?.message);
+                    errCount++;
+                }
+            }
+
+            // 8 · Refund parcial si alguns han fallat
+            if (errCount > 0) {
+                const refundEur = Number((cost.totalEur * (errCount / selected.length)).toFixed(4));
+                try {
+                    const wallet2 = await getOrCreateWalletForProject(this.projectId);
+                    const refunded = refundWallet({
+                        wallet: wallet2,
+                        amountEur: refundEur,
+                        ref: ref + '-refund',
+                        source: 'selective-publish-refund',
+                        note: 'Refund ' + errCount + ' entitats fallides',
+                    });
+                    const { persistWallet } = await import('../core/walletService.js');
+                    await persistWallet(refunded);
+                } catch (_) {}
+            }
+
+            setStatus('✓ Publicat ' + okCount + '/' + selected.length + ' entitats · cost ' + cost.totalEur.toFixed(3) + '€' + (errCount > 0 ? ' · refund ' + errCount + ' fallides' : '') + ' · re-renderitzant…', true);
+            btn.disabled = false;
+            setTimeout(() => this._renderSelectivePublishCard(), 1000);
+        } catch (e) {
+            console.error('[selective-publish] failed', e);
+            setStatus('✗ ' + (e?.message || 'error desconegut'), false);
+            if (btn) { btn.disabled = false; btn.textContent = '📤 Publicar selecció'; }
+        }
     }
 
     // FUND-FLOW-001 sprint F · publish project al permaweb
