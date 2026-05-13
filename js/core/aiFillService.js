@@ -102,6 +102,7 @@ export async function aiFillDim({
     sectorReadiness = null,
     similarProjects = [],
     criticalRoles   = [],
+    extraContext    = null,    // IA-CONTEXT-001 sprint B · user input opcional
     maxOutputTokens = 800,
     temperature     = 0.4,
     stopAt          = 'premium',
@@ -117,10 +118,11 @@ export async function aiFillDim({
     // 1 · Pre-càrrega KB
     const { project, sops, workshops, marketItems } = await loadContext({ projectId });
 
-    // 2 · Build context per dim
+    // 2 · Build context per dim · inclou extraContext si l'usuari l'ha passat
     const ctx = buildContextForDim(dimId, {
         project, sops, workshops, marketItems,
         sectorReadiness, similarProjects, criticalRoles,
+        extraContext,
     });
 
     // 3 · Setup generate + evaluate per runEscalation
