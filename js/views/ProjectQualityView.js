@@ -238,17 +238,19 @@ export default class ProjectQualityView {
     async afterRender() {
         // IA-CONTEXT-001 sprint A · botons "Ompli amb IA" ara fan crides reals
         const { aiFillDim, markAuditAccepted } = await import('../core/aiFillService.js');
+        // IA-CONTEXT-001 sprint C · accept aplica el draft al projecte
+        const { commitApply } = await import('../core/aiApplyService.js');
         document.querySelectorAll('[data-aifill]').forEach(btn => {
-            btn.addEventListener('click', () => this._handleAiFill(btn, aiFillDim, markAuditAccepted));
+            btn.addEventListener('click', () => this._handleAiFill(btn, aiFillDim, markAuditAccepted, commitApply));
         });
         document.querySelectorAll('[data-noapp]').forEach(btn => {
             btn.addEventListener('click', () => {
-                this._toast('🚧 "no aplicable" · disponible al sprint F · pesos rebalancejats per al projecte');
+                this._toast('🚧 "no aplicable" · disponible al sprint D · pesos rebalancejats per al projecte');
             });
         });
     }
 
-    async _handleAiFill(btn, aiFillDim, markAuditAccepted) {
+    async _handleAiFill(btn, aiFillDim, markAuditAccepted, commitApply) {
         const dimId = btn.getAttribute('data-aifill');
         if (!dimId || !this._projectId) return;
         const origText = btn.textContent;
@@ -278,10 +280,10 @@ export default class ProjectQualityView {
             this._toast('⚠ Escalation exhausted · cap modèl ha passat l\'evaluator');
             return;
         }
-        this._showDraftModal({ dimId, result, markAuditAccepted });
+        this._showDraftModal({ dimId, result, markAuditAccepted, commitApply });
     }
 
-    _showDraftModal({ dimId, result, markAuditAccepted }) {
+    _showDraftModal({ dimId, result, markAuditAccepted, commitApply }) {
         // Backdrop
         const bg = document.createElement('div');
         bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9990;display:flex;align-items:center;justify-content:center;padding:20px;';
@@ -297,6 +299,7 @@ export default class ProjectQualityView {
         const pretty = result.parsedDraft
             ? JSON.stringify(result.parsedDraft, null, 2)
             : (result.draft || '');
+        const canApply = !!result.parsedDraft;
         card.innerHTML = `
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
                 <h2 style="margin:0;font-size:1.2rem;color:var(--text-main);">🧠 Draft IA · dim ${escapeHtml(dimId)}</h2>
@@ -308,11 +311,9 @@ export default class ProjectQualityView {
             <pre style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:12px;font-size:12px;font-family:var(--font-mono);white-space:pre-wrap;word-break:break-word;color:var(--text-secondary);max-height:340px;overflow:auto;">${escapeHtml(pretty)}</pre>
             <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap;">
                 <button class="pq-dim-noapp" id="pqDraftReject">✕ Rebutjar</button>
-                <button class="pq-dim-aibtn"  id="pqDraftAccept">✓ Acceptar (marca audit)</button>
+                <button class="pq-dim-aibtn"  id="pqDraftAccept" ${canApply ? '' : 'disabled'}>${canApply ? '✓ Acceptar i aplicar al projecte' : '✓ Acceptar (no parseable · sols audit)'}</button>
             </div>
-            <div style="margin-top:10px;font-size:10px;color:var(--text-muted);line-height:1.5;">
-                ℹ Sprint A · acceptar registra l'audit log · l'aplicació real del draft al KB (afegir roles · SOPs · workshops) arriba al sprint C de IA-CONTEXT-001. Per ara, el draft es queda al log per a revisió manual.
-            </div>
+            <div id="pqApplyStatus" style="margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.5;"></div>
         `;
         bg.appendChild(card);
         document.body.appendChild(bg);
@@ -320,9 +321,48 @@ export default class ProjectQualityView {
         bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
         document.getElementById('pqDraftReject')?.addEventListener('click', close);
         document.getElementById('pqDraftAccept')?.addEventListener('click', async () => {
-            await markAuditAccepted(result.auditId).catch(() => {});
-            this._toast('✓ Draft acceptat · audit log marcat');
-            close();
+            const acceptBtn = document.getElementById('pqDraftAccept');
+            const status    = document.getElementById('pqApplyStatus');
+            acceptBtn.disabled = true;
+            if (canApply) {
+                acceptBtn.textContent = '⏳ Aplicant…';
+                try {
+                    const { store } = await import('../core/store.js');
+                    const { KB }    = await import('../core/kb.js');
+                    const apply = await commitApply({
+                        projectId:   this._projectId,
+                        dimId,
+                        parsedDraft: result.parsedDraft,
+                        store, kb: KB,
+                    });
+                    await markAuditAccepted(result.auditId).catch(() => {});
+                    if (apply.applied) {
+                        this._toast('✓ Aplicat · ' + apply.summary);
+                    } else {
+                        this._toast('🛈 Draft acceptat però sense canvis aplicables · ' + apply.summary);
+                    }
+                    close();
+                    // Refresh score post-apply · re-navigate al mateix /quality
+                    setTimeout(() => {
+                        try {
+                            if (typeof window.navigateTo === 'function') {
+                                window.navigateTo(window.location.pathname + window.location.search);
+                            } else {
+                                window.location.reload();
+                            }
+                        } catch (_) { window.location.reload(); }
+                    }, 600);
+                } catch (e) {
+                    status.textContent = '✗ ' + (e?.message || 'apply va fallar');
+                    status.style.color = 'var(--accent-red)';
+                    acceptBtn.disabled = false;
+                    acceptBtn.textContent = '✓ Acceptar i aplicar al projecte';
+                }
+            } else {
+                await markAuditAccepted(result.auditId).catch(() => {});
+                this._toast('✓ Audit log marcat (draft no parseable · no s\'aplica)');
+                close();
+            }
         });
     }
 
