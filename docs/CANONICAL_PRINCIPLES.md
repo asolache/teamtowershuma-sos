@@ -45,6 +45,10 @@ Every artefact in SOS is a **typed KB node** with:
 | `workshop` | WorkshopsView | Educational session |
 | `soc` | pactService | Standard Operating Charter |
 | `efficiency_log` | EfficiencyView | Context pruning metrics |
+| `attestation` | (planned) attestationService | Signed dual-entry record (TEA) |
+| `connect_sale` | connectSaleService | Stripe Connect product purchase attestation |
+| `neural_path_step` | neuralPathService | Step nodal d'usuari (visit/edit/ai-fill/publish/…) |
+| `neural_path_bundle` | neuralPathService | Selecció curada de steps + refs · context per a IA |
 
 ---
 
@@ -100,10 +104,13 @@ This is the **slicing pie** distribution model · contribution-weighted ownershi
 ## Sprint backlog aligned with principles
 
 ### High priority (next sprints)
-- ✅ **PR-F (current)** · Stripe Connect platform fee tracking + workshop buyer receipt + TEA attestation hooks
+- ✅ **PR-F (closed)** · Stripe Connect platform fee tracking + workshop buyer receipt + TEA attestation hooks
+- ✅ **PR-G (current)** · Neural Path Log · steps visit/edit/ai-fill/publish + context bundles per a IA
 - ⏳ Turbo upload real for secondary entities (sprint A is mock-first)
 - ⏳ Triple-entry validation · every wallet movement must have payer/receiver attestation
 - ⏳ Stripe Connect product · sub-account record `connect_sale` node when buyer pays seller
+- ⏳ Neural Path UI · `/path` view amb timeline + bundle builder (curador de context)
+- ⏳ Wire Neural Path bundles a aiFillService · `bundleId` opcional → context personalitzat real
 
 ### Medium priority
 - ⏳ Smart contract integration · Gnosis Safe per project (multi-sig treasury)

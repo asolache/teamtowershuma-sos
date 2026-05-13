@@ -98,6 +98,25 @@ async function router() {
         const app       = document.getElementById('app');
         app.innerHTML   = await view.getHtml();
         if (typeof view.afterRender === 'function') await view.afterRender();
+        // NEURAL-PATH-001 · log de visita · fire-and-forget · zero bloqueig
+        (async () => {
+            try {
+                const { appendStep } = await import('./core/neuralPathService.js');
+                const { KB } = await import('./core/kb.js');
+                const identities = await KB.query({ type: 'user_identity' }).catch(() => []);
+                const ownerHandle = identities[0]?.content?.handle || '@alvaro';
+                const params = new URLSearchParams(window.location.search || '');
+                const projectId = params.get('project') || null;
+                await appendStep({
+                    kb: KB,
+                    ownerHandle,
+                    kind: 'visit',
+                    route: window.location.pathname + window.location.search,
+                    projectId,
+                    summary: 'Visita · ' + path,
+                });
+            } catch (_) { /* silent */ }
+        })();
         // UX-AUDIT-001 sprint A2 · el delegado global en `document` (al final
         // de este módulo) ya cubre todos los [data-link]. Antes se añadía
         // además un listener por elemento aquí, lo que disparaba navigateTo
