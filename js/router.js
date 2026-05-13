@@ -191,6 +191,12 @@ async function router() {
             });
         } catch (e) { console.warn('[Router · bottom-nav]', e); }
 
+        // WALLET-AUTH-001 sprint D · bind delegation per al modal "🔑 Identifica't"
+        try {
+            const { bindIdentifyTriggers } = await import('./core/identifyModalService.js');
+            bindIdentifyTriggers();
+        } catch (e) { /* silent */ }
+
         // PERM-DISCO-001 sprint A · background sync silent · cooldown 1h
         // Es dispara a CADA navigation però el throttle a syncSchedulerService
         // evita que es repeteixi · sols 1 sync per hora màxim · silent UX

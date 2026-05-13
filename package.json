@@ -5,7 +5,7 @@
     "type": "module",
     "private": true,
     "scripts": {
-        "test": "node js/tests/publicRegistry.test.js && node js/tests/fundFlow.test.js && node js/tests/projectQuality.test.js && node js/tests/dashboardOnboarding.test.js && node js/tests/arweaveWalletExt.test.js && node js/tests/aiRouter.test.js && node js/tests/stripeVerify.test.js && node js/tests/projectVersioning.test.js && node js/tests/iaFill.test.js && node js/tests/aiProviders.test.js && node js/tests/permawebSyncFix.test.js && node js/tests/aiApply.test.js && node js/tests/syncScheduler.test.js && node js/tests/billing.test.js && node js/tests/workshopRevenue.test.js && node js/tests/planEnforcer.test.js && node js/tests/receipt.test.js && node js/tests/attestation.test.js && node js/tests/aiEvaluator.test.js",
+        "test": "node js/tests/publicRegistry.test.js && node js/tests/fundFlow.test.js && node js/tests/projectQuality.test.js && node js/tests/dashboardOnboarding.test.js && node js/tests/arweaveWalletExt.test.js && node js/tests/aiRouter.test.js && node js/tests/stripeVerify.test.js && node js/tests/projectVersioning.test.js && node js/tests/iaFill.test.js && node js/tests/aiProviders.test.js && node js/tests/permawebSyncFix.test.js && node js/tests/aiApply.test.js && node js/tests/syncScheduler.test.js && node js/tests/billing.test.js && node js/tests/workshopRevenue.test.js && node js/tests/planEnforcer.test.js && node js/tests/receipt.test.js && node js/tests/attestation.test.js && node js/tests/aiEvaluator.test.js && node js/tests/identifyModal.test.js",
         "test:sync-scheduler": "node js/tests/syncScheduler.test.js",
         "test:billing": "node js/tests/billing.test.js",
         "test:workshop-revenue": "node js/tests/workshopRevenue.test.js",

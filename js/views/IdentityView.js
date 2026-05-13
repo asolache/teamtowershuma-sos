@@ -28,6 +28,8 @@ import {
     isWanderAvailable, connectWander, disconnectWander,
     getWanderConnection,
 } from '../core/arweaveWalletService.js';
+// WALLET-AUTH-001 sprint D · modal unificat "🔑 Identifica't"
+import { identifyButtonHtml } from '../core/identifyModalService.js';
 
 export default class IdentityView {
     constructor() {
@@ -83,7 +85,7 @@ export default class IdentityView {
                 <a href="/" data-link class="id-logo">🗼 Team<span>Towers</span></a>
                 <span class="id-title">Identidad · perfil del operador ${renderExplainerBadge('did', { size: 'xs' })} ${renderExplainerBadge('sbt', { size: 'xs' })}</span>
                 <div class="id-spacer"></div>
-                
+                ${identifyButtonHtml({ size: 'sm' })}
             </div>
 
             <div class="id-main">
