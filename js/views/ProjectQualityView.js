@@ -346,7 +346,7 @@ export default class ProjectQualityView {
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
                 <h2 style="margin:0;font-size:1.2rem;color:var(--text-main);">🧠 Draft IA · dim ${escapeHtml(dimId)}</h2>
                 <span style="background:rgba(99,102,241,0.15);color:var(--accent-indigo);padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${escapeHtml(result.modelKey || '?')}</span>
-                <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">~${result.totalCostEur.toFixed(4)}€ · ${result.contextTokens} tokens</span>
+                <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" title="Provider · ${result.totalCostEur.toFixed(4)}€ · Marge SOS ${result.marginPct || 0}% · Total ${(result.totalWithMarginEur || result.totalCostEur).toFixed(4)}€">~${(result.totalWithMarginEur || result.totalCostEur).toFixed(4)}€ · ${result.marginEur ? '+' + result.marginEur.toFixed(4) + '€ marge · ' : ''}${result.contextTokens} tokens</span>
             </div>
             <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">📜 Chain d'intents</div>
             <ul style="list-style:none;padding:0;margin:0 0 12px;display:flex;flex-direction:column;gap:2px;">${attemptsHtml}</ul>
