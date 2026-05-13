@@ -290,15 +290,18 @@ export async function verifyProjectEntry(entry) {
 // ── Publish + revoke flow · descompta del wallet DEL PROJECTE (decisió #5) ──
 // Si mode mock actiu (PERM-USER-001 setPermawebMockEnabled), skip Turbo + wallet.
 
-export async function publishProjectToPermaweb({ entry, projectId } = {}) {
+export async function publishProjectToPermaweb({ entry, projectId, allowPayPerPublish = true } = {}) {
     if (!entry || !entry.content) throw new Error('publishProjectToPermaweb requires entry');
     if (!projectId) throw new Error('publishProjectToPermaweb requires projectId (font wallet · habitualment el mateix project que es publica)');
     if (!entry.content.signature) throw new Error('must-sign-first');
 
     // BIZ-MODEL-001 sprint C · plan enforcement
+    // PUBLISH-SELECT-001 · `allowPayPerPublish` (default true) permet a Free
+    // pla publicar pagant la fee addicional (×1.5 sobre base · ja inclosa al
+    // PROJECT_PRICING). Pro/Coop/Ent passen igualment.
     try {
         const { requirePermission } = await import('./planEnforcer.js');
-        await requirePermission('permaweb-publish');
+        await requirePermission(allowPayPerPublish ? 'permaweb-publish-paid' : 'permaweb-publish');
     } catch (e) {
         if (e?.code === 'plan-required') throw e;
     }
