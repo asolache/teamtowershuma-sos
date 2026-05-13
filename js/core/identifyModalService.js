@@ -98,17 +98,17 @@ export function renderModalHtml({ activeTab = 'wallet', identity = null, wallet 
         </p>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:0.8rem;">
             <button data-action="oauth-github" style="background:#24292e;color:#fff;border:0;padding:10px 14px;border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;gap:8px;">
-                <span>⚙</span> GitHub <span style="opacity:0.6;font-size:0.75rem;margin-left:auto;">sprint C futur</span>
+                <span>⚙</span> GitHub <span style="opacity:0.7;font-size:0.75rem;margin-left:auto;">operatiu si env vars configurades</span>
             </button>
             <button data-action="oauth-google" style="background:#fff;color:#333;border:1px solid #ccc;padding:10px 14px;border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;gap:8px;">
-                <span style="color:#4285f4;">G</span> Google <span style="opacity:0.5;font-size:0.75rem;margin-left:auto;color:#888;">sprint C futur</span>
+                <span style="color:#4285f4;">G</span> Google <span style="opacity:0.5;font-size:0.75rem;margin-left:auto;color:#888;">sprint C2 futur</span>
             </button>
             <button data-action="oauth-magic" style="background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);padding:10px 14px;border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;gap:8px;">
-                <span>✉</span> Magic-link · email <span style="opacity:0.6;font-size:0.75rem;margin-left:auto;">sprint C futur</span>
+                <span>✉</span> Magic-link · email <span style="opacity:0.6;font-size:0.75rem;margin-left:auto;">sprint C3 futur</span>
             </button>
         </div>
         <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.8rem;line-height:1.45;">
-            🚧 Necessita Netlify Function backend (sprint C de WALLET-AUTH-001 · 2.5h). De moment els botons són stubs.
+            🛡 Setup GitHub · veure <a href="/docs/OAUTH-SETUP.md" target="_blank" style="color:var(--accent-indigo);">docs/OAUTH-SETUP.md</a> · necessita GitHub OAuth App + Netlify env vars.
         </p>
         <div data-oauth-status style="margin-top:0.6rem;font-size:0.78rem;"></div>`;
 
@@ -223,12 +223,37 @@ function _bindModal(root) {
             if (status) { status.textContent = '✗ ' + (err?.message || 'cancel·lat'); status.style.color = 'var(--accent-red)'; }
         }
     });
-    // OAuth stubs
-    ['github', 'google', 'magic'].forEach(p => {
+    // OAuth · GitHub real (si env vars configurades) · resta stubs
+    root.querySelector('[data-action="oauth-github"]')?.addEventListener('click', async () => {
+        const status = root.querySelector('[data-oauth-status]');
+        if (status) { status.innerHTML = '⏳ Obrint popup GitHub…'; status.style.color = 'var(--accent-orange)'; }
+        try {
+            const { loginWithGithub, linkProviderToIdentity } = await import('./oauthService.js');
+            const data = await loginWithGithub();
+            await linkProviderToIdentity(data);
+            if (status) {
+                status.innerHTML = '✓ Connectat com a <strong>@' + (data.login || '?') + '</strong> · vincle persistit.';
+                status.style.color = 'var(--accent-green)';
+            }
+        } catch (err) {
+            const msg = err?.message || 'OAuth cancel·lat';
+            if (status) {
+                if (/popup-blocked/.test(msg)) {
+                    status.innerHTML = '⚠ Permet popups al navegador i torna-ho a intentar.';
+                } else if (/oauth-not-configured|GITHUB_OAUTH/.test(msg)) {
+                    status.innerHTML = '⚠ Env vars no configurades. Veure <a href="/docs/OAUTH-SETUP.md" target="_blank" style="color:var(--accent-indigo);">docs/OAUTH-SETUP.md</a>.';
+                } else {
+                    status.innerHTML = '✗ ' + msg;
+                }
+                status.style.color = 'var(--accent-red)';
+            }
+        }
+    });
+    ['google', 'magic'].forEach(p => {
         root.querySelector('[data-action="oauth-' + p + '"]')?.addEventListener('click', () => {
             const status = root.querySelector('[data-oauth-status]');
             if (status) {
-                status.innerHTML = '🚧 OAuth ' + p + ' arribarà al sprint C de WALLET-AUTH-001 · necessita Netlify Function backend.';
+                status.innerHTML = '🚧 OAuth ' + p + ' arribarà al sprint C2/C3 · veure <a href="/docs/OAUTH-SETUP.md" target="_blank" style="color:var(--accent-indigo);">setup guide</a>.';
                 status.style.color = 'var(--text-muted)';
             }
         });

@@ -51,7 +51,7 @@ const hOauth = svc.renderModalHtml({ activeTab: 'oauth' });
 t(hOauth.includes('data-action="oauth-github"'),                      'E · GitHub stub');
 t(hOauth.includes('data-action="oauth-google"'),                      'E · Google stub');
 t(hOauth.includes('data-action="oauth-magic"'),                       'E · Magic-link stub');
-t(hOauth.includes('sprint C futur'),                                  'E · marcat futur');
+t(hOauth.includes('sprint C2 futur') || hOauth.includes('operatiu si env vars'), 'E · marcat futur o operatiu');
 
 // ─── F · tab local-first · DID display ─────────────────────────────────
 const hLocalNoDid = svc.renderModalHtml({ activeTab: 'local' });
