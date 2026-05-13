@@ -140,46 +140,17 @@ export default class ProjectHubView {
                         <div style="color:var(--text-muted);font-size:11px;line-height:1.5;margin-top:2px;">Operacions tècniques · enjambre IA · publicació permaweb · vistes operatives. La <strong>presentació pública</strong> (hero, productes, equip, slicing pie) viu a <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link style="color:var(--accent-indigo);">/presentation</a> · la <strong>qualitat</strong> a <a href="/quality?project=${encodeURIComponent(p.id)}" data-link style="color:var(--accent-indigo);">/quality</a>.</div>
                     </div>
                 </div>
-                <div class="ph-hero">
-                    <h1 class="mat-hero-h1">${this._esc(p.nombre || p.name || p.id)}</h1>
+                <!-- PROJ-CONFIG-001 · hero compacte · stats + members viuen a /presentation -->
+                <div class="ph-hero" style="padding:1rem 1.2rem;">
+                    <h1 class="mat-hero-h1" style="font-size:1.15rem;">${this._esc(p.nombre || p.name || p.id)}</h1>
                     <div class="meta">
                         <span class="ph-badge status">● ${this._esc(p.cloneStatus || 'active')}</span>
                         ${sectorBadge}
                         ${p.readinessAtClone ? `<span class="ph-badge">${this._esc(p.readinessAtClone).toUpperCase()}</span>` : ''}
                         <span style="color:#888;font-family:monospace;font-size:0.72rem;">id: ${this._esc(p.id)}</span>
-                    </div>
-
-                    <div class="ph-stat-row">
-                        <div class="ph-stat" style="--ph-c:#6366f1;">
-                            <div class="label">Roles VNA</div>
-                            <div class="value">${(p.vna_roles || []).length}</div>
-                        </div>
-                        <div class="ph-stat" style="--ph-c:#a5b4fc;">
-                            <div class="label">Transacciones</div>
-                            <div class="value">${(p.vna_transactions || []).length}</div>
-                        </div>
-                        <div class="ph-stat" style="--ph-c:#22c55e;">
-                            <div class="label">SOPs</div>
-                            <div class="value">${s.sops}</div>
-                        </div>
-                        <div class="ph-stat" style="--ph-c:#facc15;">
-                            <div class="label">Work Orders</div>
-                            <div class="value">${s.workOrders.total}</div>
-                            <div class="sub">${s.workOrders.backlog} backlog · ${s.workOrders.doing} doing · ${s.workOrders.done} done · ${s.workOrders.ledgered} ledger</div>
-                        </div>
-                        <div class="ph-stat" style="--ph-c:#7dd3fc;">
-                            <div class="label">Ofertas Mercado</div>
-                            <div class="value">${s.marketItems.count}</div>
-                        </div>
-                        <div class="ph-stat" style="--ph-c:#86efac;">
-                            <div class="label">Ahorro acumulado</div>
-                            <div class="value">${s.savingEur.toFixed(2)} €</div>
-                            <div class="sub">${s.woRolesAi} WOs IA · ${s.woRolesHuman} humanas</div>
-                        </div>
+                        <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link class="ph-link" style="margin-left:auto;font-weight:700;">👁 Veure presentació pública →</a>
                     </div>
                 </div>
-
-                ${this._renderProjectMembersSection()}
 
                 ${this._renderSwarmSection()}
 
@@ -608,7 +579,11 @@ export default class ProjectHubView {
             signProjectEntry, publishProjectToPermaweb, PROJECT_PRICING,
             getProjectVersionHistory,
         } = await import('../core/publicProjectService.js');
-        const { getCurrentIdentity }  = await import('../core/identityService.js');
+        // PROJ-PUBLISH-FIX · getOrCreateIdentity en lloc de getCurrentIdentity
+        // perquè els usuaris primerencs (sense /identity guardat) no quedin
+        // bloquejats · l'identity es deriva automàticament del keypair ECDSA
+        // P-256 que ja existeix al KB (getOrCreateSigningKey).
+        const { getOrCreateIdentity }  = await import('../core/identityService.js');
         const { getOrCreateSigningKey } = await import('../core/projectIO.js');
         const { isPermawebMockEnabled } = await import('../core/publicRegistryService.js');
         const { getOrCreateWalletForProject } = await import('../core/walletService.js');
@@ -669,16 +644,17 @@ export default class ProjectHubView {
                 btn.disabled = true; btn.textContent = '⏳ Construint v' + (currentVersion + 1) + '…';
                 setStatus('Construint nova versió · signant…', true);
                 try {
-                    const identity = await getCurrentIdentity();
-                    if (!identity?.primaryDid) {
-                        setStatus('✗ Necessites identitat · ves a /identity', false);
+                    const identity = await getOrCreateIdentity();
+                    if (!identity?.content?.primaryDid && !identity?.primaryDid) {
+                        setStatus('✗ Identitat no s\'ha pogut crear · revisa /identity', false);
                         btn.disabled = false; btn.textContent = '📝 Publica update (v' + (currentVersion + 1) + ')';
                         return;
                     }
+                    const did = identity.content?.primaryDid || identity.primaryDid;
                     const keyMeta = await getOrCreateSigningKey();
                     const entry = buildPublicProjectEntry({
                         project:        this.project,
-                        ownerDid:       identity.primaryDid,
+                        ownerDid:       did,
                         ownerPublicJwk: keyMeta.publicJwk,
                         entryVersion:   currentVersion + 1,
                         previousTxId:   tx,
@@ -738,16 +714,20 @@ export default class ProjectHubView {
             btn.disabled = true; btn.textContent = '⏳ Construint…';
             setStatus('Construint entry · signant amb ECDSA P-256…', true);
             try {
-                const identity = await getCurrentIdentity();
-                if (!identity?.primaryDid) {
-                    setStatus('✗ Necessites identitat · ves a /identity i clica Guardar', false);
+                // PROJ-PUBLISH-FIX · auto-crea identity (deriva DID del keypair
+                // ECDSA P-256 ja al KB) en lloc de bloquejar l'usuari · zero
+                // fricció el primer cop que publica.
+                const identity = await getOrCreateIdentity();
+                const did = identity?.content?.primaryDid || identity?.primaryDid;
+                if (!did) {
+                    setStatus('✗ Identitat no s\'ha pogut crear · revisa /identity', false);
                     btn.disabled = false; btn.textContent = mockMode ? '🧪 Publicar (mock)' : '🚀 Publicar al permaweb';
                     return;
                 }
                 const keyMeta = await getOrCreateSigningKey();
                 const entry = buildPublicProjectEntry({
                     project:        this.project,
-                    ownerDid:       identity.primaryDid,
+                    ownerDid:       did,
                     ownerPublicJwk: keyMeta.publicJwk,
                 });
                 const signed = await signProjectEntry({ entry, privateJwk: keyMeta.privateJwk });

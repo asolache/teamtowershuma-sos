@@ -757,10 +757,11 @@ import { computeQualityScore, QUALITY_DIMS, QUALITY_THRESHOLDS, statusColor, sta
 
 // Tabs del subnav · cadascuna referencia les dimensions a les que contribueix.
 // `dims:[]` significa "no influeix al score" (operativa pura · kanban, wallet…).
+// PROJ-CONFIG-001 · 'Hub' renombrat a 'Configuració' i mogut al final · és la
+// pestanya d'admin tècnic (swarm matchmaker, federation publish, archive…).
 export const PROJECT_SUBNAV_ITEMS = Object.freeze([
-    { id: 'hub',          icon: '🚀', label: 'Hub',          dims: [],                          buildHref: (pid) => '/project/' + encodeURIComponent(pid) },
-    { id: 'quality',      icon: '🌟', label: 'Qualitat',     dims: [],                          buildHref: (pid) => '/quality?project=' + encodeURIComponent(pid) },
     { id: 'presentation', icon: '🎤', label: 'Presentació',  dims: ['landing'],                 buildHref: (pid) => '/presentation?project=' + encodeURIComponent(pid) },
+    { id: 'quality',      icon: '🌟', label: 'Qualitat',     dims: [],                          buildHref: (pid) => '/quality?project=' + encodeURIComponent(pid) },
     { id: 'map',          icon: '🗺',  label: 'Mapa',         dims: ['valueMap', 'deliverables'],buildHref: (pid) => '/map?project=' + encodeURIComponent(pid) },
     { id: 'sops',         icon: '📜', label: 'SOPs',         dims: ['sops'],                    buildHref: (pid) => '/sops?project=' + encodeURIComponent(pid) },
     { id: 'workshops',    icon: '🎓', label: 'Workshops',    dims: ['workshops'],               buildHref: (pid) => '/workshops?project=' + encodeURIComponent(pid) },
@@ -769,6 +770,7 @@ export const PROJECT_SUBNAV_ITEMS = Object.freeze([
     { id: 'value',        icon: '🥧', label: 'Tarta',        dims: [],                          buildHref: (pid) => '/value-accounting?project=' + encodeURIComponent(pid) },
     { id: 'wallet',       icon: '💶', label: 'Wallet',       dims: [],                          buildHref: (pid) => '/wallet?project=' + encodeURIComponent(pid) },
     { id: 'pact',         icon: '📜', label: 'Pacte',        dims: [],                          buildHref: (pid) => '/pact?project=' + encodeURIComponent(pid) },
+    { id: 'hub',          icon: '⚙',  label: 'Configuració', dims: [],                          buildHref: (pid) => '/project/' + encodeURIComponent(pid) },
 ]);
 
 // Detecta si el pathname actual coincideix amb una de les tabs del subnav.
