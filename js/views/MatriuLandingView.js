@@ -102,32 +102,34 @@ export default class MatriuLandingView {
 
         return `
         <style>
-            /* ── Matriu skin ───────────────────────────────────────────── */
+            /* ── Matriu Catalunya skin · SOS theme aliased ──────────────── */
+            /* MATRIU-SOS-REBRAND-001 · alias matriu vars → SOS theme vars per
+               heretar light/dark automàticament + typography unificada.        */
             .mt-shell {
-                --mt-cream:  #f1ebde;
-                --mt-dark:   #2a3a2a;
-                --mt-tcotta: #c25a3a;
-                --mt-olive:  #5a6e4f;
-                --mt-blue:   #2c4a7a;
-                --mt-ink:    #1a1f1a;
-                --mt-rule:   rgba(42,58,42,0.18);
-                --mt-line:   rgba(42,58,42,0.10);
-                background: var(--mt-cream);
-                color: var(--mt-dark);
-                font-family: 'Inter', 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
+                --mt-cream:  var(--bg-dark);        /* page background */
+                --mt-dark:   var(--text-main);      /* primary text */
+                --mt-tcotta: var(--accent-purple);  /* primary accent · soci */
+                --mt-olive:  var(--accent-indigo);  /* secondary accent */
+                --mt-blue:   var(--accent-indigo);  /* links */
+                --mt-ink:    var(--bg-panel);       /* CTA bg · panels */
+                --mt-rule:   var(--border-default);
+                --mt-line:   var(--border-subtle);
+                background: var(--bg-dark);
+                color: var(--text-main);
+                font-family: var(--font-base);
                 line-height: 1.5;
                 width: 100vw;
                 min-height: 100%;
                 overflow-x: hidden;
             }
-            .mt-italic { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; }
-            .mt-mono   { font-family: ui-monospace, SFMono-Regular, monospace; }
+            .mt-italic { font-family: var(--font-base); font-style: italic; font-weight: 400; }
+            .mt-mono   { font-family: var(--font-mono); }
             .mt-shell a { color: inherit; }
             .mt-container { max-width: 1240px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px); }
 
             /* ── Topbar mini ──────────────────────────────────────────── */
-            .mt-topbar { display: flex; align-items: center; justify-content: space-between; padding: 22px clamp(20px, 4vw, 48px); border-bottom: 1px solid var(--mt-line); position: sticky; top: 0; background: rgba(241,235,222,0.92); backdrop-filter: blur(8px); z-index: 10; }
-            .mt-brand { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 26px; color: var(--mt-dark); display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+            .mt-topbar { display: flex; align-items: center; justify-content: space-between; padding: 22px clamp(20px, 4vw, 48px); border-bottom: 1px solid var(--mt-line); position: sticky; top: 0; background: var(--bg-dark); opacity: 0.96; backdrop-filter: blur(8px); z-index: 10; }
+            .mt-brand { font-family: var(--font-base); font-weight: 700; letter-spacing: -0.01em; font-size: 22px; color: var(--mt-dark); display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
             .mt-brand-mark { width: 24px; height: 24px; display: inline-block; }
             .mt-nav { display: flex; gap: clamp(12px, 2vw, 28px); font-size: 13px; color: var(--mt-dark); opacity: 0.78; }
             .mt-nav a { text-decoration: none; transition: opacity 0.2s; }
@@ -143,8 +145,8 @@ export default class MatriuLandingView {
             /* ── Hero ─────────────────────────────────────────────────── */
             .mt-hero { padding: clamp(48px, 8vw, 96px) 0 clamp(40px, 6vw, 64px); }
             .mt-hero-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: clamp(24px, 4vw, 64px); align-items: end; }
-            .mt-hero h1 { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; font-size: clamp(48px, 9vw, 120px); line-height: 0.95; letter-spacing: -0.02em; color: var(--mt-dark); margin-top: 22px; }
-            .mt-hero h1 .blk { font-style: normal; font-family: 'Inter', 'Inter Tight', sans-serif; font-weight: 700; }
+            .mt-hero h1 { font-family: var(--font-base); font-weight: 900; font-size: clamp(48px, 9vw, 110px); line-height: 0.98; letter-spacing: -0.025em; color: var(--mt-dark); margin-top: 22px; }
+            .mt-hero h1 .blk { font-weight: 900; background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
             .mt-hero-counter { font-family: ui-monospace, monospace; font-size: 11px; color: var(--mt-dark); opacity: 0.55; margin-bottom: 8px; letter-spacing: 0.08em; }
             .mt-hero-block { display: flex; flex-direction: column; gap: 24px; }
             .mt-hero-num { font-family: ui-monospace, monospace; font-size: 11px; color: var(--mt-dark); opacity: 0.55; letter-spacing: 0.08em; }
@@ -250,20 +252,20 @@ export default class MatriuLandingView {
             .mt-modal { position: fixed; inset: 0; background: rgba(26,31,26,0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(6px); }
             .mt-modal.is-open { display: flex; animation: mtFade 0.2s ease-out; }
             @keyframes mtFade { from { opacity: 0; } to { opacity: 1; } }
-            .mt-modal-card { background: #f1ebde; border-radius: 16px; padding: clamp(28px, 4vw, 44px); max-width: 520px; width: calc(100% - 32px); max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.45); }
-            .mt-modal-card h3 { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 32px; color: #2a3a2a; margin-bottom: 12px; line-height: 1.1; }
-            .mt-modal-card p  { font-size: 14px; line-height: 1.6; color: #3a4a3a; margin-bottom: 22px; }
-            .mt-modal-card p strong { color: #c25a3a; font-weight: 600; }
+            .mt-modal-card { background: var(--bg-panel); border: 1px solid var(--border-default); border-radius: 16px; padding: clamp(28px, 4vw, 44px); max-width: 520px; width: calc(100% - 32px); max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.65); }
+            .mt-modal-card h3 { font-family: var(--font-base); font-weight: 800; font-size: 26px; color: var(--text-main); margin-bottom: 12px; line-height: 1.15; letter-spacing: -0.02em; }
+            .mt-modal-card p  { font-size: 14px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 22px; }
+            .mt-modal-card p strong { color: var(--accent-purple); font-weight: 600; }
             .mt-input-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-            .mt-input-row label { font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5a6e4f; font-weight: 600; }
-            .mt-input { width: 100%; padding: 12px 14px; border: 1px solid rgba(42,58,42,0.25); border-radius: 8px; background: #ffffff; font-size: 14px; font-family: 'Inter Tight', 'Inter', sans-serif; color: #1a1f1a; outline: none; transition: border-color 0.15s, box-shadow 0.15s; box-sizing: border-box; }
-            .mt-input::placeholder { color: rgba(42,58,42,0.4); }
-            .mt-input:focus { border-color: #c25a3a; box-shadow: 0 0 0 3px rgba(194,90,58,0.12); }
+            .mt-input-row label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; }
+            .mt-input { width: 100%; padding: 12px 14px; border: 1px solid var(--border-default); border-radius: 8px; background: var(--bg-elevated); font-size: 14px; font-family: var(--font-base); color: var(--text-main); outline: none; transition: border-color 0.15s, box-shadow 0.15s; box-sizing: border-box; }
+            .mt-input::placeholder { color: var(--text-muted); }
+            .mt-input:focus { border-color: var(--accent-purple); box-shadow: 0 0 0 3px rgba(168,85,247,0.12); }
             .mt-modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; }
-            .mt-modal-cancel { background: transparent; border: 1px solid rgba(42,58,42,0.2); color: #2a3a2a; cursor: pointer; font-size: 14px; padding: 12px 22px; border-radius: 999px; font-weight: 600; transition: background 0.15s; font-family: 'Inter Tight', 'Inter', sans-serif; }
-            .mt-modal-cancel:hover { background: rgba(42,58,42,0.06); }
-            .mt-modal-confirm { background: #1a1f1a; color: #f1ebde; border: 0; padding: 14px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; font-family: 'Inter Tight', 'Inter', sans-serif; box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
-            .mt-modal-confirm:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(26,31,26,0.35); }
+            .mt-modal-cancel { background: transparent; border: 1px solid var(--border-default); color: var(--text-secondary); cursor: pointer; font-size: 14px; padding: 12px 22px; border-radius: 999px; font-weight: 600; transition: background 0.15s; font-family: var(--font-base); }
+            .mt-modal-cancel:hover { background: var(--bg-elevated); }
+            .mt-modal-confirm { background: var(--accent-purple); color: #fff; border: 0; padding: 14px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; font-family: var(--font-base); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
+            .mt-modal-confirm:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(168,85,247,0.35); }
             .mt-modal-confirm:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
             /* ── Responsive ───────────────────────────────────────────── */
@@ -296,10 +298,10 @@ export default class MatriuLandingView {
             <header class="mt-topbar">
                 <a href="/matriu" class="mt-brand" data-link>
                     <svg class="mt-brand-mark" viewBox="0 0 24 24" aria-hidden="true">
-                        <polygon points="12,2 22,20 2,20" fill="none" stroke="#2a3a2a" stroke-width="1.5"></polygon>
-                        <polygon points="12,8 18,18 6,18" fill="#c25a3a"></polygon>
+                        <polygon points="12,2 22,20 2,20" fill="none" stroke="currentColor" stroke-width="1.5"></polygon>
+                        <polygon points="12,8 18,18 6,18" fill="var(--accent-purple)"></polygon>
                     </svg>
-                    Matriu
+                    Matriu Catalunya
                 </a>
                 <nav class="mt-nav">
                     <a href="#tokenomic">Tokenomic</a>
@@ -321,19 +323,21 @@ export default class MatriuLandingView {
                     <div class="mt-hero-grid" style="margin-top: 28px;">
                         <div>
                             <h1>
-                                <span class="mt-italic">Sigues</span><br>
-                                <span class="mt-italic">dels primers</span><br>
-                                <span class="mt-italic">en el nucli</span>
+                                Una Catalunya<br>
+                                <span class="blk">descentralitzada</span><br>
+                                <span class="mt-italic">i autosuficient</span>
                             </h1>
                         </div>
                         <div class="mt-hero-block">
                             <div class="mt-hero-num">01</div>
                             <p class="mt-hero-body">
-                                <strong>Matriu</strong> és una incubadora cooperativa que reparteix valor
-                                en temps real. Equity, collita, accés, drets d'ús — tot el que aportes
-                                es converteix en participacions automàtiques i auditables.
+                                <strong>Matriu Catalunya</strong> és la xarxa cooperativa SOS · projectes,
+                                ofertes i oportunitats verificables al permaweb · IA · triple-entry
+                                accounting · contractes intel·ligents per a automatització legal +
+                                comptable + tresoreria. Tot allò que aportes es converteix en
+                                participacions automàtiques i auditables.
                             </p>
-                            <a href="#cohort" class="mt-hero-cta" id="mtCtaHero">Reserva el teu seient →</a>
+                            <a href="#mtSosMember" class="mt-hero-cta" id="mtCtaHero">Crea perfil · 1 € →</a>
                             <div class="mt-hero-meta">
                                 <span class="mt-hero-meta-key">Com funciona</span>
                                 <a href="#engine" style="text-decoration: underline; opacity: 0.85;">Veure value mapping engine ↓</a>
