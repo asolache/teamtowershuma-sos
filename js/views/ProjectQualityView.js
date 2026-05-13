@@ -266,9 +266,7 @@ export default class ProjectQualityView {
             btn.disabled = false;
             btn.textContent = origText;
             if (e?.code === 'no-api-key') {
-                this._toast('⚠ Cal configurar API key del provider · ves a /settings');
-            } else if (e?.code === 'provider-not-implemented') {
-                this._toast('🚧 Provider no implementat encara · sprint B\' (Anthropic ja operatiu)');
+                this._toast('⚠ Cal API key de ' + (e.provider || 'el provider') + ' · ves a /settings');
             } else {
                 this._toast('✗ ' + (e?.message || 'error desconegut'));
             }

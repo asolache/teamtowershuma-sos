@@ -106,24 +106,198 @@ async function _anthropicGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch 
     };
 }
 
-// ── Stubs · resta de providers (placeholder per a sprint B' futur) ─────────
-async function _stubProvider(provider, modelKey, ctx) {
-    const apiKey = await _readApiKey(provider);
+// ── OpenAI adapter (Chat Completions API) ────────────────────────────────
+const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
+
+async function _openaiGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch !== 'undefined' ? fetch : null) } = {}) {
+    if (!fetchFn) throw new Error('openai · fetch unavailable');
+    const apiKey = await _readApiKey('openai');
     if (!apiKey) {
-        const e = new Error('no-api-key · ' + provider + ' · configura a /settings');
-        e.code = 'no-api-key'; e.provider = provider;
-        throw e;
+        const e = new Error('no-api-key · openai · configura a /settings');
+        e.code = 'no-api-key'; e.provider = 'openai'; throw e;
     }
-    // Provider implementation pendent · sprint B' del IA-ROUTER-001
-    const e = new Error(provider + ' · adapter no implementat encara · usa anthropic o fallback');
-    e.code = 'provider-not-implemented'; e.provider = provider;
-    throw e;
+    const model = AI_MODELS[modelKey];
+    if (!model) throw new Error('openai · modelKey unknown · ' + modelKey);
+    const body = {
+        model:       model.id,
+        max_tokens:  ctx.maxOutputTokens || 1024,
+        temperature: typeof ctx.temperature === 'number' ? ctx.temperature : 0.4,
+        messages: [
+            { role: 'system', content: ctx.systemPrompt || '' },
+            { role: 'user',   content: ctx.userPrompt   || '' },
+        ],
+    };
+    let res;
+    try {
+        res = await fetchFn(OPENAI_API, {
+            method:  'POST',
+            headers: { 'Authorization': 'Bearer ' + apiKey, 'content-type': 'application/json' },
+            body:    JSON.stringify(body),
+        });
+    } catch (e) { throw new Error('openai · fetch failed · ' + (e?.message || 'unknown')); }
+    if (!res.ok) {
+        let detail = null;
+        try { detail = (await res.json())?.error?.message; } catch (_) {}
+        throw new Error('openai · http ' + res.status + (detail ? ' · ' + detail : ''));
+    }
+    const data = await res.json();
+    const choice = data?.choices?.[0];
+    return {
+        text: choice?.message?.content || '',
+        usage: {
+            inputTokens:  data?.usage?.prompt_tokens     || 0,
+            outputTokens: data?.usage?.completion_tokens || 0,
+        },
+        modelKey,
+        finishReason: choice?.finish_reason || 'unknown',
+        raw: data,
+    };
 }
 
-const _openaiGenerate   = (k, ctx, opts) => _stubProvider('openai',   k, ctx, opts);
-const _geminiGenerate   = (k, ctx, opts) => _stubProvider('gemini',   k, ctx, opts);
-const _deepseekGenerate = (k, ctx, opts) => _stubProvider('deepseek', k, ctx, opts);
-const _minimaxGenerate  = (k, ctx, opts) => _stubProvider('minimax',  k, ctx, opts);
+// ── Gemini adapter (Generative Language API · key as query param) ─────────
+const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+async function _geminiGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch !== 'undefined' ? fetch : null) } = {}) {
+    if (!fetchFn) throw new Error('gemini · fetch unavailable');
+    const apiKey = await _readApiKey('gemini');
+    if (!apiKey) {
+        const e = new Error('no-api-key · gemini · configura a /settings');
+        e.code = 'no-api-key'; e.provider = 'gemini'; throw e;
+    }
+    const model = AI_MODELS[modelKey];
+    if (!model) throw new Error('gemini · modelKey unknown · ' + modelKey);
+    const url = GEMINI_API + '/' + encodeURIComponent(model.id) + ':generateContent?key=' + encodeURIComponent(apiKey);
+    const body = {
+        systemInstruction: ctx.systemPrompt ? { parts: [{ text: ctx.systemPrompt }] } : undefined,
+        contents: [{ role: 'user', parts: [{ text: ctx.userPrompt || '' }] }],
+        generationConfig: {
+            maxOutputTokens: ctx.maxOutputTokens || 1024,
+            temperature:     typeof ctx.temperature === 'number' ? ctx.temperature : 0.4,
+        },
+    };
+    let res;
+    try {
+        res = await fetchFn(url, {
+            method:  'POST',
+            headers: { 'content-type': 'application/json' },
+            body:    JSON.stringify(body),
+        });
+    } catch (e) { throw new Error('gemini · fetch failed · ' + (e?.message || 'unknown')); }
+    if (!res.ok) {
+        let detail = null;
+        try { detail = (await res.json())?.error?.message; } catch (_) {}
+        throw new Error('gemini · http ' + res.status + (detail ? ' · ' + detail : ''));
+    }
+    const data = await res.json();
+    const cand = data?.candidates?.[0];
+    const text = (cand?.content?.parts || []).filter(p => p && typeof p.text === 'string').map(p => p.text).join('\n');
+    return {
+        text,
+        usage: {
+            inputTokens:  data?.usageMetadata?.promptTokenCount     || 0,
+            outputTokens: data?.usageMetadata?.candidatesTokenCount || 0,
+        },
+        modelKey,
+        finishReason: cand?.finishReason || 'unknown',
+        raw: data,
+    };
+}
+
+// ── DeepSeek adapter (OpenAI-compatible API) ──────────────────────────────
+const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
+
+async function _deepseekGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch !== 'undefined' ? fetch : null) } = {}) {
+    if (!fetchFn) throw new Error('deepseek · fetch unavailable');
+    const apiKey = await _readApiKey('deepseek');
+    if (!apiKey) {
+        const e = new Error('no-api-key · deepseek · configura a /settings');
+        e.code = 'no-api-key'; e.provider = 'deepseek'; throw e;
+    }
+    const model = AI_MODELS[modelKey];
+    if (!model) throw new Error('deepseek · modelKey unknown · ' + modelKey);
+    const body = {
+        model:       model.id,
+        max_tokens:  ctx.maxOutputTokens || 1024,
+        temperature: typeof ctx.temperature === 'number' ? ctx.temperature : 0.4,
+        messages: [
+            { role: 'system', content: ctx.systemPrompt || '' },
+            { role: 'user',   content: ctx.userPrompt   || '' },
+        ],
+    };
+    let res;
+    try {
+        res = await fetchFn(DEEPSEEK_API, {
+            method:  'POST',
+            headers: { 'Authorization': 'Bearer ' + apiKey, 'content-type': 'application/json' },
+            body:    JSON.stringify(body),
+        });
+    } catch (e) { throw new Error('deepseek · fetch failed · ' + (e?.message || 'unknown')); }
+    if (!res.ok) {
+        let detail = null;
+        try { detail = (await res.json())?.error?.message; } catch (_) {}
+        throw new Error('deepseek · http ' + res.status + (detail ? ' · ' + detail : ''));
+    }
+    const data = await res.json();
+    const choice = data?.choices?.[0];
+    return {
+        text: choice?.message?.content || '',
+        usage: {
+            inputTokens:  data?.usage?.prompt_tokens     || 0,
+            outputTokens: data?.usage?.completion_tokens || 0,
+        },
+        modelKey,
+        finishReason: choice?.finish_reason || 'unknown',
+        raw: data,
+    };
+}
+
+// ── Minimax adapter (chatcompletion_v2 · OpenAI-like) ─────────────────────
+const MINIMAX_API = 'https://api.minimaxi.com/v1/text/chatcompletion_v2';
+
+async function _minimaxGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch !== 'undefined' ? fetch : null) } = {}) {
+    if (!fetchFn) throw new Error('minimax · fetch unavailable');
+    const apiKey = await _readApiKey('minimax');
+    if (!apiKey) {
+        const e = new Error('no-api-key · minimax · configura a /settings');
+        e.code = 'no-api-key'; e.provider = 'minimax'; throw e;
+    }
+    const model = AI_MODELS[modelKey];
+    if (!model) throw new Error('minimax · modelKey unknown · ' + modelKey);
+    const body = {
+        model:       model.id,
+        max_tokens:  ctx.maxOutputTokens || 1024,
+        temperature: typeof ctx.temperature === 'number' ? ctx.temperature : 0.4,
+        messages: [
+            { role: 'system', content: ctx.systemPrompt || '' },
+            { role: 'user',   content: ctx.userPrompt   || '' },
+        ],
+    };
+    let res;
+    try {
+        res = await fetchFn(MINIMAX_API, {
+            method:  'POST',
+            headers: { 'Authorization': 'Bearer ' + apiKey, 'content-type': 'application/json' },
+            body:    JSON.stringify(body),
+        });
+    } catch (e) { throw new Error('minimax · fetch failed · ' + (e?.message || 'unknown')); }
+    if (!res.ok) {
+        let detail = null;
+        try { detail = (await res.json())?.base_resp?.status_msg || (await res.json())?.error?.message; } catch (_) {}
+        throw new Error('minimax · http ' + res.status + (detail ? ' · ' + detail : ''));
+    }
+    const data = await res.json();
+    const choice = data?.choices?.[0];
+    return {
+        text: choice?.message?.content || '',
+        usage: {
+            inputTokens:  data?.usage?.prompt_tokens     || data?.usage?.input_tokens  || 0,
+            outputTokens: data?.usage?.completion_tokens || data?.usage?.output_tokens || 0,
+        },
+        modelKey,
+        finishReason: choice?.finish_reason || 'unknown',
+        raw: data,
+    };
+}
 
 // ── Dispatcher · usat per runEscalation ────────────────────────────────────
 export async function generateWithProvider(modelKey, ctx = {}, opts = {}) {
