@@ -446,8 +446,45 @@ export function setTurboLoader(loader) {
 async function _loadTurbo() {
     if (_turboLoader) return _turboLoader();
     // Real load · jsDelivr ESM
-    const mod = await import('https://cdn.jsdelivr.net/npm/@ardrive/turbo-sdk@latest/+esm');
+    const mod = await import('https://esm.sh/@ardrive/turbo-sdk@1.27.1/web');
     return mod;
+}
+
+// _resolveTurboClient · auth si hi ha keyfile · unauthenticated altrament.
+// Sprint G · 2026-05-10 · si l'usuari ha configurat `arweave_wallet` al KB,
+// usa client autenticat (cobra Turbo Credits del wallet de l'usuari).
+// Sprint A2 (WALLET-AUTH-001) · 2026-05-12 · si Wander/ArConnect està
+// connectat, prefereix ArconnectSigner (zero JWK · l'extensió signa).
+async function _resolveTurboClient() {
+    // Prioritat 1 · Wander extension (signer-based)
+    try {
+        const { isWanderAvailable, getWanderConnection, getTurboClientForExtension } = await import('./arweaveWalletService.js');
+        if (isWanderAvailable()) {
+            const conn = await getWanderConnection();
+            if (conn && conn.address) {
+                const client = await getTurboClientForExtension();
+                if (client) return { client, authenticated: true, source: 'extension' };
+            }
+        }
+    } catch (e) {
+        console.warn('[publicRegistry] extension turbo client failed · fallback keyfile', e?.message);
+    }
+    // Prioritat 2 · Keyfile JSON cacheat al KB (sprint G)
+    try {
+        const { getArweaveKeyfile, getTurboClient } = await import('./arweaveWalletService.js');
+        const stored = await getArweaveKeyfile();
+        if (stored && stored.jwk) {
+            const client = await getTurboClient(stored.jwk);
+            if (client) return { client, authenticated: true, source: 'keyfile' };
+        }
+    } catch (e) {
+        console.warn('[publicRegistry] no Arweave keyfile · fallback unauthenticated', e?.message);
+    }
+    // Fallback · unauthenticated (Turbo demanarà metodes alternatius de pagament)
+    const turbo = await _loadTurbo();
+    const factory = turbo.TurboFactory || turbo.default || turbo;
+    const client  = factory.unauthenticated ? factory.unauthenticated() : factory;
+    return { client, authenticated: false, source: 'anonymous' };
 }
 
 // publishToPermaweb · async · descompta del wallet del projecte (decisió
@@ -533,9 +570,10 @@ export async function publishToPermaweb({
             signature:       entry.content.signature,
             signatureFormat: entry.content.signatureFormat,
         });
-        const turbo = await _loadTurbo();
-        const factory = turbo.TurboFactory || turbo.default || turbo;
-        const client  = factory.unauthenticated ? factory.unauthenticated() : factory;
+        const { client, authenticated } = await _resolveTurboClient();
+        if (!authenticated) {
+            console.warn('[publicRegistry] publishing unauthenticated · cap keyfile Arweave configurada al /settings');
+        }
         const result  = await client.uploadFile({
             fileStreamFactory: () => new Blob([payload], { type: 'application/json' }).stream(),
             fileSizeFactory:   () => payload.length,
@@ -558,7 +596,12 @@ export async function publishToPermaweb({
             const { KB } = await import('./kb.js');
             await KB.upsert(refunded);
         } catch (_) { /* best-effort refund */ }
-        throw new Error('turbo-upload-failed: ' + (e?.message || e));
+        const msg = e?.message || String(e);
+        // Si el problema és la càrrega del SDK · mensatge útil
+        if (/CDN Turbo SDK|loading dynamically|imports.*fs|Failed to bundle|Rollup/i.test(msg)) {
+            throw new Error('turbo-sdk-no-browser · activa 🧪 Mode test a /settings · publish real necessita sprint H · bundle local del SDK · (' + msg + ')');
+        }
+        throw new Error('turbo-upload-failed: ' + msg);
     }
 
     // 3. Actualitza l'entry amb arweaveTxId + persisteix al KB
@@ -605,8 +648,13 @@ export async function revokeFromPermaweb({
     const price = Number(pricing?.revokeEur ?? PRICING.revokeEur);
     if (!(price >= 0)) throw new Error('revokeFromPermaweb · invalid pricing');
 
+    // FIX 2026-05-12 · si la tx original és MOCK (no és real Arweave),
+    // el revoke també ha de ser mock · no té sentit pujar revocation
+    // real per a una entry que mai va arribar a Arweave.
+    const isMockTx = typeof revokesTxId === 'string' && revokesTxId.startsWith('MOCK_TX_');
+
     // MOCK MODE · skip wallet + Turbo · fake revocation txId
-    if (await isPermawebMockEnabled()) {
+    if (isMockTx || await isPermawebMockEnabled()) {
         const revocationTxId = _mockTxIdFor('revoke-' + revokesTxId + '-' + Date.now());
         return { revocationTxId, costEur: 0, walletAfter: null, mock: true };
     }
@@ -642,9 +690,7 @@ export async function revokeFromPermaweb({
             revokesTxId,
             revokedAt:   Date.now(),
         });
-        const turbo = await _loadTurbo();
-        const factory = turbo.TurboFactory || turbo.default || turbo;
-        const client  = factory.unauthenticated ? factory.unauthenticated() : factory;
+        const { client } = await _resolveTurboClient();
         const result  = await client.uploadFile({
             fileStreamFactory: () => new Blob([payload], { type: 'application/json' }).stream(),
             fileSizeFactory:   () => payload.length,

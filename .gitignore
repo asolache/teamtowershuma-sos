@@ -1,2 +1,9 @@
 .DS_Store
 **/.DS_Store
+
+# FUND-FLOW-001 sprint H · Turbo SDK bundle local
+# Pre-bundlejat i committejat a vendor/ perquè operadors amb macOS antic
+# (Catalina · sense Node modern) puguin usar publish real sense build step.
+node_modules/
+package-lock.json
+build/turbo-build.mjs.lock

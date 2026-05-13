@@ -738,3 +738,301 @@ export function ensureNavGroupStyle() {
     el.textContent = NAV_GROUP_CSS;
     document.head.appendChild(el);
 }
+
+// =============================================================================
+// PROJ-QUALITY-001 sprint C · PROJECT SUB-NAVBAR
+//
+// Sub-barra contextual que apareix sota la global nav quan hi ha
+// `?project=X` o ruta `/project/{id}`. Mostra:
+//   - Nom + score qualitat (calculat des de projectQualityService)
+//   - 10 tabs a totes les vistes del projecte, amb badge d'estat per dim
+//   - Suggeriment "📌 Següent" amb la dim que dona més punts si es completa
+//
+// Guia "enseñar haciendo": cada tab està vinculada a la dimensió que
+// influencia (landing/valueMap/deliverables/sops/workshops) · l'usuari
+// veu d'un cop d'ull on completar perquè el score arribi a 90+.
+// =============================================================================
+
+import { computeQualityScore, QUALITY_DIMS, QUALITY_THRESHOLDS, statusColor, statusIcon } from './projectQualityService.js';
+
+// Tabs del subnav · cadascuna referencia les dimensions a les que contribueix.
+// `dims:[]` significa "no influeix al score" (operativa pura · kanban, wallet…).
+export const PROJECT_SUBNAV_ITEMS = Object.freeze([
+    { id: 'hub',          icon: '🚀', label: 'Hub',          dims: [],                          buildHref: (pid) => '/project/' + encodeURIComponent(pid) },
+    { id: 'quality',      icon: '🌟', label: 'Qualitat',     dims: [],                          buildHref: (pid) => '/quality?project=' + encodeURIComponent(pid) },
+    { id: 'presentation', icon: '🎤', label: 'Presentació',  dims: ['landing'],                 buildHref: (pid) => '/presentation?project=' + encodeURIComponent(pid) },
+    { id: 'map',          icon: '🗺',  label: 'Mapa',         dims: ['valueMap', 'deliverables'],buildHref: (pid) => '/map?project=' + encodeURIComponent(pid) },
+    { id: 'sops',         icon: '📜', label: 'SOPs',         dims: ['sops'],                    buildHref: (pid) => '/sops?project=' + encodeURIComponent(pid) },
+    { id: 'workshops',    icon: '🎓', label: 'Workshops',    dims: ['workshops'],               buildHref: (pid) => '/workshops?project=' + encodeURIComponent(pid) },
+    { id: 'market',       icon: '🛒', label: 'Mercat',       dims: ['landing'],                 buildHref: (pid) => '/market?project=' + encodeURIComponent(pid) },
+    { id: 'kanban',       icon: '📋', label: 'Kanban',       dims: [],                          buildHref: (pid) => '/kanban?project=' + encodeURIComponent(pid) },
+    { id: 'value',        icon: '🥧', label: 'Tarta',        dims: [],                          buildHref: (pid) => '/value-accounting?project=' + encodeURIComponent(pid) },
+    { id: 'wallet',       icon: '💶', label: 'Wallet',       dims: [],                          buildHref: (pid) => '/wallet?project=' + encodeURIComponent(pid) },
+    { id: 'pact',         icon: '📜', label: 'Pacte',        dims: [],                          buildHref: (pid) => '/pact?project=' + encodeURIComponent(pid) },
+]);
+
+// Detecta si el pathname actual coincideix amb una de les tabs del subnav.
+function _subnavActiveId(pathname = '') {
+    const path = (pathname || '').split('?')[0].split('#')[0];
+    if (path.startsWith('/project/'))   return 'hub';
+    if (path === '/quality')            return 'quality';
+    if (path === '/presentation')       return 'presentation';
+    if (path === '/map')                return 'map';
+    if (path === '/sops')               return 'sops';
+    if (path === '/workshops')          return 'workshops';
+    if (path === '/market')             return 'market';
+    if (path === '/kanban')             return 'kanban';
+    if (path === '/value-accounting')   return 'value';
+    if (path === '/wallet')             return 'wallet';
+    if (path === '/pact')               return 'pact';
+    return '';
+}
+
+// Donada una quality result, calcula el status del tab basat en les seves dims.
+// Retorna 'high' si totes les dims relacionades són ≥75, 'medium' si alguna
+// està a 50-74, 'low' si alguna està <50, null si dims:[] (no aplica).
+function _tabStatus(item, quality) {
+    if (!item.dims || item.dims.length === 0) return null;
+    if (!quality || !quality.byDim) return 'low';
+    let worst = 'high';
+    for (const dimId of item.dims) {
+        const sc = (quality.byDim[dimId] && quality.byDim[dimId].score) || 0;
+        if (sc < QUALITY_THRESHOLDS.medium)      return 'low';
+        if (sc < QUALITY_THRESHOLDS.high)        worst = (worst === 'high' ? 'medium' : worst);
+    }
+    return worst;
+}
+
+// Calcula la dim que dona més impuls al total si arriba a 100.
+// gain_potential = weight × (100 - currentScore) / 100
+// Retorna { dim, gain, missing[] } o null si tot està a 100.
+export function suggestNextDim(quality) {
+    if (!quality || !quality.byDim) return null;
+    let best = null;
+    for (const dim of QUALITY_DIMS) {
+        const sc   = (quality.byDim[dim.id] && quality.byDim[dim.id].score) || 0;
+        if (sc >= 100) continue;
+        const gain = Math.round(dim.weight * (100 - sc) / 100);
+        if (!best || gain > best.gain) {
+            best = { dim, gain, missing: (quality.byDim[dim.id] && quality.byDim[dim.id].missing) || [] };
+        }
+    }
+    return best;
+}
+
+// Donada una dim id, troba la tab del subnav amb vincle (preferint la primera
+// que la inclou). Útil per a la cta "📌 Següent".
+function _tabForDim(dimId) {
+    for (const item of PROJECT_SUBNAV_ITEMS) {
+        if (item.dims && item.dims.includes(dimId)) return item;
+    }
+    return PROJECT_SUBNAV_ITEMS[0]; // fallback hub
+}
+
+// Genera el HTML del subnav · pur · accepta { project, quality, pathname }
+export function renderProjectSubnavHtml({ project, quality, pathname = '' } = {}) {
+    if (!project) return '';
+    const active   = _subnavActiveId(pathname);
+    const total    = quality && typeof quality.total === 'number' ? quality.total : 0;
+    const status   = quality && quality.status                      ? quality.status : 'low';
+    const color    = statusColor(status);
+    const icon     = statusIcon(status);
+    const name     = project.nombre || project.name || project.id;
+
+    const tabsHtml = PROJECT_SUBNAV_ITEMS.map(item => {
+        const tabStatus = _tabStatus(item, quality);
+        const dot = tabStatus
+            ? `<span class="sos-psub-dot" style="background:${statusColor(tabStatus)};" title="${statusIcon(tabStatus)} ${tabStatus}"></span>`
+            : '';
+        const cls = item.id === active ? 'sos-psub-tab is-active' : 'sos-psub-tab';
+        const href = item.buildHref(project.id);
+        return `<a href="${href}" data-link class="${cls}" title="${item.label}">
+            <span class="sos-psub-tab-ico">${item.icon}</span>
+            <span class="sos-psub-tab-lbl">${_esc(item.label)}</span>
+            ${dot}
+        </a>`;
+    }).join('');
+
+    const next = suggestNextDim(quality);
+    let nextHtml = '';
+    if (next && next.gain > 0) {
+        const tab = _tabForDim(next.dim.id);
+        const href = tab.buildHref(project.id);
+        const firstMissing = (next.missing && next.missing[0] && next.missing[0].label) || ('Completa ' + next.dim.label);
+        nextHtml = `<a class="sos-psub-next" href="${href}" data-link title="${_esc(firstMissing)}">
+            <span class="sos-psub-next-pin">📌</span>
+            <span class="sos-psub-next-lbl">Següent · ${next.dim.icon} ${_esc(next.dim.label)}</span>
+            <span class="sos-psub-next-gain">+${next.gain} pts</span>
+        </a>`;
+    } else if (total >= 90) {
+        nextHtml = `<span class="sos-psub-next sos-psub-next-done"><span>🌟</span><span>Excel·lent · ≥90</span></span>`;
+    }
+
+    const hubHref = '/project/' + encodeURIComponent(project.id);
+    return `<div class="sos-psub-inner">
+        <a class="sos-psub-name" href="${hubHref}" data-link title="${_esc(name)} · obrir hub">
+            <span class="sos-psub-name-ico">${icon}</span>
+            <span class="sos-psub-name-text">${_esc(name)}</span>
+            <span class="sos-psub-name-score" style="color:${color};">${total}<span style="opacity:0.6;font-size:0.8em;">/100</span></span>
+        </a>
+        <div class="sos-psub-tabs">${tabsHtml}</div>
+        <div class="sos-psub-cta">${nextHtml}</div>
+    </div>`;
+}
+
+// CSS · injectat una sola vegada
+const PROJECT_SUBNAV_STYLE_ID = 'sos-psub-style';
+const PROJECT_SUBNAV_CSS = `
+.sos-psub {
+    background: var(--bg-elevated, var(--bg-panel));
+    border-bottom: 1px solid var(--border-default);
+    padding: 0 16px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    z-index: 49;
+    position: relative;
+}
+.sos-psub-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+}
+.sos-psub-name {
+    display: inline-flex; align-items: center; gap: 8px;
+    text-decoration: none; color: var(--text-main);
+    padding: 6px 10px; border-radius: var(--radius-sm);
+    background: var(--bg-panel);
+    border: 1px solid var(--border-default);
+    font-weight: 700; font-size: var(--text-xs);
+    flex-shrink: 0;
+}
+.sos-psub-name:hover { border-color: var(--accent-indigo); }
+.sos-psub-name-ico { font-size: 14px; }
+.sos-psub-name-text { white-space: nowrap; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+.sos-psub-name-score { font-family: var(--font-mono); font-weight: 800; padding-left: 4px; border-left: 1px solid var(--border-default); margin-left: 4px; padding-left: 8px; }
+.sos-psub-tabs { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.sos-psub-tab {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 9px; border-radius: var(--radius-sm);
+    color: var(--text-secondary); text-decoration: none;
+    font-size: var(--text-xs); font-weight: 600;
+    border: 1px solid transparent; position: relative;
+    transition: all var(--dur-fast);
+}
+.sos-psub-tab:hover { background: var(--glass-hover); color: var(--text-main); border-color: var(--border-default); }
+.sos-psub-tab.is-active { background: var(--accent-indigo); color: #fff; border-color: var(--accent-indigo); }
+.sos-psub-tab.is-active .sos-psub-tab-lbl { color: #fff; }
+.sos-psub-tab-ico { font-size: 13px; }
+.sos-psub-tab-lbl { white-space: nowrap; }
+.sos-psub-dot {
+    width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+    box-shadow: 0 0 0 2px var(--bg-elevated, var(--bg-panel));
+}
+.sos-psub-cta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.sos-psub-next {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(168,85,247,0.12));
+    border: 1px solid rgba(99,102,241,0.30);
+    color: var(--text-main); text-decoration: none;
+    font-size: var(--text-xs); font-weight: 700;
+    transition: all var(--dur-fast);
+}
+.sos-psub-next:hover { border-color: var(--accent-indigo); background: linear-gradient(135deg, rgba(99,102,241,0.20), rgba(168,85,247,0.20)); }
+.sos-psub-next-pin { font-size: 11px; }
+.sos-psub-next-gain {
+    font-family: var(--font-mono); font-size: 10px;
+    background: rgba(99,102,241,0.20); color: var(--accent-indigo);
+    padding: 1px 6px; border-radius: 10px;
+}
+.sos-psub-next-done {
+    background: rgba(0,230,118,0.10); border-color: rgba(0,230,118,0.35);
+    color: #00e676;
+}
+@media (max-width: 720px) {
+    .sos-psub { padding: 0 8px; }
+    .sos-psub-name-text { max-width: 120px; }
+    .sos-psub-tab-lbl { display: none; }
+    .sos-psub-tab { padding: 6px; }
+}
+`;
+
+export function ensureProjectSubnavStyle() {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById(PROJECT_SUBNAV_STYLE_ID)) return;
+    const el = document.createElement('style');
+    el.id = PROJECT_SUBNAV_STYLE_ID;
+    el.textContent = PROJECT_SUBNAV_CSS;
+    document.head.appendChild(el);
+}
+
+// paintProjectSubnav · async, accepta projectStats opcional · si no en té,
+// pre-carrega sops/workshops/market amb KB importat. Idempotent: amaga el
+// slot si no hi ha projecte actiu.
+export async function paintProjectSubnav({
+    pathname = (typeof window !== 'undefined' ? window.location.pathname : ''),
+    search   = (typeof window !== 'undefined' ? window.location.search   : ''),
+    projects = [],
+    quality  = null,
+} = {}) {
+    if (typeof document === 'undefined' || !document.body) return;
+    ensureProjectSubnavStyle();
+
+    // Localitza slot · si no existeix el crea entre global-nav i breadcrumb
+    let slot = document.getElementById('sos-project-subnav-slot');
+    if (!slot) {
+        slot = document.createElement('nav');
+        slot.id = 'sos-project-subnav-slot';
+        slot.className = 'sos-psub';
+        slot.setAttribute('aria-label', 'Project context navigation');
+        const breadcrumb = document.getElementById('sos-breadcrumb-slot');
+        const globalNav  = document.getElementById('sos-global-nav-slot');
+        if (breadcrumb && breadcrumb.parentNode) {
+            breadcrumb.parentNode.insertBefore(slot, breadcrumb);
+        } else if (globalNav && globalNav.parentNode && globalNav.nextSibling) {
+            globalNav.parentNode.insertBefore(slot, globalNav.nextSibling);
+        } else {
+            const app = document.getElementById('app');
+            if (app && app.parentNode) app.parentNode.insertBefore(slot, app);
+        }
+    }
+
+    const params = new URLSearchParams(search || '');
+    const projectId = params.get('project') || (pathname.startsWith('/project/') ? decodeURIComponent(pathname.slice(9)) : null);
+    if (!projectId) {
+        slot.innerHTML = '';
+        slot.style.display = 'none';
+        return;
+    }
+    const project = (projects || []).find(p => p && p.id === projectId);
+    if (!project) {
+        slot.innerHTML = '';
+        slot.style.display = 'none';
+        return;
+    }
+    slot.style.display = '';
+
+    // Si no ens passen quality pre-calculada, anem a buscar les llistes a KB
+    let q = quality;
+    if (!q) {
+        try {
+            const KB = (await import('./kb.js')).KB;
+            await KB.init();
+            const [sops, workshops, marketItems] = await Promise.all([
+                KB.query({ type: 'sop' }).catch(() => []),
+                KB.query({ type: 'workshop' }).catch(() => []),
+                KB.query({ type: 'market_item' }).catch(() => []),
+            ]);
+            q = computeQualityScore(project, { sops, workshops, marketItems });
+        } catch (_) {
+            q = computeQualityScore(project);
+        }
+    }
+
+    slot.innerHTML = renderProjectSubnavHtml({ project, quality: q, pathname });
+}

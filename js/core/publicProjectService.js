@@ -80,15 +80,27 @@ export function extractPublicFieldsFromProject(project) {
 }
 
 // buildPublicProjectEntry · pura · construeix el node canònic
+//
+// PROJ-VERSIONING-001 · suport opcional `entryVersion` i `previousTxId`.
+// Default v=1 amb previousTxId=null. Les actualitzacions han de cridar el
+// builder amb { entryVersion: prev+1, previousTxId: prev.arweaveTxId }.
 export function buildPublicProjectEntry({
     project,
     ownerDid,
     ownerPublicJwk,
     overrides = {},
+    entryVersion = 1,
+    previousTxId = null,
 } = {}) {
     if (!project) throw new Error('buildPublicProjectEntry requires project');
     if (!ownerDid) throw new Error('buildPublicProjectEntry requires ownerDid');
     if (!ownerPublicJwk) throw new Error('buildPublicProjectEntry requires ownerPublicJwk');
+    if (!Number.isInteger(entryVersion) || entryVersion < 1) {
+        throw new Error('buildPublicProjectEntry · entryVersion must be positive integer (got ' + entryVersion + ')');
+    }
+    if (entryVersion > 1 && !previousTxId) {
+        throw new Error('buildPublicProjectEntry · v>1 requires previousTxId pointing to prior version');
+    }
 
     const fields = extractPublicFieldsFromProject(project);
     if (!fields) throw new Error('buildPublicProjectEntry · invalid project');
@@ -101,6 +113,8 @@ export function buildPublicProjectEntry({
         content: {
             kind:     'public-project-entry',
             version:  PROJECT_REGISTRY_VERSION,
+            entryVersion,                  // PROJ-VERSIONING-001 · 1, 2, 3, …
+            previousTxId,                  // null per v1 · txId de v-1 altrament
             ...fields,
             ...overrides,
             ownerDid,
@@ -114,6 +128,8 @@ export function buildPublicProjectEntry({
             'type:public-project-entry',
             'projectId:' + project.id,
             'ownerDid:' + ownerDid,
+            'entryVersion:' + entryVersion,
+            ...(previousTxId ? ['previousTxId:' + previousTxId.slice(0, 16)] : []),
             ...(fields.sectorId ? ['sector:' + fields.sectorId] : []),
             ...(fields.projectType ? ['projectType:' + fields.projectType] : []),
             ...(fields.lookingForSkills || []).map(s => 'looking-skill:' + s),
@@ -160,7 +176,7 @@ function stripPrivateJwkFields(jwk) {
 export function arweaveTagsForProjectEntry(entry) {
     if (!entry || !entry.content) throw new Error('arweaveTagsForProjectEntry requires entry');
     const c = entry.content;
-    return [
+    const tags = [
         { name: 'App-Name',     value: 'SOS-V11' },
         { name: 'App-Version',  value: PROJECT_REGISTRY_VERSION },
         { name: 'Entry-Type',   value: 'public-project-entry' },
@@ -169,4 +185,318 @@ export function arweaveTagsForProjectEntry(entry) {
         { name: 'SectorId',     value: c.sectorId || '' },
         { name: 'Content-Type', value: 'application/json' },
     ];
+    // PROJ-VERSIONING-001 · tags per GraphQL filtering/sorting
+    if (Number.isInteger(c.entryVersion) && c.entryVersion > 0) {
+        // Padding zero per que el sort lexicogràfic de Arweave GraphQL coincideixi
+        // amb ordre numèric · funciona fins v9999. v=12 → "0012".
+        const padded = String(c.entryVersion).padStart(4, '0');
+        tags.push({ name: 'Version', value: padded });
+    }
+    if (c.previousTxId) {
+        tags.push({ name: 'Previous-TxId', value: c.previousTxId });
+    }
+    return tags;
+}
+
+// ── Pricing · igual que el registry d'usuaris · 0.05€ flat (decisió #8) ──
+export const PROJECT_PRICING = Object.freeze({
+    publishEur: 0.05,
+    revokeEur:  0.05,
+});
+
+// ── Sign + verify · reutilitza les utilities crypto.subtle ──────────
+
+function _ensureSubtle() {
+    if (typeof crypto === 'undefined' || !crypto.subtle) {
+        throw new Error('crypto.subtle no disponible');
+    }
+    return crypto.subtle;
+}
+
+function _bytesToBase64(bytes) {
+    if (typeof Buffer !== 'undefined') return Buffer.from(bytes).toString('base64');
+    let binary = '';
+    const len = bytes.byteLength || bytes.length;
+    for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+}
+
+function _base64ToBytes(b64) {
+    if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(b64, 'base64'));
+    const binary = atob(b64);
+    const out = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+    return out;
+}
+
+export async function signProjectEntry({ entry, privateJwk } = {}) {
+    if (!entry || !entry.content) throw new Error('signProjectEntry requires entry');
+    if (!privateJwk || privateJwk.kty !== 'EC' || privateJwk.crv !== 'P-256' || !privateJwk.d) {
+        throw new Error('signProjectEntry requires ECDSA P-256 privateJwk with "d"');
+    }
+    const pub = entry.content.publicJwk;
+    if (pub && (pub.x !== privateJwk.x || pub.y !== privateJwk.y)) {
+        throw new Error('privateJwk does not match entry.content.publicJwk');
+    }
+    const subtle = _ensureSubtle();
+    const key = await subtle.importKey('jwk', privateJwk, { name:'ECDSA', namedCurve:'P-256' }, false, ['sign']);
+    const data = new TextEncoder().encode(canonicalizeProjectEntry(entry));
+    const sigBuf = await subtle.sign({ name:'ECDSA', hash:'SHA-256' }, key, data);
+    return {
+        ...entry,
+        content: { ...entry.content, signature: _bytesToBase64(new Uint8Array(sigBuf)), signatureFormat: 'ECDSA-P256-SHA256-base64' },
+        updatedAt: Date.now(),
+    };
+}
+
+export async function verifyProjectEntry(entry) {
+    if (!entry || !entry.content) return { valid: false, reason: 'no-content' };
+    const c = entry.content;
+    if (!c.signature)  return { valid: false, reason: 'no-signature' };
+    if (!c.publicJwk)  return { valid: false, reason: 'no-publicJwk' };
+    let subtle;
+    try { subtle = _ensureSubtle(); } catch (_) { return { valid:false, reason:'crypto-unavailable' }; }
+    let sigBytes;
+    try { sigBytes = _base64ToBytes(c.signature); } catch (_) { return { valid:false, reason:'invalid-signature-encoding' }; }
+    let pubKey;
+    try {
+        pubKey = await subtle.importKey('jwk', c.publicJwk, { name:'ECDSA', namedCurve:'P-256' }, false, ['verify']);
+    } catch (_) { return { valid:false, reason:'invalid-publicJwk' }; }
+    const data = new TextEncoder().encode(canonicalizeProjectEntry(entry));
+    const ok = await subtle.verify({ name:'ECDSA', hash:'SHA-256' }, pubKey, sigBytes, data);
+    return { valid: !!ok, reason: ok ? 'ok' : 'signature-mismatch' };
+}
+
+// ── Publish + revoke flow · descompta del wallet DEL PROJECTE (decisió #5) ──
+// Si mode mock actiu (PERM-USER-001 setPermawebMockEnabled), skip Turbo + wallet.
+
+export async function publishProjectToPermaweb({ entry, projectId } = {}) {
+    if (!entry || !entry.content) throw new Error('publishProjectToPermaweb requires entry');
+    if (!projectId) throw new Error('publishProjectToPermaweb requires projectId (font wallet · habitualment el mateix project que es publica)');
+    if (!entry.content.signature) throw new Error('must-sign-first');
+
+    const v = await verifyProjectEntry(entry);
+    if (!v.valid) throw new Error('publishProjectToPermaweb · invalid signature: ' + v.reason);
+
+    // MOCK MODE check (reutilitza flag de PERM-USER-001)
+    try {
+        const reg = await import('./publicRegistryService.js');
+        if (await reg.isPermawebMockEnabled()) {
+            const txId = 'MOCK_TX_PROJ_' + Math.random().toString(36).slice(2, 10);
+            const updated = {
+                ...entry,
+                content: { ...entry.content, arweaveTxId: txId, permawebPublishedAt: Date.now(), _mock: true },
+                updatedAt: Date.now(),
+            };
+            try { const { KB } = await import('./kb.js'); await KB.upsert(updated); } catch (_) {}
+            return { entry: updated, txId, costEur: 0, mock: true };
+        }
+    } catch (_) {}
+
+    const price = PROJECT_PRICING.publishEur;
+    const { consumeAndPersist, refundWallet, getOrCreateWalletForProject, persistWallet } = await import('./walletService.js');
+    const before = await getOrCreateWalletForProject(projectId);
+    if (Number(before.content.balanceEur) < price) {
+        throw new Error('insufficient-funds · saldo ' + before.content.balanceEur + '€ < preu ' + price + '€');
+    }
+    const walletAfter = await consumeAndPersist({
+        projectId, amountEur: price,
+        ref:    'permaweb-project-publish-' + entry.id,
+        source: 'public-project-publish',
+        note:   'FUND-FLOW-001 sprint F · publish project ' + entry.content.name,
+    });
+
+    let txId;
+    try {
+        const tags = arweaveTagsForProjectEntry(entry);
+        const body = canonicalizeProjectEntry(entry);
+        const payload = JSON.stringify({
+            ...JSON.parse(body),
+            signature:       entry.content.signature,
+            signatureFormat: entry.content.signatureFormat,
+        });
+        // Sprint G · 2026-05-10 · usa keyfile Arweave si configurada al /settings
+        // Sprint A2 (WALLET-AUTH-001) · 2026-05-12 · prefereix Wander extension
+        const {
+            getArweaveKeyfile, getTurboClient,
+            isWanderAvailable, getWanderConnection, getTurboClientForExtension,
+        } = await import('./arweaveWalletService.js');
+        let client;
+        // Prioritat 1 · Wander extension (signer-based · zero JWK)
+        if (isWanderAvailable()) {
+            try {
+                const conn = await getWanderConnection();
+                if (conn && conn.address) {
+                    client = await getTurboClientForExtension();
+                }
+            } catch (e) {
+                console.warn('[publicProject] extension turbo client failed · fallback keyfile', e?.message);
+            }
+        }
+        // Prioritat 2 · Keyfile JSON cacheat al KB
+        if (!client) {
+            const stored = await getArweaveKeyfile();
+            if (stored?.jwk) {
+                client = await getTurboClient(stored.jwk);
+            }
+        }
+        if (!client) {
+            const mod = await import('https://esm.sh/@ardrive/turbo-sdk@1.27.1/web');
+            const factory = mod.TurboFactory || mod.default || mod;
+            client = factory.unauthenticated ? factory.unauthenticated() : factory;
+            console.warn('[publicProject] publishing unauthenticated · cap keyfile Arweave configurada · cap extension connectada');
+        }
+        const result  = await client.uploadFile({
+            fileStreamFactory: () => new Blob([payload], { type: 'application/json' }).stream(),
+            fileSizeFactory:   () => payload.length,
+            dataItemOpts:      { tags },
+        });
+        txId = result?.id || result?.txId;
+        if (!txId) throw new Error('Turbo upload sense txId');
+    } catch (e) {
+        // Refund
+        try {
+            const refunded = refundWallet({
+                wallet: walletAfter, amountEur: price,
+                ref: 'permaweb-project-publish-refund-' + entry.id,
+                source: 'public-project-publish-refund',
+                note: 'refund · upload failed: ' + (e?.message || e),
+            });
+            await persistWallet(refunded);
+        } catch (_) {}
+        throw new Error('turbo-upload-failed: ' + (e?.message || e));
+    }
+
+    const updated = {
+        ...entry,
+        content: { ...entry.content, arweaveTxId: txId, permawebPublishedAt: Date.now() },
+        updatedAt: Date.now(),
+    };
+    try { const { KB } = await import('./kb.js'); await KB.upsert(updated); } catch (_) {}
+    return { entry: updated, txId, costEur: price, walletAfter };
+}
+
+// =============================================================================
+// PROJ-VERSIONING-001 · Discovery helpers · GraphQL Arweave
+//
+// Cada cop que publiques un projecte, generes una nova versió enllaçada
+// a la prèvia (previousTxId) i amb tag `Version: 000N`. Aquests helpers
+// consulten el permaweb per fer:
+//   - getLatestProjectVersion(projectId) · retorna l'entry més recent
+//   - getProjectVersionHistory(projectId) · retorna [v1, v2, …, vN] sorted
+//   - validateVersionChain(history) · verifica que el chain és íntegre
+//
+// El consumidor (RegistryView · ProjectQualityView · /opportunities) pot
+// mostrar "v3 · 2 dies enrere · veure historial".
+// =============================================================================
+
+const ARWEAVE_GQL_URL_DEFAULT = 'https://arweave.net/graphql';
+
+// Reutilitza el gateway state del publicRegistryService (si caller l'ha
+// configurat amb setArweaveGateway). Implementat amb fetch directe per
+// no acoplar-nos al state mutable d'altres serveis.
+function _buildVersionQuery({ projectId, first = 100 }) {
+    return `
+    query {
+        transactions(
+            first: ${first}
+            sort: HEIGHT_DESC
+            tags: [
+                { name: "App-Name",    values: ["SOS-V11"] }
+                { name: "Entry-Type",  values: ["public-project-entry"] }
+                { name: "ProjectId",   values: ["${projectId}"] }
+            ]
+        ) {
+            edges { node {
+                id
+                block { height timestamp }
+                tags { name value }
+            } }
+        }
+    }`;
+}
+
+export async function getProjectVersionHistory({
+    projectId,
+    gqlUrl  = ARWEAVE_GQL_URL_DEFAULT,
+    first   = 100,
+    fetchFn = (typeof fetch !== 'undefined' ? fetch : null),
+} = {}) {
+    if (!projectId) throw new Error('getProjectVersionHistory requires projectId');
+    if (!fetchFn)   throw new Error('getProjectVersionHistory requires fetch (browser or node 18+)');
+    const query = _buildVersionQuery({ projectId, first });
+    let res;
+    try {
+        res = await fetchFn(gqlUrl, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ query }),
+        });
+    } catch (e) {
+        throw new Error('gql-fetch-failed: ' + (e?.message || 'unknown'));
+    }
+    if (!res.ok) throw new Error('gql-http-' + res.status);
+    let data;
+    try { data = await res.json(); } catch (_) { throw new Error('gql-malformed-response'); }
+    const edges = data?.data?.transactions?.edges || [];
+    const versions = edges.map(e => {
+        const tags = (e.node?.tags || []).reduce((acc, t) => { acc[t.name] = t.value; return acc; }, {});
+        return {
+            txId:           e.node.id,
+            blockHeight:    e.node.block?.height || null,
+            blockTimestamp: e.node.block?.timestamp || null,
+            entryVersion:   tags.Version ? parseInt(tags.Version, 10) : 1,
+            previousTxId:   tags['Previous-TxId'] || null,
+            ownerDid:       tags.OwnerDid || null,
+            sectorId:       tags.SectorId || null,
+            tags,
+        };
+    });
+    // Ordenem per entryVersion ASC (chain order, no block order)
+    versions.sort((a, b) => a.entryVersion - b.entryVersion);
+    return versions;
+}
+
+export async function getLatestProjectVersion(opts = {}) {
+    const versions = await getProjectVersionHistory(opts);
+    if (versions.length === 0) return null;
+    return versions[versions.length - 1];
+}
+
+// validateVersionChain · pura · valida que tots els previousTxId enllacen
+// correctament amb el txId v-1. Detecta forks (2 entries amb mateix
+// entryVersion) i gaps (v1 → v3 sense v2). Retorna { valid, issues:[] }.
+export function validateVersionChain(versions) {
+    const issues = [];
+    if (!Array.isArray(versions) || versions.length === 0) {
+        return { valid: false, issues: ['no-versions'] };
+    }
+    const sorted = versions.slice().sort((a, b) => a.entryVersion - b.entryVersion);
+    const seen = new Map();
+    let expected = 1;
+    for (const v of sorted) {
+        if (seen.has(v.entryVersion)) {
+            issues.push('fork-at-v' + v.entryVersion + ' · ' + v.txId + ' vs ' + seen.get(v.entryVersion));
+        } else {
+            seen.set(v.entryVersion, v.txId);
+        }
+        if (v.entryVersion !== expected) {
+            issues.push('gap · expected v' + expected + ' got v' + v.entryVersion);
+            expected = v.entryVersion;
+        }
+        if (v.entryVersion === 1) {
+            if (v.previousTxId !== null && v.previousTxId !== undefined && v.previousTxId !== '') {
+                issues.push('v1-has-previousTxId · should be null');
+            }
+        } else {
+            const expectedPrev = seen.get(v.entryVersion - 1);
+            if (!expectedPrev) {
+                issues.push('v' + v.entryVersion + ' · no v-1 found in history');
+            } else if (v.previousTxId !== expectedPrev) {
+                issues.push('v' + v.entryVersion + ' · previousTxId mismatch (expected ' + expectedPrev + ', got ' + (v.previousTxId || 'null') + ')');
+            }
+        }
+        expected = v.entryVersion + 1;
+    }
+    return { valid: issues.length === 0, issues };
 }

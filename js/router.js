@@ -8,6 +8,7 @@ import { KB }    from './core/kb.js';
 import {
     ensureNavGroupStyle, bindNavGroupDropdowns,
     paintBreadcrumb, paintBottomNav, paintGlobalNav,
+    paintProjectSubnav,
 } from './core/navService.js';
 import { bootTheme } from './core/themeService.js';
 
@@ -61,6 +62,8 @@ const ROUTES = [
     { path: '/presentation', view: () => import('./views/PresentationView.js') },
     // UX-AUDIT-001 sprint A2 · mockup mobile app (Work Orders + temps + permaweb + IA + saldo)
     { path: '/mobile',       view: () => import('./views/MobileMockupView.js') },
+    // PROJ-QUALITY-001 sprint E · vista detall qualitat del projecte
+    { path: '/quality',      view: () => import('./views/ProjectQualityView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
@@ -167,6 +170,18 @@ async function router() {
                 projectStats,
             });
         } catch (e) { console.warn('[Router · breadcrumb]', e); }
+
+        // PROJ-QUALITY-001 sprint C · Project subnav · sub-barra contextual amb
+        // 10 tabs del projecte actiu + score qualitat + cta "Següent".
+        // Apareix sols si hi ha ?project= o /project/{id}. Idempotent.
+        try {
+            const projects = (store.getState().projects || []);
+            await paintProjectSubnav({
+                pathname: window.location.pathname,
+                search:   window.location.search,
+                projects,
+            });
+        } catch (e) { console.warn('[Router · project-subnav]', e); }
 
         // UX-AUDIT-001 sprint F · bottom nav mòbil · 5 categories canòniques
         try {

@@ -23,6 +23,13 @@ import { SKILL_TAXONOMY } from '../core/skillTaxonomy.js';
 // UX-AUDIT-001 sprint B · subtipus de sector + PROJECT_TYPES Matriu per al wizard
 import { getSubtypesForSector, buildIaContextHint } from '../core/sectorSubtypes.js';
 import { PROJECT_TYPES } from '../core/critical108Roles.js';
+// PROJ-QUALITY-001 sprint B · score multidimensional al Dashboard
+import { computeQualityScore, QUALITY_DIMS, statusColor as qualityColor, statusIcon as qualityIcon, QUALITY_THRESHOLDS } from '../core/projectQualityService.js';
+import { suggestNextDim } from '../core/navService.js';
+// PROJ-QUALITY-001 sprint D · onboarding service · 5 passes guiats
+import { ONBOARDING_STEPS, computeOnboardingState, onboardingCompletion, nextOnboardingStep } from '../core/dashboardOnboardingService.js';
+// FOUNDER-001 sprint B · plantilla founder clonable
+import { buildFounderProject, FOUNDER_PROJECT_DEFAULTS } from '../core/founderTemplate.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function uid() { return 'proj-' + Math.random().toString(36).slice(2, 9); }
@@ -156,7 +163,128 @@ export default class DashboardView {
             .dash-hero h1 span { color: var(--accent-indigo); }
             .dash-hero-sub { font-size: var(--text-sm); color: var(--text-muted); font-family: var(--font-mono); }
 
-            /* ── UX-DASH-001 · onboarding flow + áreas ── */
+            /* ── PROJ-QUALITY-001 sprint D · Helper Hero unificat ── */
+            .dash-helper {
+                background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.06));
+                border: 1px solid var(--border-default);
+                border-radius: var(--radius-lg);
+                padding: 22px 24px 18px;
+                margin-bottom: 24px;
+                box-shadow: var(--shadow-sm);
+            }
+            .dash-helper-head {
+                display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;
+                justify-content: space-between; margin-bottom: 14px;
+            }
+            .dash-helper-titles { flex: 1; min-width: 280px; }
+            .dash-helper-h1 {
+                font-size: 1.8rem; font-weight: 800; color: var(--text-main);
+                margin: 0 0 6px 0; letter-spacing: -0.02em; line-height: 1.1;
+            }
+            .dash-helper-h1 strong { color: var(--accent-indigo); }
+            .dash-helper-tagline {
+                font-size: var(--text-sm); color: var(--text-secondary);
+                line-height: 1.5; margin-bottom: 6px;
+            }
+            .dash-helper-sub {
+                font-size: var(--text-xs); color: var(--text-muted);
+                font-family: var(--font-mono);
+            }
+            .dash-helper-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; flex-wrap: wrap; }
+            .dash-btn-lg { padding: 9px 16px; font-size: var(--text-sm); }
+            .dash-btn-ghost {
+                background: transparent; color: var(--text-secondary);
+                border: 1px solid var(--border-default); padding: 7px 14px;
+                border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 600;
+                text-decoration: none; transition: all var(--dur-fast);
+                display: inline-flex; align-items: center;
+            }
+            .dash-btn-ghost:hover { border-color: var(--accent-indigo); color: var(--text-main); }
+            .dash-helper-onb {
+                display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 10px;
+                padding-top: 14px; border-top: 1px solid var(--border-subtle);
+            }
+            .dash-helper-step {
+                display: flex; gap: 10px; align-items: flex-start;
+                padding: 10px 12px; border-radius: var(--radius-md);
+                background: var(--bg-panel);
+                border: 1px solid var(--border-default);
+                text-decoration: none; color: var(--text-main);
+                transition: all var(--dur-fast);
+                position: relative;
+            }
+            .dash-helper-step:hover { border-color: var(--accent-indigo); transform: translateY(-1px); }
+            .dash-helper-step.is-done {
+                background: rgba(0,230,118,0.05);
+                border-color: rgba(0,230,118,0.25);
+                opacity: 0.85;
+            }
+            .dash-helper-step.is-next {
+                background: rgba(99,102,241,0.10);
+                border-color: var(--accent-indigo);
+                box-shadow: 0 0 0 2px rgba(99,102,241,0.20);
+            }
+            .dash-helper-step-icon {
+                width: 32px; height: 32px; border-radius: 8px;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 16px; flex-shrink: 0;
+                background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+            }
+            .dash-helper-step.is-done .dash-helper-step-icon {
+                background: rgba(0,230,118,0.15); border-color: rgba(0,230,118,0.40);
+            }
+            .dash-helper-step.is-next .dash-helper-step-icon {
+                background: rgba(99,102,241,0.20); border-color: rgba(99,102,241,0.50);
+            }
+            .dash-helper-step-body { min-width: 0; flex: 1; }
+            .dash-helper-step-num {
+                font-size: 9px; color: var(--text-muted); font-family: var(--font-mono);
+                letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;
+            }
+            .dash-helper-step-label {
+                font-size: var(--text-xs); font-weight: 800; color: var(--text-main);
+                line-height: 1.25; margin: 2px 0 3px;
+                display: flex; align-items: center; gap: 6px;
+            }
+            .dash-helper-step.is-done .dash-helper-step-label { color: #00e676; }
+            .dash-helper-step-tick { color: #00e676; font-size: 11px; }
+            .dash-helper-step-hint {
+                font-size: 10px; color: var(--text-muted); line-height: 1.4;
+                margin-bottom: 4px;
+            }
+            .dash-helper-step-cta {
+                font-size: 10px; color: var(--accent-indigo); font-weight: 700;
+                margin-top: auto;
+            }
+            .dash-helper-step.is-done .dash-helper-step-cta { color: var(--text-muted); }
+            .dash-helper-progress {
+                display: flex; align-items: center; gap: 10px;
+                font-size: var(--text-xs); color: var(--text-secondary);
+                margin-bottom: 12px; font-weight: 600;
+            }
+            .dash-helper-progress-bar {
+                flex: 1; height: 6px; border-radius: 999px;
+                background: var(--border-default); overflow: hidden;
+                max-width: 240px;
+            }
+            .dash-helper-progress-fill {
+                height: 100%; border-radius: 999px;
+                background: linear-gradient(90deg, var(--accent-indigo), var(--accent-purple));
+                transition: width 0.6s ease;
+            }
+            .dash-helper-progress-pct { font-family: var(--font-mono); color: var(--accent-indigo); font-weight: 800; }
+            .dash-helper.is-complete .dash-helper-onb { display: none; }
+            .dash-helper-complete-badge {
+                display: none; align-items: center; gap: 8px;
+                font-size: var(--text-sm); font-weight: 700; color: #00e676;
+                padding: 10px 14px; border-radius: var(--radius-md);
+                background: rgba(0,230,118,0.08); border: 1px solid rgba(0,230,118,0.30);
+                margin-top: 8px;
+            }
+            .dash-helper.is-complete .dash-helper-complete-badge { display: inline-flex; }
+
+            /* ── UX-DASH-001 · onboarding flow + áreas (legacy · mantingut per compat) ── */
             .dash-section-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.12em; font-family: var(--font-mono); margin: 0 0 10px 0; font-weight: 700; }
             .dash-onboard {
                 display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
@@ -227,39 +355,78 @@ export default class DashboardView {
                 transform: translateY(-2px);
                 box-shadow: var(--shadow-indigo);
             }
-            .dash-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-            .dash-card-name { font-size: var(--text-sm); font-weight: 900; color: var(--text-main); line-height: 1.3; }
-            .dash-card-sector-badge {
-                font-size: 9px; font-family: var(--font-mono); padding: 2px 7px;
-                border-radius: 3px; background: rgba(99,102,241,0.15);
-                color: var(--accent-indigo); flex-shrink: 0; font-weight: 700;
+            /* ── PROJ-QUALITY-001 sprint E · card refactor més comprensible ── */
+            .dash-card-link { text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 8px; }
+            .dash-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+            .dash-card-name {
+                font-size: var(--text-sm); font-weight: 900; color: var(--text-main);
+                line-height: 1.25; flex: 1; min-width: 0;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             }
+            .dash-card-score {
+                font-size: 0.95rem; font-weight: 900; font-family: var(--font-mono);
+                padding: 3px 9px; border-radius: var(--radius-md); flex-shrink: 0;
+                display: inline-flex; gap: 4px; align-items: center; min-width: 56px; justify-content: center;
+            }
+            .dash-card-purpose {
+                font-size: 11px; color: var(--text-secondary); line-height: 1.45;
+                overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            }
+            .dash-card-purpose-empty { color: var(--text-muted); font-style: italic; }
             .dash-card-meta {
                 font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);
-                display: flex; gap: 10px; flex-wrap: wrap;
+                display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
             }
-            .dash-card-meta span { display: flex; align-items: center; gap: 3px; }
-            .dash-card-footer {
-                display: flex; align-items: center; justify-content: space-between;
+            .dash-card-meta span { display: inline-flex; align-items: center; gap: 3px; }
+            .dash-card-tag-demo {
+                background: rgba(201,168,83,0.15); color: var(--accent-claude);
+                padding: 1px 6px; border-radius: 3px; font-weight: 700; letter-spacing: 0.05em;
+            }
+            .dash-card-tag-sector {
+                background: rgba(99,102,241,0.15); color: var(--accent-indigo);
+                padding: 1px 6px; border-radius: 3px; font-weight: 700;
+            }
+            .dash-card-date-rel { font-style: italic; }
+            .dash-card-footer-row {
+                display: flex; align-items: center; gap: 6px;
                 padding-top: 8px; border-top: 1px solid var(--glass-border);
             }
-            .dash-card-date { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
-            .dash-card-health {
-                font-size: 10px; font-weight: 700; font-family: var(--font-mono);
-                padding: 2px 7px; border-radius: 3px;
+            .dash-card-next {
+                flex: 1; display: inline-flex; align-items: center; gap: 5px;
+                padding: 5px 9px; border-radius: var(--radius-sm);
+                background: linear-gradient(135deg, rgba(99,102,241,0.10), rgba(168,85,247,0.08));
+                border: 1px solid rgba(99,102,241,0.30);
+                color: var(--text-main); text-decoration: none;
+                font-size: 11px; font-weight: 700; transition: all var(--dur-fast);
+                min-width: 0;
             }
-            .dash-card-actions {
-                position: absolute; top: 10px; right: 10px;
-                display: none; gap: 4px;
+            .dash-card-next:hover { border-color: var(--accent-indigo); }
+            .dash-card-next-icon { font-size: 13px; }
+            .dash-card-next-lbl { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .dash-card-next-gain {
+                font-family: var(--font-mono); font-size: 10px; padding: 1px 6px;
+                border-radius: 10px; background: rgba(99,102,241,0.20); color: var(--accent-indigo);
             }
-            .dash-card:hover .dash-card-actions { display: flex; }
+            .dash-card-next-done {
+                background: rgba(0,230,118,0.08); border-color: rgba(0,230,118,0.30);
+                color: #00e676;
+            }
+            .dash-card-next-done:hover { border-color: #00e676; }
             .dash-card-action-btn {
                 background: var(--bg-panel); border: 1px solid var(--border-default);
-                color: var(--text-muted); font-size: 10px; padding: 3px 8px;
+                color: var(--text-muted); font-size: 13px; padding: 4px 8px;
                 border-radius: var(--radius-sm); cursor: pointer; transition: all var(--dur-fast);
-                font-family: var(--font-base); font-weight: 700;
+                font-family: var(--font-base); font-weight: 700; flex-shrink: 0;
             }
             .dash-card-action-btn:hover { color: var(--accent-red); border-color: rgba(255,82,82,0.4); }
+            .dash-card-health-bar { height: 4px; border-radius: 2px; background: var(--glass-border); overflow: hidden; }
+            .dash-card-health-fill { height: 100%; border-radius: 2px; transition: width .5s ease; }
+            .dash-card-qbar-lbl {
+                font-size: 9px; opacity: 0.6; text-align: center;
+                margin-top: 2px; line-height: 1;
+            }
+            .dash-card-qbar { flex-direction: column; }
+            .dash-card-qradar { height: auto; padding: 4px 0 2px; }
 
             /* ── New project card ── */
             .dash-card-new {
@@ -430,6 +597,21 @@ export default class DashboardView {
             }
             .dash-card-node-dot {
                 width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+            }
+            /* PROJ-QUALITY-001 sprint B · mini-radar 5 dims (EQ-style) */
+            .dash-card-qradar {
+                display: flex; gap: 4px; align-items: flex-end; height: 28px;
+                margin: 4px 0 2px; padding: 2px 0;
+            }
+            .dash-card-qbar {
+                flex: 1; height: 100%;
+                background: var(--glass-border); border-radius: 2px;
+                display: flex; align-items: flex-end; overflow: hidden;
+                cursor: help;
+            }
+            .dash-card-qbar-fill {
+                width: 100%; min-height: 4px;
+                border-radius: 2px; transition: height .4s ease;
             }
             .dash-card-date-rel {
                 font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);
@@ -673,26 +855,16 @@ export default class DashboardView {
 
         <div class="dash-shell">
 
-            <!-- TOPBAR -->
+            <!-- PROJ-QUALITY-001 sprint D · Topbar slim · global-nav ja porta logo i nav,
+                 aquí només controls utilitaris (Export/Import/Lang). El + Nou Projecte
+                 viu a la helper card per evitar duplicació visual. -->
             <div class="dash-topbar">
-                <a href="/" data-link class="dash-logo">🗼 Team<span>Towers</span></a>
-                <div class="dash-topbar-sep"></div>
-                <span class="dash-topbar-version">SOS V11</span>
+                <span class="dash-topbar-version">SOS V11 · Value Network Dashboard</span>
                 <a href="https://teamtowershuma.com" target="_blank" class="dash-topbar-web">teamtowershuma.com ↗</a>
                 <div class="dash-topbar-right">
-                    
-                    <!-- UX-AUDIT-001 sprint H+ · botó "📚 Knowledge Base" mogut a la nav
-                         categoria Coneixement com a enllaç "📚 Sectores" cap a /sectors.
-                         Saturava la topbar i sortia idèntic a tot arreu. -->
                     <button class="dash-btn" id="dashBtnExport" title="Descargar snapshot firmado (ECDSA P-256)">💾 Export</button>
                     <button class="dash-btn" id="dashBtnImport" title="Cargar snapshot firmado">📥 Import</button>
                     <input type="file" id="dashImportFile" accept=".json,application/json" style="display:none;">
-                    <button class="dash-btn dash-btn-primary" id="dashBtnNew">＋ New Project</button>
-                    <!-- UX-AUDIT-001 sprint A2 · botón "🎓 Cohort 0 Matriu" retirado ·
-                         el flujo Matriu ya está integrado en el wizard de New Project
-                         + en el menú "Matriu" del topbar (categoría home) y en
-                         /matriu/network. Mantenerlo aquí duplicaba acción y
-                         visualmente saturaba el topbar. -->
                     <div id="dashLangSelector"></div>
                 </div>
             </div>
@@ -702,69 +874,27 @@ export default class DashboardView {
 
                 <!-- CONTENT -->
                 <div class="dash-content" id="dashContent">
-                    <div class="dash-hero">
-                        <div class="dash-hero-bg">
-                            <svg viewBox="0 0 800 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-                                <line x1="100" y1="60" x2="400" y2="60" stroke="rgba(99,102,241,1)" stroke-width="1"/>
-                                <line x1="400" y1="60" x2="700" y2="30" stroke="rgba(99,102,241,1)" stroke-width="1"/>
-                                <line x1="400" y1="60" x2="600" y2="90" stroke="rgba(201,168,83,1)" stroke-width="1" stroke-dasharray="4 5"/>
-                                <line x1="100" y1="60" x2="250" y2="20" stroke="rgba(201,168,83,1)" stroke-width="1" stroke-dasharray="4 5"/>
-                                <circle cx="100" cy="60" r="5" fill="rgba(99,102,241,0.6)"/>
-                                <circle cx="400" cy="60" r="7" fill="rgba(99,102,241,0.8)"/>
-                                <circle cx="700" cy="30" r="5" fill="rgba(99,102,241,0.5)"/>
-                                <circle cx="600" cy="90" r="4" fill="rgba(201,168,83,0.6)"/>
-                                <circle cx="250" cy="20" r="4" fill="rgba(201,168,83,0.5)"/>
-                                <circle r="2.5" fill="rgba(99,102,241,0.8)"><animateMotion dur="3s" repeatCount="indefinite" path="M100,60 L400,60"/></circle>
-                                <circle r="2" fill="rgba(201,168,83,0.7)"><animateMotion dur="4s" repeatCount="indefinite" begin="1s" path="M400,60 L600,90"/></circle>
-                            </svg>
+
+                    <!-- PROJ-QUALITY-001 sprint D · Helper Hero unificat ·
+                         capçalera + copies clau + checklist 5 passes guiats +
+                         stats inline + cta + Nou Projecte. Substitueix els
+                         antics blocs "¿Cómo funciona? 4 pasos" + "Áreas del sistema"
+                         per evitar duplicació amb el sub-navbar de projecte +
+                         global-nav ja existents. -->
+                    <div class="dash-helper" id="dashHelper">
+                        <div class="dash-helper-head">
+                            <div class="dash-helper-titles">
+                                <h1 class="dash-helper-h1">Value <strong>Network</strong> Dashboard</h1>
+                                <div class="dash-helper-tagline">Every organization has two structures · this maps the real one.</div>
+                                <div class="dash-helper-sub" id="dashHeroSub">Loading projects…</div>
+                            </div>
+                            <div class="dash-helper-actions">
+                                <button class="dash-btn dash-btn-primary dash-btn-lg" id="dashBtnNew" title="Crea o clona un projecte">＋ Nou projecte</button>
+                                <a class="dash-btn dash-btn-ghost" href="/map?project=proj-colla-demo-v11" data-link title="Veure el projecte demo Castellers">✦ Veure demo</a>
+                            </div>
                         </div>
-                        <div class="dash-hero-inner">
-                            <h1 class="mat-hero-h1">Value <strong>Network</strong> Dashboard</h1>
-                            <div class="dash-hero-sub" id="dashHeroSub">Loading projects…</div>
-                            <div class="dash-hero-tagline">Every organization has two structures. This maps the real one.</div>
-                        </div>
-                    </div>
-
-                    <!-- UX-AUDIT-001 sprint C · Panell del membre · perfil + impacte -->
-                    <div id="dashMemberPanel"></div>
-
-                    <!-- MAT-002-F · strip Matriu Cohort 0 (visible solo si hay proyectos cohort 0) -->
-                    <div id="dashMatriuStrip"></div>
-
-                    <!-- UX-DASH-001 · ¿qué puedes hacer aquí? · 4 pasos del flujo SOS -->
-                    <div class="dash-section-title">¿Cómo funciona SOS? · 4 pasos</div>
-                    <div class="dash-onboard">
-                        <a class="dash-onboard-tile" id="dashStep1" style="--ob-c:#a855f7;">
-                            <span class="dash-onboard-step">Paso 1</span>
-                            <span class="dash-onboard-title">🧬 Crea o clona un proyecto</span>
-                            <span class="dash-onboard-desc">Vacío, plantilla del sector, o cliente personalizado con IA. Un solo wizard.</span>
-                        </a>
-                        <a class="dash-onboard-tile" href="/map" data-link style="--ob-c:#6366f1;">
-                            <span class="dash-onboard-step">Paso 2</span>
-                            <span class="dash-onboard-title">🗺 Diseña la red de valor</span>
-                            <span class="dash-onboard-desc">Roles, transacciones tangibles e intangibles. Edición inline + sugerencias IA.</span>
-                        </a>
-                        <a class="dash-onboard-tile" href="/sops" data-link style="--ob-c:#22c55e;">
-                            <span class="dash-onboard-step">Paso 3</span>
-                            <span class="dash-onboard-title">📜 Genera SOPs por rol con IA</span>
-                            <span class="dash-onboard-desc">Cada rol → procedimiento operativo con steps auto-convertibles en WOs.</span>
-                        </a>
-                        <a class="dash-onboard-tile" href="/kanban" data-link style="--ob-c:#facc15;">
-                            <span class="dash-onboard-step">Paso 4</span>
-                            <span class="dash-onboard-title">⚙ Ejecuta y contabiliza</span>
-                            <span class="dash-onboard-desc">WOs por humano o IA → Ledger triple-entry con ahorro acumulado del cliente.</span>
-                        </a>
-                    </div>
-
-                    <!-- UX-DASH-001 · áreas del sistema (siempre accesibles) -->
-                    <div class="dash-section-title">Áreas del sistema</div>
-                    <div class="dash-areas">
-                        <a class="dash-area-tile" href="/map" data-link><span class="dash-area-icon">🗺</span><div><div class="dash-area-label">Mapa</div><div class="dash-area-hint">Mapa de valor del proyecto activo</div></div></a>
-                        <a class="dash-area-tile" href="/kanban" data-link><span class="dash-area-icon">📋</span><div><div class="dash-area-label">Kanban</div><div class="dash-area-hint">WOs · backlog → ledger</div></div></a>
-                        <a class="dash-area-tile" href="/market" data-link><span class="dash-area-icon">🛒</span><div><div class="dash-area-label">Mercado</div><div class="dash-area-hint">Productos y servicios</div></div></a>
-                        <a class="dash-area-tile" href="/tags" data-link><span class="dash-area-icon">🏷</span><div><div class="dash-area-label">Tags</div><div class="dash-area-hint">Folksonomía cloud</div></div></a>
-                        <a class="dash-area-tile" href="/workshops" data-link><span class="dash-area-icon">🎯</span><div><div class="dash-area-label">Workshops</div><div class="dash-area-hint">Talleres Fent Pinya</div></div></a>
-                        <a class="dash-area-tile" href="/settings" data-link><span class="dash-area-icon">⚙</span><div><div class="dash-area-label">Settings</div><div class="dash-area-hint">API keys · IA</div></div></a>
+                        <!-- Onboarding checklist · 5 passes auto-detectats -->
+                        <div class="dash-helper-onb" id="dashHelperOnb"></div>
                     </div>
 
                     <div class="dash-stats" id="dashStats"></div>
@@ -792,7 +922,18 @@ export default class DashboardView {
         <div class="dash-modal-bg" id="dashModalNew">
             <div class="dash-modal" style="max-width:540px;">
                 <h2>＋ Nuevo proyecto</h2>
-                <div class="dash-modal-sub">Un solo wizard · 3 caminos según lo que rellenes</div>
+                <div class="dash-modal-sub">Un solo wizard · 4 caminos según lo que rellenes</div>
+
+                <!-- FOUNDER-001 sprint B · clonar founder template -->
+                <div class="dash-form-group" style="background:linear-gradient(135deg,rgba(168,85,247,0.06),rgba(99,102,241,0.04));border:1px solid rgba(168,85,247,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.8rem;">
+                    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-size:0.88rem;font-weight:700;color:var(--text-main);">
+                        <input type="checkbox" id="newProjFounder" style="cursor:pointer;">
+                        <span>🌟 Clonar plantilla <strong>Founder bootstrap</strong></span>
+                    </label>
+                    <div style="font-size:0.74rem;color:var(--text-muted);margin-top:4px;line-height:1.45;">
+                        Genera un projecte amb 9 roles · 12 transactions · 5 SOPs · 3 workshops · presentation IA pre-omplerta. Score automàtic ~85/100 al /quality. Pots adaptar tot després.
+                    </div>
+                </div>
 
                 <div class="dash-form-group">
                     <label class="dash-form-label">Nombre del proyecto *</label>
@@ -858,6 +999,56 @@ export default class DashboardView {
     }
 
     // ── Render projects v2 ───────────────────────────────────────────────────
+    // PROJ-QUALITY-001 sprint D · helper hero · pinta checklist 5 passes
+    _renderHelper({ identityNode, projects, qualityById } = {}) {
+        const slot = document.getElementById('dashHelper');
+        const onb  = document.getElementById('dashHelperOnb');
+        if (!slot || !onb) return;
+        const state = computeOnboardingState({ identityNode, projects, qualityById });
+        const comp  = onboardingCompletion(state);
+        const next  = nextOnboardingStep(state);
+        if (comp.done === comp.total) slot.classList.add('is-complete');
+        else                          slot.classList.remove('is-complete');
+
+        let html = `<div class="dash-helper-progress">
+            <span>🎯 Onboarding alfa</span>
+            <div class="dash-helper-progress-bar"><div class="dash-helper-progress-fill" style="width:${comp.pct}%;"></div></div>
+            <span class="dash-helper-progress-pct">${comp.done}/${comp.total}</span>
+        </div>`;
+
+        ONBOARDING_STEPS.forEach((step, idx) => {
+            const done   = !!state[step.id];
+            const isNext = !done && next && next.id === step.id;
+            const cls    = 'dash-helper-step' + (done ? ' is-done' : '') + (isNext ? ' is-next' : '');
+            // Pas "project" amb cta #new obre el modal en comptes de navegar
+            const isNewProject = step.cta.href === '#new';
+            const href = isNewProject ? 'javascript:void(0)' : step.cta.href;
+            const dataLink = isNewProject ? '' : 'data-link';
+            const dataAction = isNewProject ? 'data-action="new-project"' : '';
+            html += `<a class="${cls}" href="${href}" ${dataLink} ${dataAction} title="${step.hint}">
+                <div class="dash-helper-step-icon">${done ? '✓' : step.icon}</div>
+                <div class="dash-helper-step-body">
+                    <div class="dash-helper-step-num">Pas ${idx + 1}${isNext ? ' · ARA' : ''}</div>
+                    <div class="dash-helper-step-label">${step.label}${done ? ' <span class="dash-helper-step-tick">✓</span>' : ''}</div>
+                    <div class="dash-helper-step-hint">${step.hint}</div>
+                    <div class="dash-helper-step-cta">${done ? '✓ Completat' : step.cta.label + ' →'}</div>
+                </div>
+            </a>`;
+        });
+
+        html += `<div class="dash-helper-complete-badge">🌟 Onboarding alfa completat · ja pots dur projectes a la xarxa Matriu</div>`;
+        onb.innerHTML = html;
+
+        // Bind cta #new per obrir el modal
+        const self = this;
+        onb.querySelectorAll('[data-action="new-project"]').forEach(el => {
+            el.addEventListener('click', () => {
+                const m = document.getElementById('dashModalNew');
+                if (m) { m.classList.add('open'); document.getElementById('newProjName')?.focus(); }
+            });
+        });
+    }
+
     _relativeDate(ts) {
         if (!ts) return '';
         const diff = Date.now() - ts;
@@ -880,24 +1071,41 @@ export default class DashboardView {
         const state    = store.getState();
         const projects = visibleProjects(state.projects);
 
-        // UX-AUDIT-001 sprint C · Panell del membre · identitat + impacte
-        await this._renderMemberPanel(projects);
+        // PROJ-QUALITY-001 sprint E · Member panel + Matriu strip retirats del top.
+        // L'identitat de l'usuari viu a /identity · la Matriu té el seu landing
+        // /matriu i el directori /matriu/network. El Dashboard queda focalitzat
+        // a "helper + estadístiques + projectes".
 
-        // MAT-002-F · strip Matriu Cohort 0 (visible solo si hay proyectos cohort 0)
-        this._renderMatriuStrip(projects);
+        // PROJ-QUALITY-001 sprint B · pre-càrrega batched de SOPs / workshops / market_items
+        // perquè computeQualityScore és pur i necessita les llistes pre-carregades.
+        let allSops = [], allWorkshops = [], allMarket = [], allIdentities = [];
+        try { allSops       = await KB.query({ type: 'sop' });             } catch (_) {}
+        try { allWorkshops  = await KB.query({ type: 'workshop' });        } catch (_) {}
+        try { allMarket     = await KB.query({ type: 'market_item' });     } catch (_) {}
+        try { allIdentities = await KB.query({ type: 'user_identity' });   } catch (_) {}
+        const qualityById = {};
+        projects.forEach(function(p) {
+            qualityById[p.id] = computeQualityScore(p, { sops: allSops, workshops: allWorkshops, marketItems: allMarket });
+        });
+        this._qualityById = qualityById;  // cache per altres mètodes (filter chips, tooltip)
 
-        // Stats v2 con health global y barras
-        const totalRoles = projects.reduce(function(acc, p) { return acc + (p.vna_roles || []).length; }, 0);
-        const totalTxs   = projects.reduce(function(acc, p) { return acc + (p.vna_transactions || []).length; }, 0);
-        const healthScores = projects.map(function(p) { return projectHealth(p); }).filter(function(s) { return s !== null; });
-        const avgHealth  = healthScores.length > 0 ? Math.round(healthScores.reduce(function(a, b) { return a + b; }, 0) / healthScores.length) : null;
-        const hColor     = avgHealth !== null ? healthColor(avgHealth) : 'var(--text-muted)';
+        // PROJ-QUALITY-001 sprint D · onboarding helper (5 passes)
+        const identityNode = (allIdentities || []).find(n => n && (n.content?.isPrimary || n.isPrimary)) || (allIdentities && allIdentities[0]) || null;
+        this._renderHelper({ identityNode, projects, qualityById });
+
+        // Stats v2 · roles + tx + qualitat mitja (substitueix Ecosystem health)
+        const totalRoles    = projects.reduce(function(acc, p) { return acc + (p.vna_roles || []).length; }, 0);
+        const totalTxs      = projects.reduce(function(acc, p) { return acc + (p.vna_transactions || []).length; }, 0);
+        const qualityScores = Object.values(qualityById).map(function(q) { return q.total; });
+        const avgQuality    = qualityScores.length > 0 ? Math.round(qualityScores.reduce(function(a, b) { return a + b; }, 0) / qualityScores.length) : null;
+        const qStatus       = avgQuality === null ? null : (avgQuality >= QUALITY_THRESHOLDS.high ? 'high' : (avgQuality >= QUALITY_THRESHOLDS.medium ? 'medium' : 'low'));
+        const qColor        = qStatus ? qualityColor(qStatus) : 'var(--text-muted)';
 
         document.getElementById('dashStats').innerHTML =
             '<div class="dash-stat"><div class="dash-stat-label">Projects</div><div class="dash-stat-value">' + projects.length + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:100%;background:var(--accent-indigo);"></div></div></div>' +
             '<div class="dash-stat"><div class="dash-stat-label">Total roles</div><div class="dash-stat-value">' + totalRoles + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:' + Math.min(totalRoles * 4, 100) + '%;background:var(--accent-blue);"></div></div></div>' +
             '<div class="dash-stat"><div class="dash-stat-label">Transactions</div><div class="dash-stat-value">' + totalTxs + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:' + Math.min(totalTxs * 2, 100) + '%;background:var(--accent-green);"></div></div></div>' +
-            (avgHealth !== null ? '<div class="dash-stat"><div class="dash-stat-label">Ecosystem health</div><div class="dash-stat-value" style="color:' + hColor + '">' + avgHealth + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:' + avgHealth + '%;background:' + hColor + ';"></div></div></div>' : '');
+            (avgQuality !== null ? '<div class="dash-stat" title="Mitjana ponderada de Landing+ValueMap+Deliverables+SOPs+Workshops"><div class="dash-stat-label">' + qualityIcon(qStatus) + ' Project quality</div><div class="dash-stat-value" style="color:' + qColor + '">' + avgQuality + '</div><div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:' + avgQuality + '%;background:' + qColor + ';"></div></div></div>' : '');
 
         document.getElementById('dashHeroSub').textContent =
             projects.length === 0
@@ -951,10 +1159,37 @@ export default class DashboardView {
             }).join('')
             + '</div>';
 
-        // Aplica filtre · 'all' deixa la llista sencera
-        const filteredProjects = activeFilter === 'all'
+        // PROJ-QUALITY-001 sprint B3 · filtre de qualitat (independent del phase filter)
+        const qualityFilter = this._qualityFilter || 'all';
+        const qCounts = { high: 0, medium: 0, low: 0 };
+        projects.forEach(function(p) {
+            const st = qualityById[p.id] ? qualityById[p.id].status : 'low';
+            if (qCounts[st] !== undefined) qCounts[st]++;
+        });
+        const qualityChipsHtml = '<div class="dash-phase-bar" style="margin-top:4px;">'
+            + '<button class="dash-phase-chip' + (qualityFilter === 'all' ? ' is-active' : '') + '" data-quality="all" title="Mostra tots els projectes">'
+            +   '<span>📋 Qualitat · tots</span><span class="count">' + projects.length + '</span>'
+            + '</button>'
+            + '<button class="dash-phase-chip' + (qualityFilter === 'high' ? ' is-active' : '') + '" data-quality="high" title="Score ≥ 75">'
+            +   '<span>🌟 Alta</span><span class="count">' + qCounts.high + '</span>'
+            + '</button>'
+            + '<button class="dash-phase-chip' + (qualityFilter === 'medium' ? ' is-active' : '') + '" data-quality="medium" title="Score 50-74">'
+            +   '<span>⚠ Mitjana</span><span class="count">' + qCounts.medium + '</span>'
+            + '</button>'
+            + '<button class="dash-phase-chip' + (qualityFilter === 'low' ? ' is-active' : '') + '" data-quality="low" title="Score < 50">'
+            +   '<span>❌ Baixa</span><span class="count">' + qCounts.low + '</span>'
+            + '</button>'
+            + '</div>';
+
+        // Aplica filtres · primer phase · després qualitat
+        let filteredProjects = activeFilter === 'all'
             ? projects
             : (phaseGroups[activeFilter] || []);
+        if (qualityFilter !== 'all') {
+            filteredProjects = filteredProjects.filter(function(p) {
+                return qualityById[p.id] && qualityById[p.id].status === qualityFilter;
+            });
+        }
 
         // Agrupar por sector (després del filtre per phase)
         const groups = {};
@@ -970,7 +1205,7 @@ export default class DashboardView {
             return found ? found.name : (id === 'general' ? 'General' : id);
         };
 
-        let html = chipsHtml;
+        let html = chipsHtml + qualityChipsHtml;
         var self = this;
 
         if (filteredProjects.length === 0) {
@@ -996,43 +1231,63 @@ export default class DashboardView {
                 const isDemo = p.id === 'proj-colla-demo-v11';
                 const roles  = (p.vna_roles        || []).length;
                 const txs    = (p.vna_transactions || []).length;
-                const score  = projectHealth(p);
-                const hColor = score !== null ? healthColor(score) : 'var(--text-muted)';
-                const hLabel = score !== null ? score + '' : '—';
+                // PROJ-QUALITY-001 sprint E · card refactor · score gran + next-action clar
+                const q      = qualityById[p.id] || { total: 0, byDim: {}, missing: [], status: 'low' };
+                const hColor = qualityColor(q.status);
                 const rel    = self._relativeDate(p.updatedAt || p.createdAt);
+                const next   = suggestNextDim(q);
 
-                // Mini preview de nodos — puntos de color por nivel
-                var nodeDots = '';
-                (p.vna_roles || []).slice(0, 12).forEach(function(r) {
-                    nodeDots += '<div class="dash-card-node-dot" style="background:' + self._levelColor(r.castell_level) + ';opacity:.7;"></div>';
+                // Mini-radar · 5 dims com a barres verticals (EQ-style)
+                let dimBars = '';
+                QUALITY_DIMS.forEach(function(d) {
+                    const s = q.byDim[d.id] ? q.byDim[d.id].score : 0;
+                    const dimSt = s >= QUALITY_THRESHOLDS.high ? 'high' : (s >= QUALITY_THRESHOLDS.medium ? 'medium' : 'low');
+                    const dColor = qualityColor(dimSt);
+                    dimBars += '<div class="dash-card-qbar" title="' + d.icon + ' ' + d.label + ' · ' + s + '/100">'
+                        +   '<div class="dash-card-qbar-fill" style="height:' + Math.max(s, 4) + '%;background:' + dColor + ';"></div>'
+                        +   '<div class="dash-card-qbar-lbl">' + d.icon + '</div>'
+                        + '</div>';
                 });
 
-                html += '<a class="dash-card' + (isDemo ? ' dash-card-demo' : '') + '" href="/map?project=' + p.id + '" data-link>' +
-                    '<div class="dash-card-top">' +
-                        '<div class="dash-card-name">' + (p.nombre || p.name || 'Unnamed') + '</div>' +
-                        '<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">' +
-                            (isDemo ? '<div class="dash-card-demo-badge">DEMO</div>' : '') +
-                            (sectorId !== 'general' ? '<div class="dash-card-sector-badge">' + sectorId + '</div>' : '') +
+                const nameStr = p.nombre || p.name || 'Unnamed';
+                const purpose = (p.description || p.projectIdea || '').toString().trim();
+                const purposeShort = purpose.length > 90 ? purpose.slice(0, 88) + '…' : purpose;
+
+                // Next-action chip · porta directament a la vista que aporta més punts
+                const nextChip = next && next.gain > 0
+                    ? '<a class="dash-card-next" href="/quality?project=' + p.id + '" data-link title="Següent acció · veure detall de qualitat">'
+                        + '<span class="dash-card-next-icon">' + next.dim.icon + '</span>'
+                        + '<span class="dash-card-next-lbl">' + next.dim.label + '</span>'
+                        + '<span class="dash-card-next-gain">+' + next.gain + '</span>'
+                      + '</a>'
+                    : '<a class="dash-card-next dash-card-next-done" href="/quality?project=' + p.id + '" data-link>'
+                        + '<span>🌟 Excel·lent</span>'
+                      + '</a>';
+
+                html += '<div class="dash-card' + (isDemo ? ' dash-card-demo' : '') + '">' +
+                    '<a class="dash-card-link" href="/project/' + p.id + '" data-link title="Obrir el hub del projecte">' +
+                        '<div class="dash-card-top">' +
+                            '<div class="dash-card-name">' + nameStr + '</div>' +
+                            '<div class="dash-card-score" style="background:' + hColor + '18;color:' + hColor + ';" title="Qualitat global · click per detall">' +
+                                qualityIcon(q.status) + ' ' + q.total +
+                            '</div>' +
                         '</div>' +
-                    '</div>' +
-                    (nodeDots ? '<div class="dash-card-nodes">' + nodeDots + '</div>' : '') +
-                    '<div class="dash-card-meta">' +
-                        '<span>' + roles + ' roles</span>' +
-                        '<span>' + txs + ' transactions</span>' +
-                    '</div>' +
-                    '<div style="margin-top:2px;">' +
-                        '<div class="dash-card-health-bar">' +
-                            '<div class="dash-card-health-fill" style="width:' + (score || 0) + '%;background:' + hColor + ';"></div>' +
+                        (purposeShort ? '<div class="dash-card-purpose">' + purposeShort + '</div>' : '<div class="dash-card-purpose dash-card-purpose-empty">— sense descripció —</div>') +
+                        '<div class="dash-card-qradar">' + dimBars + '</div>' +
+                        '<div class="dash-card-health-bar"><div class="dash-card-health-fill" style="width:' + q.total + '%;background:' + hColor + ';"></div></div>' +
+                        '<div class="dash-card-meta">' +
+                            '<span>👥 ' + roles + ' roles</span>' +
+                            '<span>🔁 ' + txs + ' tx</span>' +
+                            (isDemo ? '<span class="dash-card-tag-demo">DEMO</span>' : '') +
+                            (sectorId !== 'general' ? '<span class="dash-card-tag-sector">' + sectorId + '</span>' : '') +
+                            '<span class="dash-card-date-rel" style="margin-left:auto;">' + rel + '</span>' +
                         '</div>' +
+                    '</a>' +
+                    '<div class="dash-card-footer-row">' +
+                        nextChip +
+                        '<button class="dash-card-action-btn" data-archive="' + p.id + '" title="Archivar">📦</button>' +
                     '</div>' +
-                    '<div class="dash-card-footer">' +
-                        '<div class="dash-card-date-rel">' + rel + '</div>' +
-                        '<div class="dash-card-health" style="background:' + hColor + '18;color:' + hColor + ';">' + hLabel + '</div>' +
-                    '</div>' +
-                    '<div class="dash-card-actions">' +
-                        '<button class="dash-card-action-btn" data-archive="' + p.id + '">Archive</button>' +
-                    '</div>' +
-                '</a>';
+                '</div>';
             });
 
             // Tarjeta "Nuevo proyecto" al final de cada grupo
@@ -1145,8 +1400,10 @@ export default class DashboardView {
         const self = this;
         document.querySelectorAll('.dash-phase-chip').forEach(function(chip) {
             chip.addEventListener('click', function() {
-                const phase = chip.getAttribute('data-phase');
-                self._phaseFilter = phase;
+                const phase   = chip.getAttribute('data-phase');
+                const quality = chip.getAttribute('data-quality');
+                if (phase)   self._phaseFilter   = phase;
+                if (quality) self._qualityFilter = quality;
                 // Re-render in-place · zero navigateTo
                 self._renderProjects();
             });
@@ -1495,8 +1752,8 @@ export default class DashboardView {
             document.getElementById('newProjName').focus();
         };
         document.getElementById('dashBtnNew')?.addEventListener('click', openNewProjectModal);
-        // UX-DASH-001 · "Paso 1" del onboarding abre el mismo wizard
-        document.getElementById('dashStep1')?.addEventListener('click', openNewProjectModal);
+        // PROJ-QUALITY-001 sprint D · helper card bind delegat via data-action
+        // (es fa a _renderHelper · evita binding orphan si la card no està al DOM)
         // MAT-002-A · botón Cohort 0 Matriu retirado del topbar (UX-AUDIT-001 sprint A2).
         // El método _openMatriuCohortModal sigue disponible y se invoca desde el
         // wizard de New Project + desde la landing /matriu (CTA "Sumar-me a Cohort 0").
@@ -1839,8 +2096,20 @@ export default class DashboardView {
         const refreshModeHint = () => {
             const sector = document.getElementById('newProjSector')?.value || '';
             const desc   = (document.getElementById('newProjDesc')?.value || '').trim();
+            const founder = !!document.getElementById('newProjFounder')?.checked;
             const hint   = document.getElementById('newProjModeHint');
+            const btn    = document.getElementById('newProjConfirm');
             if (!hint) return;
+            // FOUNDER-001 sprint B · si checkbox actiu, salta tota la resta
+            if (founder) {
+                hint.style.background = 'rgba(168,85,247,0.10)';
+                hint.style.borderLeftColor = '#a855f7';
+                hint.style.color = '#d8b4fe';
+                hint.innerHTML = '🌟 <strong>Founder bootstrap</strong> · clona el manifest SOS · 9 roles + 12 transactions + 5 SOPs + 3 workshops + presentation IA. Sector i descripció seran ignorats. Pots adaptar tot després.';
+                if (btn) btn.textContent = '🌟 Clonar founder';
+                return;
+            }
+            if (btn) btn.textContent = 'Crear & abrir mapa';
             if (!sector && !desc) {
                 hint.style.background = 'rgba(99,102,241,0.08)';
                 hint.style.borderLeftColor = '#6366f1';
@@ -1903,6 +2172,8 @@ export default class DashboardView {
         document.getElementById('newProjSubtype')?.addEventListener('change', () => { refreshSubtypeHint(); refreshModeHint(); });
         document.getElementById('newProjType')?.addEventListener('change',   refreshTypeHint);
         document.getElementById('newProjDesc')?.addEventListener('input',  refreshModeHint);
+        // FOUNDER-001 sprint B · toggle founder bootstrap
+        document.getElementById('newProjFounder')?.addEventListener('change', refreshModeHint);
 
         document.getElementById('newProjConfirm')?.addEventListener('click', async function() {
             const btn  = this;
@@ -1911,8 +2182,45 @@ export default class DashboardView {
             const subtypeId   = document.getElementById('newProjSubtype')?.value || null;
             const projectType = document.getElementById('newProjType')?.value || null;
             const description = (document.getElementById('newProjDesc').value || '').trim();
+            const founderMode = !!document.getElementById('newProjFounder')?.checked;
             const status      = document.getElementById('newProjStatus');
             if (!name) { document.getElementById('newProjName').focus(); return; }
+
+            // FOUNDER-001 sprint B · clonar founder bootstrap · prioritari · usa
+            // el handle de l'usuari actual (matriu_member resolts) o '@alvaro' fallback
+            if (founderMode) {
+                btn.disabled = true; btn.textContent = '⏳ Clonant founder…';
+                status.style.display = 'block';
+                status.style.color = 'var(--accent-indigo)';
+                status.textContent = '🌟 Generant founder template…';
+                try {
+                    let creatorHandle = FOUNDER_PROJECT_DEFAULTS.creatorHandle;
+                    try {
+                        const members = await KB.query({ type: 'matriu_member' });
+                        const primary = (members || []).find(m => m && (m.content?.isPrimary || m.isPrimary));
+                        if (primary && primary.content?.handle) creatorHandle = primary.content.handle;
+                    } catch (_) {}
+                    const { project, sops, workshops, stats } = buildFounderProject({ creatorHandle });
+                    // El nom escrit per l'usuari prevaleix sobre el default
+                    project.nombre = name;
+                    project.name   = name;
+                    await store.dispatch({ type: 'CREATE_PROJECT', payload: project });
+                    for (const s of sops)      await KB.upsert(s);
+                    for (const w of workshops) await KB.upsert(w);
+                    status.style.color = 'var(--accent-green)';
+                    status.textContent = '✓ Founder clonat · ' + stats.roles + ' roles · ' + stats.transactions + ' tx · ' + stats.sops + ' SOPs · ' + stats.workshops + ' workshops';
+                    document.getElementById('dashModalNew').classList.remove('open');
+                    btn.disabled = false; btn.textContent = 'Crear & abrir mapa';
+                    window.navigateTo('/project/' + project.id);
+                    return;
+                } catch (err) {
+                    console.error('[FOUNDER-001] clone failed', err);
+                    status.style.color = '#ff5252';
+                    status.textContent = '✗ ' + (err?.message || 'error inesperat');
+                    btn.disabled = false; btn.textContent = 'Crear & abrir mapa';
+                    return;
+                }
+            }
 
             // UX-AUDIT-001 sprint B · construir hint context-rich per a la IA
             // (només s'usa al camí IA · els altres camins el guarden a project)
