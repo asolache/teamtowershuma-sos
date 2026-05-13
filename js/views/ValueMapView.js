@@ -2538,11 +2538,37 @@ export default class ValueMapView {
         status.textContent   = t('ai.enriching');
 
         try {
-            // Context-First: enriquecer con sector + roles existentes
+            // Context-First: enriquecer con sector + subtype + projectType + roles existentes
+            // VALUEMAP-AI-CTX-001 · injectem projectType + subtypeId del store
+            // perquè la IA tingui més precisió (alineat amb VALUEMAP-GEN-001 a aiFillService)
             const detectedSector = this._state.currentSector || null;
+            let projectMeta = '';
+            try {
+                if (this._state.projectId) {
+                    const { store } = await import('../core/store.js');
+                    const project = (store.getState().projects || []).find(p => p?.id === this._state.projectId);
+                    if (project) {
+                        const parts = [];
+                        if (project.projectType) parts.push('projectType: ' + project.projectType);
+                        if (project.subtypeId)   parts.push('subtype: ' + project.subtypeId);
+                        if (project.description) parts.push('description: ' + project.description.slice(0, 240));
+                        if (project.purpose)     parts.push('purpose: ' + project.purpose.slice(0, 240));
+                        // Subtype hint via sectorSubtypes
+                        if (project.sectorId && project.subtypeId) {
+                            try {
+                                const { getSubtypeById } = await import('../core/sectorSubtypes.js');
+                                const sub = getSubtypeById(project.sectorId, project.subtypeId);
+                                if (sub?.iaContextHint) parts.push('operativa típica del subtipus: ' + sub.iaContextHint);
+                            } catch (_) {}
+                        }
+                        if (parts.length) projectMeta = '\nProject context:\n' + parts.join('\n');
+                    }
+                }
+            } catch (_) { /* degrade silenciós */ }
+            const enrichedFreeText = freeText + projectMeta;
             const ctxResult = await KnowledgeLoader.buildContext({
                 sector:      detectedSector,
-                freeText:    freeText,
+                freeText:    enrichedFreeText,
                 existingMap: hasRoles ? { roles: this._state.roles, transactions: this._state.transactions } : null,
                 includeVna:  true,
                 taskContext: hasRoles
