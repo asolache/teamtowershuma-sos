@@ -14,6 +14,18 @@ import { KB }    from '../core/kb.js';
 import {
     PUBLIC_PROJECT_TYPE, projectRegistryEntryIdFor,
 } from '../core/publicProjectService.js';
+// PUBLISH-SELECT-001 sprint A · tabs per a noves entitats públiques
+import {
+    PUBLIC_WORK_ORDER_TYPE, PUBLIC_MARKET_ITEM_TYPE, PUBLIC_WORKSHOP_TYPE,
+} from '../core/publicEntityService.js';
+
+// Mapeig tab → public type · ORDER importa per a la UI
+const TAB_DEFS = Object.freeze([
+    { id: 'projects',  type: PUBLIC_PROJECT_TYPE,    icon: '🏛', label: 'Projectes' },
+    { id: 'workorders', type: PUBLIC_WORK_ORDER_TYPE, icon: '📋', label: 'Work Orders' },
+    { id: 'market',    type: PUBLIC_MARKET_ITEM_TYPE, icon: '🛍', label: 'Productes' },
+    { id: 'workshops', type: PUBLIC_WORKSHOP_TYPE,    icon: '🎓', label: 'Workshops' },
+]);
 
 function escapeHtml(s) {
     if (s === null || s === undefined) return '';
@@ -33,10 +45,16 @@ function _gradientForId(id) {
 export default class OpportunitiesView {
     constructor() {
         document.title = 'Oportunitats · Permaweb · SOS V11';
-        this._entries = [];
+        this._entriesByTab = { projects: [], workorders: [], market: [], workshops: [] };
         this._filter  = '';
         this._syncing = false;
+        // PUBLISH-SELECT-001 · activeTab des de URL ?tab=workorders, default projects
+        const params = new URLSearchParams(window.location.search || '');
+        const tabParam = params.get('tab');
+        this._activeTab = TAB_DEFS.find(t => t.id === tabParam) ? tabParam : 'projects';
     }
+    // Helper · accés al cache del tab actiu
+    get _entries() { return this._entriesByTab[this._activeTab] || []; }
 
     async getHtml() {
         await store.init();
@@ -88,12 +106,16 @@ export default class OpportunitiesView {
             </div>
             <div class="op-main">
                 <header class="op-hero">
-                    <h1>🚀 Oportunitats · projectes públics</h1>
-                    <p>Descobreix projectes SOS publicats al permaweb · cada un porta el seu sector, descripció, skills que busca i ownerDid verificable. Quan trobis un que t'interessi, sol·licita unir-te com a stakeholder · els founders rebran la teva sol·licitud signada. <strong>Discovery i verify són sempre free</strong> · publish d'un projecte costa 0,05€ del wallet del projecte.</p>
+                    <h1>🚀 Oportunitats al permaweb</h1>
+                    <p>Descobreix <strong>projectes</strong>, <strong>work orders obertes</strong>, <strong>productes</strong> i <strong>workshops</strong> publicats per altres operadors SOS · ownerDid verificable + signatura ECDSA · <strong>Discovery i verify sempre free</strong> · publish costa 0,02-0,05€ per entitat des del wallet del projecte (Free pla ×1.5 fee).</p>
                 </header>
+                <!-- PUBLISH-SELECT-001 · tabs per tipus de contingut públic -->
+                <div class="op-tabs" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;border-bottom:1px solid var(--border-default);padding-bottom:6px;">
+                    ${TAB_DEFS.map(t => `<button class="op-tab" data-op-tab="${t.id}" style="background:${this._activeTab === t.id ? 'var(--accent-indigo)' : 'transparent'};color:${this._activeTab === t.id ? '#fff' : 'var(--text-secondary)'};border:1px solid ${this._activeTab === t.id ? 'var(--accent-indigo)' : 'var(--border-default)'};padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:0.82rem;font-weight:700;font-family:var(--font-base);">${t.icon} ${t.label}</button>`).join('')}
+                </div>
                 <div class="op-stats" id="opStats"></div>
                 <div class="op-search">
-                    <input type="search" id="opSearch" placeholder="🔍 Cerca per nom · descripció · sector · skill" autocomplete="off">
+                    <input type="search" id="opSearch" placeholder="🔍 Cerca per títol · descripció · sector · skill · status" autocomplete="off">
                 </div>
                 <div id="opList" class="op-grid">
                     <div class="op-empty">Carregant del cache local…</div>
@@ -110,9 +132,34 @@ export default class OpportunitiesView {
             this._filter = e.target.value.toLowerCase().trim();
             this._render();
         });
+        // PUBLISH-SELECT-001 · tabs · canviar entitat type
+        document.querySelectorAll('[data-op-tab]').forEach(btn => {
+            btn.addEventListener('click', () => this._switchTab(btn.getAttribute('data-op-tab')));
+        });
         // PROJ-VERSIONING-001 sprint D · async fetch latest version per card
         // (cache TTL 15min · NO bloca render · update banner inline si latest > current)
         this._checkLatestVersions().catch(e => console.warn('[opportunities] latest check', e?.message));
+    }
+
+    // PUBLISH-SELECT-001 · canvi de tab · update URL · re-render header + grid
+    async _switchTab(tabId) {
+        if (!TAB_DEFS.find(t => t.id === tabId)) return;
+        if (this._activeTab === tabId) return;
+        this._activeTab = tabId;
+        try {
+            const url = new URL(window.location.href);
+            if (tabId === 'projects') url.searchParams.delete('tab');
+            else url.searchParams.set('tab', tabId);
+            window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
+        } catch (_) {}
+        // Re-pinta tabs visualment (sense full re-render)
+        document.querySelectorAll('[data-op-tab]').forEach(btn => {
+            const isActive = btn.getAttribute('data-op-tab') === tabId;
+            btn.style.background = isActive ? 'var(--accent-indigo)' : 'transparent';
+            btn.style.color      = isActive ? '#fff' : 'var(--text-secondary)';
+            btn.style.borderColor= isActive ? 'var(--accent-indigo)' : 'var(--border-default)';
+        });
+        this._render();
     }
 
     async _checkLatestVersions() {
@@ -135,10 +182,16 @@ export default class OpportunitiesView {
     }
 
     async _loadFromCache() {
+        // PUBLISH-SELECT-001 · carrega cache de TOTS els 4 tabs en paral·lel
         try {
-            this._entries = await KB.query({ type: PUBLIC_PROJECT_TYPE });
+            const [projects, workorders, market, workshops] = await Promise.all(
+                TAB_DEFS.map(t => KB.query({ type: t.type }).catch(() => []))
+            );
+            this._entriesByTab = {
+                projects, workorders, market, workshops,
+            };
         } catch (e) {
-            this._entries = [];
+            this._entriesByTab = { projects: [], workorders: [], market: [], workshops: [] };
             console.warn('[opportunities] KB.query failed', e);
         }
         this._render();
@@ -191,25 +244,68 @@ export default class OpportunitiesView {
         if (!stats || !list) return;
         const filtered = this._applyFilter(this._entries);
 
-        // Stats sectors únics + skills demanats
-        const sectors = new Set();
-        const skills  = new Set();
-        for (const e of filtered) {
-            const c = e?.content || {};
-            if (c.sectorId) sectors.add(c.sectorId);
-            (c.lookingForSkills || []).forEach(s => skills.add(s));
+        // Stats per tab · projects té sectors+skills, els altres tenen counts per status/kind/tier
+        let statsHtml;
+        if (this._activeTab === 'projects') {
+            const sectors = new Set(); const skills = new Set();
+            for (const e of filtered) {
+                const c = e?.content || {};
+                if (c.sectorId) sectors.add(c.sectorId);
+                (c.lookingForSkills || []).forEach(s => skills.add(s));
+            }
+            statsHtml = `
+                <div class="op-stat"><div class="op-stat-label">Total cache</div><div class="op-stat-value">${this._entries.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Filtrades</div><div class="op-stat-value">${filtered.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Sectors únics</div><div class="op-stat-value">${sectors.size}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Skills demanades</div><div class="op-stat-value">${skills.size}</div></div>
+            `;
+        } else if (this._activeTab === 'workorders') {
+            const skills = new Set(); let openCount = 0;
+            for (const e of filtered) {
+                const c = e?.content || {};
+                (c.lookingForSkills || []).forEach(s => skills.add(s));
+                if (c.status === 'backlog' || c.status === 'doing') openCount++;
+            }
+            statsHtml = `
+                <div class="op-stat"><div class="op-stat-label">Total WOs</div><div class="op-stat-value">${this._entries.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Filtrades</div><div class="op-stat-value">${filtered.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Obertes</div><div class="op-stat-value" style="color:#22c55e;">${openCount}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Skills cercades</div><div class="op-stat-value">${skills.size}</div></div>
+            `;
+        } else if (this._activeTab === 'market') {
+            const kinds = new Set(); let totalEur = 0;
+            for (const e of filtered) {
+                const c = e?.content || {};
+                if (c.kind) kinds.add(c.kind);
+                if (typeof c.priceEur === 'number') totalEur += c.priceEur;
+            }
+            statsHtml = `
+                <div class="op-stat"><div class="op-stat-label">Total productes</div><div class="op-stat-value">${this._entries.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Filtrats</div><div class="op-stat-value">${filtered.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Tipus</div><div class="op-stat-value">${kinds.size}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Valor agregat</div><div class="op-stat-value">${totalEur.toFixed(0)}€</div></div>
+            `;
+        } else if (this._activeTab === 'workshops') {
+            const tiers = new Set();
+            for (const e of filtered) {
+                const c = e?.content || {};
+                if (c.accessTier) tiers.add(c.accessTier);
+            }
+            statsHtml = `
+                <div class="op-stat"><div class="op-stat-label">Total workshops</div><div class="op-stat-value">${this._entries.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Filtrats</div><div class="op-stat-value">${filtered.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Tiers</div><div class="op-stat-value">${tiers.size}</div></div>
+                <div class="op-stat"><div class="op-stat-label">—</div><div class="op-stat-value">·</div></div>
+            `;
         }
-        stats.innerHTML = `
-            <div class="op-stat"><div class="op-stat-label">Total cache</div><div class="op-stat-value">${this._entries.length}</div></div>
-            <div class="op-stat"><div class="op-stat-label">Filtrades</div><div class="op-stat-value">${filtered.length}</div></div>
-            <div class="op-stat"><div class="op-stat-label">Sectors únics</div><div class="op-stat-value">${sectors.size}</div></div>
-            <div class="op-stat"><div class="op-stat-label">Skills demanades</div><div class="op-stat-value">${skills.size}</div></div>
-        `;
+        stats.innerHTML = statsHtml;
+
         if (filtered.length === 0) {
+            const tabLabel = (TAB_DEFS.find(t => t.id === this._activeTab) || {}).label || this._activeTab;
             list.innerHTML = '<div class="op-empty">'
                 + (this._entries.length === 0
-                    ? 'Cap projecte públic al cache · prem ↻ Sync per descobrir del permaweb'
-                    : 'Cap oportunitat coincideix amb el filtre · prova un terme més general')
+                    ? 'Cap ' + tabLabel.toLowerCase() + ' al cache · prem ↻ Sync per descobrir del permaweb · publica des de <a href="/dashboard" data-link style="color:var(--accent-indigo);">Configuració del projecte → Publica continguts</a>'
+                    : 'Cap entrada coincideix amb el filtre · prova un terme més general')
                 + '</div>';
             return;
         }
@@ -221,16 +317,28 @@ export default class OpportunitiesView {
         const q = this._filter;
         return entries.filter(e => {
             const c = e?.content || {};
+            // PUBLISH-SELECT-001 · cobertura per a 4 entity types · field set unificat
             const hay = [
-                c.name, c.description, c.sectorId, c.projectType, c.subtype, c.ownerDid,
+                c.name, c.title, c.description, c.sectorId, c.sectorTT, c.projectType,
+                c.subtype, c.ownerDid, c.kind, c.status, c.accessTier, c.cnae, c.type,
                 ...(c.lookingForSkills || []),
                 ...(c.lookingForSectors || []),
+                ...(c.tags || []),
+                ...(c.deliverables || []),
             ].filter(Boolean).join(' ').toLowerCase();
             return hay.includes(q);
         });
     }
 
+    // PUBLISH-SELECT-001 · render cards segons activeTab
     _cardHtml(e) {
+        if (this._activeTab === 'workorders') return this._cardHtmlWorkOrder(e);
+        if (this._activeTab === 'market')     return this._cardHtmlMarket(e);
+        if (this._activeTab === 'workshops')  return this._cardHtmlWorkshop(e);
+        return this._cardHtmlProject(e);
+    }
+
+    _cardHtmlProject(e) {
         const c = e?.content || {};
         const initials = (c.name || c.projectId || '?').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
         const gradient = _gradientForId(c.projectId || c.ownerDid || '');
@@ -278,6 +386,104 @@ export default class OpportunitiesView {
                         ${cloneBtn}
                         <span>${typeof c.stakeholdersCount === 'number' ? c.stakeholdersCount + ' stakeholders' : ''}</span>
                     </div>
+                </div>
+            </a>
+        `;
+    }
+
+    // PUBLISH-SELECT-001 · card per a Work Order
+    _cardHtmlWorkOrder(e) {
+        const c = e?.content || {};
+        const title  = c.title || 'Work Order';
+        const status = c.status || 'unknown';
+        const statusColor = status === 'backlog' ? '#facc15' : (status === 'doing' ? '#3b82f6' : '#94a3b8');
+        const skills = (c.lookingForSkills || []).slice(0, 5);
+        const tx = c.arweaveTxId;
+        const projectId = c.projectId || e.projectId;
+        return `
+            <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
+                <div class="op-card-head">
+                    <div class="op-emblem" style="background:${_gradientForId(c.workOrderId || e.id)};">📋</div>
+                    <div class="op-card-info">
+                        <div style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:${statusColor}25;color:${statusColor};border:1px solid ${statusColor}50;font-size:10px;font-weight:700;margin-bottom:4px;">● ${escapeHtml(status)}</div>
+                        <div class="op-card-name">${escapeHtml(title)}</div>
+                        <div class="op-card-sub">
+                            ${projectId ? 'Projecte ' + escapeHtml(String(projectId).slice(0, 16)) + '…' : '(sense projecte)'}
+                            ${typeof c.estimatedHours === 'number' ? ' · ~' + c.estimatedHours + 'h' : ''}
+                            ${typeof c.fmvPerHour === 'number' ? ' · ' + c.fmvPerHour + '€/h' : ''}
+                            ${c.priority ? ` · pri ${escapeHtml(c.priority)}` : ''}
+                        </div>
+                    </div>
+                </div>
+                ${c.description ? `<div class="op-card-desc">${escapeHtml(c.description)}</div>` : ''}
+                ${skills.length ? `<div class="op-card-chips">${skills.map(s => `<span class="op-chip skill">🧠 ${escapeHtml(s)}</span>`).join('')}</div>` : ''}
+                <div class="op-card-foot">
+                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${c.deadline ? '⏰ ' + new Date(c.deadline).toLocaleDateString() : ''}</span>
+                </div>
+            </a>
+        `;
+    }
+
+    // PUBLISH-SELECT-001 · card per a Market item
+    _cardHtmlMarket(e) {
+        const c = e?.content || {};
+        const title = c.title || 'Producte';
+        const kind  = c.kind  || 'service';
+        const kindIcon = ({ service: '🛠', product: '📦', workshop: '🎓', skill: '🤲', template: '📋', subscription: '🔁' })[kind] || '✦';
+        const tx = c.arweaveTxId;
+        const projectId = c.projectId || e.projectId;
+        return `
+            <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
+                <div class="op-card-head">
+                    <div class="op-emblem" style="background:${_gradientForId(c.itemId || e.id)};">${kindIcon}</div>
+                    <div class="op-card-info">
+                        <div style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:rgba(99,102,241,0.12);color:var(--accent-indigo);border:1px solid rgba(99,102,241,0.30);font-size:10px;font-weight:700;margin-bottom:4px;">${escapeHtml(kind)}</div>
+                        <div class="op-card-name">${escapeHtml(title)}</div>
+                        <div class="op-card-sub">
+                            ${projectId ? 'Projecte ' + escapeHtml(String(projectId).slice(0, 16)) + '…' : ''}
+                            ${typeof c.priceEur === 'number' ? ' · <strong style="color:#22c55e;">' + c.priceEur + '€</strong>' : ''}
+                            ${c.cnae ? ` · CNAE ${escapeHtml(c.cnae)}` : ''}
+                        </div>
+                    </div>
+                </div>
+                ${c.description ? `<div class="op-card-desc">${escapeHtml(c.description)}</div>` : ''}
+                ${Array.isArray(c.deliverables) && c.deliverables.length ? `<div class="op-card-chips">${c.deliverables.slice(0, 4).map(d => `<span class="op-chip skill">📦 ${escapeHtml(d)}</span>`).join('')}</div>` : ''}
+                <div class="op-card-foot">
+                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${c.savingsCompareTo ? '💰 estalvi ' + escapeHtml(c.savingsCompareTo) : ''}</span>
+                </div>
+            </a>
+        `;
+    }
+
+    // PUBLISH-SELECT-001 · card per a Workshop
+    _cardHtmlWorkshop(e) {
+        const c = e?.content || {};
+        const title = c.title || 'Workshop';
+        const tier  = c.accessTier || 'public';
+        const tierColor = ({ public: '#22c55e', operator: '#3b82f6', matriu: '#a855f7', cohort: '#f59e0b' })[tier] || '#94a3b8';
+        const tx = c.arweaveTxId;
+        const projectId = c.projectId || e.projectId;
+        return `
+            <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
+                <div class="op-card-head">
+                    <div class="op-emblem" style="background:${_gradientForId(c.workshopId || e.id)};">🎓</div>
+                    <div class="op-card-info">
+                        <div style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:${tierColor}25;color:${tierColor};border:1px solid ${tierColor}50;font-size:10px;font-weight:700;margin-bottom:4px;">tier · ${escapeHtml(tier)}</div>
+                        <div class="op-card-name">${escapeHtml(title)}</div>
+                        <div class="op-card-sub">
+                            ${c.type ? escapeHtml(c.type) : ''}
+                            ${c.sector ? ` · sector ${escapeHtml(c.sector)}` : ''}
+                            ${typeof c.audienceSize === 'number' ? ` · ${c.audienceSize} pax` : ''}
+                            ${typeof c.priceEur === 'number' ? ' · <strong style="color:#22c55e;">' + c.priceEur + '€</strong>' : ''}
+                        </div>
+                    </div>
+                </div>
+                ${c.description ? `<div class="op-card-desc">${escapeHtml(c.description)}</div>` : ''}
+                <div class="op-card-foot">
+                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${c.date ? '📅 ' + new Date(c.date).toLocaleDateString() : ''}</span>
                 </div>
             </a>
         `;
