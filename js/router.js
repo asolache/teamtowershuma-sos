@@ -190,6 +190,19 @@ async function router() {
                 search:   window.location.search,
             });
         } catch (e) { console.warn('[Router · bottom-nav]', e); }
+
+        // PERM-DISCO-001 sprint A · background sync silent · cooldown 1h
+        // Es dispara a CADA navigation però el throttle a syncSchedulerService
+        // evita que es repeteixi · sols 1 sync per hora màxim · silent UX
+        // (status badge invisible si sync no toca).
+        try {
+            const { triggerSyncIfDue } = await import('./core/syncSchedulerService.js');
+            triggerSyncIfDue({
+                onStart: () => _paintSyncBadge('syncing'),
+                onDone:  (res) => _paintSyncBadge('done', res),
+                onError: (e)   => _paintSyncBadge('error', e),
+            }).catch(() => {});  // silent
+        } catch (e) { console.warn('[Router · bg-sync]', e); }
     } catch (err) {
         console.error('[Router V11]', err);
         document.getElementById('app').innerHTML = `
@@ -201,6 +214,42 @@ async function router() {
     } finally {
         const boot = document.getElementById('bootloader');
         if (boot) { boot.classList.add('done'); setTimeout(() => boot.remove(), 700); }
+    }
+}
+
+// PERM-DISCO-001 sprint A · status badge del background sync
+// Estats: 'syncing' (pulse indigo) · 'done' (verd 4s) · 'error' (taronja 4s)
+function _ensureSyncBadgeSlot() {
+    let el = document.getElementById('sos-sync-badge');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'sos-sync-badge';
+    el.style.cssText = 'position:fixed;top:8px;right:12px;z-index:9991;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;font-family:var(--font-mono);pointer-events:none;opacity:0;transition:opacity 0.3s ease;';
+    document.body.appendChild(el);
+    return el;
+}
+function _paintSyncBadge(state, payload) {
+    const el = _ensureSyncBadgeSlot();
+    let text = '', bg = '', color = '', autoHideMs = 0;
+    if (state === 'syncing') {
+        text = '🔄 Sync permaweb…';
+        bg = 'rgba(99,102,241,0.15)'; color = '#6366f1';
+    } else if (state === 'done') {
+        const fetched = payload?.fetched ?? 0;
+        const cached  = payload?.cached  ?? 0;
+        text = `✓ Sync · ${fetched} entries · ${cached} cache`;
+        bg = 'rgba(0,230,118,0.12)'; color = '#00e676'; autoHideMs = 4200;
+    } else if (state === 'error') {
+        text = '⚠ Sync · ' + (payload?.message || 'error').slice(0, 40);
+        bg = 'rgba(250,204,21,0.12)'; color = '#facc15'; autoHideMs = 5400;
+    }
+    el.style.background = bg;
+    el.style.color = color;
+    el.style.border = '1px solid ' + color + '40';
+    el.textContent = text;
+    el.style.opacity = '1';
+    if (autoHideMs > 0) {
+        setTimeout(() => { el.style.opacity = '0'; }, autoHideMs);
     }
 }
 
