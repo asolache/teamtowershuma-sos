@@ -533,3 +533,69 @@ export function validateVersionChain(versions) {
     }
     return { valid: issues.length === 0, issues };
 }
+
+// =============================================================================
+// PROJ-VERSIONING-001 sprint D · cached latest version lookup
+//
+// Per evitar abusar del gateway Arweave amb queries duplicades a cada
+// render del /opportunities, cache TTL 15min per projectId. KB-bound ·
+// el cache sobreviu reload.
+// =============================================================================
+
+const LATEST_CACHE_TTL_MS = 15 * 60 * 1000;   // 15min
+const LATEST_CACHE_TYPE   = 'project_version_cache';
+
+// getLatestVersionCached · async · retorna { entryVersion, txId, blockTimestamp }
+// del cache KB si dins TTL, sinó fa GraphQL + cacheja.
+// Si fail (gateway down) · retorna null silenciosament (no llança al caller).
+export async function getLatestVersionCached({
+    projectId,
+    ttlMs    = LATEST_CACHE_TTL_MS,
+    force    = false,
+    gqlUrl,
+    fetchFn,
+    kb       = null,
+} = {}) {
+    if (!projectId) return null;
+    const cacheId = 'project-latest-' + projectId;
+    let KB;
+    try { KB = kb || (await import('./kb.js')).KB; } catch (_) { KB = null; }
+    if (KB && !force) {
+        try {
+            const node = await KB.getNode(cacheId);
+            if (node && node.type === LATEST_CACHE_TYPE) {
+                const age = Date.now() - (node.content?._cachedAt || 0);
+                if (age < ttlMs) return node.content?.latest || null;
+            }
+        } catch (_) {}
+    }
+    // Fetch fresh
+    let latest = null;
+    try {
+        latest = await getLatestProjectVersion({ projectId, gqlUrl, fetchFn });
+    } catch (e) {
+        console.warn('[publicProject] getLatestVersionCached gateway fail', e?.message);
+        return null;
+    }
+    // Cache
+    if (KB) {
+        try {
+            const now = Date.now();
+            await KB.upsert({
+                id:   cacheId,
+                type: LATEST_CACHE_TYPE,
+                content: {
+                    projectId,
+                    latest,
+                    _cachedAt: now,
+                },
+                keywords:  ['type:project-version-cache', 'projectId:' + projectId],
+                createdAt: now,
+                updatedAt: now,
+            });
+        } catch (_) {}
+    }
+    return latest;
+}
+
+export { LATEST_CACHE_TTL_MS, LATEST_CACHE_TYPE };
