@@ -47,6 +47,23 @@ t(landing.userPrompt.includes('Mentoria'),                            'B · user
 t(landing.contextTokens > 0,                                          'B · contextTokens estimat > 0');
 eq(landing.dim, 'landing',                                            'B · dim = landing');
 t(Array.isArray(landing.refs) && landing.refs.length >= 1,            'B · refs array no buit');
+// LANDING-UNIFY-001 · el prompt ha de demanar heroTitle/heroTag/heroMantra
+t(landing.userPrompt.includes('heroTitle'),                           'B · prompt demana heroTitle');
+t(landing.userPrompt.includes('heroTag'),                             'B · prompt demana heroTag');
+t(landing.userPrompt.includes('heroMantra'),                          'B · prompt demana heroMantra');
+t(landing.userPrompt.includes('bodyMarkdown'),                        'B · prompt demana bodyMarkdown');
+t(landing.userPrompt.includes('roleDescriptions'),                    'B · prompt demana roleDescriptions');
+// roles del projecte injectats al prompt per roleDescriptions
+t(landing.userPrompt.includes('"r1"') || landing.userPrompt.includes("r1 ·"), 'B · roles incloses al prompt per roleDescriptions');
+
+// LANDING-UNIFY-001 · audienceId propaga to específic
+const landingFund = ctx.buildLandingContext({ project, marketItems: market, audienceId: 'fundadors' });
+t(landingFund.userPrompt.includes('Fundadors'),                       'B · audienceId=fundadors · prompt nomena audiència');
+t(landingFund.systemPrompt.includes('Fundadors'),                     'B · audienceId=fundadors · system prompt adapta to');
+
+const landingUser = ctx.buildLandingContext({ project, marketItems: market, audienceId: 'usuaris' });
+t(landingUser.userPrompt.includes('Usuaris'),                         'B · audienceId=usuaris · prompt nomena audiència');
+t(landingUser.userPrompt !== landingFund.userPrompt,                  'B · diferents audiences · prompts diferents');
 
 // ─── C · buildValueMapContext · roles+tx incloses ────────────────────────
 const vmap = ctx.buildValueMapContext({ project });
@@ -89,8 +106,9 @@ t(threw && /requires project/.test(threw.message),                    'H · land
 const mockProvider = async (modelKey, payload) => ({
     text: JSON.stringify({
         description: 'Generated description longer than 60 characters for landing dim test fixture.',
+        heroTag: 'Test Tag', heroTitle: 'Test Project', heroMantra: 'Frase potent del test.',
+        bodyMarkdown: '## Que oferim\nQualitat.',
         productSuggestions: [],
-        presentationNarrative: '# Hero\n\nGenerated.',
     }),
     usage: { inputTokens: 500, outputTokens: 200 },
     modelKey,
@@ -130,7 +148,7 @@ const escalatingProvider = async (modelKey, payload) => {
         return { text: 'not valid json', usage: { inputTokens: 100, outputTokens: 20 }, modelKey, finishReason: 'end_turn' };
     }
     return {
-        text: JSON.stringify({ description: 'd'.repeat(80), productSuggestions: [], presentationNarrative: 'x' }),
+        text: JSON.stringify({ description: 'd'.repeat(80), heroTitle: 'Test Project Name', heroTag: 'Tag', heroMantra: 'Mantra', productSuggestions: [] }),
         usage: { inputTokens: 100, outputTokens: 20 },
         modelKey, finishReason: 'end_turn',
     };

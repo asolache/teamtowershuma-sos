@@ -49,12 +49,25 @@ PRIORITAT · qualitat semàntica sobre extensió. Format estricte JSON quan se't
 Idioma de resposta · català per defecte (manté el to del context).`;
 
 // ─── Dim 1 · Landing context ──────────────────────────────────────────────
+// LANDING-UNIFY-001 · el JSON output ara és compatible amb PresentationView
+// (heroTag · heroTitle · heroMantra · roleDescriptions) · així el text IA
+// apareix DIRECTAMENT a la landing pública del projecte (/presentation).
+// Suporta `audienceId` opcional (fundadors|equip|usuaris|inversors|comunitat)
+// per a generar variants per a diferents públics destinataris.
+const AUDIENCE_TONE = Object.freeze({
+    fundadors: 'visió + drets de propietat (multiplicador ×1.5 · cap-table) · directe als qui posen primera pedra',
+    equip:     'SOPs + WOs + slicing pie del temps · directe als operadors que executen',
+    usuaris:   'valor concret entregat + feedback loop · evita jargon cooperatiu',
+    inversors: 'risk multiplier ×4 · liquiditat · cap-table oberta · ROI social i financer',
+    comunitat: 'territori + valor difús + sostenibilitat ecosistema',
+});
 export function buildLandingContext({
     project,
     sectorReadiness = null,   // opcional · descripció del sector base
     marketItems     = [],     // items del market lligats al projecte
     similarProjects = [],     // descriptors de projectes públics del permaweb
     extraContext    = null,   // IA-CONTEXT-001 sprint B · usuari pot afegir context
+    audienceId      = null,   // LANDING-UNIFY-001 · audiència destinatària opcional
 } = {}) {
     if (!project || !project.id) throw new Error('buildLandingContext requires project');
     const refs = [];
@@ -72,35 +85,66 @@ export function buildLandingContext({
         if (p && p.id) _addRef(refs, p);
         return '- ' + (p.name || p.title || p.id || '?') + ' · ' + (p.sectorId || p.sector || '?');
     });
+    const rolesShort = (project.vna_roles || []).slice(0, 8).map(r => ({
+        id:    r.id,
+        label: r.label || r.name || r.id,
+        desc:  (r.description || '').slice(0, 60),
+    }));
+    const rolesLines = rolesShort.map(r => '- ' + r.id + ' · ' + r.label + (r.desc ? ' · ' + r.desc : ''));
+    const audienceTone = audienceId && AUDIENCE_TONE[audienceId] ? AUDIENCE_TONE[audienceId] : null;
+    const audienceLabel = {
+        fundadors: 'Fundadors (qui inicia)',
+        equip:     'Equip operatiu',
+        usuaris:   'Usuaris/Clients',
+        inversors: 'Inversors',
+        comunitat: 'Comunitat (territori)',
+    }[audienceId] || null;
+
     const userPrompt =
         '## Projecte\n' +
         'Id · ' + project.id + '\n' +
         'Nom · ' + (project.nombre || project.name || project.id) + '\n' +
         'Sector · ' + (project.sector_id || project.sectorId || '—') + '\n' +
+        'Tipus · ' + (project.projectType || '—') + '\n' +
         (project.description ? ('Descripció existent · ' + project.description.slice(0, 300) + '\n') : '') +
         (project.purpose ? ('Purpose · ' + project.purpose.slice(0, 300) + '\n') : '') +
+        (audienceLabel ? '\n## Audiència destinatària · ' + audienceLabel + '\nTo · ' + audienceTone + '\n' : '') +
         '\n## Context del sector\n' + (sectorReadiness || '—') + '\n' +
+        '\n## Roles del projecte (per generar roleDescriptions)\n' + (rolesLines.length ? rolesLines.join('\n') : '— cap encara —') + '\n' +
         '\n## Productes/serveis al market\n' + (productLines.length ? productLines.join('\n') : '— cap encara —') + '\n' +
         '\n## Projectes similars descobrits al permaweb\n' + (peerLines.length ? peerLines.join('\n') : '— cap encara —') + '\n' +
         _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
-        'Genera el contingut clau de la landing del projecte. Format ESTRICTE JSON:\n' +
+        'Genera el contingut COMPLET de la landing del projecte (es renderitzarà directament a /presentation).\n' +
+        'Format ESTRICTE JSON · zero text fora dels braços {}:\n' +
         '{\n' +
+        '  "heroTag": "<3-6 paraules · etiqueta tipus \\"Cooperativa de cures\\" · majúscula inicial>",\n' +
+        '  "heroTitle": "<el nom del projecte o reformulació que el reflecteixi · ≤80 chars>",\n' +
+        '  "heroMantra": "<1 frase potent · ≤18 paraules · captura el propòsit' + (audienceLabel ? ' per a ' + audienceLabel : '') + '>",\n' +
         '  "description": "<70-180 chars · qui són, què fan, per qui · sense buzzwords>",\n' +
+        '  "bodyMarkdown": "## Que oferim\\n<paràgraf · ≤80 paraules>\\n\\n## Per qui\\n<paràgraf · ≤60 paraules>",\n' +
+        '  "roleDescriptions": {\n' +
+        (rolesShort.length
+            ? rolesShort.map(r => '    "' + r.id + '": "<1 frase ≤20 paraules · què fa des del punt de vista' + (audienceLabel ? ' de ' + audienceLabel : ' del client') + '>"').join(',\n') + '\n'
+            : '    "<roleId>": "<1 frase ≤20 paraules>"\n'
+        ) +
+        '  },\n' +
         '  "productSuggestions": [\n' +
         '    { "title": "<≤60 chars>", "kind": "service|product|workshop|membership",\n' +
         '      "oneLiner": "<≤140 chars · valor concret · sense fluff>" }\n' +
-        '  ],\n' +
-        '  "presentationNarrative": "# <Hero title accionable>\\n\\n<paràgraf 1 · problema/audiència>\\n\\n<paràgraf 2 · solució + diferenciador>"\n' +
+        '  ]\n' +
         '}\n' +
         'REGLES estrictes:\n' +
         '- description ≥60 chars · directa · idioma català · zero "innovador", "revolucionari", "best-in-class"\n' +
         '- 1-2 productSuggestions · alineats amb el sector i el purpose\n' +
-        '- presentationNarrative ~120-180 paraules · # hero + 2 paràgrafs · markdown vàlid\n' +
-        '- Retorna SOLS JSON · zero text fora dels braços {}.';
+        '- heroMantra · ZERO floritures · una idea concreta\n' +
+        '- bodyMarkdown · markdown vàlid · 2 seccions · zero linc trencat\n' +
+        '- roleDescriptions · UNA entrada per role llistat (ids exactes)' + (audienceLabel ? ' · to ' + audienceLabel : '') + '\n' +
+        '- Retorna SOLS JSON.';
     const systemPrompt = COMMON_SYSTEM_HEADER +
-        '\nDim activa · 🎨 Landing · pes 20% · primer punt de contacte amb el client.' +
-        '\nPRIORITZA · claredat sobre creativitat · qui paga vol entendre què guanya.';
+        '\nDim activa · 🎨 Landing · pes 20% · text que apareix directament a /presentation.' +
+        '\nPRIORITZA · claredat sobre creativitat · qui paga vol entendre què guanya.' +
+        (audienceLabel ? '\nADAPTA el to a · ' + audienceLabel + ' · ' + audienceTone : '');
     return {
         systemPrompt,
         userPrompt,

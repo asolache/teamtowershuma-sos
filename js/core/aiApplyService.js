@@ -24,18 +24,56 @@ function _clean(s, max = 1000) {
 }
 
 // ─── Apply · Landing ────────────────────────────────────────────────────
-//   parsedDraft shape · { description, productSuggestions[], presentationNarrative }
+//   parsedDraft shape · LANDING-UNIFY-001 · estructura compatible amb
+//   PresentationView (legible directament a /presentation):
+//     { heroTag, heroTitle, heroMantra, description, bodyMarkdown,
+//       roleDescriptions:{<roleId>:str}, productSuggestions[], audienceId? }
+//   El draft legacy (només `presentationNarrative` string) també és acceptat
+//   per retro-compat · el storejem com a bodyMarkdown.
 export function applyLanding(parsedDraft, project) {
     const updates  = {};
     const kbWrites = [];
     if (!parsedDraft || !project) return { updates, kbWrites, summary: 'no-op', applied: false };
 
+    // description al projecte (camp directe · usat a /project + value map)
     if (parsedDraft.description && typeof parsedDraft.description === 'string') {
         updates.description = _clean(parsedDraft.description, 1000);
     }
-    if (parsedDraft.presentationNarrative && typeof parsedDraft.presentationNarrative === 'string') {
-        updates.presentation_narrative_v1 = _clean(parsedDraft.presentationNarrative, 4000);
+
+    // LANDING-UNIFY-001 · construïm SEMPRE un objecte narrative · PresentationView
+    // espera shape · { heroTag, heroTitle, heroMantra, roleDescriptions, ... }
+    // Si el draft només té el camp legacy `presentationNarrative`, el conservem
+    // dins `bodyMarkdown` per a retro-compat (no es perd).
+    const existingNarr = (project.presentation_narrative_v1 && typeof project.presentation_narrative_v1 === 'object')
+        ? project.presentation_narrative_v1 : null;
+    const narrative = {
+        heroTag:    parsedDraft.heroTag   ? _clean(parsedDraft.heroTag, 80)    : (existingNarr?.heroTag    || null),
+        heroTitle:  parsedDraft.heroTitle ? _clean(parsedDraft.heroTitle, 120) : (existingNarr?.heroTitle  || null),
+        heroMantra: parsedDraft.heroMantra? _clean(parsedDraft.heroMantra,240) : (existingNarr?.heroMantra || null),
+        bodyMarkdown: typeof parsedDraft.bodyMarkdown === 'string'
+            ? _clean(parsedDraft.bodyMarkdown, 4000)
+            : (typeof parsedDraft.presentationNarrative === 'string'
+                ? _clean(parsedDraft.presentationNarrative, 4000)
+                : (existingNarr?.bodyMarkdown || null)),
+        roleDescriptions: (parsedDraft.roleDescriptions && typeof parsedDraft.roleDescriptions === 'object')
+            ? Object.fromEntries(
+                Object.entries(parsedDraft.roleDescriptions)
+                    .slice(0, 50)
+                    .filter(([k, v]) => typeof k === 'string' && typeof v === 'string' && v.trim())
+                    .map(([k, v]) => [k.slice(0, 64), _clean(v, 240)])
+              )
+            : (existingNarr?.roleDescriptions || {}),
+        audienceId: parsedDraft.audienceId || existingNarr?.audienceId || null,
+        generatedAt: Date.now(),
+    };
+    // Nomès persistim si almenys 1 camp principal és present (no escrivim
+    // objecte buit que clobbery una narrativa anterior)
+    const hasNarrative = narrative.heroTitle || narrative.heroTag || narrative.heroMantra
+        || narrative.bodyMarkdown || (Object.keys(narrative.roleDescriptions).length > 0);
+    if (hasNarrative) {
+        updates.presentation_narrative_v1 = narrative;
     }
+
     let products = 0;
     if (Array.isArray(parsedDraft.productSuggestions)) {
         for (const p of parsedDraft.productSuggestions) {
@@ -61,7 +99,13 @@ export function applyLanding(parsedDraft, project) {
     updates.updatedAt = Date.now();
     const parts = [];
     if (updates.description) parts.push('description');
-    if (updates.presentation_narrative_v1) parts.push('presentation IA');
+    if (hasNarrative) {
+        const narrParts = [];
+        if (narrative.heroTitle)  narrParts.push('hero');
+        if (narrative.bodyMarkdown) narrParts.push('body');
+        if (Object.keys(narrative.roleDescriptions).length) narrParts.push(Object.keys(narrative.roleDescriptions).length + ' roleDesc');
+        parts.push('landing ' + (narrParts.length ? narrParts.join('+') : 'IA'));
+    }
     if (products) parts.push(products + ' producte' + (products === 1 ? '' : 's'));
     return {
         updates,
