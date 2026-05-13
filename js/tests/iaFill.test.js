@@ -253,6 +253,50 @@ const rOverride = await fill.aiFillDim({
 });
 eq(rOverride.subtypeId, 'agric-coop',                                  'K3 · subtypeId override aplicat');
 
+// K3b · IA-PROVIDER-PREF-001 · preferredProvider explicit propagat
+// Si l'usuari passa preferredProvider explícit, el chain prepend el model
+// adequat d'aquest provider. Els tests verifiquen el flow end-to-end via
+// captureProvider que registra els modelKey provats.
+let prefProviderCalls = [];
+const captureProviderTrack = async (modelKey, payload) => {
+    prefProviderCalls.push(modelKey);
+    return {
+        text: JSON.stringify({
+            addRoles: [{ id: 'r1', name: 'X', castell_level: 'tronc', description: 'd' }],
+            addTransactions: [{ id: 'tx1', from: 'r1', to: 'r1', deliverable: 'x', type: 'intangible' }],
+        }),
+        usage: { inputTokens: 100, outputTokens: 50 },
+        modelKey, finishReason: 'end_turn',
+    };
+};
+const projectMinSec = { ...project, sector_id: 'A' };
+const mockLoadMinSec = async () => ({ project: projectMinSec, sops, workshops, marketItems: market });
+const noopSeedLoader = async () => null;
+prefProviderCalls = [];
+await fill.aiFillDim({
+    projectId:         'proj-test-1',
+    dimId:             'valueMap',
+    loadContext:       mockLoadMinSec,
+    provider:          captureProviderTrack,
+    persistAudit:      async () => 'a-pref',
+    sectorSeedLoader:  noopSeedLoader,
+    preferredProvider: 'minimax',
+});
+t(prefProviderCalls.length >= 1 && prefProviderCalls[0].startsWith('minimax/'), 'K3b · preferredProvider=minimax · primer attempt és minimax');
+
+// K3c · sense preferredProvider explícit · respecta el default chain (anthropic per valueMap)
+prefProviderCalls = [];
+await fill.aiFillDim({
+    projectId:         'proj-test-1',
+    dimId:             'valueMap',
+    loadContext:       mockLoadMinSec,
+    provider:          captureProviderTrack,
+    persistAudit:      async () => 'a-pref-2',
+    sectorSeedLoader:  noopSeedLoader,
+    preferredProvider: null,    // explicit null sobreescriu auto-load del KB
+});
+eq(prefProviderCalls[0], 'anthropic/sonnet-4.6',                      'K3c · preferredProvider=null · agafa primary del chain (sonnet-4.6)');
+
 // K4 · loader pot fallar · degrade silenciós (no llança · prompt sense seed)
 seedLoaderCalls = [];
 promptReceived = null;
