@@ -47,11 +47,14 @@ export default class ProjectQualityView {
         const state = store.getState();
         this._project = (state.projects || []).find(p => p && p.id === pid) || null;
         if (!this._project) { this._quality = null; return; }
-        const [sops, workshops, marketItems] = await Promise.all([
+        const [sops, workshops, marketItems, providerNode] = await Promise.all([
             KB.query({ type: 'sop' }).catch(() => []),
             KB.query({ type: 'workshop' }).catch(() => []),
             KB.query({ type: 'market_item' }).catch(() => []),
+            // IA-PROVIDER-PREF-001 · llegim el provider preferit per al badge
+            KB.getNode('sos_ai_provider').catch(() => null),
         ]);
+        this._preferredProvider = providerNode?.value || null;
         this._quality = computeQualityScore(this._project, { sops, workshops, marketItems });
     }
 
@@ -176,7 +179,14 @@ export default class ProjectQualityView {
                 <header class="pq-hero">
                     <div class="pq-hero-title">
                         <h1 class="pq-hero-h1">${name}</h1>
-                        <div class="pq-hero-sub">Qualitat detall · 5 capes ponderades · objectiu ≥90 per a alfa Matriu</div>
+                        <div class="pq-hero-sub" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                            <span>Qualitat detall · 5 capes ponderades · objectiu ≥90 per a alfa Matriu</span>
+                            <span title="Provider IA preferit · es prova primer abans del fallback default · canvia a /settings"
+                                  style="background:rgba(168,85,247,0.12);color:var(--accent-purple);padding:2px 10px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border:1px solid rgba(168,85,247,0.30);">
+                                🧠 ${this._preferredProvider ? _esc(this._preferredProvider) : 'default chain'}
+                                <a href="/settings" data-link style="color:var(--accent-purple);text-decoration:underline;font-weight:700;margin-left:4px;">↻ canvia</a>
+                            </span>
+                        </div>
                     </div>
                     <div class="pq-hero-score">
                         <div class="pq-hero-score-num">${q.total}<span class="pq-hero-score-tot">/100</span></div>

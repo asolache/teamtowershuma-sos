@@ -104,6 +104,17 @@ export async function markAuditAccepted(auditId) {
     } catch (_) { return false; }
 }
 
+// IA-PROVIDER-PREF-001 · llegeix la preferència de provider de l'usuari
+// del KB (mateix node que /settings escriu via Orchestrator.setActiveProvider)
+async function _loadPreferredProvider() {
+    try {
+        const { KB } = await import('./kb.js');
+        await KB.init();
+        const node = await KB.getNode('sos_ai_provider');
+        return node?.value || null;
+    } catch (_) { return null; }
+}
+
 // aiFillDim · async · main entry point
 export async function aiFillDim({
     projectId,
@@ -115,6 +126,7 @@ export async function aiFillDim({
     audienceId      = null,    // LANDING-UNIFY-001 · per a regenerar landings per audiència
     subtypeId       = null,    // VALUEMAP-GEN-001 · override del project.subtypeId
     sectorSeedLoader = null,   // VALUEMAP-GEN-001 · injectable per a tests · default importa KnowledgeLoader
+    preferredProvider = undefined,  // IA-PROVIDER-PREF-001 · explicit override; undefined = auto-load del KB
     maxOutputTokens = 800,
     temperature     = 0.4,
     stopAt          = 'premium',
@@ -184,12 +196,17 @@ export async function aiFillDim({
         return out;
     };
 
-    // 4 · Run escalation chain
+    // 4 · Run escalation chain · respectant preferred-provider de l'usuari
+    // si en té un seleccionat a /settings (sos_ai_provider KB node)
+    const effectivePreferredProvider = (preferredProvider === undefined)
+        ? await _loadPreferredProvider()
+        : preferredProvider;
     let result;
     try {
         result = await runEscalation({
             taskKind, generate, evaluate: evaluator,
             stopAt,
+            preferredProvider: effectivePreferredProvider,
         });
     } catch (e) {
         // Persisteix audit log fins i tot si fail
@@ -236,6 +253,7 @@ export async function aiFillDim({
         audienceId,
         subtypeId:   subtypeId || project.subtypeId || null,
         sectorSeed:  sectorSeed ? { sectorId: sectorSeed.sectorId, sectorName: sectorSeed.sectorName, rolesCount: (sectorSeed.roles || []).length } : null,
+        preferredProvider: effectivePreferredProvider,
         modelKey:    result.modelKey,
         draft:       result.output ? result.output.text : null,
         parsedDraft: parsedDraftLocal,
