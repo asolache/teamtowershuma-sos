@@ -50,6 +50,9 @@ export const CANONICAL_NODE_TYPES = Object.freeze({
     efficiency_log:       'Context pruning metrics',
     // Triple-Entry Accounting (CANONICAL-001 nou)
     attestation:          'Signed dual-entry record (payer + receiver)',
+    // Neural Path Log (NEURAL-PATH-001 nou)
+    neural_path_step:     'Step nodal d\'usuari · visit/edit/ai-fill/publish/…',
+    neural_path_bundle:   'Selecció curada de steps + refs · context per a IA',
     config:               'Generic config nodes (sos_key_*, etc.)',
     kernel:               'Global state persistence',
 });

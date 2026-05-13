@@ -264,6 +264,26 @@ export async function aiFillDim({
         walletDebit,
     });
 
+    // NEURAL-PATH-001 · log step 'ai-fill' · fire-and-forget · zero bloqueig
+    (async () => {
+        try {
+            const { appendStep } = await import('./neuralPathService.js');
+            const { KB } = await import('./kb.js');
+            const identities = await KB.query({ type: 'user_identity' }).catch(() => []);
+            const ownerHandle = identities[0]?.content?.handle || '@alvaro';
+            await appendStep({
+                kb: KB,
+                ownerHandle,
+                kind: 'ai-fill',
+                refType: 'ai_audit',
+                refId: auditId || null,
+                projectId,
+                summary: 'IA ' + dimId + ' · ' + (result.modelKey || 'unknown') + ' · ' + margin.totalEur.toFixed(4) + '€',
+                meta: { dimId, modelKey: result.modelKey, costEur: margin.totalEur },
+            });
+        } catch (_) {}
+    })();
+
     // LANDING-UNIFY-001 · si el caller passa audienceId i el draft té camps
     // landing-specific, els persistim com a part del parsedDraft (l'applier ja
     // els consumirà · zero canvi addicional).
