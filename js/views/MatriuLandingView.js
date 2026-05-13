@@ -537,6 +537,47 @@ export default class MatriuLandingView {
                 </div>
             </section>
 
+            <!-- COMM-001 · Comunitat SOS · feed de projectes/ofertes/oportunitats publicats al permaweb + CTA membership 1€ -->
+            <section style="padding: clamp(48px, 8vw, 80px) 0; border-top: 1px solid var(--mt-rule);">
+                <div class="mt-container">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.4rem;">
+                        <h2 class="mt-italic" style="font-size:clamp(32px,5vw,56px);margin:0;color:var(--mt-dark);">Comunitat <strong style="font-style:normal;font-family:'Inter',sans-serif;">SOS</strong></h2>
+                        <a href="#mtSosMember" class="mt-cta-mini" style="background:var(--mt-tcotta);">✦ Soci · 1 € →</a>
+                    </div>
+                    <p class="mt-hero-body" style="max-width:680px;margin-bottom:2rem;">
+                        Descobreix què està fent la comunitat ara mateix · projectes publicats, ofertes obertes i oportunitats al permaweb. Es paguen els membre per a publicar (0,05€ per entrada · ×1.5 free) i discovery sempre lliure. <a href="/opportunities" data-link style="border-bottom:1px solid var(--mt-rule);">Explorar totes →</a>
+                    </p>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.4rem;">
+                        <div id="mtSosProjects" style="background:rgba(42,58,42,0.04);border:1px solid var(--mt-rule);border-radius:14px;padding:1.2rem 1.3rem;">
+                            <h3 style="font-family:'Instrument Serif',Georgia,serif;font-size:22px;margin:0 0 8px 0;color:var(--mt-tcotta);">🏛 Projectes</h3>
+                            <div data-stream="projects" class="mt-stream-list" style="font-size:13px;line-height:1.6;color:var(--mt-dark);min-height:80px;">— carregant —</div>
+                            <a href="/opportunities?tab=projects" data-link style="font-size:11px;color:var(--mt-blue);text-decoration:underline;font-family:ui-monospace,monospace;display:inline-block;margin-top:10px;">→ veure tots</a>
+                        </div>
+                        <div id="mtSosOfertes" style="background:rgba(42,58,42,0.04);border:1px solid var(--mt-rule);border-radius:14px;padding:1.2rem 1.3rem;">
+                            <h3 style="font-family:'Instrument Serif',Georgia,serif;font-size:22px;margin:0 0 8px 0;color:var(--mt-tcotta);">🛍 Ofertes</h3>
+                            <div data-stream="market" class="mt-stream-list" style="font-size:13px;line-height:1.6;color:var(--mt-dark);min-height:80px;">— carregant —</div>
+                            <a href="/opportunities?tab=market" data-link style="font-size:11px;color:var(--mt-blue);text-decoration:underline;font-family:ui-monospace,monospace;display:inline-block;margin-top:10px;">→ veure totes</a>
+                        </div>
+                        <div id="mtSosWOs" style="background:rgba(42,58,42,0.04);border:1px solid var(--mt-rule);border-radius:14px;padding:1.2rem 1.3rem;">
+                            <h3 style="font-family:'Instrument Serif',Georgia,serif;font-size:22px;margin:0 0 8px 0;color:var(--mt-tcotta);">📋 Oportunitats (WOs)</h3>
+                            <div data-stream="workorders" class="mt-stream-list" style="font-size:13px;line-height:1.6;color:var(--mt-dark);min-height:80px;">— carregant —</div>
+                            <a href="/opportunities?tab=workorders" data-link style="font-size:11px;color:var(--mt-blue);text-decoration:underline;font-family:ui-monospace,monospace;display:inline-block;margin-top:10px;">→ veure totes</a>
+                        </div>
+                    </div>
+
+                    <!-- CTA membership · 1 € · publicar perfil + projecte + ofertes + oportunitats -->
+                    <div id="mtSosMember" style="margin-top:3rem;padding:2rem 1.6rem;background:linear-gradient(135deg,rgba(194,90,58,0.08),rgba(42,58,42,0.04));border:1px solid var(--mt-tcotta);border-radius:18px;display:flex;gap:1.6rem;align-items:center;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:280px;">
+                            <h3 style="font-family:'Instrument Serif',Georgia,serif;font-size:28px;margin:0 0 0.5rem;color:var(--mt-dark);font-style:italic;">Crea el teu perfil · <strong style="font-style:normal;font-family:'Inter',sans-serif;">1 €</strong> de fee únic</h3>
+                            <p style="font-size:14px;line-height:1.6;color:var(--mt-dark);margin:0;max-width:540px;">
+                                Activa la teva identitat DID + ECDSA · publica el teu perfil al permaweb · puja projectes, ofertes i oportunitats que tota la comunitat SOS pugui descobrir · queda part del directori que enllaçarem a <strong>teamtowershuma.com</strong>.
+                            </p>
+                        </div>
+                        <a href="/identity" data-link class="mt-hero-cta" style="background:var(--mt-tcotta);align-self:center;">✦ Crear perfil · 1 € →</a>
+                    </div>
+                </div>
+            </section>
+
             <!-- FOOTER CTA -->
             <section class="mt-footer-cta">
                 <div class="mt-container">
@@ -716,6 +757,9 @@ export default class MatriuLandingView {
     async afterRender() {
         ensureExplainerStyle();
         bindExplainerBadges(document);
+
+        // COMM-001 · render dels 3 streams de la comunitat (fire-and-forget)
+        this._renderCommunityStreams().catch(e => console.warn('[matriu] streams', e?.message));
 
         // Smooth scroll para anchor links internos (no SPA)
         document.querySelectorAll('.mt-shell a[href^="#"]').forEach(a => {
@@ -983,6 +1027,38 @@ export default class MatriuLandingView {
                 if (btn) { btn.disabled = false; btn.textContent = 'Crear projecte →'; }
             }
         });
+    }
+
+    // COMM-001 · render dels 3 streams · top-N de cada type
+    async _renderCommunityStreams() {
+        try {
+            const { KB } = await import('../core/kb.js');
+            const { PUBLIC_PROJECT_TYPE }    = await import('../core/publicProjectService.js');
+            const { PUBLIC_WORK_ORDER_TYPE, PUBLIC_MARKET_ITEM_TYPE } = await import('../core/publicEntityService.js');
+            const [projects, market, wos] = await Promise.all([
+                KB.query({ type: PUBLIC_PROJECT_TYPE }).catch(() => []),
+                KB.query({ type: PUBLIC_MARKET_ITEM_TYPE }).catch(() => []),
+                KB.query({ type: PUBLIC_WORK_ORDER_TYPE }).catch(() => []),
+            ]);
+            const _esc = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+            const renderList = (entries, format) => {
+                if (!entries || entries.length === 0) {
+                    return '<div style="color:rgba(42,58,42,0.55);font-style:italic;">Encara ningú · sigues el primer.</div>';
+                }
+                return entries.slice(0, 5).map(e => {
+                    const c = e?.content || {};
+                    return '<div style="padding:6px 0;border-bottom:1px dashed rgba(42,58,42,0.10);">' + format(c, _esc) + '</div>';
+                }).join('');
+            };
+            const proj  = document.querySelector('[data-stream="projects"]');
+            const mkt   = document.querySelector('[data-stream="market"]');
+            const wosEl = document.querySelector('[data-stream="workorders"]');
+            if (proj)  proj.innerHTML  = renderList(projects, (c, esc) => `<strong>${esc(c.name || '?')}</strong>${c.sectorId ? ' · <code style="font-size:11px;opacity:0.7;">' + esc(c.sectorId) + '</code>' : ''}`);
+            if (mkt)   mkt.innerHTML   = renderList(market,   (c, esc) => `<strong>${esc(c.title || '?')}</strong>${typeof c.priceEur === 'number' ? ' · <em style="color:#5a6e4f;">' + c.priceEur + '€</em>' : ''}${c.kind ? ' · ' + esc(c.kind) : ''}`);
+            if (wosEl) wosEl.innerHTML = renderList(wos,      (c, esc) => `<strong>${esc(c.title || '?')}</strong>${c.status ? ' · <code style="font-size:11px;opacity:0.7;">' + esc(c.status) + '</code>' : ''}${typeof c.estimatedHours === 'number' ? ' · ~' + c.estimatedHours + 'h' : ''}`);
+        } catch (e) {
+            console.warn('[matriu] community streams failed', e?.message);
+        }
     }
 
     destroy() { /* nothing to clean */ }
