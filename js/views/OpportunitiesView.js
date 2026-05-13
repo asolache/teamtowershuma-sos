@@ -20,6 +20,8 @@ import {
 } from '../core/publicEntityService.js';
 // PR-K · CV nodals · neural_path_bundle publicat al permaweb
 import { NEURAL_PATH_BUNDLE_TYPE } from '../core/neuralPathService.js';
+// TRUST-001 · trust score badges per a cards
+import { computeTrustForBatch, renderTrustBadgeHtml } from '../core/trustScoreService.js';
 
 // Mapeig tab → public type · ORDER importa per a la UI
 const TAB_DEFS = Object.freeze([
@@ -200,6 +202,20 @@ export default class OpportunitiesView {
             this._entriesByTab = { projects: [], workorders: [], market: [], workshops: [], cvnodals: [] };
             console.warn('[opportunities] KB.query failed', e);
         }
+        // TRUST-001 · pre-compute trust scores per a tots els ids visibles
+        // (1 query global + filtre per id · més eficient que N queries)
+        try {
+            const allIds = [];
+            for (const arr of Object.values(this._entriesByTab)) {
+                for (const e of (arr || [])) {
+                    if (e?.id) allIds.push(e.id);
+                    // Projecte attestation pot referenciar projectId (no entry id)
+                    const pid = e?.content?.projectId;
+                    if (pid && !allIds.includes(pid)) allIds.push(pid);
+                }
+            }
+            this._trustByAttestedId = await computeTrustForBatch({ kb: KB, attestedIds: allIds });
+        } catch (_) { this._trustByAttestedId = {}; }
         this._render();
     }
 
@@ -382,13 +398,18 @@ export default class OpportunitiesView {
         const updateSlot = c.projectId
             ? `<span data-update-slot="${escapeHtml(c.projectId)}" data-current-version="${c.entryVersion || 1}" data-current-tx="${escapeHtml(c.arweaveTxId || '')}" style="display:none;"></span>`
             : '';
+        // TRUST-001 · badge inline derivat del cache pre-computat
+        const trustProj = (this._trustByAttestedId || {})[c.projectId] || (this._trustByAttestedId || {})[e.id];
+        const trustBadge = trustProj && trustProj.band !== 'none'
+            ? renderTrustBadgeHtml(trustProj, { compact: true })
+            : '';
         return `
             <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
                 <div class="op-card-head">
                     <div class="op-emblem" style="background:${gradient};">${escapeHtml(initials)}</div>
                     <div class="op-card-info">
                         ${founderBadge}
-                        <div class="op-card-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${escapeHtml(c.name || 'Projecte')}${ver}${updateSlot}</div>
+                        <div class="op-card-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${escapeHtml(c.name || 'Projecte')}${ver}${updateSlot}${trustBadge}</div>
                         <div class="op-card-sub">
                             ${c.sectorId ? `sector ${escapeHtml(c.sectorId)}` : 'sense sector'}
                             ${c.projectType ? ` · ${escapeHtml(c.projectType)}` : ''}
@@ -522,6 +543,11 @@ export default class OpportunitiesView {
         const signed = !!c.signature;
         const stepCount = c.stepCount || 0;
         const publishedAt = c.permawebPublishedAt;
+        // TRUST-001 · trust score del CV nodal (per attestedId = bundleId)
+        const trustCv = (this._trustByAttestedId || {})[e.id];
+        const trustBadge = trustCv && trustCv.band !== 'none'
+            ? renderTrustBadgeHtml(trustCv, { compact: true })
+            : '';
         return `
             <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
                 <div class="op-card-head">
@@ -530,6 +556,7 @@ export default class OpportunitiesView {
                         <div style="display:flex;gap:4px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
                             <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:rgba(168,85,247,0.15);color:var(--accent-purple);border:1px solid rgba(168,85,247,0.30);font-size:10px;font-weight:700;">${escapeHtml(owner)}</span>
                             ${signed ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:999px;background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.30);font-size:10px;font-weight:700;" title="ECDSA P-256 firmat">🔐</span>' : ''}
+                            ${trustBadge}
                         </div>
                         <div class="op-card-name">${escapeHtml(title)}</div>
                         <div class="op-card-sub">
