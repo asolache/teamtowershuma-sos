@@ -169,6 +169,34 @@ export async function recordConnectSale({
     const receipts = [];
     if (kb && typeof kb.upsert === 'function') {
         try { await kb.upsert(sale); } catch (e) { console.warn('[connect-sale] node persist', e?.message); }
+        // TEA-UNIV-001 · attestation pareja buyer→seller + buyer→platform
+        try {
+            const { recordMovementAttestation } = await import('./walletAttestationService.js');
+            // 5a · buyer → platform (fee)
+            if (split.feeEur > 0) {
+                await recordMovementAttestation({
+                    kb,
+                    kind: 'wallet-transfer',
+                    payer:    { walletId: buyerWalletId,  projectId: buyerProjectId },
+                    receiver: { walletId: 'wallet-' + PLATFORM_WALLET_PROJECT_ID, projectId: PLATFORM_WALLET_PROJECT_ID },
+                    amountEur: split.feeEur,
+                    source:    'connect-platform-fee',
+                    ref,
+                    meta: { sessionId, productId, kind: 'platform-fee' },
+                });
+            }
+            // 5b · buyer → seller (net)
+            await recordMovementAttestation({
+                kb,
+                kind: 'wallet-transfer',
+                payer:    { walletId: buyerWalletId,  projectId: buyerProjectId },
+                receiver: { walletId: sellerWalletId, projectId: sellerProjectId },
+                amountEur: split.sellerEur,
+                source:    'connect-seller',
+                ref,
+                meta: { sessionId, productId, kind: 'seller-net' },
+            });
+        } catch (e) { console.warn('[connect-sale] attestation failed', e?.message); }
     }
     if (rApi && typeof rApi.recordReceipt === 'function') {
         try {
