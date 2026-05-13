@@ -18,6 +18,8 @@ import {
 import {
     PUBLIC_WORK_ORDER_TYPE, PUBLIC_MARKET_ITEM_TYPE, PUBLIC_WORKSHOP_TYPE,
 } from '../core/publicEntityService.js';
+// PR-K · CV nodals · neural_path_bundle publicat al permaweb
+import { NEURAL_PATH_BUNDLE_TYPE } from '../core/neuralPathService.js';
 
 // Mapeig tab → public type · ORDER importa per a la UI
 const TAB_DEFS = Object.freeze([
@@ -25,6 +27,7 @@ const TAB_DEFS = Object.freeze([
     { id: 'workorders', type: PUBLIC_WORK_ORDER_TYPE, icon: '📋', label: 'Work Orders' },
     { id: 'market',    type: PUBLIC_MARKET_ITEM_TYPE, icon: '🛍', label: 'Productes' },
     { id: 'workshops', type: PUBLIC_WORKSHOP_TYPE,    icon: '🎓', label: 'Workshops' },
+    { id: 'cvnodals',  type: NEURAL_PATH_BUNDLE_TYPE, icon: '🧠', label: 'CV nodals' },
 ]);
 
 function escapeHtml(s) {
@@ -45,7 +48,7 @@ function _gradientForId(id) {
 export default class OpportunitiesView {
     constructor() {
         document.title = 'Oportunitats · Permaweb · SOS V11';
-        this._entriesByTab = { projects: [], workorders: [], market: [], workshops: [] };
+        this._entriesByTab = { projects: [], workorders: [], market: [], workshops: [], cvnodals: [] };
         this._filter  = '';
         this._syncing = false;
         // PUBLISH-SELECT-001 · activeTab des de URL ?tab=workorders, default projects
@@ -182,16 +185,19 @@ export default class OpportunitiesView {
     }
 
     async _loadFromCache() {
-        // PUBLISH-SELECT-001 · carrega cache de TOTS els 4 tabs en paral·lel
+        // PR-K · carrega cache dels 5 tabs en paral·lel · CV nodals filtrats
+        // a sols els publicats (arweaveTxId · ja són públics a la xarxa).
         try {
-            const [projects, workorders, market, workshops] = await Promise.all(
+            const [projects, workorders, market, workshops, cvnodalsRaw] = await Promise.all(
                 TAB_DEFS.map(t => KB.query({ type: t.type }).catch(() => []))
             );
+            // CV nodals · sols els publicats al permaweb (filtra els privats del propi usuari)
+            const cvnodals = (cvnodalsRaw || []).filter(n => !!n?.content?.arweaveTxId);
             this._entriesByTab = {
-                projects, workorders, market, workshops,
+                projects, workorders, market, workshops, cvnodals,
             };
         } catch (e) {
-            this._entriesByTab = { projects: [], workorders: [], market: [], workshops: [] };
+            this._entriesByTab = { projects: [], workorders: [], market: [], workshops: [], cvnodals: [] };
             console.warn('[opportunities] KB.query failed', e);
         }
         this._render();
@@ -297,6 +303,21 @@ export default class OpportunitiesView {
                 <div class="op-stat"><div class="op-stat-label">Tiers</div><div class="op-stat-value">${tiers.size}</div></div>
                 <div class="op-stat"><div class="op-stat-label">—</div><div class="op-stat-value">·</div></div>
             `;
+        } else if (this._activeTab === 'cvnodals') {
+            // PR-K · stats CV nodals · owners únics + intents + signed count
+            const owners = new Set(); const intents = new Set(); let signedCount = 0;
+            for (const e of filtered) {
+                const c = e?.content || {};
+                if (c.ownerHandle) owners.add(c.ownerHandle);
+                if (c.intent)      intents.add(c.intent);
+                if (c.signature)   signedCount++;
+            }
+            statsHtml = `
+                <div class="op-stat"><div class="op-stat-label">CV nodals</div><div class="op-stat-value">${this._entries.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Filtrats</div><div class="op-stat-value">${filtered.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Owners únics</div><div class="op-stat-value">${owners.size}</div></div>
+                <div class="op-stat"><div class="op-stat-label">🔐 firmats</div><div class="op-stat-value" style="color:#22c55e;">${signedCount}</div></div>
+            `;
         }
         stats.innerHTML = statsHtml;
 
@@ -335,6 +356,7 @@ export default class OpportunitiesView {
         if (this._activeTab === 'workorders') return this._cardHtmlWorkOrder(e);
         if (this._activeTab === 'market')     return this._cardHtmlMarket(e);
         if (this._activeTab === 'workshops')  return this._cardHtmlWorkshop(e);
+        if (this._activeTab === 'cvnodals')   return this._cardHtmlCvNodal(e);
         return this._cardHtmlProject(e);
     }
 
@@ -484,6 +506,45 @@ export default class OpportunitiesView {
                 <div class="op-card-foot">
                     <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
                     <span>${c.date ? '📅 ' + new Date(c.date).toLocaleDateString() : ''}</span>
+                </div>
+            </a>
+        `;
+    }
+
+    // PR-K · card per a neural_path_bundle publicat al permaweb
+    _cardHtmlCvNodal(e) {
+        const c = e?.content || {};
+        const title  = c.name || 'CV nodal';
+        const owner  = c.ownerHandle || '?';
+        const intent = c.intent || null;
+        const audience = c.audienceId || null;
+        const tx     = c.arweaveTxId;
+        const signed = !!c.signature;
+        const stepCount = c.stepCount || 0;
+        const publishedAt = c.permawebPublishedAt;
+        return `
+            <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
+                <div class="op-card-head">
+                    <div class="op-emblem" style="background:${_gradientForId(owner)};">🧠</div>
+                    <div class="op-card-info">
+                        <div style="display:flex;gap:4px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
+                            <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:rgba(168,85,247,0.15);color:var(--accent-purple);border:1px solid rgba(168,85,247,0.30);font-size:10px;font-weight:700;">${escapeHtml(owner)}</span>
+                            ${signed ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:999px;background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.30);font-size:10px;font-weight:700;" title="ECDSA P-256 firmat">🔐</span>' : ''}
+                        </div>
+                        <div class="op-card-name">${escapeHtml(title)}</div>
+                        <div class="op-card-sub">
+                            ${stepCount} steps nodals
+                            ${intent ? ` · intent: ${escapeHtml(intent)}` : ''}
+                            ${audience ? ` · audience: ${escapeHtml(audience)}` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="op-card-desc" style="font-size:0.78rem;color:var(--text-muted);">
+                    Context bundle publicat · curat com a flux de valor per a agents IA · CV nodal verificable
+                </div>
+                <div class="op-card-foot">
+                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${publishedAt ? '📅 ' + new Date(publishedAt).toLocaleDateString() : ''}</span>
                 </div>
             </a>
         `;
