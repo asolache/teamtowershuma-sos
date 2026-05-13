@@ -184,6 +184,8 @@ export default class RegistryView {
         this._entries = [];      // { ...normalized, typeId }
         this._filter = '';
         this._typeId = 'all';
+        // PERM-DISCO-001 sprint B · facet filters
+        this._facetSelections = { sector: new Set(), skill: new Set(), tier: new Set() };
         this._syncing = false;
     }
 
@@ -258,6 +260,8 @@ export default class RegistryView {
                 </header>
                 <div class="rg-stats" id="rgStats"></div>
                 <div class="rg-filters" id="rgFilters"></div>
+                <!-- PERM-DISCO-001 sprint B · facets avançats (sector · skill · tier) -->
+                <div class="rg-facets" id="rgFacets" style="display:flex;flex-direction:column;gap:6px;margin:8px 0;"></div>
                 <div class="rg-search">
                     <input type="search" id="rgSearch" placeholder="🔍 Cerca per nom · handle · sector · tag" autocomplete="off">
                 </div>
@@ -284,7 +288,14 @@ export default class RegistryView {
             const chip = e.target.closest('[data-type-chip]');
             if (!chip) return;
             this._typeId = chip.dataset.typeChip;
+            // Cap facet quan canviem de tipus · evita filtres orphan
+            if (this._facetSelections) {
+                this._facetSelections.sector.clear();
+                this._facetSelections.skill.clear();
+                this._facetSelections.tier.clear();
+            }
             this._renderFilters();
+            this._renderFacets();
             this._renderList();
             this._renderStats();
         });
@@ -315,6 +326,7 @@ export default class RegistryView {
         }
         this._entries = collected;
         this._renderFilters();
+        this._renderFacets();
         this._renderStats();
         this._renderList();
     }
@@ -379,7 +391,107 @@ export default class RegistryView {
                 return hay.includes(q);
             });
         }
+        // PERM-DISCO-001 sprint B · facet filters · multi-select OR per facet, AND between facets
+        const sels = this._facetSelections || {};
+        if (sels.sector && sels.sector.size > 0) {
+            out = out.filter(e => {
+                const chips = (e.chips || []).filter(c => c.cls === 'sector').map(c => c.text);
+                return chips.some(s => sels.sector.has(s));
+            });
+        }
+        if (sels.skill && sels.skill.size > 0) {
+            out = out.filter(e => {
+                const chips = (e.chips || []).filter(c => c.cls === 'skill').map(c => c.text);
+                return chips.some(s => sels.skill.has(s));
+            });
+        }
+        if (sels.tier && sels.tier.size > 0) {
+            out = out.filter(e => {
+                // Tier sols aplicat a workshop · public/operator/matriu/cohort
+                if (e.typeId !== 'workshop') return true;
+                const tier = (e.chips || []).find(c => c.cls === 'tier' || c.text === 'public' || c.text === 'operator' || c.text === 'matriu' || c.text === 'cohort');
+                return tier ? sels.tier.has(tier.text) : false;
+            });
+        }
         return out;
+    }
+
+    _renderFacets() {
+        const wrap = document.getElementById('rgFacets');
+        if (!wrap) return;
+        // Sobre quins entries calculem facets · els que passarien el filtre de tipus
+        // (no els de text · perquè ja són dinàmics dins el listat)
+        const base = (this._typeId && this._typeId !== 'all')
+            ? this._entries.filter(e => e.typeId === this._typeId)
+            : this._entries;
+        const facets = this._computeFacets(base);
+        const sels   = this._facetSelections;
+        const showTier = this._typeId === 'all' || this._typeId === 'workshop';
+        const buildChips = (facetKey, items, label) => {
+            if (items.length === 0) return '';
+            const chips = items.map(f => {
+                const active = sels[facetKey].has(f.value);
+                const style  = active
+                    ? 'background:var(--accent-indigo);color:#fff;border:1px solid var(--accent-indigo);'
+                    : 'background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-default);';
+                return `<button data-facet="${facetKey}" data-value="${escapeHtml(f.value)}" style="${style}padding:3px 9px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 0.15s;">${escapeHtml(f.value)}${f.count ? `<span style="opacity:0.7;">${f.count}</span>` : ''}</button>`;
+            }).join('');
+            const hasSel = sels[facetKey] && sels[facetKey].size > 0;
+            const clearBtn = hasSel
+                ? `<button data-facet-clear="${facetKey}" style="background:transparent;color:var(--accent-red);border:0;font-size:10px;cursor:pointer;font-weight:700;">✕ neteja</button>`
+                : '';
+            return `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;min-width:60px;">${label}</span>
+                ${chips}${clearBtn}
+            </div>`;
+        };
+        wrap.innerHTML =
+            buildChips('sector', facets.sector, '🌐 Sector') +
+            buildChips('skill',  facets.skill,  '🧠 Skill')  +
+            (showTier ? buildChips('tier', facets.tier, '🎓 Tier') : '');
+        // Bind
+        wrap.querySelectorAll('[data-facet]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const facetKey = btn.getAttribute('data-facet');
+                const value    = btn.getAttribute('data-value');
+                if (!sels[facetKey]) return;
+                if (sels[facetKey].has(value)) sels[facetKey].delete(value);
+                else sels[facetKey].add(value);
+                this._renderFacets();
+                this._renderStats();
+                this._renderList();
+            });
+        });
+        wrap.querySelectorAll('[data-facet-clear]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const facetKey = btn.getAttribute('data-facet-clear');
+                if (sels[facetKey]) sels[facetKey].clear();
+                this._renderFacets();
+                this._renderStats();
+                this._renderList();
+            });
+        });
+    }
+
+    // PERM-DISCO-001 sprint B · facets derivats dels entries · counts per valor
+    _computeFacets(entries) {
+        const sectorCount = {};
+        const skillCount  = {};
+        for (const e of entries) {
+            for (const ch of (e.chips || [])) {
+                if (ch.cls === 'sector') sectorCount[ch.text] = (sectorCount[ch.text] || 0) + 1;
+                if (ch.cls === 'skill')  skillCount[ch.text]  = (skillCount[ch.text]  || 0) + 1;
+            }
+        }
+        const toFacet = (obj) => Object.entries(obj)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 16)
+            .map(([value, count]) => ({ value, count }));
+        return {
+            sector: toFacet(sectorCount),
+            skill:  toFacet(skillCount),
+            tier:   ['public', 'operator', 'matriu', 'cohort'].map(t => ({ value: t, count: 0 })),
+        };
     }
 
     _renderStats() {
