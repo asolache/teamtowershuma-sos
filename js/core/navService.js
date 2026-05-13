@@ -39,6 +39,7 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'opportunities', icon: '🚀', label: 'Oportunitats', href: '/opportunities', global: true, category: 'market', hint: 'Projectes públics permaweb · descobreix · sol·licita unir-te com a stakeholder · FUND-FLOW-001 sprint F' },
     { id: 'market',    icon: '🛒', label: 'Mercado',   href: '/market',     global: true,  category: 'market',     hint: 'Catálogo de productos y servicios' },
     { id: 'efficiency',icon: '⚡', label: 'Eficiencia', href: '/efficiency', global: true,  category: 'market',     hint: 'KM-001 · tokens/coste/pruning · ROI IA' },
+    { id: 'path',      icon: '🧠', label: 'Path nodal', href: '/path',       global: true,  category: 'knowledge',  hint: 'Historial nodal cronològic · curador de context bundles per a IA · NEURAL-PATH-001' },
     { id: 'savings',   icon: '📊', label: 'Ahorro',    href: '/savings',    global: true,  category: 'market',     hint: 'Cuadro comparativo de ahorro vs convencional · global o por proyecto' },
     { id: 'value',     icon: '🥧', label: 'Tarta',     href: '/value-accounting', global: false, category: 'market', hint: 'Contabilidad de valor · Slicing Pie + FairShares · tarta del proyecto' },
     { id: 'pact',      icon: '📜', label: 'Pacte',     href: '/pact',       global: false, category: 'operations', hint: 'Pacte de socis dinàmic · primer contrato del Mètode SOS' },

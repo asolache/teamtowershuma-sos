@@ -32,6 +32,9 @@ export default class ProjectQualityView {
         this._projectId = null;
         this._project   = null;
         this._quality   = null;
+        // NEURAL-PATH-001 sprint B · bundle opcional via ?bundleId=...
+        const params = new URLSearchParams(window.location.search || '');
+        this._bundleId = params.get('bundleId') || null;
     }
 
     _readProjectId() {
@@ -186,6 +189,7 @@ export default class ProjectQualityView {
                                 🧠 ${this._preferredProvider ? _esc(this._preferredProvider) : 'default chain'}
                                 <a href="/settings" data-link style="color:var(--accent-purple);text-decoration:underline;font-weight:700;margin-left:4px;">↻ canvia</a>
                             </span>
+                            ${this._bundleId ? `<span title="Context bundle actiu · injectat al prompt IA" style="background:rgba(34,197,94,0.12);color:#22c55e;padding:2px 10px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border:1px solid rgba(34,197,94,0.30);">📦 bundle · <code style="font-size:10px;">${_esc(this._bundleId.slice(0, 14))}…</code> <a href="/path" data-link style="color:#22c55e;text-decoration:underline;font-weight:700;margin-left:4px;">↻ canvia</a></span>` : ''}
                         </div>
                     </div>
                     <div class="pq-hero-score">
@@ -373,6 +377,7 @@ export default class ProjectQualityView {
                 dimId,
                 extraContext,
                 subtypeId,           // VALUEMAP-GEN-001 · override del project.subtypeId
+                bundleId: this._bundleId,  // NEURAL-PATH-001 sprint B · context bundle opcional
                 maxOutputTokens: dimId === 'valueMap' ? 1600 : 800,
                 temperature: 0.4,
             });

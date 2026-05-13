@@ -133,6 +133,7 @@ export async function aiFillDim({
     subtypeId       = null,    // VALUEMAP-GEN-001 · override del project.subtypeId
     sectorSeedLoader = null,   // VALUEMAP-GEN-001 · injectable per a tests · default importa KnowledgeLoader
     preferredProvider = undefined,  // IA-PROVIDER-PREF-001 · explicit override; undefined = auto-load del KB
+    bundleId        = null,    // NEURAL-PATH-001 sprint B · context bundle opcional · injectat a extraContext
     maxOutputTokens = 800,
     temperature     = 0.4,
     stopAt          = 'premium',
@@ -174,11 +175,42 @@ export async function aiFillDim({
         }
     }
 
+    // 1c · NEURAL-PATH-001 sprint B · si el caller passa bundleId, carrega
+    // el neural_path_bundle + resol els seus steps i el prependa a
+    // extraContext (l'usuari es manté com a context personalitzat de CV nodal).
+    let effectiveExtraContext = extraContext;
+    let bundleInfo = null;
+    if (bundleId) {
+        try {
+            const { KB }    = await import('./kb.js');
+            const { resolveBundleSteps, renderBundleAsContextString } = await import('./neuralPathService.js');
+            await KB.init();
+            const bundleNode = await KB.getNode(bundleId);
+            if (bundleNode && bundleNode.type === 'neural_path_bundle') {
+                const resolved = await resolveBundleSteps({ kb: KB, bundle: bundleNode });
+                const bundleStr = renderBundleAsContextString({
+                    bundle: bundleNode,
+                    steps: resolved.steps,
+                    extraNodes: resolved.extraNodes,
+                });
+                effectiveExtraContext = bundleStr + (extraContext ? '\n\n## Context addicional usuari\n' + extraContext : '');
+                bundleInfo = {
+                    bundleId,
+                    name: bundleNode.content?.name || null,
+                    stepCount: resolved.steps.length,
+                    missing: resolved.missing.length,
+                };
+            }
+        } catch (e) {
+            console.warn('[aiFillDim] bundle load failed', e?.message);
+        }
+    }
+
     // 2 · Build context per dim · inclou extraContext si l'usuari l'ha passat
     const ctx = buildContextForDim(dimId, {
         project, sops, workshops, marketItems,
         sectorReadiness, similarProjects, criticalRoles,
-        extraContext,
+        extraContext: effectiveExtraContext,   // NEURAL-PATH-001 · pot incloure bundle context
         audienceId,   // LANDING-UNIFY-001 · propagat al builder (landing l'usa)
         sectorSeed,   // VALUEMAP-GEN-001 · sectorSeed propagat al builder valueMap
         subtypeHint,  // VALUEMAP-GEN-001 · text hint del subtype
@@ -302,6 +334,7 @@ export async function aiFillDim({
         subtypeId:   subtypeId || project.subtypeId || null,
         sectorSeed:  sectorSeed ? { sectorId: sectorSeed.sectorId, sectorName: sectorSeed.sectorName, rolesCount: (sectorSeed.roles || []).length } : null,
         preferredProvider: effectivePreferredProvider,
+        bundleInfo,  // NEURAL-PATH-001 · {bundleId, name, stepCount, missing} o null
         walletDebit, // WALLET-ACC-001 · {ok, balanceAfter, error} o null
         modelKey:    result.modelKey,
         draft:       result.output ? result.output.text : null,
