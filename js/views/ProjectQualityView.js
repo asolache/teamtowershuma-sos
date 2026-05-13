@@ -236,16 +236,95 @@ export default class ProjectQualityView {
     }
 
     async afterRender() {
-        // Stub handlers · UX-only fins que arribi sprint F (ProjectQualityIA)
+        // IA-CONTEXT-001 sprint A · botons "Ompli amb IA" ara fan crides reals
+        const { aiFillDim, markAuditAccepted } = await import('../core/aiFillService.js');
         document.querySelectorAll('[data-aifill]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._toast('🚧 Ompli amb IA · disponible al sprint F · ~150 tokens per dim · pre-fill amb el corpus KB del sector');
-            });
+            btn.addEventListener('click', () => this._handleAiFill(btn, aiFillDim, markAuditAccepted));
         });
         document.querySelectorAll('[data-noapp]').forEach(btn => {
             btn.addEventListener('click', () => {
                 this._toast('🚧 "no aplicable" · disponible al sprint F · pesos rebalancejats per al projecte');
             });
+        });
+    }
+
+    async _handleAiFill(btn, aiFillDim, markAuditAccepted) {
+        const dimId = btn.getAttribute('data-aifill');
+        if (!dimId || !this._projectId) return;
+        const origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳ Generant…';
+        let result;
+        try {
+            result = await aiFillDim({
+                projectId: this._projectId,
+                dimId,
+                maxOutputTokens: 800,
+                temperature: 0.4,
+            });
+        } catch (e) {
+            btn.disabled = false;
+            btn.textContent = origText;
+            if (e?.code === 'no-api-key') {
+                this._toast('⚠ Cal configurar API key del provider · ves a /settings');
+            } else if (e?.code === 'provider-not-implemented') {
+                this._toast('🚧 Provider no implementat encara · sprint B\' (Anthropic ja operatiu)');
+            } else {
+                this._toast('✗ ' + (e?.message || 'error desconegut'));
+            }
+            return;
+        }
+        btn.disabled = false;
+        btn.textContent = origText;
+        if (!result.draft) {
+            this._toast('⚠ Escalation exhausted · cap modèl ha passat l\'evaluator');
+            return;
+        }
+        this._showDraftModal({ dimId, result, markAuditAccepted });
+    }
+
+    _showDraftModal({ dimId, result, markAuditAccepted }) {
+        // Backdrop
+        const bg = document.createElement('div');
+        bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9990;display:flex;align-items:center;justify-content:center;padding:20px;';
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:1.4rem;max-width:680px;width:100%;max-height:80vh;overflow:auto;color:var(--text-main);';
+        const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+        const attemptsHtml = (result.attempts || []).map(a =>
+            '<li style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">'
+            + (a.evalOk ? '✓' : '✗') + ' ' + escapeHtml(a.modelKey || '?')
+            + (a.evalReason ? ' · ' + escapeHtml(a.evalReason) : '')
+            + '</li>'
+        ).join('');
+        const pretty = result.parsedDraft
+            ? JSON.stringify(result.parsedDraft, null, 2)
+            : (result.draft || '');
+        card.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                <h2 style="margin:0;font-size:1.2rem;color:var(--text-main);">🧠 Draft IA · dim ${escapeHtml(dimId)}</h2>
+                <span style="background:rgba(99,102,241,0.15);color:var(--accent-indigo);padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${escapeHtml(result.modelKey || '?')}</span>
+                <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">~${result.totalCostEur.toFixed(4)}€ · ${result.contextTokens} tokens</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">📜 Chain d'intents</div>
+            <ul style="list-style:none;padding:0;margin:0 0 12px;display:flex;flex-direction:column;gap:2px;">${attemptsHtml}</ul>
+            <pre style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:12px;font-size:12px;font-family:var(--font-mono);white-space:pre-wrap;word-break:break-word;color:var(--text-secondary);max-height:340px;overflow:auto;">${escapeHtml(pretty)}</pre>
+            <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap;">
+                <button class="pq-dim-noapp" id="pqDraftReject">✕ Rebutjar</button>
+                <button class="pq-dim-aibtn"  id="pqDraftAccept">✓ Acceptar (marca audit)</button>
+            </div>
+            <div style="margin-top:10px;font-size:10px;color:var(--text-muted);line-height:1.5;">
+                ℹ Sprint A · acceptar registra l'audit log · l'aplicació real del draft al KB (afegir roles · SOPs · workshops) arriba al sprint C de IA-CONTEXT-001. Per ara, el draft es queda al log per a revisió manual.
+            </div>
+        `;
+        bg.appendChild(card);
+        document.body.appendChild(bg);
+        const close = () => bg.remove();
+        bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+        document.getElementById('pqDraftReject')?.addEventListener('click', close);
+        document.getElementById('pqDraftAccept')?.addEventListener('click', async () => {
+            await markAuditAccepted(result.auditId).catch(() => {});
+            this._toast('✓ Draft acceptat · audit log marcat');
+            close();
         });
     }
 
