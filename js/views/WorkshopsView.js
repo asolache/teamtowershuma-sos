@@ -212,6 +212,11 @@ export default class WorkshopsView {
             const projects = store.getState().projects || [];
             this.projectsById = new Map(projects.map(p => [p.id, p]));
         } catch (_) { this.projectsById = new Map(); }
+        // WORKSHOPS-FED-001 sprint B2 · workshops desbloquejats locally
+        try {
+            const unlocks = await KB.query({ type: 'workshop_unlock' });
+            this._unlockedIds = new Set((unlocks || []).map(u => u.content?.workshopId).filter(Boolean));
+        } catch (_) { this._unlockedIds = new Set(); }
     }
 
     // WORKSHOPS-FED-001 sprint A · filtres pur · scope + tier
@@ -374,6 +379,63 @@ export default class WorkshopsView {
         root.querySelectorAll('[data-ws-report]').forEach(btn => {
             btn.addEventListener('click', () => this._openReportNotesModal(btn.dataset.wsReport));
         });
+        // WORKSHOPS-FED-001 sprint B2 · unlock CTA per a tiers > public
+        root.querySelectorAll('[data-ws-unlock]').forEach(btn => {
+            btn.addEventListener('click', () => this._handleUnlock(btn.dataset.wsUnlock, parseFloat(btn.dataset.wsPrice || '2.5')));
+        });
+    }
+
+    async _handleUnlock(workshopId, priceEur) {
+        const w = this.workshops.find(x => x.id === workshopId);
+        if (!w) return;
+        const c = w.content || {};
+        const title = c.title || c.clientName || workshopId;
+        const cohort = typeof c.cohortNumber === 'number' ? c.cohortNumber : null;
+        const creatorHandle = c.createdBy || c.creatorHandle || '@alvaro';
+        // Calculem el split a priori per al confirm() (transparència UX)
+        let splitInfo = '';
+        try {
+            const { computeUnlockSplit } = await import('../core/workshopRevenueService.js');
+            const split = computeUnlockSplit({
+                priceEur, creatorHandle,
+                projectId: c.projectId || null,
+                cohortNumber: cohort,
+            });
+            splitInfo = `\n\nSplit:\n  Creator (@${creatorHandle.replace(/^@/,'')}) · ${split.creatorEur.toFixed(2)}€\n`
+                      + `  Project · ${split.projectEur.toFixed(2)}€\n`
+                      + `  Cohort ${cohort ?? '—'} · ${split.cohortEur.toFixed(2)}€`;
+        } catch (_) {}
+        const ok = confirm(
+            'Desbloquejar "' + title + '" per ' + priceEur.toFixed(2) + '€?'
+            + splitInfo
+            + '\n\nEs descomptarà del teu wallet personal. Continua?'
+        );
+        if (!ok) return;
+        try {
+            const { recordWorkshopUnlock } = await import('../core/workshopRevenueService.js');
+            const { personalWalletIdFor }  = await import('../core/walletService.js');
+            // Resol handle de l'usuari · matriu_member primari o fallback '@alvaro'
+            let userHandle = '@alvaro';
+            try {
+                const members = await KB.query({ type: 'matriu_member' });
+                const primary = (members || []).find(m => m && (m.content?.isPrimary || m.isPrimary));
+                if (primary && primary.content?.handle) userHandle = primary.content.handle;
+            } catch (_) {}
+            const payerProjectId = personalWalletIdFor(userHandle);
+            const result = await recordWorkshopUnlock({
+                workshop: w,
+                payerProjectId,
+                priceEur,
+                kb: KB,
+                store,
+            });
+            alert('✓ Desbloquejat! · ' + result.unlockId.slice(0, 24) + '…\n\nEl contingut ara és accessible.');
+            this._unlockedIds = this._unlockedIds || new Set();
+            this._unlockedIds.add(workshopId);
+            this._render();
+        } catch (e) {
+            alert('✗ ' + (e?.message || 'unlock va fallar'));
+        }
     }
 
     _cardHtml(w, s) {
@@ -386,6 +448,15 @@ export default class WorkshopsView {
         const tier = c.accessTier || 'public';
         const tierMeta = TIER_OPTS.find(t => t.id === tier) || TIER_OPTS[1];
         const tierPill = `<span style="background:${tierMeta.color}22;color:${tierMeta.color};border:1px solid ${tierMeta.color};padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">${tierMeta.label}</span>`;
+        // WORKSHOPS-FED-001 sprint B2 · paywall UI per a tiers > public
+        const isLocked     = tier !== 'public' && !this._unlockedIds?.has(w.id);
+        const priceEur     = typeof c.priceEur === 'number' ? c.priceEur : 2.50;
+        const unlockBtn    = isLocked
+            ? `<button class="ws-btn" data-ws-unlock="${w.id}" data-ws-price="${priceEur}" title="Desbloca el contingut íntegre · 70/20/10 split · creator/project/cohort" style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:0;font-weight:700;">🔓 ${priceEur.toFixed(2)}€</button>`
+            : '';
+        const lockedNote   = isLocked
+            ? `<div class="meta" style="background:rgba(168,85,247,0.06);border-left:3px solid #a855f7;padding:6px 8px;border-radius:4px;font-size:11px;color:var(--text-secondary);">🔒 Preview · contingut íntegre desbloca al pagament. Es reparteix 70/20/10 (creator/project/cohort).</div>`
+            : '';
         const pidRaw = c.projectId || w.projectId || null;
         const pidName = pidRaw ? (this.projectsById.get(pidRaw)?.nombre || this.projectsById.get(pidRaw)?.name || pidRaw) : null;
         const projBadge = pidName && this.scopeFilter === 'all'
@@ -411,7 +482,9 @@ export default class WorkshopsView {
                         ${STATUSES.map(st => `<option value="${st.id}" ${st.id===s.id?'selected':''}>${st.emoji} ${st.label}</option>`).join('')}
                     </select>
                 </div>
+                ${lockedNote}
                 <div class="actions">
+                    ${unlockBtn}
                     ${isProposal       ? `<button class="ws-btn ws-btn-primary" data-ws-ai="${w.id}">✨ Propuesta IA</button>` : ''}
                     ${isAfterDelivery  ? `<button class="ws-btn ws-btn-primary" data-ws-report="${w.id}">📝 Generar informe</button>` : ''}
                     <button class="ws-btn danger" data-ws-del="${w.id}">Borrar</button>
