@@ -160,6 +160,32 @@ eq(cost,                   3.00,                                      'G · sonn
 const cost2 = prov.actualCostUsd('anthropic/haiku-4.5', { inputTokens: 100_000, outputTokens: 50_000 });
 eq(cost2,                  0.35,                                      'G · haiku 100k/50k = $0.35');
 
+// ─── H · KB key path · prioritat Orchestrator (sos_key_*) > bundle ─────
+// El sprint del API keys UI usa Orchestrator que guarda nodes
+// `sos_key_anthropic` amb { value: '...' }. aiProviderService ha de
+// llegir-ne. Test amb resolver custom que simula KB lookup.
+prov._resetApiKeyCache();
+let lastKeyLookup = null;
+prov.setApiKeyResolver((p) => {
+    lastKeyLookup = p;
+    // Simula que /settings ha escrit sols Anthropic
+    if (p === 'anthropic') return 'sk-ant-from-settings';
+    return null;
+});
+
+// Mock fetch return per fer la crida no llançar
+const okFetch = async () => ({ ok: true, json: async () => ({
+    content: [{ type:'text', text:'ok' }],
+    usage:   { input_tokens: 10, output_tokens: 5 },
+    stop_reason: 'end_turn',
+})});
+
+const rH = await prov.generateWithProvider('anthropic/sonnet-4.6', {
+    systemPrompt:'s', userPrompt:'u',
+}, { fetchFn: okFetch });
+eq(rH.text, 'ok',                                                     'H · resolver settings · anthropic key resolt');
+eq(lastKeyLookup, 'anthropic',                                        'H · resolver cridat amb provider correct');
+
 // Reset
 prov.setApiKeyResolver(null);
 prov._resetApiKeyCache();

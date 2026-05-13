@@ -33,6 +33,9 @@ function _isFreshCache(entry) {
 let _apiKeyResolver = null;
 export function setApiKeyResolver(fn) { _apiKeyResolver = (typeof fn === 'function') ? fn : null; }
 
+// BIZ-MODEL-001 sprint B refinament · llegim del mateix node KB que el
+// /settings UI ja escriu (via Orchestrator.setApiKey) · zero UI dual.
+// Nodes · `sos_key_{provider}` amb { value: 'sk-...' }
 async function _readApiKey(provider) {
     if (_apiKeyResolver) return _apiKeyResolver(provider);
     const cached = _apiKeyCache.get(provider);
@@ -40,8 +43,14 @@ async function _readApiKey(provider) {
     try {
         const { KB } = await import('./kb.js');
         await KB.init();
-        const node = await KB.getNode('api-keys-sos');
-        const key  = node?.content?.[provider] || null;
+        // Prioritat 1 · format Orchestrator (UI existent a /settings)
+        const orchNode = await KB.getNode('sos_key_' + provider);
+        let key = orchNode?.value || null;
+        // Prioritat 2 · format unified api-keys-sos (fallback legacy)
+        if (!key) {
+            const bundleNode = await KB.getNode('api-keys-sos');
+            key = bundleNode?.content?.[provider] || null;
+        }
         _apiKeyCache.set(provider, { key, fetchedAt: Date.now() });
         return key;
     } catch (_) {
