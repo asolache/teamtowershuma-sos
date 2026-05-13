@@ -110,6 +110,28 @@ export default class OpportunitiesView {
             this._filter = e.target.value.toLowerCase().trim();
             this._render();
         });
+        // PROJ-VERSIONING-001 sprint D · async fetch latest version per card
+        // (cache TTL 15min · NO bloca render · update banner inline si latest > current)
+        this._checkLatestVersions().catch(e => console.warn('[opportunities] latest check', e?.message));
+    }
+
+    async _checkLatestVersions() {
+        if (!Array.isArray(this._entries) || this._entries.length === 0) return;
+        const { getLatestVersionCached } = await import('../core/publicProjectService.js');
+        for (const slot of document.querySelectorAll('[data-update-slot]')) {
+            const projectId = slot.getAttribute('data-update-slot');
+            const currentVersion = parseInt(slot.getAttribute('data-current-version') || '1', 10);
+            const currentTx      = slot.getAttribute('data-current-tx') || '';
+            if (!projectId) continue;
+            try {
+                const latest = await getLatestVersionCached({ projectId });
+                if (!latest || !latest.entryVersion) continue;
+                if (latest.entryVersion > currentVersion && latest.txId && latest.txId !== currentTx) {
+                    slot.style.display = 'inline-flex';
+                    slot.innerHTML = `<a href="https://arweave.net/${encodeURIComponent(latest.txId)}" target="_blank" rel="noopener" title="Veure v${latest.entryVersion} a Arweave (gateway)" style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:999px;background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.30);font-size:10px;font-weight:800;font-family:var(--font-mono);text-decoration:none;">🆕 v${latest.entryVersion}</a>`;
+                }
+            } catch (_) { /* silent · gateway pot estar caigut */ }
+        }
     }
 
     async _loadFromCache() {
@@ -223,13 +245,20 @@ export default class OpportunitiesView {
         const cloneBtn = (isFounder && c.templateClonable !== false)
             ? `<a href="/dashboard?wizard=founder" data-link style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;text-decoration:none;">🔄 Clonar founder</a>`
             : '';
+        // PROJ-VERSIONING-001 sprint D · version badge inline
+        const ver = (typeof c.entryVersion === 'number' && c.entryVersion >= 1)
+            ? `<span data-version-badge="${escapeHtml(c.projectId || '')}" style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:999px;background:rgba(99,102,241,0.12);color:var(--accent-indigo);border:1px solid rgba(99,102,241,0.30);font-size:10px;font-weight:800;font-family:var(--font-mono);">v${c.entryVersion}</span>`
+            : '';
+        const updateSlot = c.projectId
+            ? `<span data-update-slot="${escapeHtml(c.projectId)}" data-current-version="${c.entryVersion || 1}" data-current-tx="${escapeHtml(c.arweaveTxId || '')}" style="display:none;"></span>`
+            : '';
         return `
             <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
                 <div class="op-card-head">
                     <div class="op-emblem" style="background:${gradient};">${escapeHtml(initials)}</div>
                     <div class="op-card-info">
                         ${founderBadge}
-                        <div class="op-card-name">${escapeHtml(c.name || 'Projecte')}</div>
+                        <div class="op-card-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${escapeHtml(c.name || 'Projecte')}${ver}${updateSlot}</div>
                         <div class="op-card-sub">
                             ${c.sectorId ? `sector ${escapeHtml(c.sectorId)}` : 'sense sector'}
                             ${c.projectType ? ` · ${escapeHtml(c.projectType)}` : ''}
