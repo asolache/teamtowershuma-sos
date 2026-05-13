@@ -215,11 +215,20 @@ export default class OpportunitiesView {
         const skills = (c.lookingForSkills || []).slice(0, 3);
         const sectors = (c.lookingForSectors || []).slice(0, 3);
         const tx = c.arweaveTxId;
+        // FOUNDER-001 sprint C · detect founder template + clone CTA
+        const isFounder = c.template === 'founder' || c.projectType === 'foundational-network';
+        const founderBadge = isFounder
+            ? `<div style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:rgba(168,85,247,0.15);color:#a855f7;border:1px solid rgba(168,85,247,0.40);font-size:10px;font-weight:700;margin-bottom:4px;">🌟 Founder template</div>`
+            : '';
+        const cloneBtn = (isFounder && c.templateClonable !== false)
+            ? `<a href="/dashboard?wizard=founder" data-link style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;text-decoration:none;">🔄 Clonar founder</a>`
+            : '';
         return `
             <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
                 <div class="op-card-head">
                     <div class="op-emblem" style="background:${gradient};">${escapeHtml(initials)}</div>
                     <div class="op-card-info">
+                        ${founderBadge}
                         <div class="op-card-name">${escapeHtml(c.name || 'Projecte')}</div>
                         <div class="op-card-sub">
                             ${c.sectorId ? `sector ${escapeHtml(c.sectorId)}` : 'sense sector'}
@@ -236,7 +245,10 @@ export default class OpportunitiesView {
                 </div>` : ''}
                 <div class="op-card-foot">
                     <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
-                    <span>${typeof c.stakeholdersCount === 'number' ? c.stakeholdersCount + ' stakeholders' : ''}</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        ${cloneBtn}
+                        <span>${typeof c.stakeholdersCount === 'number' ? c.stakeholdersCount + ' stakeholders' : ''}</span>
+                    </div>
                 </div>
             </a>
         `;

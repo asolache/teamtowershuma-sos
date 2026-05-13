@@ -86,6 +86,13 @@ function _normalize(node, typeId) {
         };
     }
     if (typeId === 'project') {
+        // FOUNDER-001 sprint C · detect template:'founder' o foundational-network
+        const isFounderTemplate = c.template === 'founder'
+            || c.projectType === 'foundational-network'
+            || (c.projectType || node.projectType) === 'foundational-network';
+        const founderChips = isFounderTemplate
+            ? [{ icon: '🌟', text: 'Founder template', cls: 'founder' }]
+            : [];
         return {
             id:        node.id,
             typeId:    'project',
@@ -93,12 +100,15 @@ function _normalize(node, typeId) {
             title:     c.name || 'Projecte',
             subtitle:  c.sector ? `📂 ${c.sector}` : '',
             body:      c.purpose || c.description || '',
-            chips:     (c.tags || []).slice(0, 4).map(t => ({ icon: '🏷', text: t, cls: 'tag' })),
+            chips:     [...founderChips, ...(c.tags || []).slice(0, 4).map(t => ({ icon: '🏷', text: t, cls: 'tag' }))],
             txId:      c.arweaveTxId || null,
             mock:      false,
             revoked:   false,
             verified:  null,
             published: !!c.arweaveTxId,
+            // Founder template flag · usat pel card render per a clone CTA
+            isFounderTemplate,
+            clonable:  !!(c.templateClonable || isFounderTemplate),
         };
     }
     if (typeId === 'workshop') {
