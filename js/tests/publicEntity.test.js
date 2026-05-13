@@ -21,6 +21,13 @@ eq(svc.ENTITY_PUBLISH_PRICING.work_order, 0.02,             'A · WO base price 
 eq(svc.ENTITY_PUBLISH_PRICING.market_item, 0.03,            'A · Market base price 0.03');
 eq(svc.ENTITY_PUBLISH_PRICING.workshop,    0.04,            'A · Workshop base price 0.04');
 eq(svc.ENTITY_PUBLISH_PRICING.project,     0.05,            'A · Project base price 0.05');
+eq(svc.ENTITY_PUBLISH_PRICING.neural_path_bundle, 0.04,     'A · Neural path bundle base 0.04 (CV nodal)');
+
+// PR-J · computePublishCost per a bundle · free vs pro
+const cBundleFree = svc.computePublishCost({ kind: 'neural_path_bundle', planId: 'free' });
+eq(cBundleFree.totalEur, 0.06,                              'A2 · free bundle · 0.04 × 1.5 = 0.06');
+const cBundlePro = svc.computePublishCost({ kind: 'neural_path_bundle', planId: 'pro' });
+eq(cBundlePro.totalEur, 0.04,                               'A2 · pro bundle · 0.04 sense fee');
 
 // ─── B · computePublishCost ─────────────────────────────────────────────
 const cFree = svc.computePublishCost({ kind: 'work_order', planId: 'free' });
