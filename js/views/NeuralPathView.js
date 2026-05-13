@@ -224,11 +224,15 @@ export default class NeuralPathView {
         return this._bundles.map(b => {
             const c = b?.content || {};
             const signed = !!c.signature;
+            const pubd   = !!c.arweaveTxId;
             const sigBadge = signed
-                ? '<span style="background:rgba(34,197,94,0.15);color:#22c55e;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;" title="ECDSA P-256 · TEA-SIGN-001">🔐 firmat</span>'
-                : '<span style="background:rgba(148,163,184,0.15);color:var(--text-muted);padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;">sense firma</span>';
+                ? '<span style="background:rgba(34,197,94,0.15);color:#22c55e;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;" title="ECDSA P-256 · TEA-SIGN-001">🔐</span>'
+                : '<span style="background:rgba(148,163,184,0.15);color:var(--text-muted);padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;" title="sense firma">·</span>';
+            const pubBadge = pubd
+                ? '<span style="background:rgba(99,102,241,0.15);color:var(--accent-indigo);padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;" title="Permaweb · ' + esc(c.arweaveTxId) + '">🌐</span>'
+                : '';
             return `<div class="np-bundle">
-                <div class="name">${esc(c.name || b.id)} ${sigBadge}</div>
+                <div class="name">${esc(c.name || b.id)} ${sigBadge}${pubBadge}</div>
                 <div class="meta">${c.stepCount || 0} steps · ${esc(c.intent || '—')} · ${esc(c.audienceId || '—')}</div>
                 <div class="actions">
                     <button data-bundle-view="${esc(b.id)}">👁 Veure context</button>
@@ -344,20 +348,30 @@ export default class NeuralPathView {
             const str = renderBundleAsContextString({ bundle, steps: resolved.steps, extraNodes: resolved.extraNodes });
             const root = document.getElementById('npBundleModalRoot');
             const c = bundle.content || {};
+            const isPublished = !!c.arweaveTxId;
+            const isSigned    = !!c.signature;
             root.innerHTML = `
                 <div id="npModalBg" style="position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9990;display:flex;align-items:center;justify-content:center;padding:20px;">
                     <div style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:1.5rem;max-width:720px;width:100%;max-height:80vh;overflow:auto;color:var(--text-main);">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
                             <h2 style="margin:0;font-size:1.2rem;">📦 ${esc(c.name || bundleId)}</h2>
-                            <code style="color:var(--accent-purple);font-size:11px;">${esc(bundleId)}</code>
+                            <div style="display:flex;gap:6px;align-items:center;">
+                                ${isSigned ? '<span style="background:rgba(34,197,94,0.15);color:#22c55e;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;">🔐 firmat</span>' : ''}
+                                ${isPublished ? '<span style="background:rgba(99,102,241,0.15);color:var(--accent-indigo);padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;" title="' + esc(c.arweaveTxId) + '">🌐 publicat</span>' : ''}
+                                <code style="color:var(--accent-purple);font-size:11px;">${esc(bundleId)}</code>
+                            </div>
                         </div>
                         <div style="color:var(--text-muted);font-size:11px;margin-bottom:10px;font-family:var(--font-mono);">
                             ${c.stepCount} steps · intent: ${esc(c.intent || '—')} · audience: ${esc(c.audienceId || '—')} · resolved: ${resolved.steps.length}/${c.stepCount || 0}${resolved.missing.length ? ' · missing: ' + resolved.missing.length : ''}
                         </div>
                         <pre id="npCtxString" style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:12px;font-size:11px;font-family:var(--font-mono);white-space:pre-wrap;word-break:break-word;color:var(--text-secondary);max-height:50vh;overflow:auto;">${esc(str)}</pre>
+                        <div id="npPublishStatus" style="margin-top:8px;font-size:11px;display:none;"></div>
                         <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap;">
                             <button id="npModalCopy" style="background:var(--accent-purple);color:#fff;border:0;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:11px;">📋 Copiar context</button>
-                            <button id="npModalUseAi" style="background:var(--accent-indigo);color:#fff;border:0;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:11px;">🧠 Usar a /quality (futur)</button>
+                            <button id="npModalUseAi" style="background:var(--accent-indigo);color:#fff;border:0;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:11px;">🧠 Usar a /quality</button>
+                            ${isPublished
+                                ? '<button id="npModalView" style="background:#22c55e;color:#fff;border:0;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:11px;">🌐 Veure al permaweb</button>'
+                                : '<button id="npModalPublish" style="background:#22c55e;color:#fff;border:0;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:11px;" ' + (isSigned ? '' : 'disabled title="Cal firmar el bundle abans"') + '>🚀 Publicar CV nodal</button>'}
                             <button id="npModalClose" style="background:transparent;color:var(--text-muted);border:1px solid var(--border-default);padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-size:11px;">Tancar</button>
                         </div>
                     </div>
@@ -378,8 +392,84 @@ export default class NeuralPathView {
                 if (typeof window.navigateTo === 'function') window.navigateTo(url);
                 else window.location.href = url;
             });
+            // PR-J · publish CV nodal al permaweb
+            document.getElementById('npModalPublish')?.addEventListener('click', () => this._handlePublishBundle(bundle));
+            document.getElementById('npModalView')?.addEventListener('click', () => {
+                const tx = bundle.content?.arweaveTxId;
+                if (tx) window.open('https://arweave.net/' + encodeURIComponent(tx), '_blank', 'noopener');
+            });
         } catch (e) {
             alert('Error: ' + (e?.message || e));
+        }
+    }
+
+    // PR-J · publish bundle al permaweb · 0,04€ base (×1.5 fee free pla)
+    // Sprint A · mock-first · marca arweaveTxId + permawebPublishedAt al
+    // node KB. Sprint B · upload Turbo real.
+    async _handlePublishBundle(bundle) {
+        const status = document.getElementById('npPublishStatus');
+        const btn    = document.getElementById('npModalPublish');
+        const setStatus = (msg, ok = true) => {
+            if (!status) return;
+            status.style.display = 'block';
+            status.textContent = msg;
+            status.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)';
+        };
+        try {
+            if (!bundle.content?.signature) {
+                setStatus('✗ Bundle sense firma · re-crea el bundle (auto-sign requereix identitat)', false);
+                return;
+            }
+            const { canPerform } = await import('../core/planEnforcer.js');
+            const { loadCurrentPlan } = await import('../core/stripeService.js');
+            const planId = await loadCurrentPlan().catch(() => 'free');
+            const op = planId === 'free' ? 'permaweb-publish-paid' : 'permaweb-publish';
+            const okPlan = canPerform({ planId, op });
+            if (!okPlan.allowed) { setStatus('✗ Pla ' + planId + ' no permet publicar', false); return; }
+
+            const { computePublishCost } = await import('../core/publicEntityService.js');
+            const cost = computePublishCost({ kind: 'neural_path_bundle', planId });
+            // Detect projecte associat al bundle (primer step amb projectId · fallback __personal_handle__)
+            const { resolveBundleSteps } = await import('../core/neuralPathService.js');
+            const resolved = await resolveBundleSteps({ kb: KB, bundle });
+            const projectId = resolved.steps.find(s => s?.content?.projectId)?.content?.projectId
+                || '__personal_' + (bundle.content.ownerHandle || '@alvaro') + '__';
+
+            const { getOrCreateWalletForProject, consumeAndPersist } = await import('../core/walletService.js');
+            const wallet = await getOrCreateWalletForProject(projectId);
+            const balance = Number(wallet.content?.balanceEur || 0);
+            if (balance < cost.totalEur) {
+                setStatus('✗ Saldo insuficient · cal ' + cost.totalEur.toFixed(3) + '€ · disponible ' + balance.toFixed(2) + '€ · recarrega a /wallet?project=' + encodeURIComponent(projectId), false);
+                return;
+            }
+            btn.disabled = true; btn.textContent = '⏳ Pagant ' + cost.totalEur.toFixed(3) + '€…';
+            const ref = 'bundle-publish-' + bundle.id;
+            await consumeAndPersist({
+                projectId, amountEur: cost.totalEur, ref,
+                source: 'public-bundle-publish',
+                note: 'CV nodal · ' + (bundle.content?.name || bundle.id),
+            });
+            // Sprint A · mock txId · sprint B · Turbo real (afegir tags arweaveTagsForBundle)
+            const now = Date.now();
+            const mockTx = 'mock-bundle-' + bundle.id.slice(-12) + '-' + now.toString(36);
+            const updated = { ...bundle, content: { ...bundle.content,
+                arweaveTxId: mockTx,
+                permawebPublishedAt: now,
+                _cachedAt: now,
+                _fromPermaweb: false,
+                _mockMode: true,
+            }};
+            await KB.upsert(updated);
+            setStatus('✓ Publicat · ' + mockTx.slice(0, 18) + '… · cost ' + cost.totalEur.toFixed(3) + '€ · re-renderitzant…', true);
+            setTimeout(async () => {
+                await this._loadData();
+                const app = document.getElementById('app');
+                if (app) { app.innerHTML = await this.getHtml(); await this.afterRender(); }
+            }, 1000);
+        } catch (e) {
+            console.error('[neural-path] publish failed', e);
+            setStatus('✗ ' + (e?.message || 'error desconegut'), false);
+            if (btn) { btn.disabled = false; btn.textContent = '🚀 Publicar CV nodal'; }
         }
     }
 }

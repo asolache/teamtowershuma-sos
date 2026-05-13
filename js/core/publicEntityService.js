@@ -32,6 +32,7 @@ export const PUBLIC_ENTITY_VERSION = '1.0';
 export const ENTITY_PUBLISH_PRICING = Object.freeze({
     project:     0.05,
     workshop:    0.04,
+    neural_path_bundle: 0.04,   // PR-J · CV nodal · same tier que workshop (~midweight)
     market_item: 0.03,
     work_order:  0.02,
 });
