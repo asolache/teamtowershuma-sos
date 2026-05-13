@@ -415,16 +415,21 @@ export default class ProjectQualityView {
                         this._toast('🛈 Draft acceptat però sense canvis aplicables · ' + apply.summary);
                     }
                     close();
-                    // Refresh score post-apply · re-navigate al mateix /quality
+                    // LANDING-UNIFY-001 · després d'aplicar landing, redirigeix a
+                    // /presentation perquè l'usuari vegi el text generat. Altres
+                    // dims es queden a /quality per veure el nou score.
+                    const targetUrl = (dimId === 'landing' && apply.applied)
+                        ? '/presentation?project=' + encodeURIComponent(this._projectId)
+                        : (window.location.pathname + window.location.search);
                     setTimeout(() => {
                         try {
                             if (typeof window.navigateTo === 'function') {
-                                window.navigateTo(window.location.pathname + window.location.search);
+                                window.navigateTo(targetUrl);
                             } else {
-                                window.location.reload();
+                                window.location.href = targetUrl;
                             }
                         } catch (_) { window.location.reload(); }
-                    }, 600);
+                    }, 700);
                 } catch (e) {
                     status.textContent = '✗ ' + (e?.message || 'apply va fallar');
                     status.style.color = 'var(--accent-red)';
