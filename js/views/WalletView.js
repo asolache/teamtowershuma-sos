@@ -386,7 +386,24 @@ export default class WalletView {
                 note:   'Stripe Checkout · ' + (result.currency || 'eur').toUpperCase() + ' ' + amountEur.toFixed(2),
             });
             await markSessionClaimed(sid, { amountEur });
-            this._toast('✓ +' + amountEur.toFixed(2) + '€ verificats i aplicats al wallet');
+            // BIZ-MODEL-001 sprint E · genera receipt post-topup
+            let invoiceNumber = null;
+            try {
+                const { recordReceipt } = await import('../core/receiptService.js');
+                const receipt = await recordReceipt({
+                    topupRef:      'stripe-session-' + sid.slice(0, 20),
+                    amountEur,
+                    currency:      result.currency || 'eur',
+                    paymentMethod: 'stripe-verified',
+                    customerEmail: result.customerEmail || null,
+                    sessionId:     sid,
+                    description:   'Top-up SOS wallet via Stripe Checkout',
+                });
+                invoiceNumber = receipt?.content?.invoiceNumber;
+            } catch (e) {
+                console.warn('[wallet] receipt fallit', e?.message);
+            }
+            this._toast('✓ +' + amountEur.toFixed(2) + '€ aplicats · invoice ' + (invoiceNumber || 'pendent'));
             // Neteja l'URL · evita re-claim si l'usuari recarrega la pestanya
             try {
                 const u = new URL(window.location.href);
