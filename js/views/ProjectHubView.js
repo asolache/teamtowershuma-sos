@@ -124,13 +124,22 @@ export default class ProjectHubView {
         <div class="ph-shell">
             <div class="ph-topbar">
                 <a href="/" data-link class="ph-logo">🗼 Team<span>Towers</span></a>
-                <span class="ph-title">Proyecto · panel</span>
+                <span class="ph-title">⚙ Admin del projecte</span>
                 <div class="ph-spacer"></div>
-                
+                <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link class="ph-link" style="font-weight:700;">👁 Veure presentació pública →</a>
+                <span style="color:var(--text-muted);">·</span>
                 <a href="/n/${encodeURIComponent(p.id)}" data-link class="ph-link">📂 Nodo</a>
             </div>
 
             <div class="ph-main">
+                <!-- PRESENTATION-HUB-001 · banner orientació · separar admin de presentació pública -->
+                <div style="background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(168,85,247,0.06));border:1px solid var(--border-default);border-left:3px solid var(--accent-indigo);border-radius:var(--radius-md);padding:0.85rem 1.1rem;margin-bottom:1.5rem;display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+                    <span style="font-size:1.2rem;">⚙</span>
+                    <div style="flex:1;min-width:240px;">
+                        <div style="font-weight:800;color:var(--text-main);font-size:0.95rem;">Admin tècnic del projecte</div>
+                        <div style="color:var(--text-muted);font-size:11px;line-height:1.5;margin-top:2px;">Operacions tècniques · enjambre IA · publicació permaweb · vistes operatives. La <strong>presentació pública</strong> (hero, productes, equip, slicing pie) viu a <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link style="color:var(--accent-indigo);">/presentation</a> · la <strong>qualitat</strong> a <a href="/quality?project=${encodeURIComponent(p.id)}" data-link style="color:var(--accent-indigo);">/quality</a>.</div>
+                    </div>
+                </div>
                 <div class="ph-hero">
                     <h1 class="mat-hero-h1">${this._esc(p.nombre || p.name || p.id)}</h1>
                     <div class="meta">
@@ -199,34 +208,18 @@ export default class ProjectHubView {
                     </div>
                 </div>
 
-                ${s.marketItems.count ? `
+                <!-- PRESENTATION-HUB-001 · les llistes de ofertes/SOPs ara viuen
+                     a /presentation · evitem duplicació. Si s'està buscant un SOP
+                     concret · /sops té el llistat editable. -->
+                ${(s.marketItems.count || s.sops > 0) ? `
                     <div class="ph-section">
-                        <h2>Ofertas publicadas (${s.marketItems.count})</h2>
-                        <div class="ph-list">
-                            ${s.marketItems.list.map(it => {
-                                const c = it.content || {};
-                                return `
-                                    <a class="ph-item" href="/n/${encodeURIComponent(it.id)}" data-link>
-                                        <span style="font-size:1.1rem;">${c.kind === 'workshop' ? '🎓' : c.kind === 'product' ? '📦' : c.kind === 'template' ? '📋' : c.kind === 'skill' ? '🤲' : c.kind === 'subscription' ? '🔁' : '💡'}</span>
-                                        <span class="pname">${this._esc(c.title || it.id)}</span>
-                                        <span class="pmeta">${c.cnae ? 'CNAE ' + this._esc(c.cnae) + ' · ' : ''}${c.priceEur != null ? c.priceEur + ' €' : '— €'}</span>
-                                    </a>`;
-                            }).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${s.sops > 0 ? `
-                    <div class="ph-section">
-                        <h2>SOPs del proyecto (${s.sops})</h2>
-                        <div class="ph-list">
-                            ${s.sopsList.slice(0, 8).map(n => `
-                                <a class="ph-item" href="/sops?project=${encodeURIComponent(this.projectId)}&focus=${encodeURIComponent(n.id)}" data-link>
-                                    <span style="font-size:1rem;">📜</span>
-                                    <span class="pname">${this._esc(n.content?.name || n.id)}</span>
-                                    <span class="pmeta">rol ${this._esc(n.content?.role_ref || '?')} · ${(n.content?.steps || []).length} steps</span>
-                                </a>`).join('')}
-                            ${s.sops > 8 ? `<a class="ph-link" href="/sops?project=${encodeURIComponent(this.projectId)}" data-link style="text-align:center;padding:0.5rem;">Ver los ${s.sops} SOPs ›</a>` : ''}
+                        <h2>📚 Contingut del projecte</h2>
+                        <p style="color:var(--text-secondary);font-size:0.82rem;line-height:1.6;margin:0 0 0.7rem 0;">
+                            La presentació pública dels productes/SOPs/equip viu a <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link style="color:var(--accent-indigo);font-weight:700;">/presentation</a>. Aquí pots accedir a les vistes operatives per editar.
+                        </p>
+                        <div class="ph-grid">
+                            ${s.marketItems.count ? `<a class="ph-tile" href="/market?project=${encodeURIComponent(p.id)}" data-link><div class="icon">🛍</div><div class="ttl">${s.marketItems.count} ofertes al market</div><div class="hint">Edita productes, serveis i preus</div></a>` : ''}
+                            ${s.sops > 0 ? `<a class="ph-tile" href="/sops?project=${encodeURIComponent(p.id)}" data-link><div class="icon">📜</div><div class="ttl">${s.sops} SOPs del projecte</div><div class="hint">Edita / regenera SOPs amb IA</div></a>` : ''}
                         </div>
                     </div>
                 ` : ''}

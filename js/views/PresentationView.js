@@ -106,13 +106,20 @@ export default class PresentationView {
                 </div>`;
         }
 
-        // KB queries · roles, tx, sops, work_orders, soc
-        const [rolesNodes, txNodes, sops, wos, socs] = await Promise.all([
-            KB.query({ type: 'role',         projectId: project.id }),
-            KB.query({ type: 'transaction',  projectId: project.id }),
-            KB.query({ type: 'sop',          projectId: project.id }),
-            KB.query({ type: 'work_order',   projectId: project.id }),
-            KB.query({ type: 'soc',          projectId: project.id }),
+        // KB queries · roles, tx, sops, work_orders, soc, market_items,
+        // swarm_assignment, members, contributions (PRESENTATION-HUB-001)
+        const [rolesNodes, txNodes, sops, wos, socs, marketItems, assignments, allMembers, allSeats, contribNodes, permawebNodes] = await Promise.all([
+            KB.query({ type: 'role',                projectId: project.id }),
+            KB.query({ type: 'transaction',         projectId: project.id }),
+            KB.query({ type: 'sop',                 projectId: project.id }),
+            KB.query({ type: 'work_order',          projectId: project.id }),
+            KB.query({ type: 'soc',                 projectId: project.id }),
+            KB.query({ type: 'market_item' }).catch(() => []),  // filtrarem per projectId
+            KB.query({ type: 'swarm_assignment',    projectId: project.id }).catch(() => []),
+            KB.query({ type: 'matriu_member' }).catch(() => []),
+            KB.query({ type: 'cohort_seat' }).catch(() => []),
+            KB.query({ type: 'value_contribution', projectId: project.id }).catch(() => []),
+            KB.query({ type: 'permaweb_entry',     projectId: project.id }).catch(() => []),
         ]);
 
         // Fallback · si store té vna_roles/transactions, usar-los
@@ -187,6 +194,44 @@ export default class PresentationView {
         const bodyMarkdown = (narrative && typeof narrative.bodyMarkdown === 'string') ? narrative.bodyMarkdown : null;
         // Subtipus llegit per pintar al meta
         const subtype = (project.sectorId && project.subtypeId) ? getSubtypeById(project.sectorId, project.subtypeId) : null;
+
+        // PRESENTATION-HUB-001 · agregacions noves seccions ──────────────
+        // Products del market lligats al projecte
+        const projectMarketItems = (marketItems || []).filter(m =>
+            (m?.content?.projectId === project.id) || (m?.projectId === project.id)
+        ).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        // Team · members assignats al projecte via swarm_assignment + owner
+        const memberIdsInProj = new Set();
+        for (const a of (assignments || [])) {
+            if (a?.content?.seatId) memberIdsInProj.add(a.content.seatId);
+            if (a?.content?.memberId) memberIdsInProj.add(a.content.memberId);
+        }
+        for (const w of (wos || [])) {
+            if (w?.content?.assignedToSeatId) memberIdsInProj.add(w.content.assignedToSeatId);
+        }
+        const memberById = new Map([...(allMembers || []), ...(allSeats || [])].map(n => [n.id, n]));
+        const teamNodes = Array.from(memberIdsInProj).map(id => memberById.get(id)).filter(Boolean);
+        if (project.ownerMemberId && memberById.has(project.ownerMemberId) && !teamNodes.find(m => m.id === project.ownerMemberId)) {
+            teamNodes.unshift(memberById.get(project.ownerMemberId));
+        }
+        // Slicing pie · agregació pure des de contributions
+        let slicingPie = null;
+        try {
+            const { calculateSlices, calculatePieDistribution } = await import('../core/valueAccountingService.js');
+            const contributions = (contribNodes || []).map(n => ({
+                partyId:        n.content?.partyId,
+                slices:         n.content?.slices,
+            })).filter(c => typeof c.partyId === 'string' && typeof c.slices === 'number' && c.slices > 0);
+            if (contributions.length > 0) {
+                const slices = calculateSlices(contributions);
+                const dist   = calculatePieDistribution({ slices });
+                slicingPie   = { dist, totalParties: dist.length, totalSlices: dist.reduce((s, d) => s + (d.slices || 0), 0) };
+            }
+        } catch (_) { /* degrade · slicing pie opcional */ }
+        // Permaweb publish status · agafa l'última entrada del projecte (per version)
+        const latestPermaweb = (permawebNodes || [])
+            .filter(n => n?.content?.projectId === project.id || n?.projectId === project.id)
+            .sort((a, b) => (b?.content?.entryVersion || 0) - (a?.content?.entryVersion || 0))[0] || null;
 
         // Cache global · expose project + roles per als handlers async
         this._project       = project;
@@ -282,9 +327,11 @@ export default class PresentationView {
             <div class="pv-topbar pv-print-hide-mobile">
                 <a href="/dashboard" data-link class="pv-back">← Dashboard</a>
                 <span style="color:var(--text-muted);">·</span>
-                <a href="/project/${esc(project.id)}" data-link class="pv-back">🎛 ${esc(project.nombre || project.name || project.id)}</a>
+                <a href="/quality?project=${encodeURIComponent(project.id)}" data-link class="pv-back">📊 Qualitat</a>
                 <span style="color:var(--text-muted);">·</span>
-                <a href="/map?project=${encodeURIComponent(project.id)}" data-link class="pv-back">🗺 Editar mapa</a>
+                <a href="/map?project=${encodeURIComponent(project.id)}" data-link class="pv-back">🗺 Mapa</a>
+                <span style="color:var(--text-muted);">·</span>
+                <a href="/project/${esc(project.id)}" data-link class="pv-back" title="Admin tècnic · archivar / exportar / swarm matchmaker / publish permaweb">⚙ Admin</a>
                 <div style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;">
                     ${!this._editMode ? `<button id="pvBtnEditEnter" class="pv-edit-btn pv-edit-btn-secondary">✏ Editar presentació</button>` : ''}
                     <button id="pvBtnPrint" class="pv-back" style="background:transparent;border:1px solid var(--border-default);padding:6px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:var(--text-xs);">🖨 Imprimir / PDF</button>
@@ -311,6 +358,7 @@ export default class PresentationView {
                     ${guardian ? `<span>🪶 ${esc(guardian.icon || '✦')} ${esc(guardian.name || guardian.id)}</span>` : ''}
                     ${project.matriuCohort === 0 ? `<span style="border-color:#c25a3a;color:#c25a3a;">✦ Matriu Cohort 0</span>` : ''}
                     ${narrative ? `<span style="border-color:var(--accent-purple);color:var(--accent-purple);" title="Narrativa generada amb IA · audiència ${esc(narrativeAudience || '·')} · ${narrativeAt ? new Date(narrativeAt).toLocaleString() : ''}">🤖 IA · ${esc(narrativeAudience || '·')}</span>` : ''}
+                    ${latestPermaweb ? `<span style="border-color:#22c55e;color:#22c55e;" title="Publicat al permaweb · v${esc(String(latestPermaweb.content?.entryVersion || '1'))} · txId ${esc(String(latestPermaweb.content?.txId || latestPermaweb.id || '').slice(0, 12))}…">🌐 Publicat v${esc(String(latestPermaweb.content?.entryVersion || '1'))}</span>` : ''}
                 </div>
             </div>
 
@@ -381,6 +429,86 @@ export default class PresentationView {
                     <div class="pv-section-title">📜 SOC · Standard Operating Charter</div>
                     <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:var(--space-6);font-family:var(--font-serif);font-style:italic;color:var(--text-secondary);line-height:1.7;">
                         ${esc(projectSoc.content?.text || projectSoc.content?.body || projectSoc.content?.charter || 'SOC sense text · obre /pact per editar')}
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- PRESENTATION-HUB-001 · Productes/serveis del projecte -->
+            ${projectMarketItems.length ? `
+                <div class="pv-section">
+                    <div class="pv-section-title" style="display:flex;align-items:center;gap:8px;">
+                        🛍 Productes i serveis
+                        <span style="color:var(--text-muted);font-weight:400;letter-spacing:0;text-transform:none;font-size:11px;">${projectMarketItems.length} ofertes · <a href="/market?project=${encodeURIComponent(project.id)}" data-link style="color:var(--accent-indigo);">veure totes →</a></span>
+                    </div>
+                    <div class="pv-grid">
+                        ${projectMarketItems.slice(0, 6).map(m => {
+                            const c = m.content || m;
+                            const kindIcon = ({ service: '🛠', product: '📦', workshop: '🎓', membership: '🪪' })[c.kind] || '✦';
+                            return `<div class="pv-role-card">
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                                    <span style="font-size:1.3rem;">${kindIcon}</span>
+                                    <div class="pv-role-name" style="margin-bottom:0;flex:1;">${esc((c.title || c.name || 'sense títol').slice(0, 60))}</div>
+                                </div>
+                                ${c.description ? `<div class="pv-role-desc">${esc(c.description.slice(0, 200))}</div>` : ''}
+                                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+                                    <span class="pv-sop-pill">${esc(c.kind || 'service')}</span>
+                                    ${c.priceEur ? `<span class="pv-sop-pill" style="background:rgba(34,197,94,0.12);color:var(--accent-green);">${esc(String(c.priceEur))}€</span>` : ''}
+                                    ${c.accessTier && c.accessTier !== 'public' ? `<span class="pv-sop-pill" style="background:rgba(168,85,247,0.12);color:var(--accent-purple);">${esc(c.accessTier)}</span>` : ''}
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- PRESENTATION-HUB-001 · Equip / membres assignats al projecte -->
+            ${teamNodes.length ? `
+                <div class="pv-section">
+                    <div class="pv-section-title" style="display:flex;align-items:center;gap:8px;">
+                        🧑‍🤝‍🧑 Equip del projecte
+                        <span style="color:var(--text-muted);font-weight:400;letter-spacing:0;text-transform:none;font-size:11px;">${teamNodes.length} membre${teamNodes.length === 1 ? '' : 's'}${project.ownerMemberId ? ' · 1 owner' : ''}</span>
+                    </div>
+                    <div class="pv-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));">
+                        ${teamNodes.slice(0, 12).map(m => {
+                            const c = m.content || m;
+                            const isOwner = m.id === project.ownerMemberId;
+                            const handle = c.handle || c.displayName || c.name || m.id;
+                            const skills = Array.isArray(c.skills) ? c.skills.slice(0, 3) : [];
+                            const guardianArch = c.guardianArchetype || c.guardian || null;
+                            return `<div class="pv-role-card" style="${isOwner ? 'border-left:3px solid var(--accent-purple);' : ''}">
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent-indigo),var(--accent-purple));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;flex-shrink:0;">${esc((handle[0] || '?').toUpperCase())}</div>
+                                    <div style="flex:1;min-width:0;">
+                                        <div class="pv-role-name" style="margin-bottom:0;font-size:var(--text-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(handle)}${isOwner ? ' <span style="color:var(--accent-purple);font-size:0.7em;">★ owner</span>' : ''}</div>
+                                        ${guardianArch ? `<div style="color:var(--text-muted);font-size:11px;">🪶 ${esc(guardianArch)}</div>` : ''}
+                                    </div>
+                                </div>
+                                ${skills.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">${skills.map(s => `<span class="pv-sop-pill" style="font-size:9px;">${esc(typeof s === 'string' ? s : (s.id || ''))}</span>`).join('')}</div>` : ''}
+                            </div>`;
+                        }).join('')}
+                    </div>
+                    ${teamNodes.length > 12 ? `<p style="text-align:center;margin-top:var(--space-3);color:var(--text-muted);font-size:11px;"><a href="/project/${encodeURIComponent(project.id)}" data-link style="color:var(--accent-indigo);">+${teamNodes.length - 12} membres més a Admin del projecte →</a></p>` : ''}
+                </div>
+            ` : ''}
+
+            <!-- PRESENTATION-HUB-001 · Slicing pie summary -->
+            ${slicingPie ? `
+                <div class="pv-section">
+                    <div class="pv-section-title" style="display:flex;align-items:center;gap:8px;">
+                        🥧 Tarta del projecte · top stakeholders
+                        <span style="color:var(--text-muted);font-weight:400;letter-spacing:0;text-transform:none;font-size:11px;">${slicingPie.totalParties} parties · ${slicingPie.totalSlices.toFixed(0)} slices · <a href="/value-accounting?project=${encodeURIComponent(project.id)}" data-link style="color:var(--accent-indigo);">veure tarta sencera →</a></span>
+                    </div>
+                    <div style="display:grid;gap:8px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:var(--space-5);">
+                        ${slicingPie.dist.slice(0, 5).map(d => `
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div style="flex:0 0 auto;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(d.partyId)}</div>
+                                <div style="flex:1;background:rgba(99,102,241,0.10);border-radius:6px;height:18px;position:relative;overflow:hidden;">
+                                    <div style="width:${(d.sharePct || 0).toFixed(1)}%;background:linear-gradient(90deg,var(--accent-indigo),var(--accent-purple));height:100%;border-radius:6px;"></div>
+                                </div>
+                                <div style="flex:0 0 60px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-main);">${(d.sharePct || 0).toFixed(1)}%</div>
+                            </div>
+                        `).join('')}
+                        ${slicingPie.dist.length > 5 ? `<div style="text-align:center;color:var(--text-muted);font-size:11px;padding-top:4px;">+${slicingPie.dist.length - 5} parties més</div>` : ''}
                     </div>
                 </div>
             ` : ''}

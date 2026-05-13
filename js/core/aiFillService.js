@@ -15,6 +15,8 @@ import { runEscalation, AI_MODELS, estimateCostUsd } from './aiRouterService.js'
 import { generateWithProvider, makeJsonShapeEvaluator, actualCostUsd } from './aiProviderService.js';
 // BIZ-MODEL-001 sprint B · marge SOS sobre cost provider IA
 import { applyMarginWithOverride } from './billingService.js';
+// VALUEMAP-GEN-001 · seed sectorial + subtype hint quan dim=valueMap
+import { getSubtypeById, buildIaContextHint } from './sectorSubtypes.js';
 
 const USD_EUR = 0.92;
 
@@ -111,6 +113,8 @@ export async function aiFillDim({
     criticalRoles   = [],
     extraContext    = null,    // IA-CONTEXT-001 sprint B · user input opcional
     audienceId      = null,    // LANDING-UNIFY-001 · per a regenerar landings per audiència
+    subtypeId       = null,    // VALUEMAP-GEN-001 · override del project.subtypeId
+    sectorSeedLoader = null,   // VALUEMAP-GEN-001 · injectable per a tests · default importa KnowledgeLoader
     maxOutputTokens = 800,
     temperature     = 0.4,
     stopAt          = 'premium',
@@ -126,12 +130,40 @@ export async function aiFillDim({
     // 1 · Pre-càrrega KB
     const { project, sops, workshops, marketItems } = await loadContext({ projectId });
 
+    // 1b · VALUEMAP-GEN-001 · per a dim=valueMap, carrega seed sectorial
+    // (roles+tx típiques del sector) + subtype hint · injectats al context
+    let sectorSeed = null;
+    let subtypeHint = null;
+    if (dimId === 'valueMap') {
+        const effSubtypeId = subtypeId || project.subtypeId || null;
+        const sectorId     = project.sector_id || project.sectorId || null;
+        if (sectorId) {
+            try {
+                let loader = sectorSeedLoader;
+                if (!loader) {
+                    const mod = await import('./KnowledgeLoader.js');
+                    loader = (sid) => mod.KnowledgeLoader.getSectorSeed(sid);
+                }
+                sectorSeed = await loader(sectorId);
+            } catch (e) { /* loader pot fallar a node tests · degrade silenciós */ }
+            if (effSubtypeId) {
+                const sub = getSubtypeById(sectorId, effSubtypeId);
+                if (sub) {
+                    subtypeHint = sub.label + ' · ' + (sub.hint || '') +
+                        (sub.iaContextHint ? ' · operativa típica: ' + sub.iaContextHint : '');
+                }
+            }
+        }
+    }
+
     // 2 · Build context per dim · inclou extraContext si l'usuari l'ha passat
     const ctx = buildContextForDim(dimId, {
         project, sops, workshops, marketItems,
         sectorReadiness, similarProjects, criticalRoles,
         extraContext,
         audienceId,   // LANDING-UNIFY-001 · propagat al builder (landing l'usa)
+        sectorSeed,   // VALUEMAP-GEN-001 · sectorSeed propagat al builder valueMap
+        subtypeHint,  // VALUEMAP-GEN-001 · text hint del subtype
     });
 
     // 3 · Setup generate + evaluate per runEscalation
@@ -202,6 +234,8 @@ export async function aiFillDim({
         dimId,
         taskKind,
         audienceId,
+        subtypeId:   subtypeId || project.subtypeId || null,
+        sectorSeed:  sectorSeed ? { sectorId: sectorSeed.sectorId, sectorName: sectorSeed.sectorName, rolesCount: (sectorSeed.roles || []).length } : null,
         modelKey:    result.modelKey,
         draft:       result.output ? result.output.text : null,
         parsedDraft: parsedDraftLocal,

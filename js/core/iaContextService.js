@@ -156,12 +156,19 @@ export function buildLandingContext({
 }
 
 // ─── Dim 2 · Value map context ────────────────────────────────────────────
+// VALUEMAP-GEN-001 · accepta `sectorSeed` (roles+tx del sector segons
+// KnowledgeLoader.getSectorSeed) i `subtypeHint` (string descripció del
+// subtipus dins del sector) com a REFERÈNCIA · la IA HA D'ADAPTAR aquesta
+// referència al prompt de l'usuari (description + extraContext), no
+// duplicar-la cegament.
 export function buildValueMapContext({
     project,
     sectorReadiness = null,
     similarProjects = [],
     criticalRoles   = [],   // skills/critical roles catalog (opcional)
     extraContext    = null,
+    sectorSeed      = null, // VALUEMAP-GEN-001 · {sectorId, sectorName, roles[], transactions[]}
+    subtypeHint     = null, // VALUEMAP-GEN-001 · text · "Subtipus: X · operativa típica: Y"
 } = {}) {
     if (!project || !project.id) throw new Error('buildValueMapContext requires project');
     const refs = [];
@@ -173,43 +180,68 @@ export function buildValueMapContext({
         if (p && p.id) _addRef(refs, p);
         return '- ' + (p.name || p.id) + ' · ' + (p.sectorId || '?') + ' · ' + (p.rolesCount || '?') + ' roles';
     });
+    // VALUEMAP-GEN-001 · sector seed roles+tx com a REFERÈNCIA
+    const seedRolesLines = (sectorSeed?.roles || []).slice(0, 12).map(r =>
+        '- ' + (r.id || r.slug || r.name) + ' · ' + (r.name || r.id) +
+        (r.castell_level ? ' · ' + r.castell_level : '') +
+        (r.description ? ' · ' + r.description.slice(0, 80) : '')
+    );
+    const seedTxLines = (sectorSeed?.transactions || []).slice(0, 16).map(t =>
+        '- ' + (t.from || '?') + '→' + (t.to || '?') + ' · ' + (t.deliverable || '').slice(0, 70) + ' (' + (t.type || 'tangible') + ')'
+    );
+    const hasSeed = (seedRolesLines.length || seedTxLines.length);
     const hasIntangible = (project.vna_transactions || []).some(t => t && t.type === 'intangible');
     const userPrompt =
         '## Projecte\n' +
         'Id · ' + project.id + '\n' +
         'Nom · ' + (project.nombre || project.name) + '\n' +
-        'Sector · ' + (project.sector_id || '—') + '\n' +
+        'Sector · ' + (project.sector_id || project.sectorId || '—') + '\n' +
+        (sectorSeed?.sectorName ? 'Sector nom · ' + sectorSeed.sectorName + '\n' : '') +
+        (subtypeHint ? 'Subtipus · ' + subtypeHint + '\n' : '') +
         'Purpose · ' + ((project.purpose || project.description || '').slice(0, 240)) + '\n' +
-        '\n## Roles actuals (' + existingRoles.length + ')\n' + (existingRoles.length ? existingRoles.join('\n') : '— cap encara —') + '\n' +
-        '\n## Transactions actuals (' + existingTx.length + ')\n' + (existingTx.length ? existingTx.join('\n') : '— cap encara —') + '\n' +
-        '\n## Context · sector\n' + (sectorReadiness || '—') + '\n' +
+        '\n## Roles actuals al projecte (' + existingRoles.length + ')\n' + (existingRoles.length ? existingRoles.join('\n') : '— cap encara — projecte buit a omplir —') + '\n' +
+        '\n## Transactions actuals al projecte (' + existingTx.length + ')\n' + (existingTx.length ? existingTx.join('\n') : '— cap encara —') + '\n' +
+        (hasSeed
+            ? '\n## REFERÈNCIA · roles típics del sector' + (subtypeHint ? '/subtipus' : '') + ' (no copiar literal · ADAPTAR al projecte)\n' +
+              (seedRolesLines.length ? seedRolesLines.join('\n') : '— cap —') + '\n' +
+              '\n## REFERÈNCIA · transactions típiques del sector (ADAPTAR)\n' +
+              (seedTxLines.length ? seedTxLines.join('\n') : '— cap —') + '\n'
+            : '') +
+        '\n## Context · sector readiness\n' + (sectorReadiness || '—') + '\n' +
         '\n## Roles crítics catàleg\n' + (criticalLines.join('\n') || '—') + '\n' +
         '\n## Projectes similars\n' + (peerLines.join('\n') || '—') + '\n' +
         _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
-        'Suggereix EXTENSIONS al value map · NO substitueixis res existent. Format ESTRICTE JSON:\n' +
+        (hasSeed
+            ? 'Construeix el value map del projecte basant-te en la REFERÈNCIA sectorial però ADAPTANT al purpose/description i a la "Context addicional" si n\'hi ha.\n'
+            : 'Construeix el value map del projecte basant-te en el purpose/description i la "Context addicional" si n\'hi ha.\n') +
+        'Si JA hi ha roles/transactions al projecte · suggereix EXTENSIONS (no els duplica). Si està buit · genera 4-7 roles + 6-10 transactions COMPLETS.\n' +
+        'Format ESTRICTE JSON · zero text fora dels braços {}:\n' +
         '{\n' +
         '  "addRoles": [\n' +
-        '    { "id": "ai-<slug-curt>", "name": "<≤40 chars>",\n' +
-        '      "castell_level": "base|tronc|cim", "description": "<≤200 chars · què fa concretament>",\n' +
+        '    { "id": "<slug-curt-sense-prefix>", "name": "<≤40 chars>",\n' +
+        '      "castell_level": "base|tronc|cim", "description": "<≤200 chars · què fa concretament al projecte>",\n' +
         '      "typical_actor": "<perfil real ex. Designer Sr.>", "tags": ["sector:x", "skill:y"] }\n' +
         '  ],\n' +
         '  "addTransactions": [\n' +
-        '    { "id": "ai-tx-<n>", "from": "<roleId existent o nou>", "to": "<roleId>",\n' +
-        '      "deliverable": "<què flueix concretament · ex. \\"feedback estructurat\\">",\n' +
+        '    { "id": "tx-<from>-<to>-<n>", "from": "<roleId existent o nou>", "to": "<roleId>",\n' +
+        '      "deliverable": "<què flueix concretament · ex. \\"feedback estructurat setmanal\\">",\n' +
         '      "type": "tangible|intangible", "is_must": true }\n' +
         '  ]\n' +
         '}\n' +
         'REGLES estrictes:\n' +
-        '- Genera 1-4 addRoles + 2-6 addTransactions\n' +
-        '- ' + (hasIntangible ? 'Ja hi ha intangibles · pots afegir-ne més' : '⚠ NO hi ha intangibles · cal MINIM 1 transaction type:"intangible" (ex. confiança, reputació, feedback)') + '\n' +
+        '- Si el projecte està buit · genera 4-7 addRoles + 6-10 addTransactions COMPLETS\n' +
+        '- Si ja hi ha roles · genera 1-3 addRoles + 2-6 addTransactions extensives (NO duplicar ids existents)\n' +
+        '- ' + (hasIntangible ? 'Ja hi ha intangibles · pots afegir-ne més' : '⚠ Cal MÍNIM 1 transaction type:"intangible" (ex. confiança, reputació, feedback, autoritat)') + '\n' +
         '- Cal ≥1 cicle recíproc · si A→B està definida, afegeix B→A o un triangle A→B→C→A\n' +
-        '- ids amb prefix "ai-" per identificar drafts\n' +
-        '- Roles existents pots referenciar-los per id sense duplicar-los a addRoles\n' +
-        '- Retorna SOLS JSON · zero text fora dels braços {}.';
+        '- IDS · slugs curts en kebab-case · NO "ai-" prefix (eren drafts antics) · respectar ids existents al projecte i a la REFERÈNCIA\n' +
+        '- deliverables · concrets i observables · evita "valor", "experiència" sense més\n' +
+        '- ADAPTA la REFERÈNCIA al context del projecte · si el purpose suggereix algo específic, prioritza-ho\n' +
+        '- Retorna SOLS JSON.';
     const systemPrompt = COMMON_SYSTEM_HEADER +
         '\nDim activa · 🗺 Value map · pes 30% · cor sistèmic del projecte.' +
-        '\nPRIORITZA · transactions concrets sobre roles abstractes · qui dóna què a qui i per què.';
+        '\nPRIORITZA · transactions concrets sobre roles abstractes · qui dóna què a qui i per què.' +
+        (hasSeed ? '\nUSA la REFERÈNCIA sectorial com a punt de partida però adapta-la · NO la copies literal.' : '');
     return {
         systemPrompt,
         userPrompt,
