@@ -167,6 +167,12 @@ t(result.modelKey,                                                    'I · mode
 t(Array.isArray(result.refs),                                         'I · refs propagat');
 t(auditPersistedWith && auditPersistedWith.dimId === 'landing',       'I · persistAudit cridat amb dim');
 
+// WALLET-ACC-001 · audit log inclou walletDebit (encara que falli per
+// project sense wallet · marquem walletDebit.ok=false sense bloquejar el draft)
+t('walletDebit' in auditPersistedWith,                                'I · auditPersistedWith inclou walletDebit');
+t(auditPersistedWith.walletDebit !== null && typeof auditPersistedWith.walletDebit === 'object', 'I · walletDebit és objecte');
+t(typeof result.walletDebit === 'object',                             'I · result inclou walletDebit');
+
 // ─── J · aiFillDim · provider falla primary · escalate ──────────────────
 let callCount = 0;
 const escalatingProvider = async (modelKey, payload) => {

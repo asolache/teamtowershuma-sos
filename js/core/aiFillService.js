@@ -55,7 +55,7 @@ async function _defaultLoadContext({ projectId }) {
 }
 
 // Persisteix un ai_audit log al KB per a auditoria / cost tracking
-async function _persistAuditLog({ projectId, dimId, attempts, totalCostUsd, accepted, draft, refs, billing = null }) {
+async function _persistAuditLog({ projectId, dimId, attempts, totalCostUsd, accepted, draft, refs, billing = null, walletDebit = null }) {
     try {
         const { KB } = await import('./kb.js');
         await KB.init();
@@ -76,6 +76,12 @@ async function _persistAuditLog({ projectId, dimId, attempts, totalCostUsd, acce
                 marginPct:    billing ? billing.marginPct : 0,
                 totalWithMarginEur: billing ? billing.totalEur : baseCostEur,
                 billingKind:  billing ? billing.kind : 'ai',
+                // WALLET-ACC-001 · resultat del debit automàtic al wallet
+                walletDebit:  walletDebit ? {
+                    ok:           !!walletDebit.ok,
+                    balanceAfter: walletDebit.balanceAfter ?? null,
+                    error:        walletDebit.error || null,
+                } : null,
                 accepted: !!accepted,
                 draftPreview: draft ? draft.slice(0, 200) : null,
                 refs,
@@ -225,7 +231,28 @@ export async function aiFillDim({
     const baseCostEur = Number((totalCostUsd * USD_EUR).toFixed(6));
     const margin = applyMarginWithOverride({ baseCostEur, kind: 'ai' });
 
-    // 6 · Persisteix audit log (no accepted encara) · inclou marge
+    // 5b · WALLET-ACC-001 · auto-debit del project wallet pel cost + marge IA.
+    // Si el wallet no té saldo suficient, allowNegative=false → throw. Catch
+    // local · no bloqueja el return del draft · l'usuari pot acceptar audit
+    // log encara que el debit hagi fallat (i top-up wallet després).
+    let walletDebit = null;
+    if (margin.totalEur > 0) {
+        try {
+            const { consumeAndPersist } = await import('./walletService.js');
+            const updated = await consumeAndPersist({
+                projectId,
+                amountEur: margin.totalEur,
+                ref:       'ai-fill-' + dimId + '-' + Date.now().toString(36),
+                source:    'ai-fill',
+                note:      'IA ' + dimId + ' · ' + (result.modelKey || 'unknown'),
+            });
+            walletDebit = { ok: true, balanceAfter: updated.content.balanceEur };
+        } catch (e) {
+            walletDebit = { ok: false, error: e?.message || 'wallet-debit-failed' };
+        }
+    }
+
+    // 6 · Persisteix audit log (no accepted encara) · inclou marge + walletDebit
     const auditId = await persistAudit({
         projectId, dimId,
         attempts: result.attempts,
@@ -234,6 +261,7 @@ export async function aiFillDim({
         draft: result.output?.text || null,
         refs: ctx.refs,
         billing: margin,
+        walletDebit,
     });
 
     // LANDING-UNIFY-001 · si el caller passa audienceId i el draft té camps
@@ -254,6 +282,7 @@ export async function aiFillDim({
         subtypeId:   subtypeId || project.subtypeId || null,
         sectorSeed:  sectorSeed ? { sectorId: sectorSeed.sectorId, sectorName: sectorSeed.sectorName, rolesCount: (sectorSeed.roles || []).length } : null,
         preferredProvider: effectivePreferredProvider,
+        walletDebit, // WALLET-ACC-001 · {ok, balanceAfter, error} o null
         modelKey:    result.modelKey,
         draft:       result.output ? result.output.text : null,
         parsedDraft: parsedDraftLocal,
