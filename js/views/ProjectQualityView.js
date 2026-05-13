@@ -18,6 +18,8 @@ import {
     statusIcon,
 } from '../core/projectQualityService.js';
 import { suggestNextDim } from '../core/navService.js';
+// VALUEMAP-GEN-001 · subtype selector + seed reference per al panel valueMap
+import { getSubtypesForSector, getSubtypeById } from '../core/sectorSubtypes.js';
 
 function _esc(s) {
     if (s === null || s === undefined) return '';
@@ -224,6 +226,32 @@ export default class ProjectQualityView {
             }
             const exclLabel = excluded ? '↩ Marcar com a aplicable' : 'no aplicable';
 
+            // VALUEMAP-GEN-001 · panel específic per a valueMap · subtype selector
+            // amb la llista pre-omplerta des de SECTOR_SUBTYPES + project.subtypeId
+            // com a default. Aquest selector es passa a aiFillDim per fer servir
+            // la seed sectorial/subsector com a REFERÈNCIA al prompt.
+            let valueMapSubtypePanel = '';
+            if (d.id === 'valueMap' && !excluded) {
+                const proj      = this._project || {};
+                const sectorId  = proj.sector_id || proj.sectorId || null;
+                const curSubId  = proj.subtypeId || proj.subtype_id || '';
+                const subtypes  = sectorId ? getSubtypesForSector(sectorId) : [];
+                const opts      = subtypes.map(s => `<option value="${_esc(s.id)}" ${curSubId === s.id ? 'selected' : ''}>${_esc(s.label)} · ${_esc(s.hint || '')}</option>`).join('');
+                const seedInfo  = sectorId
+                    ? `Sector base · <code>${_esc(sectorId)}</code> · els roles/transactions típics del sector ${subtypes.length ? '+ subtipus seleccionat ' : ''}s'injectaran com a <strong>REFERÈNCIA</strong> al prompt.`
+                    : `<span style="color:var(--accent-orange);">⚠ El projecte no té sector base · Edita'l a <a href="/project/${_esc(proj.id)}" data-link style="color:var(--accent-indigo);">Admin del projecte</a> per millorar el draft.</span>`;
+                valueMapSubtypePanel = `
+                    <div style="margin-top:8px;padding:10px 12px;border-radius:var(--radius-md);background:var(--bg-elevated);border:1px solid var(--border-default);">
+                        <label style="font-size:10px;color:var(--text-muted);font-weight:700;display:block;margin-bottom:6px;">🎯 Subtipus dins del sector ${sectorId ? '<code style="font-size:10px;">(' + _esc(sectorId) + ')</code>' : ''}</label>
+                        ${subtypes.length ? `
+                        <select data-valuemap-subtype="${_esc(d.id)}" style="width:100%;background:var(--bg-panel);color:var(--text-main);border:1px solid var(--border-default);border-radius:4px;padding:5px 8px;font-size:11px;margin-bottom:8px;">
+                            <option value="">(cap subtipus · sols sector base)</option>
+                            ${opts}
+                        </select>` : ''}
+                        <p style="font-size:11px;color:var(--text-muted);line-height:1.4;margin:0;">${seedInfo}</p>
+                    </div>`;
+            }
+
             return `<section class="pq-dim" id="dim-${_esc(d.id)}" style="${excluded ? 'opacity:0.7;' : ''}">
                 <div class="pq-dim-head">
                     <span class="pq-dim-icon">${d.icon}</span>
@@ -233,14 +261,15 @@ export default class ProjectQualityView {
                 </div>
                 <div class="pq-dim-bar"><div class="pq-dim-bar-fill" style="width:${excluded ? 0 : score}%;background:${color};"></div></div>
                 ${bodyHtml}
+                ${valueMapSubtypePanel}
                 <div class="pq-dim-foot">
                     ${excluded ? '' : `<button class="pq-dim-aibtn" data-aifill="${_esc(d.id)}" title="Genera un draft amb IA · escalation chain primary→fallback→premium">🧠 Ompli amb IA</button>`}
                     ${excluded ? '' : `<button class="pq-dim-noapp" data-toggle-ctx="${_esc(d.id)}" title="Afegir context extra (URLs/text/imatges futur · sprint B2)">📎 +context</button>`}
                     <button class="pq-dim-noapp" data-noapp="${_esc(d.id)}" title="${excluded ? 'Torna a comptabilitzar aquesta capa al score' : 'Marca aquesta capa com a no aplicable · els pesos restants es re-balancegen'}">${exclLabel}</button>
                 </div>
                 ${excluded ? '' : `<div data-ctx-panel-for="${_esc(d.id)}" style="display:none;margin-top:6px;padding-top:8px;border-top:1px solid var(--border-subtle);">
-                    <label style="font-size:10px;color:var(--text-muted);font-weight:700;display:block;margin-bottom:4px;">📎 Context addicional per a la IA · max 2000 chars · serà inclós al prompt</label>
-                    <textarea data-ctx-input="${_esc(d.id)}" placeholder="Pega text, links a docs, descripcions detallades… (ex. una landing existent, una guia tècnica, un brief de client)" style="width:100%;min-height:80px;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:6px 8px;font-family:var(--font-mono);font-size:11px;resize:vertical;box-sizing:border-box;"></textarea>
+                    <label style="font-size:10px;color:var(--text-muted);font-weight:700;display:block;margin-bottom:4px;">📎 ${d.id === 'valueMap' ? 'Prompt del creador · descriu intencions, rols clau, transactions o entregables que vols al mapa' : 'Context addicional per a la IA · max 2000 chars · serà inclós al prompt'}</label>
+                    <textarea data-ctx-input="${_esc(d.id)}" placeholder="${d.id === 'valueMap' ? 'Ex: \"Volem 3 rols · client / equip core / mentor extern · que el client rebi report setmanal i el mentor faci 1 sessió mensual\"' : 'Pega text, links a docs, descripcions detallades… (ex. una landing existent, una guia tècnica, un brief de client)'}" style="width:100%;min-height:80px;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:6px 8px;font-family:var(--font-mono);font-size:11px;resize:vertical;box-sizing:border-box;"></textarea>
                 </div>`}
             </section>`;
         }).join('');
@@ -320,13 +349,21 @@ export default class ProjectQualityView {
         // l'ha omplert per aquesta dim
         const ctxTextarea = document.querySelector('[data-ctx-input="' + dimId + '"]');
         const extraContext = ctxTextarea ? (ctxTextarea.value || '').trim() : null;
+        // VALUEMAP-GEN-001 · per a dim=valueMap, llegir subtype del selector
+        // dedicat · serà passat a aiFillDim per al builder de context.
+        let subtypeId = null;
+        if (dimId === 'valueMap') {
+            const subSel = document.querySelector('[data-valuemap-subtype="' + dimId + '"]');
+            subtypeId = subSel ? (subSel.value || null) : null;
+        }
         let result;
         try {
             result = await aiFillDim({
                 projectId: this._projectId,
                 dimId,
                 extraContext,
-                maxOutputTokens: 800,
+                subtypeId,           // VALUEMAP-GEN-001 · override del project.subtypeId
+                maxOutputTokens: dimId === 'valueMap' ? 1600 : 800,
                 temperature: 0.4,
             });
         } catch (e) {

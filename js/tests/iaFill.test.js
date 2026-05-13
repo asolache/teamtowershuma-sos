@@ -77,6 +77,34 @@ const deliv = ctx.buildDeliverablesContext({ project });
 t(deliv.userPrompt.includes('r2'),                                    'D · deliverables · role sense entregable detectat');
 eq(deliv.dim, 'deliverables',                                         'D · dim = deliverables');
 
+// ─── C2 · VALUEMAP-GEN-001 · sectorSeed + subtypeHint propagats al prompt ─
+const sectorSeedFixture = {
+    sectorId: 'A',
+    sectorName: 'Agricultura',
+    roles: [
+        { id: 'farmer',  name: 'Pagès', castell_level: 'tronc', description: 'Cultiva i recol·lecta.' },
+        { id: 'broker',  name: 'Intermediari', castell_level: 'tronc' },
+    ],
+    transactions: [
+        { from: 'farmer', to: 'broker', deliverable: 'producte fresc', type: 'tangible' },
+        { from: 'broker', to: 'farmer', deliverable: 'remuneració justa', type: 'tangible' },
+    ],
+};
+const vmapSeed = ctx.buildValueMapContext({
+    project,
+    sectorSeed:  sectorSeedFixture,
+    subtypeHint: 'Cooperativa de consum · operativa típica: caixa setmanal',
+});
+t(vmapSeed.userPrompt.includes('REFERÈNCIA · roles típics del sector'), 'C2 · prompt menciona REFERÈNCIA sector roles');
+t(vmapSeed.userPrompt.includes('farmer'),                             'C2 · seed role injectat al prompt');
+t(vmapSeed.userPrompt.includes('producte fresc'),                     'C2 · seed transaction injectada al prompt');
+t(vmapSeed.userPrompt.includes('Cooperativa de consum'),              'C2 · subtypeHint al prompt');
+t(vmapSeed.systemPrompt.includes('REFERÈNCIA sectorial'),             'C2 · system instrueix usar REFERÈNCIA');
+
+// Sense seed · cap menció de REFERÈNCIA
+const vmapNoSeed = ctx.buildValueMapContext({ project });
+t(!vmapNoSeed.userPrompt.includes('REFERÈNCIA · roles típics'),       'C2 · sense seed · sense REFERÈNCIA al prompt');
+
 // ─── E · buildSopsContext · roles sense SOP ──────────────────────────────
 const sopsCtx = ctx.buildSopsContext({ project, sops });
 // r1 té SOP · r2 no → ha de sortir r2 al prompt
@@ -169,6 +197,76 @@ try {
     await fill.aiFillDim({ projectId: 'p', dimId: 'unknown', loadContext: mockLoad, provider: mockProvider, persistAudit: async () => 'a' });
 } catch (e) { threw = e; }
 t(threw && /taskKind/.test(threw.message),                            'K · dimId invàlid · throw');
+
+// ─── K2 · VALUEMAP-GEN-001 · aiFillDim carrega sectorSeed via loader ───
+// El loader és injectable per a tests · default fa servir KnowledgeLoader.
+let seedLoaderCalls = [];
+const mockSectorSeedLoader = async (sectorId) => {
+    seedLoaderCalls.push(sectorId);
+    return {
+        sectorId,
+        sectorName: 'Test Sector',
+        roles: [{ id: 'seed-r1', name: 'Seed Role 1' }],
+        transactions: [{ from: 'seed-r1', to: 'client', deliverable: 'seed-deliv', type: 'tangible' }],
+    };
+};
+let promptReceived = null;
+const captureProvider = async (modelKey, payload) => {
+    promptReceived = payload.userPrompt;
+    return {
+        text: JSON.stringify({
+            addRoles: [{ id: 'r-new', name: 'Nou', castell_level: 'tronc', description: 'd' }],
+            addTransactions: [{ id: 'tx-new', from: 'r-new', to: 'r-new', deliverable: 'x', type: 'intangible' }],
+        }),
+        usage: { inputTokens: 100, outputTokens: 50 },
+        modelKey, finishReason: 'end_turn',
+    };
+};
+const projectWithSector = { ...project, sector_id: 'A', subtypeId: 'agric-bio' };
+const mockLoadWithSector = async () => ({ project: projectWithSector, sops, workshops, marketItems: market });
+const rValueMap = await fill.aiFillDim({
+    projectId:        'proj-test-1',
+    dimId:            'valueMap',
+    loadContext:      mockLoadWithSector,
+    provider:         captureProvider,
+    persistAudit:     async () => 'a-vm',
+    sectorSeedLoader: mockSectorSeedLoader,
+});
+eq(seedLoaderCalls.length,    1,                                       'K2 · sectorSeedLoader cridat 1 cop');
+eq(seedLoaderCalls[0],        'A',                                     'K2 · loader rep sectorId del projecte');
+t(promptReceived && promptReceived.includes('seed-r1'),                'K2 · seed role injectat al prompt aiFillDim');
+t(promptReceived && promptReceived.includes('seed-deliv'),             'K2 · seed transaction injectada al prompt');
+t(rValueMap.sectorSeed && rValueMap.sectorSeed.sectorId === 'A',       'K2 · sectorSeed metadata retornada a result');
+eq(rValueMap.subtypeId,       'agric-bio',                             'K2 · subtypeId propagat a result');
+
+// K3 · override · si l'usuari passa subtypeId explícit, sobreescriu project.subtypeId
+seedLoaderCalls = [];
+promptReceived = null;
+const rOverride = await fill.aiFillDim({
+    projectId:        'proj-test-1',
+    dimId:            'valueMap',
+    subtypeId:        'agric-coop',     // override
+    loadContext:      mockLoadWithSector,
+    provider:         captureProvider,
+    persistAudit:     async () => 'a-vm-2',
+    sectorSeedLoader: mockSectorSeedLoader,
+});
+eq(rOverride.subtypeId, 'agric-coop',                                  'K3 · subtypeId override aplicat');
+
+// K4 · loader pot fallar · degrade silenciós (no llança · prompt sense seed)
+seedLoaderCalls = [];
+promptReceived = null;
+const failingLoader = async () => { throw new Error('network fail'); };
+const rNoSeed = await fill.aiFillDim({
+    projectId:        'proj-test-1',
+    dimId:            'valueMap',
+    loadContext:      mockLoadWithSector,
+    provider:         captureProvider,
+    persistAudit:     async () => 'a-vm-3',
+    sectorSeedLoader: failingLoader,
+});
+t(rNoSeed.sectorSeed === null,                                         'K4 · loader fail · sectorSeed null · no throw');
+t(promptReceived && !promptReceived.includes('REFERÈNCIA · roles típics'), 'K4 · loader fail · prompt sense secció REFERÈNCIA');
 
 // ─── L · makeJsonShapeEvaluator ─────────────────────────────────────────
 import * as prov from '../core/aiProviderService.js';
