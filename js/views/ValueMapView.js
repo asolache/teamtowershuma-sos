@@ -850,6 +850,7 @@ export default class ValueMapView {
                     <button class="vmap-btn" id="vmapBtnAnim" title="H_ANIM_001 · animar flujo de valor por sequence_order de las transactions">▶ Animar flujo</button>
                     <button class="vmap-btn" id="vmapBtnInferOrder" title="H_ANIM_001 sprint C · IA infiere sequence_order y phase de todas las transactions">🤖 Inferir orden IA</button>
                     <button class="vmap-btn" id="vmapBtnFlowLine" title="H_ANIM_001 sprint B · ver el flujo como timeline lineal">📜 Vista lineal</button>
+                    <button class="vmap-btn" id="vmapBtnCastell" title="VMAP-CASTELL-001 · vista castell · 3 nivells (pinya / tronc / pom de dalt) amb roles ordenats per lògica de procés">🏛 Castell</button>
                     <button class="vmap-btn" id="vmapBtnFit">⊡ ${t('vmap.fit')}</button>
                     <button class="vmap-btn" id="vmapBtnReset">↺ ${t('vmap.reset')}</button>
                     <button class="vmap-btn vmap-btn-save" id="vmapBtnSave">💾 ${t('vmap.save')}</button>
@@ -1243,6 +1244,7 @@ export default class ValueMapView {
         document.getElementById('vmapBtnAnim')?.addEventListener('click',   () => this._toggleFlowAnim());
         document.getElementById('vmapBtnInferOrder')?.addEventListener('click', () => this._inferFlowOrderIA());
         document.getElementById('vmapBtnFlowLine')?.addEventListener('click',   () => this._openFlowLineModal());
+        document.getElementById('vmapBtnCastell')?.addEventListener('click',    () => this._openCastellModal());
         document.getElementById('vmapAddRole')?.addEventListener('click',   () => this._openRoleModal());
         document.getElementById('vmapAddTx')?.addEventListener('click',     () => this._openTxModal());
         document.getElementById('vmapZoomIn')?.addEventListener('click',    () => this._zoom(1.25));
@@ -3086,6 +3088,123 @@ ${ctxResult.systemPrompt}`;
             </div>`;
         document.getElementById('vmapFlowLineClose')?.addEventListener('click', close);
         document.getElementById('vmapFlowLineBg')?.addEventListener('click', e => { if (e.target.id === 'vmapFlowLineBg') close(); });
+    }
+
+    // VMAP-CASTELL-001 · vista castell · 3 nivells horitzontals (pinya/tronc/
+    // pom de dalt) + roles ordenats per lògica de procés dins de cada nivell.
+    // Les transactions es rendiritzen com arcs entre les cards de rol.
+    _openCastellModal() {
+        if (!this._state.roles || !this._state.roles.length) {
+            this._toast('Encara no hi ha rols al mapa · afegeix-ne abans de veure la vista castell.');
+            return;
+        }
+        let root = document.getElementById('vmapCastellRoot');
+        if (!root) {
+            root = document.createElement('div');
+            root.id = 'vmapCastellRoot';
+            document.body.appendChild(root);
+        }
+        const close = () => { root.innerHTML = ''; };
+
+        // Agrupa rols per castell_level · default tronc
+        const LEVEL_DEFS = [
+            { id: 'pom_de_dalt', label: 'Pom de dalt · cúspide estratègica', color: '#e040fb', shortLabel: '↑ Pom de dalt' },
+            { id: 'tronc',       label: 'Tronc · nucli de valor',           color: '#6366f1', shortLabel: '◯ Tronc' },
+            { id: 'pinya',       label: 'Pinya · base operativa',           color: '#00b0ff', shortLabel: '_ Pinya' },
+        ];
+        // Sorted by sequence_order si hi és (transactions originades del role)
+        const txs = this._state.transactions || [];
+        const seqByRole = new Map();
+        for (const r of this._state.roles) {
+            const outgoing = txs.filter(t => t.from === r.id && typeof t.sequence_order === 'number');
+            const minSeq = outgoing.length ? Math.min(...outgoing.map(t => t.sequence_order)) : 999;
+            seqByRole.set(r.id, minSeq);
+        }
+        const rolesByLevel = {};
+        for (const def of LEVEL_DEFS) {
+            const list = this._state.roles
+                .filter(r => (r.castell_level || 'tronc') === def.id)
+                .sort((a, b) => (seqByRole.get(a.id) || 999) - (seqByRole.get(b.id) || 999));
+            rolesByLevel[def.id] = list;
+        }
+        const orphanLevel = this._state.roles.filter(r => !LEVEL_DEFS.some(d => d.id === (r.castell_level || 'tronc')));
+        if (orphanLevel.length) rolesByLevel.pinya = (rolesByLevel.pinya || []).concat(orphanLevel);
+
+        // Render · per cada nivell · row horitzontal amb les cards
+        const rolesMap = new Map(this._state.roles.map(r => [r.id, r]));
+        const renderRoleCard = (r, levelColor) => {
+            const outCount = txs.filter(t => t.from === r.id).length;
+            const inCount  = txs.filter(t => t.to   === r.id).length;
+            return `<div style="background:#0e0e14;border:1px solid #1a1a22;border-left:3px solid ${levelColor};border-radius:8px;padding:0.7rem 0.9rem;min-width:180px;flex:0 0 auto;cursor:pointer;transition:transform 0.15s ease;" data-castell-role="${this._escHtml(r.id)}" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='';">
+                <div style="color:#fff;font-size:0.92rem;font-weight:700;margin-bottom:2px;">${this._escHtml(r.name || r.id)}</div>
+                <div style="color:#aaa;font-size:0.72rem;font-family:monospace;">${this._escHtml(r.typical_actor || r.id)}</div>
+                <div style="display:flex;gap:6px;margin-top:6px;font-size:0.7rem;font-family:monospace;">
+                    <span style="color:#facc15;" title="Transactions out (origen)">↗ ${outCount}</span>
+                    <span style="color:#22c55e;" title="Transactions in (destí)">↙ ${inCount}</span>
+                </div>
+            </div>`;
+        };
+
+        const levelRows = LEVEL_DEFS.map(def => {
+            const list = rolesByLevel[def.id] || [];
+            return `<div style="margin-bottom:1.4rem;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${def.color};"></span>
+                    <h4 style="margin:0;color:${def.color};font-size:0.92rem;font-weight:800;letter-spacing:0.02em;">${this._escHtml(def.label)}</h4>
+                    <span style="color:#666;font-size:0.72rem;font-family:monospace;">${list.length} rol${list.length === 1 ? '' : 's'}</span>
+                </div>
+                ${list.length === 0
+                    ? `<div style="color:#666;font-style:italic;font-size:0.78rem;padding:0.5rem 0.9rem;border:1px dashed #2a2a35;border-radius:6px;">— sense rols a aquest nivell —</div>`
+                    : `<div style="display:flex;gap:0.7rem;overflow-x:auto;padding-bottom:6px;">${list.map(r => renderRoleCard(r, def.color)).join('')}</div>`}
+            </div>`;
+        }).join('');
+
+        // Transactions ordenades (top inter-level connections)
+        const interLevelTxs = txs.filter(t => {
+            const fromR = rolesMap.get(t.from);
+            const toR   = rolesMap.get(t.to);
+            return fromR && toR && (fromR.castell_level || 'tronc') !== (toR.castell_level || 'tronc');
+        });
+
+        root.innerHTML = `
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,0.88);display:flex;align-items:flex-start;justify-content:center;z-index:1000;padding:2rem 1rem;overflow-y:auto;" id="vmapCastellBg">
+                <div style="background:#050507;border:1px solid #2a2a35;border-radius:12px;padding:1.6rem;width:100%;max-width:1240px;color:#e6e6e6;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;flex-wrap:wrap;gap:0.5rem;">
+                        <h3 style="margin:0;color:#fff;">🏛 Vista castell · ${this._state.roles.length} rols · ${LEVEL_DEFS.filter(d => (rolesByLevel[d.id] || []).length > 0).length} nivells actius</h3>
+                        <button class="vmap-btn" id="vmapCastellClose">✕ Tancar</button>
+                    </div>
+                    <div style="color:#aaa;font-size:0.82rem;margin-bottom:1.2rem;line-height:1.55;">
+                        Visual thinking · roles organitzats per nivell de castell (analogia: castells humans catalans).
+                        Pinya = base operativa · Tronc = nucli de valor · Pom de dalt = cúspide estratègica.
+                        Dins de cada nivell els rols estan ordenats segons el <code>sequence_order</code> de les seves
+                        transactions sortints (si en tenen). Clica un rol per a obrir l'inspector lateral.
+                    </div>
+                    ${levelRows}
+                    <div style="margin-top:1.4rem;padding-top:1rem;border-top:1px solid #1a1a22;color:#aaa;font-size:0.78rem;">
+                        <strong style="color:#fff;">${interLevelTxs.length}</strong> transactions inter-nivell ·
+                        <strong style="color:#fff;">${txs.length - interLevelTxs.length}</strong> intra-nivell ·
+                        usa <strong>📜 Vista lineal</strong> per veure el flux complet seqüencial.
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById('vmapCastellClose')?.addEventListener('click', close);
+        document.getElementById('vmapCastellBg')?.addEventListener('click', e => { if (e.target.id === 'vmapCastellBg') close(); });
+        document.querySelectorAll('[data-castell-role]').forEach(el => {
+            el.addEventListener('click', () => {
+                const rid = el.getAttribute('data-castell-role');
+                close();
+                this._selectItem(rid, 'role');
+            });
+        });
+    }
+
+    // Helper · toast inline · evita native alert/confirm
+    _toast(msg, ok = true) {
+        const t = document.createElement('div');
+        t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:' + (ok ? 'rgba(34,197,94,0.92)' : 'rgba(239,68,68,0.92)') + ';color:#fff;padding:10px 16px;border-radius:8px;font-size:0.85rem;z-index:9999;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3500);
     }
 
     _runFlowPulses() {
