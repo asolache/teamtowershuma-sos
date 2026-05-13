@@ -223,8 +223,12 @@ export default class NeuralPathView {
         }
         return this._bundles.map(b => {
             const c = b?.content || {};
+            const signed = !!c.signature;
+            const sigBadge = signed
+                ? '<span style="background:rgba(34,197,94,0.15);color:#22c55e;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;" title="ECDSA P-256 · TEA-SIGN-001">🔐 firmat</span>'
+                : '<span style="background:rgba(148,163,184,0.15);color:var(--text-muted);padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;">sense firma</span>';
             return `<div class="np-bundle">
-                <div class="name">${esc(c.name || b.id)}</div>
+                <div class="name">${esc(c.name || b.id)} ${sigBadge}</div>
                 <div class="meta">${c.stepCount || 0} steps · ${esc(c.intent || '—')} · ${esc(c.audienceId || '—')}</div>
                 <div class="actions">
                     <button data-bundle-view="${esc(b.id)}">👁 Veure context</button>
@@ -297,13 +301,31 @@ export default class NeuralPathView {
         if (!name) { alert('Cal un nom per al bundle'); return; }
         if (this._selectedStepIds.size === 0) { alert('Selecciona almenys 1 step'); return; }
         try {
-            const bundle = buildContextBundle({
+            let bundle = buildContextBundle({
                 ownerHandle: this._ownerHandle,
                 name,
                 stepIds: Array.from(this._selectedStepIds),
                 intent:  intent || null,
                 audienceId: audience || null,
             });
+            // TEA-SIGN-001 · auto-sign amb ECDSA P-256 si l'usuari té identitat
+            try {
+                const { getOrCreateIdentity } = await import('../core/identityService.js');
+                const { getOrCreateSigningKey } = await import('../core/projectIO.js');
+                const { signNode } = await import('../core/nodeSigningService.js');
+                const identity = await getOrCreateIdentity();
+                const did = identity?.content?.primaryDid || identity?.primaryDid;
+                if (did) {
+                    const keyMeta = await getOrCreateSigningKey();
+                    // Afegir ownerDid + publicJwk al content abans de signar
+                    bundle.content.ownerDid  = did;
+                    bundle.content.publicJwk = { ...keyMeta.publicJwk };
+                    delete bundle.content.publicJwk.d;
+                    bundle = await signNode({ node: bundle, privateJwk: keyMeta.privateJwk });
+                }
+            } catch (e) {
+                console.warn('[neural-path] sign failed · bundle persistit sense signatura', e?.message);
+            }
             await KB.upsert(bundle);
             this._selectedStepIds.clear();
             await this._loadData();
