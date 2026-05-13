@@ -116,7 +116,9 @@ const mockWalletApi = {
 const mockReceiptApi = {
     recordReceipt: async (args) => { calls.receipt.push(args); return { id: 'r1', content: args }; },
 };
-const mockKb = { upsert: async (n) => { calls.salePersisted = n; return n; } };
+// TEA-UNIV-001 · ara recordConnectSale persisteix 1 sale node + N attestation nodes.
+// Tracegem totes les upserts i busquem el connect_sale específicament.
+const mockKb = { upsert: async (n) => { calls.upserts = (calls.upserts || []); calls.upserts.push(n); if (n.type === 'connect_sale') calls.salePersisted = n; return n; } };
 
 const result = await recordConnectSale({
     sessionId:        'cs_real_001',
@@ -144,6 +146,10 @@ eq(calls.topUp[1].amountEur, 92,                            'H · seller topUp 9
 eq(calls.topUp[1].source,   'connect-seller',               'H · seller source');
 // Sale node persistit al KB?
 t(calls.salePersisted && calls.salePersisted.type === 'connect_sale', 'H · connect_sale node persisted');
+// TEA-UNIV-001 · ara també persistim wallet_attestation nodes parejats
+const teaAtts = (calls.upserts || []).filter(n => n.type === 'wallet_attestation');
+t(teaAtts.length === 2,                                                'H · TEA · 2 attestations parejats (platform fee + seller net)');
+t(teaAtts.every(a => a.content.kind === 'wallet-transfer'),            'H · TEA · kind wallet-transfer');
 // Receipt creat per al buyer?
 eq(calls.receipt.length, 1,                                 'H · 1 receipt creat per al buyer');
 eq(calls.receipt[0].paymentMethod, 'stripe-connect',        'H · receipt paymentMethod');

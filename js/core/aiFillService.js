@@ -271,14 +271,39 @@ export async function aiFillDim({
     if (margin.totalEur > 0) {
         try {
             const { consumeAndPersist } = await import('./walletService.js');
+            const ref = 'ai-fill-' + dimId + '-' + Date.now().toString(36);
             const updated = await consumeAndPersist({
                 projectId,
                 amountEur: margin.totalEur,
-                ref:       'ai-fill-' + dimId + '-' + Date.now().toString(36),
+                ref,
                 source:    'ai-fill',
                 note:      'IA ' + dimId + ' · ' + (result.modelKey || 'unknown'),
             });
             walletDebit = { ok: true, balanceAfter: updated.content.balanceEur };
+            // TEA-UNIV-001 · attestation firmada del movement · fire-and-forget
+            (async () => {
+                try {
+                    const { KB } = await import('./kb.js');
+                    const { recordMovementAttestation } = await import('./walletAttestationService.js');
+                    const { getOrCreateIdentity } = await import('./identityService.js');
+                    const { getOrCreateSigningKey } = await import('./projectIO.js');
+                    const identity = await getOrCreateIdentity().catch(() => null);
+                    const did = identity?.content?.primaryDid || identity?.primaryDid || null;
+                    let pk = null;
+                    try { const k = await getOrCreateSigningKey(); pk = k?.privateJwk || null; } catch (_) {}
+                    await recordMovementAttestation({
+                        kb: KB,
+                        kind: 'wallet-consume',
+                        payer: { walletId: 'wallet-' + projectId, projectId, ownerDid: did },
+                        receiver: null,  // IA provider extern · no SOS wallet
+                        amountEur: margin.totalEur,
+                        source: 'ai-fill',
+                        ref,
+                        meta: { dimId, modelKey: result.modelKey, marginEur: margin.marginEur },
+                        privateJwk: pk,
+                    });
+                } catch (_) {}
+            })();
         } catch (e) {
             walletDebit = { ok: false, error: e?.message || 'wallet-debit-failed' };
         }
