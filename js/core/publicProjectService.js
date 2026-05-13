@@ -60,15 +60,21 @@ export function validatePublicProjectEntry(node) {
 
 // extractPublicFieldsFromProject · pura · selecciona només camps safe
 // d'un project store entry per publicar al permaweb.
+//
+// FOUNDER-001 sprint C · si projectType === 'foundational-network', marquem
+// l'entry com `template:'founder'` perquè altres operadors la puguin descobrir
+// + clonar des de /registry.
 export function extractPublicFieldsFromProject(project) {
     if (!project || typeof project !== 'object') return null;
+    const projectType = project.projectType || project.matriuProjectType || null;
+    const isFounder   = projectType === 'foundational-network';
     return {
         projectId:        project.id,
         name:             project.nombre || project.name || project.id,
         description:      String(project.description || '').slice(0, 1000),
         sectorId:         project.sector_id || project.based_on_sector || null,
         subtype:          project.subtypeId || null,
-        projectType:      project.projectType || project.matriuProjectType || null,
+        projectType,
         lookingForSkills: Array.isArray(project.lookingForSkills) ? project.lookingForSkills.slice() : [],
         lookingForSectors:Array.isArray(project.lookingForSectors) ? project.lookingForSectors.slice() : [],
         stakeholdersCount: typeof project.stakeholdersCount === 'number'
@@ -76,6 +82,10 @@ export function extractPublicFieldsFromProject(project) {
                            : (Array.isArray(project.roles) ? project.roles.length : 0),
         cohortNumber:     typeof project.matriuCohort === 'number' ? project.matriuCohort : null,
         tags:             Array.isArray(project.tags) ? project.tags.slice() : [],
+        // FOUNDER-001 sprint C · marca template per discovery
+        template:         isFounder ? 'founder' : (project.template || null),
+        templateClonable: !!(isFounder || project.templateClonable),
+        creatorHandle:    project.creatorHandle || null,
     };
 }
 
@@ -135,6 +145,9 @@ export function buildPublicProjectEntry({
             ...(fields.lookingForSkills || []).map(s => 'looking-skill:' + s),
             ...(fields.lookingForSectors || []).map(s => 'looking-sector:' + s),
             ...(typeof fields.cohortNumber === 'number' ? ['cohort:' + fields.cohortNumber] : []),
+            // FOUNDER-001 sprint C · discovery keywords
+            ...(fields.template ? ['template:' + fields.template] : []),
+            ...(fields.templateClonable ? ['template-clonable'] : []),
         ],
         createdAt: now,
         updatedAt: now,
@@ -185,6 +198,13 @@ export function arweaveTagsForProjectEntry(entry) {
         { name: 'SectorId',     value: c.sectorId || '' },
         { name: 'Content-Type', value: 'application/json' },
     ];
+    // FOUNDER-001 sprint C · Template tag per GraphQL filtering "clonable seeds"
+    if (c.template) {
+        tags.push({ name: 'Template', value: String(c.template) });
+    }
+    if (c.templateClonable) {
+        tags.push({ name: 'TemplateClonable', value: 'true' });
+    }
     // PROJ-VERSIONING-001 · tags per GraphQL filtering/sorting
     if (Number.isInteger(c.entryVersion) && c.entryVersion > 0) {
         // Padding zero per que el sort lexicogràfic de Arweave GraphQL coincideixi

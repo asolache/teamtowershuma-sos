@@ -996,6 +996,25 @@ export default class DashboardView {
         this._bindTopbar();
         this._bindModal();
         await this._loadKBSectors();
+        // FOUNDER-001 sprint C · auto-open wizard amb founder pre-check si
+        // arribem amb ?wizard=founder (des de /opportunities clone CTA)
+        try {
+            const params = new URLSearchParams(window.location.search || '');
+            if (params.get('wizard') === 'founder') {
+                const modal = document.getElementById('dashModalNew');
+                const chk   = document.getElementById('newProjFounder');
+                if (modal && chk) {
+                    chk.checked = true;
+                    chk.dispatchEvent(new Event('change'));
+                    modal.classList.add('open');
+                    document.getElementById('newProjName')?.focus();
+                    // Neteja l'URL · evita re-open al recarregar
+                    const u = new URL(window.location.href);
+                    u.searchParams.delete('wizard');
+                    window.history.replaceState({}, '', u.toString());
+                }
+            }
+        } catch (_) {}
     }
 
     // ── Render projects v2 ───────────────────────────────────────────────────

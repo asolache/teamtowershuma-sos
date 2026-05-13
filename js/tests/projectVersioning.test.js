@@ -202,5 +202,47 @@ eq(founderResult.stats.transactions, 12,                              'Q · stat
 eq(founderResult.stats.sops,         5,                               'Q · stats.sops 5');
 eq(founderResult.stats.workshops,    3,                               'Q · stats.workshops 3');
 
+// ─── R · FOUNDER-001 sprint C · template:'founder' propagated ──────────
+// extractPublicFieldsFromProject d'un projecte foundational-network ha de
+// portar template='founder' + templateClonable=true
+const fields = svc.extractPublicFieldsFromProject(founderResult.project);
+eq(fields.template,         'founder',                                'R · founder project · template=founder');
+eq(fields.templateClonable, true,                                     'R · founder project · templateClonable=true');
+eq(fields.projectType,      'foundational-network',                   'R · founder project · projectType preserved');
+
+// Projecte normal (no foundational) · sense template
+const regularProject = { id: 'p-reg', nombre: 'Regular', sector_id: 'A', description: 'desc' };
+const fieldsReg = svc.extractPublicFieldsFromProject(regularProject);
+t(!fieldsReg.template,                                                'R · regular project · template null');
+t(!fieldsReg.templateClonable,                                        'R · regular project · templateClonable false');
+
+// buildPublicProjectEntry inclou keywords template:founder + template-clonable
+const founderEntry = svc.buildPublicProjectEntry({
+    project:        founderResult.project,
+    ownerDid:       'did:sos:fake1234567890abcdef',
+    ownerPublicJwk: { kty:'EC', crv:'P-256', x:'AAAA', y:'BBBB' },
+});
+t(founderEntry.keywords.includes('template:founder'),                 'R · entry keywords · template:founder');
+t(founderEntry.keywords.includes('template-clonable'),                'R · entry keywords · template-clonable');
+eq(founderEntry.content.template, 'founder',                          'R · entry content · template=founder');
+
+// Regular project · keywords NO porten template
+const regEntry = svc.buildPublicProjectEntry({
+    project:        regularProject,
+    ownerDid:       'did:sos:fake1234567890abcdef',
+    ownerPublicJwk: { kty:'EC', crv:'P-256', x:'AAAA', y:'BBBB' },
+});
+t(!regEntry.keywords.some(k => k.startsWith('template:')),            'R · regular entry · sense template keyword');
+
+// arweaveTagsForProjectEntry afegeix Template tag per founder
+const founderTags = svc.arweaveTagsForProjectEntry(founderEntry);
+const tplTag = founderTags.find(t => t.name === 'Template');
+t(tplTag && tplTag.value === 'founder',                               'R · arweave tags · Template=founder');
+const cloneTag = founderTags.find(t => t.name === 'TemplateClonable');
+t(cloneTag && cloneTag.value === 'true',                              'R · arweave tags · TemplateClonable=true');
+
+const regTags = svc.arweaveTagsForProjectEntry(regEntry);
+t(!regTags.find(t => t.name === 'Template'),                          'R · regular · sense tag Template');
+
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);
