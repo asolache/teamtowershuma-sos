@@ -112,7 +112,8 @@ export default class OpportunitiesView {
             <div class="op-main">
                 <header class="op-hero">
                     <h1>🚀 Oportunitats al permaweb</h1>
-                    <p>Descobreix <strong>projectes</strong>, <strong>work orders obertes</strong>, <strong>productes</strong> i <strong>workshops</strong> publicats per altres operadors SOS · ownerDid verificable + signatura ECDSA · <strong>Discovery i verify sempre free</strong> · publish costa 0,02-0,05€ per entitat des del wallet del projecte (Free pla ×1.5 fee).</p>
+                    <p>Descobreix <strong>projectes</strong>, <strong>work orders obertes</strong>, <strong>productes</strong>, <strong>workshops</strong> i <strong>CV nodals</strong> publicats per altres operadors SOS via permaweb · ownerDid verificable + signatura ECDSA · cross-device · <strong>Discovery sempre free</strong> · publish 0,02-0,05€ per entitat (Free pla ×1.5 fee).</p>
+                    <p style="font-size:12px;color:var(--text-muted);margin-top:6px;"><strong>⚠ Important</strong> · les entries amb txId que comença per <code>mock-</code> són locals · no es sincronitzen entre dispositius. Cal Wander connectat o keyfile Arweave a <a href="/identity" data-link style="color:var(--accent-indigo);">/identity</a> per a upload real.</p>
                 </header>
                 <!-- PUBLISH-SELECT-001 · tabs per tipus de contingut públic -->
                 <div class="op-tabs" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;border-bottom:1px solid var(--border-default);padding-bottom:6px;">
@@ -313,25 +314,55 @@ export default class OpportunitiesView {
         const btn = document.getElementById('opSyncBtn');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Sincronitzant…'; }
         try {
-            // Reuse el sync mechanism del publicRegistryService però per a projects
+            // SYNC-CROSS-001 · sincronitza els 5 entry types en paral·lel
+            // Cross-device discovery · qualsevol entry publicat al permaweb des
+            // de qualsevol màquina apareix aquí via Arweave GraphQL gateway.
             const { queryPermawebRegistry, fetchEntryByTxId } = await import('../core/publicRegistryService.js');
-            const descs = await queryPermawebRegistry({ entryType: 'public-project-entry', first: 50 });
-            let cached = 0;
-            for (const d of descs) {
+            const SYNC_TYPES = [
+                { tab: 'projects',   gqlType: 'public-project-entry',     kbType: PUBLIC_PROJECT_TYPE },
+                { tab: 'workorders', gqlType: 'public_work_order_entry',  kbType: PUBLIC_WORK_ORDER_TYPE },
+                { tab: 'market',     gqlType: 'public_market_item_entry', kbType: PUBLIC_MARKET_ITEM_TYPE },
+                { tab: 'workshops',  gqlType: 'public_workshop_entry',    kbType: PUBLIC_WORKSHOP_TYPE },
+                { tab: 'cvnodals',   gqlType: 'neural-path-bundle',       kbType: NEURAL_PATH_BUNDLE_TYPE },
+            ];
+            let totalDescs = 0, totalCached = 0;
+            const perTab = [];
+            for (const t of SYNC_TYPES) {
                 try {
-                    const { entry } = await fetchEntryByTxId(d.txId);
-                    if (entry && entry.type === PUBLIC_PROJECT_TYPE) {
-                        await KB.upsert({
-                            ...entry,
-                            content: { ...entry.content, _cachedAt: Date.now(), _fromPermaweb: true },
-                            updatedAt: Date.now(),
-                        });
-                        cached++;
+                    const descs = await queryPermawebRegistry({ entryType: t.gqlType, first: 50 });
+                    totalDescs += descs.length;
+                    let cached = 0;
+                    for (const d of descs) {
+                        try {
+                            const { entry } = await fetchEntryByTxId(d.txId);
+                            if (!entry) continue;
+                            const normalized = {
+                                ...entry,
+                                type: t.kbType,
+                                content: {
+                                    ...entry.content,
+                                    arweaveTxId:  entry.content?.arweaveTxId || d.txId,
+                                    _cachedAt:    Date.now(),
+                                    _fromPermaweb:true,
+                                    _verified:    true,
+                                },
+                                updatedAt: Date.now(),
+                            };
+                            await KB.upsert(normalized);
+                            cached++;
+                        } catch (e) {
+                            console.warn('[opportunities] fetch failed', t.tab, d.txId, e?.message);
+                        }
                     }
-                } catch (e) { console.warn('[opportunities] fetch failed', d.txId, e); }
+                    totalCached += cached;
+                    perTab.push(t.tab + ':' + cached);
+                } catch (e) {
+                    console.warn('[opportunities] sync tab failed', t.tab, e?.message);
+                    perTab.push(t.tab + ':err');
+                }
             }
             await this._loadFromCache();
-            this._toast(`✓ ${descs.length} oportunitats trobades · ${cached} al cache`);
+            this._toast(`✓ ${totalDescs} entries · ${totalCached} cachejades · ${perTab.join(' · ')}`);
         } catch (e) {
             console.error('[opportunities] sync failed', e);
             this._toast('✗ Sync ha fallat: ' + (e?.message || 'error'));
