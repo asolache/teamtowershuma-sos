@@ -104,13 +104,14 @@ This is the **slicing pie** distribution model · contribution-weighted ownershi
 ## Sprint backlog aligned with principles
 
 ### High priority (next sprints)
-- ✅ **PR-F (closed)** · Stripe Connect platform fee tracking + workshop buyer receipt + TEA attestation hooks
-- ✅ **PR-G (current)** · Neural Path Log · steps visit/edit/ai-fill/publish + context bundles per a IA
+- ✅ **PR-F** · Stripe Connect platform fee tracking + workshop buyer receipt + TEA attestation hooks
+- ✅ **PR-G** · Neural Path Log · steps visit/edit/ai-fill/publish + context bundles per a IA
+- ✅ **PR-H** · `/path` view amb timeline + bundle builder + wire bundles a aiFillDim
+- ✅ **PR-I (current)** · `nodeSigningService` genèric (ECDSA P-256) + auto-sign bundles
 - ⏳ Turbo upload real for secondary entities (sprint A is mock-first)
+- ⏳ Publish bundle al permaweb (CV nodal compartible) · ja firmable
 - ⏳ Triple-entry validation · every wallet movement must have payer/receiver attestation
-- ⏳ Stripe Connect product · sub-account record `connect_sale` node when buyer pays seller
-- ⏳ Neural Path UI · `/path` view amb timeline + bundle builder (curador de context)
-- ⏳ Wire Neural Path bundles a aiFillService · `bundleId` opcional → context personalitzat real
+- ⏳ Stripe Connect product · webhook · `recordConnectSale` post-payment confirmed
 
 ### Medium priority
 - ⏳ Smart contract integration · Gnosis Safe per project (multi-sig treasury)
