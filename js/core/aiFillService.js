@@ -13,6 +13,8 @@
 import { buildContextForDim, DIM_TO_TASK_KIND } from './iaContextService.js';
 import { runEscalation, AI_MODELS, estimateCostUsd } from './aiRouterService.js';
 import { generateWithProvider, makeJsonShapeEvaluator, actualCostUsd } from './aiProviderService.js';
+// BIZ-MODEL-001 sprint B · marge SOS sobre cost provider IA
+import { applyMarginWithOverride } from './billingService.js';
 
 const USD_EUR = 0.92;
 
@@ -44,12 +46,13 @@ async function _defaultLoadContext({ projectId }) {
 }
 
 // Persisteix un ai_audit log al KB per a auditoria / cost tracking
-async function _persistAuditLog({ projectId, dimId, attempts, totalCostUsd, accepted, draft, refs }) {
+async function _persistAuditLog({ projectId, dimId, attempts, totalCostUsd, accepted, draft, refs, billing = null }) {
     try {
         const { KB } = await import('./kb.js');
         await KB.init();
         const id = 'ai-audit-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
         const now = Date.now();
+        const baseCostEur = Number((totalCostUsd * USD_EUR).toFixed(6));
         await KB.upsert({
             id,
             type: 'ai_audit',
@@ -58,7 +61,12 @@ async function _persistAuditLog({ projectId, dimId, attempts, totalCostUsd, acce
                 dimId,
                 attempts,
                 totalCostUsd,
-                totalCostEur: Number((totalCostUsd * USD_EUR).toFixed(6)),
+                totalCostEur: baseCostEur,
+                // BIZ-MODEL-001 sprint B · marge SOS (si proveït pel caller)
+                marginEur:    billing ? billing.marginEur : 0,
+                marginPct:    billing ? billing.marginPct : 0,
+                totalWithMarginEur: billing ? billing.totalEur : baseCostEur,
+                billingKind:  billing ? billing.kind : 'ai',
                 accepted: !!accepted,
                 draftPreview: draft ? draft.slice(0, 200) : null,
                 refs,
@@ -153,7 +161,11 @@ export async function aiFillDim({
         throw e;
     }
 
-    // 5 · Persisteix audit log (no accepted encara)
+    // 5 · BIZ-MODEL-001 sprint B · marge SOS sobre cost provider
+    const baseCostEur = Number((totalCostUsd * USD_EUR).toFixed(6));
+    const margin = applyMarginWithOverride({ baseCostEur, kind: 'ai' });
+
+    // 6 · Persisteix audit log (no accepted encara) · inclou marge
     const auditId = await persistAudit({
         projectId, dimId,
         attempts: result.attempts,
@@ -161,6 +173,7 @@ export async function aiFillDim({
         accepted: false,
         draft: result.output?.text || null,
         refs: ctx.refs,
+        billing: margin,
     });
 
     return {
@@ -175,7 +188,10 @@ export async function aiFillDim({
         attempts:    result.attempts,
         attemptCosts,
         totalCostUsd,
-        totalCostEur: Number((totalCostUsd * USD_EUR).toFixed(6)),
+        totalCostEur:  baseCostEur,
+        marginEur:     margin.marginEur,
+        marginPct:     margin.marginPct,
+        totalWithMarginEur: margin.totalEur,
         escalatedExhausted: !!result.escalatedExhausted,
         refs:        ctx.refs,
         contextTokens: ctx.contextTokens,
