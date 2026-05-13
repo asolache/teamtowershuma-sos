@@ -295,6 +295,14 @@ export async function publishProjectToPermaweb({ entry, projectId } = {}) {
     if (!projectId) throw new Error('publishProjectToPermaweb requires projectId (font wallet · habitualment el mateix project que es publica)');
     if (!entry.content.signature) throw new Error('must-sign-first');
 
+    // BIZ-MODEL-001 sprint C · plan enforcement
+    try {
+        const { requirePermission } = await import('./planEnforcer.js');
+        await requirePermission('permaweb-publish');
+    } catch (e) {
+        if (e?.code === 'plan-required') throw e;
+    }
+
     const v = await verifyProjectEntry(entry);
     if (!v.valid) throw new Error('publishProjectToPermaweb · invalid signature: ' + v.reason);
 

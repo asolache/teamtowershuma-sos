@@ -511,6 +511,16 @@ export async function publishToPermaweb({
     if (!projectId) throw new Error('publishToPermaweb requires projectId (wallet source)');
     if (!entry.content.signature) throw new Error('publishToPermaweb · entry not signed · call signRegistryEntry first');
 
+    // BIZ-MODEL-001 sprint C · plan enforcement · free no pot publish
+    // Pre-check abans de tocar wallet · evita gastar saldo si no pot acabar
+    try {
+        const { requirePermission } = await import('./planEnforcer.js');
+        await requirePermission('permaweb-publish');
+    } catch (e) {
+        if (e?.code === 'plan-required') throw e;
+        // Altres errors silents · planEnforcer ja té defensives
+    }
+
     // Sanity · verify la firma abans de gastar (defensive)
     const v = await verifyRegistryEntry(entry);
     if (!v.valid) throw new Error('publishToPermaweb · entry signature invalid: ' + v.reason);

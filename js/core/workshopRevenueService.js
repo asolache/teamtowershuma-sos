@@ -121,6 +121,13 @@ export async function recordWorkshopUnlock({
 } = {}) {
     if (!workshop || !workshop.content) throw new Error('recordWorkshopUnlock · workshop required');
     if (!payerProjectId)                throw new Error('recordWorkshopUnlock · payerProjectId required');
+    // BIZ-MODEL-001 sprint C · plan enforcement · free no pot unlock
+    try {
+        const { requirePermission } = await import('./planEnforcer.js');
+        await requirePermission('workshop-unlock', { kb });
+    } catch (e) {
+        if (e?.code === 'plan-required') throw e;
+    }
     const c = workshop.content;
     const creatorHandle = c.createdBy || c.creatorHandle || '@alvaro';
     const finalPrice    = typeof priceEur === 'number' ? priceEur : (typeof c.priceEur === 'number' ? c.priceEur : UNLOCK_PRICING.defaultEur);
