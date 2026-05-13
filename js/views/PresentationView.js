@@ -227,10 +227,25 @@ export default class PresentationView {
 
             ${projectDescription || bodyMarkdown ? `
             <!-- LANDING-UNIFY-001 · description + bodyMarkdown generats des de /quality fill IA -->
-            <div class="pv-section" style="max-width:760px;margin-left:auto;margin-right:auto;">
-                ${projectDescription ? `<p style="font-size:var(--text-md);color:var(--text-main);line-height:1.6;margin:0 0 var(--space-4);">${esc(projectDescription)}</p>` : ''}
+            <section class="pv-section pv-landing-block" style="max-width:780px;margin:0 auto var(--space-10);background:linear-gradient(135deg,rgba(168,85,247,0.04),rgba(99,102,241,0.03));border:1px solid var(--border-default);border-left:3px solid var(--accent-purple);border-radius:var(--radius-lg);padding:var(--space-6) var(--space-7);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:var(--space-3);font-size:11px;text-transform:uppercase;letter-spacing:0.15em;color:var(--accent-purple);font-weight:800;">
+                    <span>📊 Descripció del projecte</span>
+                    ${narrativeAt ? `<span style="color:var(--text-muted);font-weight:600;letter-spacing:0;text-transform:none;font-size:10px;">· generat amb IA · ${esc(new Date(narrativeAt).toLocaleDateString())}</span>` : ''}
+                </div>
+                ${projectDescription ? `<p style="font-size:1.05rem;color:var(--text-main);line-height:1.65;margin:0 0 ${bodyMarkdown ? 'var(--space-4)' : '0'};font-weight:500;">${esc(projectDescription)}</p>` : ''}
                 ${bodyMarkdown ? `<div class="pv-body-md" style="color:var(--text-secondary);font-size:var(--text-sm);line-height:1.7;">${this._renderMarkdown(bodyMarkdown)}</div>` : ''}
-            </div>` : ''}
+            </section>` : `
+            <!-- LANDING-UNIFY-001 · empty state amb CTA cap a /quality -->
+            <section class="pv-section pv-print-hide-mobile" style="max-width:780px;margin:0 auto var(--space-10);background:var(--bg-elevated);border:1px dashed var(--border-default);border-radius:var(--radius-lg);padding:var(--space-6) var(--space-7);text-align:center;">
+                <div style="font-size:2rem;margin-bottom:8px;">📊</div>
+                <p style="color:var(--text-secondary);font-size:var(--text-sm);margin:0 0 var(--space-3);line-height:1.55;">
+                    Encara no hi ha descripció del projecte. Genera-la amb IA des de
+                    <a href="/quality?project=${encodeURIComponent(project.id)}" data-link style="color:var(--accent-indigo);font-weight:700;">📊 /quality → 🎨 Landing → 🧠 Ompli amb IA</a>.
+                </p>
+                <p style="color:var(--text-muted);font-size:11px;margin:0;">
+                    El text generat (description + bodyMarkdown + roleDescriptions) apareixerà aquí · escalation chain · 5 providers.
+                </p>
+            </section>`}
 
             <!-- LANDING-UNIFY-001 · regeneració per audiència · usa escalation chain · BIZ-MODEL marges + audit log -->
             <div class="pv-section pv-print-hide-mobile" style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:var(--space-6);">
