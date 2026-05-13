@@ -178,5 +178,64 @@ prov.setApiKeyResolver((provider) => provider === 'anthropic' ? 'sk-ant-test-moc
 t(typeof prov.setApiKeyResolver === 'function',                       'M · setApiKeyResolver és funció');
 prov.setApiKeyResolver(null);   // reset
 
+// ─── N · IA-CONTEXT-001 sprint B · extraContext propagat ────────────────
+const landingPlain = ctx.buildLandingContext({ project, marketItems: market });
+t(!landingPlain.userPrompt.includes('## Context addicional'),         'N · sense extraContext · cap secció');
+t(landingPlain.hasExtraContext === false,                             'N · sense extraContext · hasExtraContext=false');
+
+const landingCtx = ctx.buildLandingContext({
+    project, marketItems: market,
+    extraContext: 'A document explaining the brand voice and key markets.',
+});
+t(landingCtx.userPrompt.includes('## Context addicional'),            'N · amb extraContext · secció present');
+t(landingCtx.userPrompt.includes('brand voice'),                      'N · contingut propagat al userPrompt');
+t(landingCtx.hasExtraContext === true,                                'N · hasExtraContext=true');
+
+// Truncació · 3000 chars → max 2000
+const longCtx = 'X'.repeat(3000);
+const truncCtx = ctx.buildLandingContext({ project, marketItems: market, extraContext: longCtx });
+t(truncCtx.userPrompt.includes('XXX'),                                'N · long ctx · primera part inclosa');
+t(truncCtx.userPrompt.includes('…'),                                  'N · long ctx · marcador truncat present');
+
+// Empty string ignored
+const emptyCtx = ctx.buildLandingContext({ project, marketItems: market, extraContext: '   ' });
+t(!emptyCtx.userPrompt.includes('## Context addicional'),             'N · whitespace-only · secció no inclosa');
+t(emptyCtx.hasExtraContext === false,                                 'N · whitespace-only · hasExtraContext=false');
+
+// Tots 5 builders propaguen extraContext consistent
+for (const dimId of ['landing', 'valueMap', 'deliverables', 'sops', 'workshops']) {
+    const r = ctx.buildContextForDim(dimId, {
+        project, sops, workshops, marketItems: market,
+        extraContext: 'shared context note ABC123',
+    });
+    t(r.userPrompt.includes('ABC123'),                                'N · ' + dimId + ' · extraContext propagat');
+    t(r.hasExtraContext === true,                                     'N · ' + dimId + ' · hasExtraContext=true');
+}
+
+// aiFillDim · extraContext arriba al builder via opts
+let observedCtx = null;
+const inspectProvider = async (modelKey) => {
+    observedCtx = arguments;   // no funciona en arrow · fem-ho via closure abaix
+    return { text: JSON.stringify({ description: 'd'.repeat(80), productSuggestions: [], presentationNarrative: 'x' }), usage:{inputTokens:1,outputTokens:1}, modelKey, finishReason:'end_turn' };
+};
+let lastPrompt = null;
+const promptCaptureProvider = async (modelKey, payload) => {
+    lastPrompt = payload.userPrompt;
+    return { text: JSON.stringify({ description: 'd'.repeat(80), productSuggestions: [], presentationNarrative: 'x' }), usage:{inputTokens:1,outputTokens:1}, modelKey, finishReason:'end_turn' };
+};
+const mockLoadN = async () => ({ project, sops, workshops, marketItems: market });
+const rN = await fill.aiFillDim({
+    projectId:    'proj-test-1',
+    dimId:        'landing',
+    extraContext: 'INJECTED-N-MARKER',
+    loadContext:  mockLoadN,
+    provider:     promptCaptureProvider,
+    persistAudit: async () => 'a',
+});
+t(lastPrompt && lastPrompt.includes('INJECTED-N-MARKER'),             'N · aiFillDim · extraContext arriba al provider');
+
+// EXTRA_CONTEXT_MAX_CHARS exportat
+t(typeof ctx.EXTRA_CONTEXT_MAX_CHARS === 'number' && ctx.EXTRA_CONTEXT_MAX_CHARS >= 1000, 'N · EXTRA_CONTEXT_MAX_CHARS exportat (≥1000)');
+
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

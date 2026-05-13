@@ -235,8 +235,13 @@ export default class ProjectQualityView {
                 ${bodyHtml}
                 <div class="pq-dim-foot">
                     ${excluded ? '' : `<button class="pq-dim-aibtn" data-aifill="${_esc(d.id)}" title="Genera un draft amb IA · escalation chain primary→fallback→premium">🧠 Ompli amb IA</button>`}
+                    ${excluded ? '' : `<button class="pq-dim-noapp" data-toggle-ctx="${_esc(d.id)}" title="Afegir context extra (URLs/text/imatges futur · sprint B2)">📎 +context</button>`}
                     <button class="pq-dim-noapp" data-noapp="${_esc(d.id)}" title="${excluded ? 'Torna a comptabilitzar aquesta capa al score' : 'Marca aquesta capa com a no aplicable · els pesos restants es re-balancegen'}">${exclLabel}</button>
                 </div>
+                ${excluded ? '' : `<div data-ctx-panel-for="${_esc(d.id)}" style="display:none;margin-top:6px;padding-top:8px;border-top:1px solid var(--border-subtle);">
+                    <label style="font-size:10px;color:var(--text-muted);font-weight:700;display:block;margin-bottom:4px;">📎 Context addicional per a la IA · max 2000 chars · serà inclós al prompt</label>
+                    <textarea data-ctx-input="${_esc(d.id)}" placeholder="Pega text, links a docs, descripcions detallades… (ex. una landing existent, una guia tècnica, un brief de client)" style="width:100%;min-height:80px;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:6px 8px;font-family:var(--font-mono);font-size:11px;resize:vertical;box-sizing:border-box;"></textarea>
+                </div>`}
             </section>`;
         }).join('');
     }
@@ -261,6 +266,19 @@ export default class ProjectQualityView {
         });
         document.querySelectorAll('[data-noapp]').forEach(btn => {
             btn.addEventListener('click', () => this._toggleDimExclusion(btn.getAttribute('data-noapp')));
+        });
+        // IA-CONTEXT-001 sprint B · toggle panel context extra
+        document.querySelectorAll('[data-toggle-ctx]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const dimId = btn.getAttribute('data-toggle-ctx');
+                const panel = document.querySelector('[data-ctx-panel-for="' + dimId + '"]');
+                if (panel) {
+                    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                    if (panel.style.display === 'block') {
+                        panel.querySelector('textarea')?.focus();
+                    }
+                }
+            });
         });
     }
 
@@ -298,11 +316,16 @@ export default class ProjectQualityView {
         const origText = btn.textContent;
         btn.disabled = true;
         btn.textContent = '⏳ Generant…';
+        // IA-CONTEXT-001 sprint B · llegeix el textarea de context si l'usuari
+        // l'ha omplert per aquesta dim
+        const ctxTextarea = document.querySelector('[data-ctx-input="' + dimId + '"]');
+        const extraContext = ctxTextarea ? (ctxTextarea.value || '').trim() : null;
         let result;
         try {
             result = await aiFillDim({
                 projectId: this._projectId,
                 dimId,
+                extraContext,
                 maxOutputTokens: 800,
                 temperature: 0.4,
             });

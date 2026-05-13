@@ -27,6 +27,22 @@ function _addRef(refs, node) {
     refs.push({ nodeId: node.id, type: node.type || 'unknown' });
 }
 
+// IA-CONTEXT-001 sprint B · context extra opcional · l'usuari pot pegar
+// URLs (text scraped futur · sprint B2), text lliure o llegir docs. Aquest
+// helper trunca a max 2000 chars (~500 tokens) per evitar overflow del
+// system prompt + budget.
+const EXTRA_CONTEXT_MAX_CHARS = 2000;
+function _buildExtraContextSection(extraContext) {
+    if (!extraContext || typeof extraContext !== 'string') return '';
+    const trimmed = extraContext.trim();
+    if (!trimmed) return '';
+    const clipped = trimmed.length > EXTRA_CONTEXT_MAX_CHARS
+        ? trimmed.slice(0, EXTRA_CONTEXT_MAX_CHARS - 3) + '…'
+        : trimmed;
+    return '\n\n## Context addicional (input usuari)\n' + clipped + '\n';
+}
+export { EXTRA_CONTEXT_MAX_CHARS };
+
 const COMMON_SYSTEM_HEADER = `Ets una IA assistent del SOS V11 · sistema operatiu col·laboratiu.
 Generes drafts breus i estructurats que un operador humà revisarà abans d'acceptar.
 PRIORITAT · qualitat semàntica sobre extensió. Format estricte JSON quan se't demana.
@@ -38,6 +54,7 @@ export function buildLandingContext({
     sectorReadiness = null,   // opcional · descripció del sector base
     marketItems     = [],     // items del market lligats al projecte
     similarProjects = [],     // descriptors de projectes públics del permaweb
+    extraContext    = null,   // IA-CONTEXT-001 sprint B · usuari pot afegir context
 } = {}) {
     if (!project || !project.id) throw new Error('buildLandingContext requires project');
     const refs = [];
@@ -65,6 +82,7 @@ export function buildLandingContext({
         '\n## Context del sector\n' + (sectorReadiness || '—') + '\n' +
         '\n## Productes/serveis al market\n' + (productLines.length ? productLines.join('\n') : '— cap encara —') + '\n' +
         '\n## Projectes similars descobrits al permaweb\n' + (peerLines.length ? peerLines.join('\n') : '— cap encara —') + '\n' +
+        _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
         'Genera DRAFT JSON per a la dim "Landing" amb camps:\n' +
         '  description (≥60 chars · narratiu directe · sense buzzwords)\n' +
@@ -78,6 +96,7 @@ export function buildLandingContext({
         contextTokens: _approxTokens(systemPrompt + userPrompt),
         refs,
         dim: 'landing',
+        hasExtraContext: !!(extraContext && extraContext.trim()),
     };
 }
 
@@ -87,6 +106,7 @@ export function buildValueMapContext({
     sectorReadiness = null,
     similarProjects = [],
     criticalRoles   = [],   // skills/critical roles catalog (opcional)
+    extraContext    = null,
 } = {}) {
     if (!project || !project.id) throw new Error('buildValueMapContext requires project');
     const refs = [];
@@ -108,6 +128,7 @@ export function buildValueMapContext({
         '\n## Context · sector\n' + (sectorReadiness || '—') + '\n' +
         '\n## Roles crítics catàleg\n' + (criticalLines.join('\n') || '—') + '\n' +
         '\n## Projectes similars\n' + (peerLines.join('\n') || '—') + '\n' +
+        _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
         'Suggereix EXTENSIONS · NO replaces · al value map. Format JSON:\n' +
         '  addRoles    [{id, name, castell_level, description, typical_actor, tags}]\n' +
@@ -120,12 +141,13 @@ export function buildValueMapContext({
         userPrompt,
         contextTokens: _approxTokens(systemPrompt + userPrompt),
         refs,
+        hasExtraContext: !!(extraContext && extraContext.trim()),
         dim: 'valueMap',
     };
 }
 
 // ─── Dim 3 · Deliverables context ─────────────────────────────────────────
-export function buildDeliverablesContext({ project } = {}) {
+export function buildDeliverablesContext({ project, extraContext = null } = {}) {
     if (!project || !project.id) throw new Error('buildDeliverablesContext requires project');
     const refs = [{ nodeId: project.id, type: 'project' }];
     const roles = project.vna_roles || [];
@@ -138,6 +160,7 @@ export function buildDeliverablesContext({ project } = {}) {
         'Sector · ' + (project.sector_id || '—') + '\n' +
         '\n## Roles SENSE entregable declarat (' + rolesWithoutDeliver.length + '/' + roles.length + ')\n' +
         (rolesLines.join('\n') || '— tots tenen entregable · cap a omplir —') + '\n' +
+        _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
         'Per a cada role sense entregable, suggereix 1-2 transactions tangibles + 1 intangible. Format JSON:\n' +
         '  addTransactions [{id (prefix "ai-"), from (roleId), to (roleId · pot ser nou ad-hoc tipus client/usuari/comunitat), deliverable, type, is_must}]\n' +
@@ -149,11 +172,12 @@ export function buildDeliverablesContext({ project } = {}) {
         contextTokens: _approxTokens(systemPrompt + userPrompt),
         refs,
         dim: 'deliverables',
+        hasExtraContext: !!(extraContext && extraContext.trim()),
     };
 }
 
 // ─── Dim 4 · SOPs context ─────────────────────────────────────────────────
-export function buildSopsContext({ project, sops = [], sectorReadiness = null } = {}) {
+export function buildSopsContext({ project, sops = [], sectorReadiness = null, extraContext = null } = {}) {
     if (!project || !project.id) throw new Error('buildSopsContext requires project');
     const refs = [{ nodeId: project.id, type: 'project' }];
     const roles = project.vna_roles || [];
@@ -172,6 +196,7 @@ export function buildSopsContext({ project, sops = [], sectorReadiness = null } 
         '\n## SOPs ja existents (' + projSops.length + ')\n' + (examples.join('\n') || '— cap encara —') + '\n' +
         '\n## Roles que necessiten SOP (' + rolesWithoutSop.length + ')\n' + (rolesLines.join('\n') || '— tots cobertats —') + '\n' +
         '\n## Context sector\n' + (sectorReadiness || '—') + '\n' +
+        _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
         'Per cada role pendent, draftea un SOP. Format JSON:\n' +
         '  newSops [{roleId, title (≤60 chars), steps [5-7 strings d\'acció directa · imperatiu]}]\n' +
@@ -183,11 +208,12 @@ export function buildSopsContext({ project, sops = [], sectorReadiness = null } 
         contextTokens: _approxTokens(systemPrompt + userPrompt),
         refs,
         dim: 'sops',
+        hasExtraContext: !!(extraContext && extraContext.trim()),
     };
 }
 
 // ─── Dim 5 · Workshops context ────────────────────────────────────────────
-export function buildWorkshopsContext({ project, workshops = [], sectorReadiness = null } = {}) {
+export function buildWorkshopsContext({ project, workshops = [], sectorReadiness = null, extraContext = null } = {}) {
     if (!project || !project.id) throw new Error('buildWorkshopsContext requires project');
     const refs = [{ nodeId: project.id, type: 'project' }];
     const projWorkshops = (workshops || []).filter(w => (w.content?.projectId || w.projectId) === project.id);
@@ -201,6 +227,7 @@ export function buildWorkshopsContext({ project, workshops = [], sectorReadiness
         '\n## Workshops existents (' + projWorkshops.length + ')\n' +
         projWorkshops.slice(0, 3).map(w => '- ' + (w.content?.title || '?').slice(0, 50) + ' · audience: ' + (w.content?.audience || '—')).join('\n') + '\n' +
         '\n## Context sector\n' + (sectorReadiness || '—') + '\n' +
+        _buildExtraContextSection(extraContext) +
         '\n## Tasca\n' +
         'Si l\'estat és buit · genera 2-3 workshops base. Si ja n\'hi ha · suggereix 1-2 que cobreixin audiences que falten. Format JSON:\n' +
         '  newWorkshops [{title (≤60 chars), audience (founders|operators|cohort|clients|comunitat), accessTier (public|operator|matriu|cohort), outline (2-4 línies markdown amb llista de continguts)}]\n' +
@@ -213,6 +240,7 @@ export function buildWorkshopsContext({ project, workshops = [], sectorReadiness
         contextTokens: _approxTokens(systemPrompt + userPrompt),
         refs,
         dim: 'workshops',
+        hasExtraContext: !!(extraContext && extraContext.trim()),
     };
 }
 
