@@ -193,33 +193,49 @@ export default class ProjectQualityView {
 
     _renderDims(q) {
         return QUALITY_DIMS.map(d => {
-            const dim    = q.byDim[d.id] || { score: 0, missing: [] };
-            const score  = dim.score || 0;
-            const st     = score >= QUALITY_THRESHOLDS.high ? 'high' : (score >= QUALITY_THRESHOLDS.medium ? 'medium' : 'low');
-            const color  = statusColor(st);
-            const missing = dim.missing || [];
+            const dim       = q.byDim[d.id] || { score: 0, missing: [] };
+            const score     = dim.score || 0;
+            const st        = score >= QUALITY_THRESHOLDS.high ? 'high' : (score >= QUALITY_THRESHOLDS.medium ? 'medium' : 'low');
+            const color     = statusColor(st);
+            const missing   = dim.missing || [];
+            // PROJ-QUALITY-001 sprint F · dim exclosa "no aplicable"
+            const excluded  = !!dim.excluded;
+            const effWeight = typeof dim.effectiveWeight === 'number' ? dim.effectiveWeight : d.weight;
+            const weightStr = excluded
+                ? `<span class="pq-dim-weight" style="opacity:0.5;text-decoration:line-through;">${d.weight}%</span>`
+                : (Math.abs(effWeight - d.weight) > 0.1
+                    ? `<span class="pq-dim-weight" title="Pes original ${d.weight}% · efectiu ${effWeight}% per re-balanceig">${effWeight}%<span style="opacity:0.5;font-size:9px;"> (orig ${d.weight}%)</span></span>`
+                    : `<span class="pq-dim-weight">${d.weight}%</span>`);
 
-            const items = missing.length === 0
-                ? `<div class="pq-dim-done">✓ Aquesta capa està completa</div>`
-                : `<ul class="pq-dim-missing">${missing.map(m => `
-                    <li class="pq-dim-missing-item">
-                        <span class="pq-dim-missing-icon">●</span>
-                        <span class="pq-dim-missing-text">${_esc(m.label)}</span>
-                        ${m.cta ? `<a class="pq-dim-missing-cta" href="${_esc(m.cta.href)}" data-link>${_esc(m.cta.label)} →</a>` : ''}
-                    </li>`).join('')}</ul>`;
+            let bodyHtml;
+            if (excluded) {
+                bodyHtml = `<div class="pq-dim-done" style="background:rgba(148,163,184,0.10);border-color:rgba(148,163,184,0.30);color:var(--text-muted);">
+                    🛑 Marcada com a <strong>no aplicable</strong> per a aquest projecte · els pesos restants s'han re-balancejat
+                </div>`;
+            } else {
+                bodyHtml = missing.length === 0
+                    ? `<div class="pq-dim-done">✓ Aquesta capa està completa</div>`
+                    : `<ul class="pq-dim-missing">${missing.map(m => `
+                        <li class="pq-dim-missing-item">
+                            <span class="pq-dim-missing-icon">●</span>
+                            <span class="pq-dim-missing-text">${_esc(m.label)}</span>
+                            ${m.cta ? `<a class="pq-dim-missing-cta" href="${_esc(m.cta.href)}" data-link>${_esc(m.cta.label)} →</a>` : ''}
+                        </li>`).join('')}</ul>`;
+            }
+            const exclLabel = excluded ? '↩ Marcar com a aplicable' : 'no aplicable';
 
-            return `<section class="pq-dim" id="dim-${_esc(d.id)}">
+            return `<section class="pq-dim" id="dim-${_esc(d.id)}" style="${excluded ? 'opacity:0.7;' : ''}">
                 <div class="pq-dim-head">
                     <span class="pq-dim-icon">${d.icon}</span>
-                    <div class="pq-dim-title">${_esc(d.label)}</div>
-                    <span class="pq-dim-weight">${d.weight}%</span>
-                    <span class="pq-dim-score" style="background:${color}18;color:${color};">${score}</span>
+                    <div class="pq-dim-title" style="${excluded ? 'text-decoration:line-through;' : ''}">${_esc(d.label)}</div>
+                    ${weightStr}
+                    <span class="pq-dim-score" style="background:${color}18;color:${color};${excluded ? 'opacity:0.5;' : ''}">${score}</span>
                 </div>
-                <div class="pq-dim-bar"><div class="pq-dim-bar-fill" style="width:${score}%;background:${color};"></div></div>
-                ${items}
+                <div class="pq-dim-bar"><div class="pq-dim-bar-fill" style="width:${excluded ? 0 : score}%;background:${color};"></div></div>
+                ${bodyHtml}
                 <div class="pq-dim-foot">
-                    <button class="pq-dim-aibtn" data-aifill="${_esc(d.id)}" title="Genera un draft amb IA (cost ~150 tokens · sprint F)">🧠 Ompli amb IA</button>
-                    <button class="pq-dim-noapp" data-noapp="${_esc(d.id)}" title="Marca aquesta capa com a no aplicable per a aquest projecte (sprint F)">no aplicable</button>
+                    ${excluded ? '' : `<button class="pq-dim-aibtn" data-aifill="${_esc(d.id)}" title="Genera un draft amb IA · escalation chain primary→fallback→premium">🧠 Ompli amb IA</button>`}
+                    <button class="pq-dim-noapp" data-noapp="${_esc(d.id)}" title="${excluded ? 'Torna a comptabilitzar aquesta capa al score' : 'Marca aquesta capa com a no aplicable · els pesos restants es re-balancegen'}">${exclLabel}</button>
                 </div>
             </section>`;
         }).join('');
@@ -244,10 +260,36 @@ export default class ProjectQualityView {
             btn.addEventListener('click', () => this._handleAiFill(btn, aiFillDim, markAuditAccepted, commitApply));
         });
         document.querySelectorAll('[data-noapp]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._toast('🚧 "no aplicable" · disponible al sprint D · pesos rebalancejats per al projecte');
-            });
+            btn.addEventListener('click', () => this._toggleDimExclusion(btn.getAttribute('data-noapp')));
         });
+    }
+
+    // PROJ-QUALITY-001 sprint F · toggle exclusió de la dim
+    async _toggleDimExclusion(dimId) {
+        if (!dimId || !this._projectId || !this._project) return;
+        const current = Array.isArray(this._project.excludedQualityDims)
+            ? this._project.excludedQualityDims.slice()
+            : [];
+        const idx = current.indexOf(dimId);
+        if (idx >= 0) current.splice(idx, 1);
+        else           current.push(dimId);
+        try {
+            const { store } = await import('../core/store.js');
+            await store.dispatch({
+                type: 'UPDATE_PROJECT_INFO',
+                payload: { projectId: this._projectId, updates: { excludedQualityDims: current, updatedAt: Date.now() } },
+            });
+            this._toast(idx >= 0 ? '✓ "' + dimId + '" tornada a comptabilitzar' : '🛑 "' + dimId + '" marcada com a no aplicable');
+            setTimeout(() => {
+                try {
+                    if (typeof window.navigateTo === 'function') {
+                        window.navigateTo(window.location.pathname + window.location.search);
+                    } else { window.location.reload(); }
+                } catch (_) { window.location.reload(); }
+            }, 500);
+        } catch (e) {
+            this._toast('✗ ' + (e?.message || 'error'));
+        }
     }
 
     async _handleAiFill(btn, aiFillDim, markAuditAccepted, commitApply) {
