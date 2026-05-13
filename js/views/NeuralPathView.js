@@ -449,18 +449,47 @@ export default class NeuralPathView {
                 source: 'public-bundle-publish',
                 note: 'CV nodal · ' + (bundle.content?.name || bundle.id),
             });
-            // Sprint A · mock txId · sprint B · Turbo real (afegir tags arweaveTagsForBundle)
+            // TURBO-UNIFY-001 · upload real al permaweb · fallback mock txId
+            btn.textContent = '⏳ Pujant a Arweave…';
             const now = Date.now();
-            const mockTx = 'mock-bundle-' + bundle.id.slice(-12) + '-' + now.toString(36);
+            let txId, uploadMode = 'mock';
+            try {
+                const { canonicalizeNode } = await import('../core/nodeSigningService.js');
+                const { uploadNodeToTurbo, buildSignedPayload, commonArweaveTags } = await import('../core/turboUploadService.js');
+                const canonical = canonicalizeNode(bundle);
+                const payload = buildSignedPayload({
+                    canonicalString: canonical,
+                    signature: bundle.content.signature,
+                    signatureFormat: bundle.content.signatureFormat,
+                });
+                const tags = commonArweaveTags({
+                    entryType: 'neural-path-bundle',
+                    extra: [
+                        { name: 'OwnerHandle', value: bundle.content.ownerHandle || '?' },
+                        { name: 'BundleId', value: bundle.id },
+                        ...(bundle.content.intent     ? [{ name: 'Intent',   value: bundle.content.intent }] : []),
+                        ...(bundle.content.audienceId ? [{ name: 'Audience', value: bundle.content.audienceId }] : []),
+                    ],
+                });
+                const result = await uploadNodeToTurbo({ payload, tags });
+                txId = result.txId;
+                uploadMode = result.mode;
+            } catch (uploadErr) {
+                console.warn('[neural-path] turbo upload failed · fallback mock txId', uploadErr?.message);
+                txId = 'mock-bundle-' + bundle.id.slice(-12) + '-' + now.toString(36);
+                uploadMode = 'mock';
+            }
             const updated = { ...bundle, content: { ...bundle.content,
-                arweaveTxId: mockTx,
+                arweaveTxId: txId,
                 permawebPublishedAt: now,
                 _cachedAt: now,
                 _fromPermaweb: false,
-                _mockMode: true,
+                _mockMode: uploadMode === 'mock',
+                _uploadMode: uploadMode,
             }};
             await KB.upsert(updated);
-            setStatus('✓ Publicat · ' + mockTx.slice(0, 18) + '… · cost ' + cost.totalEur.toFixed(3) + '€ · re-renderitzant…', true);
+            const txLabel = uploadMode === 'mock' ? '🧪 mock · ' + txId.slice(0, 18) : '✓ ' + txId.slice(0, 18);
+            setStatus(txLabel + '… · ' + uploadMode + ' · cost ' + cost.totalEur.toFixed(3) + '€ · re-renderitzant…', true);
             setTimeout(async () => {
                 await this._loadData();
                 const app = document.getElementById('app');

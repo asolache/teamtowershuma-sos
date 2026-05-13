@@ -763,15 +763,16 @@ export default class ProjectHubView {
                 note: 'Publicació selectiva · ' + selected.length + ' entitats',
             });
 
-            // 7 · Per cada entity · build + KB upsert (mock-first · sprint A)
-            // El upload Turbo real arriba a sprint B. Per ara persistim node KB
-            // amb mock-tx perquè /opportunities el descobreixi via cache.
+            // 7 · Per cada entity · sign + Turbo upload real (fallback mock si Turbo no disponible)
+            //     TURBO-UNIFY-001 · usa turboUploadService unificat
             btn.textContent = '⏳ Publicant ' + selected.length + ' entitats…';
             const mockTxBase = 'mock-' + ref;
+            const { signNode, canonicalizeNode } = await import('../core/nodeSigningService.js');
+            const { uploadNodeToTurbo, buildSignedPayload, commonArweaveTags } = await import('../core/turboUploadService.js');
             let okCount = 0, errCount = 0;
             for (const s of selected) {
                 try {
-                    const node = buildPublicEntityEntry({
+                    let node = buildPublicEntityEntry({
                         kind: s.kind,
                         entity: s.entity,
                         project: this.project,
@@ -779,15 +780,46 @@ export default class ProjectHubView {
                         ownerPublicJwk: keyMeta.publicJwk,
                     });
                     const now = Date.now();
-                    node.content.arweaveTxId = mockTxBase + '-' + s.entity.id.slice(0, 8);
+                    // Firma ECDSA P-256 abans del upload (TEA-SIGN-001)
+                    try { node = await signNode({ node, privateJwk: keyMeta.privateJwk }); }
+                    catch (e) { console.warn('[selective-publish] sign failed · puja sense firma', e?.message); }
+                    // Upload Turbo real · fallback mock txId
+                    let txId, uploadMode = 'mock';
+                    try {
+                        const canonical = canonicalizeNode(node);
+                        const payload = node.content.signature
+                            ? buildSignedPayload({
+                                canonicalString: canonical,
+                                signature:       node.content.signature,
+                                signatureFormat: node.content.signatureFormat,
+                            })
+                            : canonical;
+                        const tags = commonArweaveTags({
+                            entryType: node.type,
+                            extra: [
+                                { name: 'Entity-Kind', value: s.kind },
+                                { name: 'ProjectId',   value: this.projectId },
+                                { name: 'OwnerDid',    value: did },
+                            ],
+                        });
+                        const result = await uploadNodeToTurbo({ payload, tags });
+                        txId = result.txId;
+                        uploadMode = result.mode;
+                    } catch (uErr) {
+                        console.warn('[selective-publish] turbo upload failed · mock txId', uErr?.message);
+                        txId = mockTxBase + '-' + s.entity.id.slice(0, 8);
+                        uploadMode = 'mock';
+                    }
+                    node.content.arweaveTxId = txId;
                     node.content.permawebPublishedAt = now;
                     node.content._cachedAt = now;
-                    node.content._fromPermaweb = false;  // mock · marcat com a local
-                    node.content._mockMode = true;
+                    node.content._fromPermaweb = false;
+                    node.content._mockMode = uploadMode === 'mock';
+                    node.content._uploadMode = uploadMode;
                     await KB.upsert(node);
                     // També marquem l'entity origen com a "publicada" per UI
                     const origUpdated = { ...s.entity, content: { ...s.entity.content,
-                        permawebTxId: node.content.arweaveTxId,
+                        permawebTxId: txId,
                         permawebPublishedAt: now,
                     }};
                     await KB.upsert(origUpdated);
