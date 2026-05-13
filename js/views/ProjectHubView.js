@@ -597,7 +597,8 @@ export default class ProjectHubView {
                 buildPublicEntityEntry, publicEntityIdFor,
             } = await import('../core/publicEntityService.js');
             const { loadCurrentPlan } = await import('../core/stripeService.js');
-            const planId = await loadCurrentPlan().catch(() => 'free');
+            const planObj = await loadCurrentPlan().catch(() => null);
+            const planId  = planObj?.planId || 'free';
 
             const [woNodes, marketNodes, wsNodes] = await Promise.all([
                 KB.query({ type: 'work_order',  projectId: this.projectId }).catch(() => []),

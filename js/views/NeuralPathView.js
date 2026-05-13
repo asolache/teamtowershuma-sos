@@ -422,7 +422,8 @@ export default class NeuralPathView {
             }
             const { canPerform } = await import('../core/planEnforcer.js');
             const { loadCurrentPlan } = await import('../core/stripeService.js');
-            const planId = await loadCurrentPlan().catch(() => 'free');
+            const planObj = await loadCurrentPlan().catch(() => null);
+            const planId  = planObj?.planId || 'free';
             const op = planId === 'free' ? 'permaweb-publish-paid' : 'permaweb-publish';
             const okPlan = canPerform({ planId, op });
             if (!okPlan.allowed) { setStatus('✗ Pla ' + planId + ' no permet publicar', false); return; }
