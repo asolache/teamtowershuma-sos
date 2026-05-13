@@ -227,6 +227,34 @@ export function isPersonalWallet(projectId) {
     return typeof projectId === 'string' && projectId.startsWith('__personal_') && projectId.endsWith('__');
 }
 
+// WORKSHOPS-FED-001 sprint B · cohort wallet · destinació del 10% revenue
+// split dels workshop unlocks. Cada cohortNumber té el seu wallet propi.
+// cohortWalletIdFor(0) → '__cohort_0__'
+export function cohortWalletIdFor(cohortNumber) {
+    if (typeof cohortNumber !== 'number' || !Number.isInteger(cohortNumber) || cohortNumber < 0) {
+        throw new Error('cohortWalletIdFor requires non-negative integer cohortNumber');
+    }
+    return '__cohort_' + cohortNumber + '__';
+}
+
+export function isCohortWallet(projectId) {
+    return typeof projectId === 'string' && /^__cohort_\d+__$/.test(projectId);
+}
+
+export async function getOrCreateCohortWallet(cohortNumber) {
+    const id = cohortWalletIdFor(cohortNumber);
+    let wallet = await getWalletForProject(id);
+    if (!wallet) {
+        wallet = buildWalletForProject(id, { initial: 0 });
+        wallet.content.kind         = 'wallet-cohort';
+        wallet.content.isCohort     = true;
+        wallet.content.cohortNumber = cohortNumber;
+        wallet.content.createdAt    = wallet.content.createdAt || Date.now();
+        await persistWallet(wallet);
+    }
+    return wallet;
+}
+
 // getOrCreatePersonalWallet · async · crea (o recupera) el wallet personal
 // del handle indicat. Mateixa shape que els de projecte · només el
 // projectId convencional. Marca isPersonal=true al content per UI.
