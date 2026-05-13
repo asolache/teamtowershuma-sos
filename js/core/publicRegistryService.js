@@ -605,14 +605,23 @@ export async function publishToPermaweb({
     }
 
     // 3. Actualitza l'entry amb arweaveTxId + persisteix al KB
+    //    Sync-bugfix · marquem l'entry com a `_cachedAt: now` perquè el
+    //    nostre propi publish surti immediatament a getCachedRegistry sense
+    //    haver d'esperar la indexació del gateway Arweave (~minuts). Sense
+    //    això, el filtre TTL exclou l'entry pròpia tot just publicada.
+    const now = Date.now();
     const updated = {
         ...entry,
         content: {
             ...entry.content,
             arweaveTxId:    txId,
-            permawebPublishedAt: Date.now(),
+            permawebPublishedAt: now,
+            _cachedAt:      now,
+            _ttlExpiresAt:  now + DEFAULT_TTL_BG_MS,
+            _fromPermaweb:  true,
+            _verified:      true,                // hem signat just abans del publish
         },
-        updatedAt: Date.now(),
+        updatedAt: now,
     };
     try {
         const { KB } = await import('./kb.js');
@@ -818,12 +827,37 @@ export async function fetchEntryByTxId(txId) {
 
     // Re-construeix l'entry · el payload publicat porta el canonical (sense
     // signature/arweaveTxId) + signature/signatureFormat al top-level (publish
-    // sprint C l'afegeix així). Reconstruim el shape original per verifyRegistryEntry.
+    // sprint C l'afegeix així). Reconstruim el shape original perquè
+    // verifyRegistryEntry pugui llegir content.signature.
+    //
+    // Sync-bugfix 2026-05-13 · abans aquest if returnava `parsed` directament
+    // quan trobava el shape complet (id + type), però oblidava que les
+    // publishes reals porten signature al TOP LEVEL del payload (no a
+    // content). Resultat · verifyRegistryEntry no trobava la signatura i
+    // tots els entries externs apareixien com a "no verificades".
     if (parsed.id && parsed.type === PUBLIC_REGISTRY_TYPE) {
-        // Format antic / canonical pur · ja shape complet
-        return { entry: parsed, raw };
+        // Defensiu · si signature és al top-level, la movem dins content
+        // (preservem la que ja hi pugui haver dins content per compat).
+        const mergedContent = { ...(parsed.content || {}) };
+        if (parsed.signature && !mergedContent.signature) {
+            mergedContent.signature = parsed.signature;
+        }
+        if (parsed.signatureFormat && !mergedContent.signatureFormat) {
+            mergedContent.signatureFormat = parsed.signatureFormat;
+        }
+        // Marca el txId · útil per relink i per applyRevocations
+        if (!mergedContent.arweaveTxId) mergedContent.arweaveTxId = txId;
+        const entry = {
+            id:        parsed.id,
+            type:      parsed.type,
+            content:   mergedContent,
+            keywords:  parsed.keywords  || [],
+            createdAt: parsed.createdAt || 0,
+            updatedAt: parsed.updatedAt || 0,
+        };
+        return { entry, raw };
     }
-    // Format publicat · re-mount
+    // Format minimalista · sols content + signature top-level · re-mount
     const entry = {
         id:   parsed.id,
         type: parsed.type || PUBLIC_REGISTRY_TYPE,

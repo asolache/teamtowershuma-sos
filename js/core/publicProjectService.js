@@ -367,10 +367,23 @@ export async function publishProjectToPermaweb({ entry, projectId } = {}) {
         throw new Error('turbo-upload-failed: ' + (e?.message || e));
     }
 
+    // Sync-bugfix · marquem _cachedAt al moment del publish perquè el
+    // nostre propi entry aparegui immediatament a /opportunities (i als
+    // helpers cached) sense esperar la indexació del gateway. 24h TTL.
+    const now = Date.now();
+    const TTL_BG = 24 * 60 * 60 * 1000;
     const updated = {
         ...entry,
-        content: { ...entry.content, arweaveTxId: txId, permawebPublishedAt: Date.now() },
-        updatedAt: Date.now(),
+        content: {
+            ...entry.content,
+            arweaveTxId:         txId,
+            permawebPublishedAt: now,
+            _cachedAt:           now,
+            _ttlExpiresAt:       now + TTL_BG,
+            _fromPermaweb:       true,
+            _verified:           true,
+        },
+        updatedAt: now,
     };
     try { const { KB } = await import('./kb.js'); await KB.upsert(updated); } catch (_) {}
     return { entry: updated, txId, costEur: price, walletAfter };
