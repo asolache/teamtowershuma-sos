@@ -193,34 +193,55 @@ export default class ProjectQualityView {
 
     _renderDims(q) {
         return QUALITY_DIMS.map(d => {
-            const dim    = q.byDim[d.id] || { score: 0, missing: [] };
-            const score  = dim.score || 0;
-            const st     = score >= QUALITY_THRESHOLDS.high ? 'high' : (score >= QUALITY_THRESHOLDS.medium ? 'medium' : 'low');
-            const color  = statusColor(st);
-            const missing = dim.missing || [];
+            const dim       = q.byDim[d.id] || { score: 0, missing: [] };
+            const score     = dim.score || 0;
+            const st        = score >= QUALITY_THRESHOLDS.high ? 'high' : (score >= QUALITY_THRESHOLDS.medium ? 'medium' : 'low');
+            const color     = statusColor(st);
+            const missing   = dim.missing || [];
+            // PROJ-QUALITY-001 sprint F · dim exclosa "no aplicable"
+            const excluded  = !!dim.excluded;
+            const effWeight = typeof dim.effectiveWeight === 'number' ? dim.effectiveWeight : d.weight;
+            const weightStr = excluded
+                ? `<span class="pq-dim-weight" style="opacity:0.5;text-decoration:line-through;">${d.weight}%</span>`
+                : (Math.abs(effWeight - d.weight) > 0.1
+                    ? `<span class="pq-dim-weight" title="Pes original ${d.weight}% · efectiu ${effWeight}% per re-balanceig">${effWeight}%<span style="opacity:0.5;font-size:9px;"> (orig ${d.weight}%)</span></span>`
+                    : `<span class="pq-dim-weight">${d.weight}%</span>`);
 
-            const items = missing.length === 0
-                ? `<div class="pq-dim-done">✓ Aquesta capa està completa</div>`
-                : `<ul class="pq-dim-missing">${missing.map(m => `
-                    <li class="pq-dim-missing-item">
-                        <span class="pq-dim-missing-icon">●</span>
-                        <span class="pq-dim-missing-text">${_esc(m.label)}</span>
-                        ${m.cta ? `<a class="pq-dim-missing-cta" href="${_esc(m.cta.href)}" data-link>${_esc(m.cta.label)} →</a>` : ''}
-                    </li>`).join('')}</ul>`;
+            let bodyHtml;
+            if (excluded) {
+                bodyHtml = `<div class="pq-dim-done" style="background:rgba(148,163,184,0.10);border-color:rgba(148,163,184,0.30);color:var(--text-muted);">
+                    🛑 Marcada com a <strong>no aplicable</strong> per a aquest projecte · els pesos restants s'han re-balancejat
+                </div>`;
+            } else {
+                bodyHtml = missing.length === 0
+                    ? `<div class="pq-dim-done">✓ Aquesta capa està completa</div>`
+                    : `<ul class="pq-dim-missing">${missing.map(m => `
+                        <li class="pq-dim-missing-item">
+                            <span class="pq-dim-missing-icon">●</span>
+                            <span class="pq-dim-missing-text">${_esc(m.label)}</span>
+                            ${m.cta ? `<a class="pq-dim-missing-cta" href="${_esc(m.cta.href)}" data-link>${_esc(m.cta.label)} →</a>` : ''}
+                        </li>`).join('')}</ul>`;
+            }
+            const exclLabel = excluded ? '↩ Marcar com a aplicable' : 'no aplicable';
 
-            return `<section class="pq-dim" id="dim-${_esc(d.id)}">
+            return `<section class="pq-dim" id="dim-${_esc(d.id)}" style="${excluded ? 'opacity:0.7;' : ''}">
                 <div class="pq-dim-head">
                     <span class="pq-dim-icon">${d.icon}</span>
-                    <div class="pq-dim-title">${_esc(d.label)}</div>
-                    <span class="pq-dim-weight">${d.weight}%</span>
-                    <span class="pq-dim-score" style="background:${color}18;color:${color};">${score}</span>
+                    <div class="pq-dim-title" style="${excluded ? 'text-decoration:line-through;' : ''}">${_esc(d.label)}</div>
+                    ${weightStr}
+                    <span class="pq-dim-score" style="background:${color}18;color:${color};${excluded ? 'opacity:0.5;' : ''}">${score}</span>
                 </div>
-                <div class="pq-dim-bar"><div class="pq-dim-bar-fill" style="width:${score}%;background:${color};"></div></div>
-                ${items}
+                <div class="pq-dim-bar"><div class="pq-dim-bar-fill" style="width:${excluded ? 0 : score}%;background:${color};"></div></div>
+                ${bodyHtml}
                 <div class="pq-dim-foot">
-                    <button class="pq-dim-aibtn" data-aifill="${_esc(d.id)}" title="Genera un draft amb IA (cost ~150 tokens · sprint F)">🧠 Ompli amb IA</button>
-                    <button class="pq-dim-noapp" data-noapp="${_esc(d.id)}" title="Marca aquesta capa com a no aplicable per a aquest projecte (sprint F)">no aplicable</button>
+                    ${excluded ? '' : `<button class="pq-dim-aibtn" data-aifill="${_esc(d.id)}" title="Genera un draft amb IA · escalation chain primary→fallback→premium">🧠 Ompli amb IA</button>`}
+                    ${excluded ? '' : `<button class="pq-dim-noapp" data-toggle-ctx="${_esc(d.id)}" title="Afegir context extra (URLs/text/imatges futur · sprint B2)">📎 +context</button>`}
+                    <button class="pq-dim-noapp" data-noapp="${_esc(d.id)}" title="${excluded ? 'Torna a comptabilitzar aquesta capa al score' : 'Marca aquesta capa com a no aplicable · els pesos restants es re-balancegen'}">${exclLabel}</button>
                 </div>
+                ${excluded ? '' : `<div data-ctx-panel-for="${_esc(d.id)}" style="display:none;margin-top:6px;padding-top:8px;border-top:1px solid var(--border-subtle);">
+                    <label style="font-size:10px;color:var(--text-muted);font-weight:700;display:block;margin-bottom:4px;">📎 Context addicional per a la IA · max 2000 chars · serà inclós al prompt</label>
+                    <textarea data-ctx-input="${_esc(d.id)}" placeholder="Pega text, links a docs, descripcions detallades… (ex. una landing existent, una guia tècnica, un brief de client)" style="width:100%;min-height:80px;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:6px 8px;font-family:var(--font-mono);font-size:11px;resize:vertical;box-sizing:border-box;"></textarea>
+                </div>`}
             </section>`;
         }).join('');
     }
@@ -236,16 +257,177 @@ export default class ProjectQualityView {
     }
 
     async afterRender() {
-        // Stub handlers · UX-only fins que arribi sprint F (ProjectQualityIA)
+        // IA-CONTEXT-001 sprint A · botons "Ompli amb IA" ara fan crides reals
+        const { aiFillDim, markAuditAccepted } = await import('../core/aiFillService.js');
+        // IA-CONTEXT-001 sprint C · accept aplica el draft al projecte
+        const { commitApply } = await import('../core/aiApplyService.js');
         document.querySelectorAll('[data-aifill]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._toast('🚧 Ompli amb IA · disponible al sprint F · ~150 tokens per dim · pre-fill amb el corpus KB del sector');
-            });
+            btn.addEventListener('click', () => this._handleAiFill(btn, aiFillDim, markAuditAccepted, commitApply));
         });
         document.querySelectorAll('[data-noapp]').forEach(btn => {
+            btn.addEventListener('click', () => this._toggleDimExclusion(btn.getAttribute('data-noapp')));
+        });
+        // IA-CONTEXT-001 sprint B · toggle panel context extra
+        document.querySelectorAll('[data-toggle-ctx]').forEach(btn => {
             btn.addEventListener('click', () => {
-                this._toast('🚧 "no aplicable" · disponible al sprint F · pesos rebalancejats per al projecte');
+                const dimId = btn.getAttribute('data-toggle-ctx');
+                const panel = document.querySelector('[data-ctx-panel-for="' + dimId + '"]');
+                if (panel) {
+                    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                    if (panel.style.display === 'block') {
+                        panel.querySelector('textarea')?.focus();
+                    }
+                }
             });
+        });
+    }
+
+    // PROJ-QUALITY-001 sprint F · toggle exclusió de la dim
+    async _toggleDimExclusion(dimId) {
+        if (!dimId || !this._projectId || !this._project) return;
+        const current = Array.isArray(this._project.excludedQualityDims)
+            ? this._project.excludedQualityDims.slice()
+            : [];
+        const idx = current.indexOf(dimId);
+        if (idx >= 0) current.splice(idx, 1);
+        else           current.push(dimId);
+        try {
+            const { store } = await import('../core/store.js');
+            await store.dispatch({
+                type: 'UPDATE_PROJECT_INFO',
+                payload: { projectId: this._projectId, updates: { excludedQualityDims: current, updatedAt: Date.now() } },
+            });
+            this._toast(idx >= 0 ? '✓ "' + dimId + '" tornada a comptabilitzar' : '🛑 "' + dimId + '" marcada com a no aplicable');
+            setTimeout(() => {
+                try {
+                    if (typeof window.navigateTo === 'function') {
+                        window.navigateTo(window.location.pathname + window.location.search);
+                    } else { window.location.reload(); }
+                } catch (_) { window.location.reload(); }
+            }, 500);
+        } catch (e) {
+            this._toast('✗ ' + (e?.message || 'error'));
+        }
+    }
+
+    async _handleAiFill(btn, aiFillDim, markAuditAccepted, commitApply) {
+        const dimId = btn.getAttribute('data-aifill');
+        if (!dimId || !this._projectId) return;
+        const origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳ Generant…';
+        // IA-CONTEXT-001 sprint B · llegeix el textarea de context si l'usuari
+        // l'ha omplert per aquesta dim
+        const ctxTextarea = document.querySelector('[data-ctx-input="' + dimId + '"]');
+        const extraContext = ctxTextarea ? (ctxTextarea.value || '').trim() : null;
+        let result;
+        try {
+            result = await aiFillDim({
+                projectId: this._projectId,
+                dimId,
+                extraContext,
+                maxOutputTokens: 800,
+                temperature: 0.4,
+            });
+        } catch (e) {
+            btn.disabled = false;
+            btn.textContent = origText;
+            if (e?.code === 'no-api-key') {
+                this._toast('⚠ Cal API key de ' + (e.provider || 'el provider') + ' · ves a /settings');
+            } else {
+                this._toast('✗ ' + (e?.message || 'error desconegut'));
+            }
+            return;
+        }
+        btn.disabled = false;
+        btn.textContent = origText;
+        if (!result.draft) {
+            this._toast('⚠ Escalation exhausted · cap modèl ha passat l\'evaluator');
+            return;
+        }
+        this._showDraftModal({ dimId, result, markAuditAccepted, commitApply });
+    }
+
+    _showDraftModal({ dimId, result, markAuditAccepted, commitApply }) {
+        // Backdrop
+        const bg = document.createElement('div');
+        bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9990;display:flex;align-items:center;justify-content:center;padding:20px;';
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:1.4rem;max-width:680px;width:100%;max-height:80vh;overflow:auto;color:var(--text-main);';
+        const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+        const attemptsHtml = (result.attempts || []).map(a =>
+            '<li style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">'
+            + (a.evalOk ? '✓' : '✗') + ' ' + escapeHtml(a.modelKey || '?')
+            + (a.evalReason ? ' · ' + escapeHtml(a.evalReason) : '')
+            + '</li>'
+        ).join('');
+        const pretty = result.parsedDraft
+            ? JSON.stringify(result.parsedDraft, null, 2)
+            : (result.draft || '');
+        const canApply = !!result.parsedDraft;
+        card.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                <h2 style="margin:0;font-size:1.2rem;color:var(--text-main);">🧠 Draft IA · dim ${escapeHtml(dimId)}</h2>
+                <span style="background:rgba(99,102,241,0.15);color:var(--accent-indigo);padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${escapeHtml(result.modelKey || '?')}</span>
+                <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" title="Provider · ${result.totalCostEur.toFixed(4)}€ · Marge SOS ${result.marginPct || 0}% · Total ${(result.totalWithMarginEur || result.totalCostEur).toFixed(4)}€">~${(result.totalWithMarginEur || result.totalCostEur).toFixed(4)}€ · ${result.marginEur ? '+' + result.marginEur.toFixed(4) + '€ marge · ' : ''}${result.contextTokens} tokens</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">📜 Chain d'intents</div>
+            <ul style="list-style:none;padding:0;margin:0 0 12px;display:flex;flex-direction:column;gap:2px;">${attemptsHtml}</ul>
+            <pre style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:12px;font-size:12px;font-family:var(--font-mono);white-space:pre-wrap;word-break:break-word;color:var(--text-secondary);max-height:340px;overflow:auto;">${escapeHtml(pretty)}</pre>
+            <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap;">
+                <button class="pq-dim-noapp" id="pqDraftReject">✕ Rebutjar</button>
+                <button class="pq-dim-aibtn"  id="pqDraftAccept" ${canApply ? '' : 'disabled'}>${canApply ? '✓ Acceptar i aplicar al projecte' : '✓ Acceptar (no parseable · sols audit)'}</button>
+            </div>
+            <div id="pqApplyStatus" style="margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.5;"></div>
+        `;
+        bg.appendChild(card);
+        document.body.appendChild(bg);
+        const close = () => bg.remove();
+        bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+        document.getElementById('pqDraftReject')?.addEventListener('click', close);
+        document.getElementById('pqDraftAccept')?.addEventListener('click', async () => {
+            const acceptBtn = document.getElementById('pqDraftAccept');
+            const status    = document.getElementById('pqApplyStatus');
+            acceptBtn.disabled = true;
+            if (canApply) {
+                acceptBtn.textContent = '⏳ Aplicant…';
+                try {
+                    const { store } = await import('../core/store.js');
+                    const { KB }    = await import('../core/kb.js');
+                    const apply = await commitApply({
+                        projectId:   this._projectId,
+                        dimId,
+                        parsedDraft: result.parsedDraft,
+                        store, kb: KB,
+                    });
+                    await markAuditAccepted(result.auditId).catch(() => {});
+                    if (apply.applied) {
+                        this._toast('✓ Aplicat · ' + apply.summary);
+                    } else {
+                        this._toast('🛈 Draft acceptat però sense canvis aplicables · ' + apply.summary);
+                    }
+                    close();
+                    // Refresh score post-apply · re-navigate al mateix /quality
+                    setTimeout(() => {
+                        try {
+                            if (typeof window.navigateTo === 'function') {
+                                window.navigateTo(window.location.pathname + window.location.search);
+                            } else {
+                                window.location.reload();
+                            }
+                        } catch (_) { window.location.reload(); }
+                    }, 600);
+                } catch (e) {
+                    status.textContent = '✗ ' + (e?.message || 'apply va fallar');
+                    status.style.color = 'var(--accent-red)';
+                    acceptBtn.disabled = false;
+                    acceptBtn.textContent = '✓ Acceptar i aplicar al projecte';
+                }
+            } else {
+                await markAuditAccepted(result.auditId).catch(() => {});
+                this._toast('✓ Audit log marcat (draft no parseable · no s\'aplica)');
+                close();
+            }
         });
     }
 

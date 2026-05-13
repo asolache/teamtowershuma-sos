@@ -28,6 +28,8 @@ import {
     isWanderAvailable, connectWander, disconnectWander,
     getWanderConnection,
 } from '../core/arweaveWalletService.js';
+// WALLET-AUTH-001 sprint D · modal unificat "🔑 Identifica't"
+import { identifyButtonHtml } from '../core/identifyModalService.js';
 
 export default class IdentityView {
     constructor() {
@@ -83,7 +85,7 @@ export default class IdentityView {
                 <a href="/" data-link class="id-logo">🗼 Team<span>Towers</span></a>
                 <span class="id-title">Identidad · perfil del operador ${renderExplainerBadge('did', { size: 'xs' })} ${renderExplainerBadge('sbt', { size: 'xs' })}</span>
                 <div class="id-spacer"></div>
-                
+                ${identifyButtonHtml({ size: 'sm' })}
             </div>
 
             <div class="id-main">
@@ -468,8 +470,15 @@ export default class IdentityView {
             } catch (e) {
                 console.error('[permaweb] publish failed', e);
                 const msg = e?.message || 'error desconegut';
-                // Si és el problema conegut de Turbo SDK no carregable
-                if (/turbo-sdk-no-browser|no-browser|loading dynamically/.test(msg)) {
+                // BIZ-MODEL-001 sprint C · plan gating · missatge UX clar
+                if (e?.code === 'plan-required') {
+                    setStatus(
+                        '⚠ Aquesta operació requereix plan <strong>' + (e.requiredPlan || 'pro') + '</strong>. ' +
+                        'Pla actual: <strong>' + (e.currentPlan || 'free') + '</strong>. ' +
+                        '<a href="/settings?upgrade=' + encodeURIComponent(e.requiredPlan || 'pro') + '" data-link style="color:var(--accent-purple);">Anar a /settings per upgrade →</a>',
+                        'var(--accent-orange)'
+                    );
+                } else if (/turbo-sdk-no-browser|no-browser|loading dynamically/.test(msg)) {
                     setStatus(
                         '✗ Turbo SDK no es pot carregar al browser sense bundle local. ' +
                         'Per provar tot el flux ara · ves a <a href="/settings" data-link style="color:var(--accent-purple);">/settings</a> i activa <strong>🧪 Mode test Permaweb</strong>. ' +

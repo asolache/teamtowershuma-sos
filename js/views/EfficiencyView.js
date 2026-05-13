@@ -100,6 +100,9 @@ export default class EfficiencyView {
         await KB.init();
         const all = await KB.query({ type: 'efficiency_log' });
         this.logs = (all || []).sort((a, b) => (b.content?.timestamp || 0) - (a.content?.timestamp || 0));
+        // IA-CONTEXT-001 sprint D · audit logs dels drafts IA del /quality
+        const audits = await KB.query({ type: 'ai_audit' }).catch(() => []);
+        this.aiAudits = (audits || []).sort((a, b) => (b.content?.createdAt || 0) - (a.content?.createdAt || 0));
     }
 
     _render() {
@@ -188,7 +191,9 @@ export default class EfficiencyView {
             <div class="ef-list">
                 ${rowsHtml}
                 ${this.logs.length > 100 ? `<div style="color:var(--text-muted);font-size:0.78rem;text-align:center;padding:0.5rem;">…${this.logs.length - 100} logs más</div>` : ''}
-            </div>`;
+            </div>
+
+            ${this._renderAiAuditsSection()}`;
 
         document.getElementById('efPurge')?.addEventListener('click', async () => {
             if (!confirm('Borrar TODOS los logs de eficiencia? Acumulado y datos de comparación se perderán.')) return;
@@ -198,6 +203,97 @@ export default class EfficiencyView {
             await this._load();
             this._render();
         });
+    }
+
+    // IA-CONTEXT-001 sprint D · render audit log dels drafts IA
+    _renderAiAuditsSection() {
+        const audits = Array.isArray(this.aiAudits) ? this.aiAudits : [];
+        if (audits.length === 0) {
+            return `
+                <div class="ef-hero" style="margin-top:2rem;border-top:1px solid var(--border-default);padding-top:1.4rem;">
+                    <h2 style="margin:0 0 6px 0;font-size:1.1rem;color:var(--text-main);">🧠 Drafts IA · audit log</h2>
+                    <div class="meta">Encara cap draft generat amb "🧠 Ompli amb IA" del /quality. Quan en facis · cada generació es registra aquí amb modelKey · cost provider · marge SOS · status accepted.</div>
+                </div>`;
+        }
+        // Agregats
+        let totalBaseEur = 0;
+        let totalMarginEur = 0;
+        let totalGrossEur = 0;
+        let acceptedCount = 0;
+        const byDim = {};
+        const byModel = {};
+        for (const a of audits) {
+            const c = a.content || {};
+            const base   = Number(c.totalCostEur || 0);
+            const margin = Number(c.marginEur || 0);
+            const gross  = Number(c.totalWithMarginEur || (base + margin));
+            totalBaseEur   += base;
+            totalMarginEur += margin;
+            totalGrossEur  += gross;
+            if (c.accepted) acceptedCount++;
+            const dim = c.dimId || 'other';
+            byDim[dim] = (byDim[dim] || 0) + gross;
+            // Compta per modelKey de l'attempt accepted (si hi és) sinó el primer
+            const modelKey = c.attempts?.find(at => at.evalOk)?.modelKey
+                          || c.attempts?.[0]?.modelKey
+                          || 'unknown';
+            byModel[modelKey] = (byModel[modelKey] || 0) + 1;
+        }
+        const acceptRate = audits.length ? Math.round(acceptedCount / audits.length * 100) : 0;
+        const topDim = Object.entries(byDim).sort((a, b) => b[1] - a[1])[0] || ['—', 0];
+        const topModel = Object.entries(byModel).sort((a, b) => b[1] - a[1])[0] || ['—', 0];
+
+        const rowsHtml = audits.slice(0, 30).map(a => {
+            const c = a.content || {};
+            const when = c.createdAt ? new Date(c.createdAt).toLocaleString('es-ES') : '—';
+            const winnerModel = c.attempts?.find(at => at.evalOk)?.modelKey
+                              || c.attempts?.[0]?.modelKey
+                              || '—';
+            const acceptedBadge = c.accepted
+                ? '<span style="background:rgba(0,230,118,0.12);color:#00e676;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;">✓ Acceptat</span>'
+                : '<span style="background:rgba(148,163,184,0.10);color:var(--text-muted);padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;">— pendent</span>';
+            const escapedPreview = this._esc((c.draftPreview || '').slice(0, 80));
+            return `
+                <div class="ef-row">
+                    <div class="when">${this._esc(when)}</div>
+                    <div class="provider">${this._esc(c.dimId || '?')} · ${this._esc(winnerModel)}</div>
+                    <div class="tokens">${(c.totalWithMarginEur ?? c.totalCostEur ?? 0).toFixed(4)} € ${c.marginEur ? `<span style="color:var(--text-muted);">(+${(c.marginEur).toFixed(4)}€ marge)</span>` : ''}</div>
+                    <div class="nodes">${acceptedBadge}</div>
+                    <div class="saved" style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapedPreview}</div>
+                </div>`;
+        }).join('');
+
+        return `
+            <div class="ef-hero" style="margin-top:2rem;border-top:1px solid var(--border-default);padding-top:1.4rem;">
+                <h2 style="margin:0 0 6px 0;font-size:1.1rem;color:var(--text-main);">🧠 Drafts IA · ${audits.length} generació${audits.length === 1 ? '' : 'ns'}</h2>
+                <div class="meta">Cada vegada que cliques <strong>"🧠 Ompli amb IA"</strong> al /quality, queda registrat aquí amb el modelKey usat (escalation chain), cost provider real, marge SOS (5% IA) i status accepted.</div>
+                <div class="ef-kpis">
+                    <div class="ef-kpi" style="--ef-c:#a855f7;">
+                        <div class="label">Cost total brut</div>
+                        <div class="value">${totalGrossEur.toFixed(4)} €</div>
+                        <div class="sub">provider ${totalBaseEur.toFixed(4)}€ + marge ${totalMarginEur.toFixed(4)}€</div>
+                    </div>
+                    <div class="ef-kpi" style="--ef-c:#00e676;">
+                        <div class="label">Taxa acceptació</div>
+                        <div class="value">${acceptRate} %</div>
+                        <div class="sub">${acceptedCount} / ${audits.length} drafts</div>
+                    </div>
+                    <div class="ef-kpi" style="--ef-c:#6366f1;">
+                        <div class="label">Top dim · cost</div>
+                        <div class="value" style="font-size:1rem;">${this._esc(topDim[0])}</div>
+                        <div class="sub">${topDim[1].toFixed(4)} € acumulats</div>
+                    </div>
+                    <div class="ef-kpi" style="--ef-c:#facc15;">
+                        <div class="label">Modèl més usat</div>
+                        <div class="value" style="font-size:0.85rem;font-family:var(--font-mono);">${this._esc(topModel[0])}</div>
+                        <div class="sub">${topModel[1]} crida${topModel[1] === 1 ? '' : 'des'}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="ef-list">
+                ${rowsHtml}
+                ${audits.length > 30 ? `<div style="color:var(--text-muted);font-size:0.78rem;text-align:center;padding:0.5rem;">…${audits.length - 30} drafts més</div>` : ''}
+            </div>`;
     }
 
     _esc(s) {

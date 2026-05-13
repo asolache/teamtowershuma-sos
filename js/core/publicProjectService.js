@@ -60,15 +60,21 @@ export function validatePublicProjectEntry(node) {
 
 // extractPublicFieldsFromProject · pura · selecciona només camps safe
 // d'un project store entry per publicar al permaweb.
+//
+// FOUNDER-001 sprint C · si projectType === 'foundational-network', marquem
+// l'entry com `template:'founder'` perquè altres operadors la puguin descobrir
+// + clonar des de /registry.
 export function extractPublicFieldsFromProject(project) {
     if (!project || typeof project !== 'object') return null;
+    const projectType = project.projectType || project.matriuProjectType || null;
+    const isFounder   = projectType === 'foundational-network';
     return {
         projectId:        project.id,
         name:             project.nombre || project.name || project.id,
         description:      String(project.description || '').slice(0, 1000),
         sectorId:         project.sector_id || project.based_on_sector || null,
         subtype:          project.subtypeId || null,
-        projectType:      project.projectType || project.matriuProjectType || null,
+        projectType,
         lookingForSkills: Array.isArray(project.lookingForSkills) ? project.lookingForSkills.slice() : [],
         lookingForSectors:Array.isArray(project.lookingForSectors) ? project.lookingForSectors.slice() : [],
         stakeholdersCount: typeof project.stakeholdersCount === 'number'
@@ -76,6 +82,10 @@ export function extractPublicFieldsFromProject(project) {
                            : (Array.isArray(project.roles) ? project.roles.length : 0),
         cohortNumber:     typeof project.matriuCohort === 'number' ? project.matriuCohort : null,
         tags:             Array.isArray(project.tags) ? project.tags.slice() : [],
+        // FOUNDER-001 sprint C · marca template per discovery
+        template:         isFounder ? 'founder' : (project.template || null),
+        templateClonable: !!(isFounder || project.templateClonable),
+        creatorHandle:    project.creatorHandle || null,
     };
 }
 
@@ -135,6 +145,9 @@ export function buildPublicProjectEntry({
             ...(fields.lookingForSkills || []).map(s => 'looking-skill:' + s),
             ...(fields.lookingForSectors || []).map(s => 'looking-sector:' + s),
             ...(typeof fields.cohortNumber === 'number' ? ['cohort:' + fields.cohortNumber] : []),
+            // FOUNDER-001 sprint C · discovery keywords
+            ...(fields.template ? ['template:' + fields.template] : []),
+            ...(fields.templateClonable ? ['template-clonable'] : []),
         ],
         createdAt: now,
         updatedAt: now,
@@ -185,6 +198,13 @@ export function arweaveTagsForProjectEntry(entry) {
         { name: 'SectorId',     value: c.sectorId || '' },
         { name: 'Content-Type', value: 'application/json' },
     ];
+    // FOUNDER-001 sprint C · Template tag per GraphQL filtering "clonable seeds"
+    if (c.template) {
+        tags.push({ name: 'Template', value: String(c.template) });
+    }
+    if (c.templateClonable) {
+        tags.push({ name: 'TemplateClonable', value: 'true' });
+    }
     // PROJ-VERSIONING-001 · tags per GraphQL filtering/sorting
     if (Number.isInteger(c.entryVersion) && c.entryVersion > 0) {
         // Padding zero per que el sort lexicogràfic de Arweave GraphQL coincideixi
@@ -274,6 +294,14 @@ export async function publishProjectToPermaweb({ entry, projectId } = {}) {
     if (!entry || !entry.content) throw new Error('publishProjectToPermaweb requires entry');
     if (!projectId) throw new Error('publishProjectToPermaweb requires projectId (font wallet · habitualment el mateix project que es publica)');
     if (!entry.content.signature) throw new Error('must-sign-first');
+
+    // BIZ-MODEL-001 sprint C · plan enforcement
+    try {
+        const { requirePermission } = await import('./planEnforcer.js');
+        await requirePermission('permaweb-publish');
+    } catch (e) {
+        if (e?.code === 'plan-required') throw e;
+    }
 
     const v = await verifyProjectEntry(entry);
     if (!v.valid) throw new Error('publishProjectToPermaweb · invalid signature: ' + v.reason);
@@ -367,10 +395,23 @@ export async function publishProjectToPermaweb({ entry, projectId } = {}) {
         throw new Error('turbo-upload-failed: ' + (e?.message || e));
     }
 
+    // Sync-bugfix · marquem _cachedAt al moment del publish perquè el
+    // nostre propi entry aparegui immediatament a /opportunities (i als
+    // helpers cached) sense esperar la indexació del gateway. 24h TTL.
+    const now = Date.now();
+    const TTL_BG = 24 * 60 * 60 * 1000;
     const updated = {
         ...entry,
-        content: { ...entry.content, arweaveTxId: txId, permawebPublishedAt: Date.now() },
-        updatedAt: Date.now(),
+        content: {
+            ...entry.content,
+            arweaveTxId:         txId,
+            permawebPublishedAt: now,
+            _cachedAt:           now,
+            _ttlExpiresAt:       now + TTL_BG,
+            _fromPermaweb:       true,
+            _verified:           true,
+        },
+        updatedAt: now,
     };
     try { const { KB } = await import('./kb.js'); await KB.upsert(updated); } catch (_) {}
     return { entry: updated, txId, costEur: price, walletAfter };
@@ -500,3 +541,69 @@ export function validateVersionChain(versions) {
     }
     return { valid: issues.length === 0, issues };
 }
+
+// =============================================================================
+// PROJ-VERSIONING-001 sprint D · cached latest version lookup
+//
+// Per evitar abusar del gateway Arweave amb queries duplicades a cada
+// render del /opportunities, cache TTL 15min per projectId. KB-bound ·
+// el cache sobreviu reload.
+// =============================================================================
+
+const LATEST_CACHE_TTL_MS = 15 * 60 * 1000;   // 15min
+const LATEST_CACHE_TYPE   = 'project_version_cache';
+
+// getLatestVersionCached · async · retorna { entryVersion, txId, blockTimestamp }
+// del cache KB si dins TTL, sinó fa GraphQL + cacheja.
+// Si fail (gateway down) · retorna null silenciosament (no llança al caller).
+export async function getLatestVersionCached({
+    projectId,
+    ttlMs    = LATEST_CACHE_TTL_MS,
+    force    = false,
+    gqlUrl,
+    fetchFn,
+    kb       = null,
+} = {}) {
+    if (!projectId) return null;
+    const cacheId = 'project-latest-' + projectId;
+    let KB;
+    try { KB = kb || (await import('./kb.js')).KB; } catch (_) { KB = null; }
+    if (KB && !force) {
+        try {
+            const node = await KB.getNode(cacheId);
+            if (node && node.type === LATEST_CACHE_TYPE) {
+                const age = Date.now() - (node.content?._cachedAt || 0);
+                if (age < ttlMs) return node.content?.latest || null;
+            }
+        } catch (_) {}
+    }
+    // Fetch fresh
+    let latest = null;
+    try {
+        latest = await getLatestProjectVersion({ projectId, gqlUrl, fetchFn });
+    } catch (e) {
+        console.warn('[publicProject] getLatestVersionCached gateway fail', e?.message);
+        return null;
+    }
+    // Cache
+    if (KB) {
+        try {
+            const now = Date.now();
+            await KB.upsert({
+                id:   cacheId,
+                type: LATEST_CACHE_TYPE,
+                content: {
+                    projectId,
+                    latest,
+                    _cachedAt: now,
+                },
+                keywords:  ['type:project-version-cache', 'projectId:' + projectId],
+                createdAt: now,
+                updatedAt: now,
+            });
+        } catch (_) {}
+    }
+    return latest;
+}
+
+export { LATEST_CACHE_TTL_MS, LATEST_CACHE_TYPE };

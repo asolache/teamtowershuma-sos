@@ -240,9 +240,15 @@ function scoreWorkshops(project, { workshops }) {
 }
 
 // ─── Core · agrupador ────────────────────────────────────────────────────
+// PROJ-QUALITY-001 sprint F · `project.excludedQualityDims` array opt-in
+// permet a l'usuari marcar dims com "no aplicable" (ex. workshops per a
+// consultoria 1:1). Els pesos restants es re-balancegen sumant a 100%.
+//   Ex. exclude workshops (pes 15) → pesos restants 20+30+15+20=85
+//        normalitzats · 20→23.5 · 30→35.3 · 15→17.6 · 20→23.5
+//   El score total es calcula sobre els pesos normalitzats.
 export function computeQualityScore(project, opts = {}) {
     if (!project || !project.id) {
-        return { total: 0, byDim: {}, missing: [], status: 'invalid' };
+        return { total: 0, byDim: {}, missing: [], status: 'invalid', excludedDims: [] };
     }
     const sops        = opts.sops        || [];
     const workshops   = opts.workshops   || [];
@@ -256,15 +262,40 @@ export function computeQualityScore(project, opts = {}) {
         workshops:    scoreWorkshops(project,    { workshops }),
     };
 
+    // Dims excluses opt-in · array al project. Filtrem només dims vàlides.
+    const validDimIds   = new Set(QUALITY_DIMS.map(d => d.id));
+    const excludedDims  = Array.isArray(project.excludedQualityDims)
+        ? project.excludedQualityDims.filter(id => validDimIds.has(id))
+        : [];
+    const excludedSet   = new Set(excludedDims);
+
+    // Pesos efectius · sols dims actives · sumen a 100 via normalització
+    const activeDims    = QUALITY_DIMS.filter(d => !excludedSet.has(d.id));
+    const activeWeightSum = activeDims.reduce((acc, d) => acc + d.weight, 0) || 1;
+
     let total = 0;
-    for (const dim of QUALITY_DIMS) {
+    for (const dim of activeDims) {
         const sc = byDim[dim.id] ? byDim[dim.id].score : 0;
-        total += sc * (dim.weight / 100);
+        const effectiveWeight = dim.weight / activeWeightSum;  // normalitzat a 1
+        total += sc * effectiveWeight;
+        // Marca el byDim amb el pes efectiu (i original) per a UI transparent
+        if (byDim[dim.id]) {
+            byDim[dim.id].effectiveWeight = Math.round(dim.weight / activeWeightSum * 1000) / 10;
+            byDim[dim.id].excluded = false;
+        }
+    }
+    // Marca les dims excluses · score 0 efectiu però visible
+    for (const dim of QUALITY_DIMS) {
+        if (excludedSet.has(dim.id) && byDim[dim.id]) {
+            byDim[dim.id].excluded = true;
+            byDim[dim.id].effectiveWeight = 0;
+        }
     }
     total = Math.round(total);
 
+    // Missing items · sols de dims actives (no apliquem missing a excloses)
     const missing = [];
-    for (const dim of QUALITY_DIMS) {
+    for (const dim of activeDims) {
         const dm = byDim[dim.id] ? byDim[dim.id].missing : [];
         for (const m of dm) missing.push({ dim: dim.id, ...m });
     }
@@ -273,7 +304,7 @@ export function computeQualityScore(project, opts = {}) {
     if (total >= QUALITY_THRESHOLDS.high)        status = 'high';
     else if (total >= QUALITY_THRESHOLDS.medium) status = 'medium';
 
-    return { total, byDim, missing, status };
+    return { total, byDim, missing, status, excludedDims };
 }
 
 export function statusColor(status) {

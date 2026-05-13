@@ -202,5 +202,115 @@ eq(founderResult.stats.transactions, 12,                              'Q · stat
 eq(founderResult.stats.sops,         5,                               'Q · stats.sops 5');
 eq(founderResult.stats.workshops,    3,                               'Q · stats.workshops 3');
 
+// ─── R · FOUNDER-001 sprint C · template:'founder' propagated ──────────
+// extractPublicFieldsFromProject d'un projecte foundational-network ha de
+// portar template='founder' + templateClonable=true
+const fields = svc.extractPublicFieldsFromProject(founderResult.project);
+eq(fields.template,         'founder',                                'R · founder project · template=founder');
+eq(fields.templateClonable, true,                                     'R · founder project · templateClonable=true');
+eq(fields.projectType,      'foundational-network',                   'R · founder project · projectType preserved');
+
+// Projecte normal (no foundational) · sense template
+const regularProject = { id: 'p-reg', nombre: 'Regular', sector_id: 'A', description: 'desc' };
+const fieldsReg = svc.extractPublicFieldsFromProject(regularProject);
+t(!fieldsReg.template,                                                'R · regular project · template null');
+t(!fieldsReg.templateClonable,                                        'R · regular project · templateClonable false');
+
+// buildPublicProjectEntry inclou keywords template:founder + template-clonable
+const founderEntry = svc.buildPublicProjectEntry({
+    project:        founderResult.project,
+    ownerDid:       'did:sos:fake1234567890abcdef',
+    ownerPublicJwk: { kty:'EC', crv:'P-256', x:'AAAA', y:'BBBB' },
+});
+t(founderEntry.keywords.includes('template:founder'),                 'R · entry keywords · template:founder');
+t(founderEntry.keywords.includes('template-clonable'),                'R · entry keywords · template-clonable');
+eq(founderEntry.content.template, 'founder',                          'R · entry content · template=founder');
+
+// Regular project · keywords NO porten template
+const regEntry = svc.buildPublicProjectEntry({
+    project:        regularProject,
+    ownerDid:       'did:sos:fake1234567890abcdef',
+    ownerPublicJwk: { kty:'EC', crv:'P-256', x:'AAAA', y:'BBBB' },
+});
+t(!regEntry.keywords.some(k => k.startsWith('template:')),            'R · regular entry · sense template keyword');
+
+// arweaveTagsForProjectEntry afegeix Template tag per founder
+const founderTags = svc.arweaveTagsForProjectEntry(founderEntry);
+const tplTag = founderTags.find(t => t.name === 'Template');
+t(tplTag && tplTag.value === 'founder',                               'R · arweave tags · Template=founder');
+const cloneTag = founderTags.find(t => t.name === 'TemplateClonable');
+t(cloneTag && cloneTag.value === 'true',                              'R · arweave tags · TemplateClonable=true');
+
+const regTags = svc.arweaveTagsForProjectEntry(regEntry);
+t(!regTags.find(t => t.name === 'Template'),                          'R · regular · sense tag Template');
+
+// ─── S · PROJ-VERSIONING-001 sprint D · getLatestVersionCached ──────────
+t(typeof svc.getLatestVersionCached === 'function',                   'S · getLatestVersionCached exportat');
+t(typeof svc.LATEST_CACHE_TTL_MS === 'number' && svc.LATEST_CACHE_TTL_MS > 0, 'S · LATEST_CACHE_TTL_MS exportat');
+
+// Mock KB · cache hit/miss simulation
+function makeMockKb() {
+    const m = new Map();
+    return { store: m, getNode: async (id) => m.get(id) || null, upsert: async (n) => { m.set(n.id, n); return n; } };
+}
+
+// Mock fetch que retorna 2 versions per al projecte
+const mockGqlOk = {
+    data: {
+        transactions: {
+            edges: [
+                { node: { id: 'TX_V2', block: { height: 2, timestamp: 1700000200 },
+                    tags: [
+                        { name: 'App-Name', value: 'SOS-V11' },
+                        { name: 'Entry-Type', value: 'public-project-entry' },
+                        { name: 'ProjectId', value: 'proj-v' },
+                        { name: 'Version', value: '0002' },
+                        { name: 'Previous-TxId', value: 'TX_V1' },
+                    ],
+                }},
+                { node: { id: 'TX_V1', block: { height: 1, timestamp: 1700000100 },
+                    tags: [
+                        { name: 'App-Name', value: 'SOS-V11' },
+                        { name: 'Entry-Type', value: 'public-project-entry' },
+                        { name: 'ProjectId', value: 'proj-v' },
+                        { name: 'Version', value: '0001' },
+                    ],
+                }},
+            ],
+        },
+    },
+};
+const mockFetchOk = async () => ({ ok: true, json: async () => mockGqlOk });
+
+// 1ª crida · cache miss · fa fetch + cacheja
+const kbS = makeMockKb();
+const latestS1 = await svc.getLatestVersionCached({ projectId: 'proj-v', fetchFn: mockFetchOk, kb: kbS });
+t(latestS1 && latestS1.entryVersion === 2,                            'S · cache miss · fetch + latest v2');
+eq(latestS1.txId, 'TX_V2',                                            'S · txId TX_V2');
+t(kbS.store.has('project-latest-proj-v'),                             'S · cache persistit al KB');
+
+// 2ª crida · cache hit · NO fa fetch
+let fetchCalls = 0;
+const countingFetch = async () => { fetchCalls++; return { ok:true, json: async () => mockGqlOk }; };
+const latestS2 = await svc.getLatestVersionCached({ projectId: 'proj-v', fetchFn: countingFetch, kb: kbS });
+eq(latestS2.entryVersion, 2,                                          'S · cache hit · retorna same data');
+eq(fetchCalls, 0,                                                     'S · cache hit · 0 fetch calls');
+
+// force=true · bypassa cache · fa fetch
+const latestS3 = await svc.getLatestVersionCached({ projectId: 'proj-v', fetchFn: countingFetch, kb: kbS, force: true });
+t(latestS3 && latestS3.entryVersion === 2,                            'S · force=true · refetch');
+eq(fetchCalls, 1,                                                     'S · force=true · 1 fetch call');
+
+// Gateway error · retorna null silent
+const gwFailFetch = async () => ({ ok: false, status: 500 });
+const kbErr = makeMockKb();
+const latestErr = await svc.getLatestVersionCached({ projectId: 'proj-z', fetchFn: gwFailFetch, kb: kbErr });
+eq(latestErr, null,                                                   'S · gateway fail · null silent (no throw)');
+t(!kbErr.store.has('project-latest-proj-z'),                          'S · gateway fail · NO cacheja');
+
+// projectId buit · null
+const latestNul = await svc.getLatestVersionCached({});
+eq(latestNul, null,                                                   'S · projectId buit · null');
+
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

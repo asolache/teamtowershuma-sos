@@ -5,7 +5,13 @@
     "type": "module",
     "private": true,
     "scripts": {
-        "test": "node js/tests/publicRegistry.test.js && node js/tests/fundFlow.test.js && node js/tests/projectQuality.test.js && node js/tests/dashboardOnboarding.test.js && node js/tests/arweaveWalletExt.test.js && node js/tests/aiRouter.test.js && node js/tests/stripeVerify.test.js && node js/tests/projectVersioning.test.js",
+        "test": "node js/tests/publicRegistry.test.js && node js/tests/fundFlow.test.js && node js/tests/projectQuality.test.js && node js/tests/dashboardOnboarding.test.js && node js/tests/arweaveWalletExt.test.js && node js/tests/aiRouter.test.js && node js/tests/stripeVerify.test.js && node js/tests/projectVersioning.test.js && node js/tests/iaFill.test.js && node js/tests/aiProviders.test.js && node js/tests/permawebSyncFix.test.js && node js/tests/aiApply.test.js && node js/tests/syncScheduler.test.js && node js/tests/billing.test.js && node js/tests/workshopRevenue.test.js && node js/tests/planEnforcer.test.js && node js/tests/receipt.test.js && node js/tests/attestation.test.js && node js/tests/aiEvaluator.test.js && node js/tests/identifyModal.test.js",
+        "test:sync-scheduler": "node js/tests/syncScheduler.test.js",
+        "test:billing": "node js/tests/billing.test.js",
+        "test:workshop-revenue": "node js/tests/workshopRevenue.test.js",
+        "test:ia-providers": "node js/tests/aiProviders.test.js",
+        "test:sync-fix": "node js/tests/permawebSyncFix.test.js",
+        "test:ia-apply": "node js/tests/aiApply.test.js",
         "test:permaweb": "node js/tests/publicRegistry.test.js",
         "test:fund-flow": "node js/tests/fundFlow.test.js",
         "test:quality": "node js/tests/projectQuality.test.js",
@@ -14,6 +20,7 @@
         "test:ai-router": "node js/tests/aiRouter.test.js",
         "test:stripe": "node js/tests/stripeVerify.test.js",
         "test:versioning": "node js/tests/projectVersioning.test.js",
+        "test:ia-fill": "node js/tests/iaFill.test.js",
         "build:turbo": "node build/turbo-build.mjs",
         "setup:turbo": "npm install --save-dev @ardrive/turbo-sdk@1.41.2 esbuild esbuild-plugin-polyfill-node && mkdir -p vendor && npm run build:turbo"
     },

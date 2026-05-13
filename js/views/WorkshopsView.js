@@ -94,10 +94,30 @@ function statusMeta(id) {
     return STATUSES.find(s => s.id === id) || STATUSES[0];
 }
 
+// WORKSHOPS-FED-001 sprint A · scope toggle + accessTier filter
+const SCOPE_OPTS = [
+    { id: 'project', label: '📂 Aquest projecte', hint: 'Sols workshops d\'aquest projecte (cal ?project=…)' },
+    { id: 'all',     label: '🌐 Tots projectes',   hint: 'Tots els workshops locals · cross-project discovery' },
+];
+const TIER_OPTS = [
+    { id: 'all',      label: 'Tots tier',  color: 'var(--text-muted)' },
+    { id: 'public',   label: 'Public',     color: '#22c55e' },
+    { id: 'operator', label: 'Operator',   color: '#3b82f6' },
+    { id: 'matriu',   label: 'Matriu',     color: '#a855f7' },
+    { id: 'cohort',   label: 'Cohort',     color: '#f59e0b' },
+];
+
 export default class WorkshopsView {
 
     constructor() {
         this.workshops = [];
+        // Project filter via ?project=… del URL · null si no
+        const params = new URLSearchParams(window.location.search || '');
+        this.projectId = params.get('project') || null;
+        // Default scope · "project" si arribem amb ?project=, "all" altrament
+        this.scopeFilter = this.projectId ? 'project' : 'all';
+        this.tierFilter  = 'all';
+        this.projectsById = new Map();   // omplerta a _loadWorkshops
     }
 
     async getHtml() {
@@ -161,6 +181,8 @@ export default class WorkshopsView {
 
             <div class="ws-main">
                 <div class="ws-stats" id="wsStats"></div>
+                <!-- WORKSHOPS-FED-001 sprint A · filtres scope + accessTier -->
+                <div id="wsFilters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;"></div>
                 <div id="wsBoard"></div>
             </div>
 
@@ -182,8 +204,31 @@ export default class WorkshopsView {
     // ─── data ──────────────────────────────────────────────────────────────
     async _loadWorkshops() {
         await KB.init();
+        await store.init();
         this.workshops = await KB.query({ type: 'workshop' });
         this.workshops.sort((a, b) => (b.content?.date || 0) - (a.content?.date || 0));
+        // WORKSHOPS-FED-001 sprint A · lookup projecte name per badges
+        try {
+            const projects = store.getState().projects || [];
+            this.projectsById = new Map(projects.map(p => [p.id, p]));
+        } catch (_) { this.projectsById = new Map(); }
+        // WORKSHOPS-FED-001 sprint B2 · workshops desbloquejats locally
+        try {
+            const unlocks = await KB.query({ type: 'workshop_unlock' });
+            this._unlockedIds = new Set((unlocks || []).map(u => u.content?.workshopId).filter(Boolean));
+        } catch (_) { this._unlockedIds = new Set(); }
+    }
+
+    // WORKSHOPS-FED-001 sprint A · filtres pur · scope + tier
+    _applyFilters(list) {
+        let out = list;
+        if (this.scopeFilter === 'project' && this.projectId) {
+            out = out.filter(w => (w.content?.projectId || w.projectId) === this.projectId);
+        }
+        if (this.tierFilter && this.tierFilter !== 'all') {
+            out = out.filter(w => (w.content?.accessTier || 'public') === this.tierFilter);
+        }
+        return out;
     }
 
     async _saveWorkshop(node) {
@@ -209,15 +254,67 @@ export default class WorkshopsView {
     // ─── render ─────────────────────────────────────────────────────────────
     _render() {
         this._renderStats();
+        this._renderFilters();
         this._renderBoard();
+    }
+
+    // WORKSHOPS-FED-001 sprint A · renderitza chips filtre + binds
+    _renderFilters() {
+        const root = document.getElementById('wsFilters');
+        if (!root) return;
+        const total      = this.workshops.length;
+        const inScope    = this._applyFilters(this.workshops).length;
+        const projectName = this.projectId
+            ? (this.projectsById.get(this.projectId)?.nombre || this.projectsById.get(this.projectId)?.name || this.projectId)
+            : null;
+        const scopeChips = SCOPE_OPTS.map(s => {
+            const disabled  = s.id === 'project' && !this.projectId;
+            const active    = !disabled && this.scopeFilter === s.id;
+            const cls       = 'ws-link' + (active ? '' : '') ;
+            const styleAct  = active
+                ? 'background:var(--accent-indigo);color:#fff;border:1px solid var(--accent-indigo);'
+                : 'background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-default);';
+            const styleDis  = disabled
+                ? 'opacity:0.45;cursor:not-allowed;'
+                : '';
+            return `<button class="${cls}" data-scope="${s.id}" title="${s.hint}" ${disabled ? 'disabled' : ''} style="font-weight:700;${styleAct}${styleDis}">${s.label}</button>`;
+        }).join('');
+        const tierChips = TIER_OPTS.map(t => {
+            const active = this.tierFilter === t.id;
+            const style  = active
+                ? `background:${t.color}22;color:${t.color};border:1px solid ${t.color};`
+                : 'background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-default);';
+            return `<button class="ws-link" data-tier="${t.id}" style="font-weight:700;${style}">${t.label}</button>`;
+        }).join('');
+        const projBadge = projectName && this.scopeFilter === 'project'
+            ? `<span style="font-size:11px;color:var(--text-muted);">filtre actiu · <strong style="color:var(--text-main);">${this._esc(projectName)}</strong></span>`
+            : '';
+        const totalBadge = `<span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">${inScope} / ${total} workshops</span>`;
+        root.innerHTML = scopeChips + '<span style="width:8px;"></span>' + tierChips + projBadge + totalBadge;
+        // Bind
+        root.querySelectorAll('[data-scope]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.disabled) return;
+                this.scopeFilter = btn.getAttribute('data-scope');
+                this._render();
+            });
+        });
+        root.querySelectorAll('[data-tier]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.tierFilter = btn.getAttribute('data-tier');
+                this._render();
+            });
+        });
     }
 
     _renderStats() {
         const root = document.getElementById('wsStats');
         if (!root) return;
+        // Stats sobre la llista FILTRADA · més útil per a l'usuari
+        const filtered = this._applyFilters(this.workshops);
         const counts = STATUSES.map(s => ({
             ...s,
-            count: this.workshops.filter(w => (w.content?.status || 'propuesta') === s.id).length
+            count: filtered.filter(w => (w.content?.status || 'propuesta') === s.id).length
         }));
         root.innerHTML = counts.map(c => `
             <div class="ws-stat" style="border-left:3px solid ${c.color};">
@@ -226,8 +323,8 @@ export default class WorkshopsView {
             </div>
         `).join('') + `
             <div class="ws-stat" style="border-left:3px solid #6366f1;">
-                <div class="ws-stat-num">${this.workshops.length}</div>
-                <div class="ws-stat-lbl">📚 Total</div>
+                <div class="ws-stat-num">${filtered.length}</div>
+                <div class="ws-stat-lbl">📚 Total (filtrat)</div>
             </div>
         `;
     }
@@ -236,6 +333,7 @@ export default class WorkshopsView {
         const root = document.getElementById('wsBoard');
         if (!root) return;
 
+        const filteredAll = this._applyFilters(this.workshops);
         if (this.workshops.length === 0) {
             root.innerHTML = `
                 <div class="ws-empty">
@@ -244,9 +342,17 @@ export default class WorkshopsView {
                 </div>`;
             return;
         }
+        if (filteredAll.length === 0) {
+            root.innerHTML = `
+                <div class="ws-empty">
+                    Cap workshop coincideix amb el filtre actiu.<br>
+                    Prova "🌐 Tots projectes" o canvia el tier · o crea'n un nou.
+                </div>`;
+            return;
+        }
 
         root.innerHTML = STATUSES.map(s => {
-            const items = this.workshops.filter(w => (w.content?.status || 'propuesta') === s.id);
+            const items = filteredAll.filter(w => (w.content?.status || 'propuesta') === s.id);
             if (items.length === 0) return '';
             return `
                 <div class="ws-section">
@@ -273,6 +379,63 @@ export default class WorkshopsView {
         root.querySelectorAll('[data-ws-report]').forEach(btn => {
             btn.addEventListener('click', () => this._openReportNotesModal(btn.dataset.wsReport));
         });
+        // WORKSHOPS-FED-001 sprint B2 · unlock CTA per a tiers > public
+        root.querySelectorAll('[data-ws-unlock]').forEach(btn => {
+            btn.addEventListener('click', () => this._handleUnlock(btn.dataset.wsUnlock, parseFloat(btn.dataset.wsPrice || '2.5')));
+        });
+    }
+
+    async _handleUnlock(workshopId, priceEur) {
+        const w = this.workshops.find(x => x.id === workshopId);
+        if (!w) return;
+        const c = w.content || {};
+        const title = c.title || c.clientName || workshopId;
+        const cohort = typeof c.cohortNumber === 'number' ? c.cohortNumber : null;
+        const creatorHandle = c.createdBy || c.creatorHandle || '@alvaro';
+        // Calculem el split a priori per al confirm() (transparència UX)
+        let splitInfo = '';
+        try {
+            const { computeUnlockSplit } = await import('../core/workshopRevenueService.js');
+            const split = computeUnlockSplit({
+                priceEur, creatorHandle,
+                projectId: c.projectId || null,
+                cohortNumber: cohort,
+            });
+            splitInfo = `\n\nSplit:\n  Creator (@${creatorHandle.replace(/^@/,'')}) · ${split.creatorEur.toFixed(2)}€\n`
+                      + `  Project · ${split.projectEur.toFixed(2)}€\n`
+                      + `  Cohort ${cohort ?? '—'} · ${split.cohortEur.toFixed(2)}€`;
+        } catch (_) {}
+        const ok = confirm(
+            'Desbloquejar "' + title + '" per ' + priceEur.toFixed(2) + '€?'
+            + splitInfo
+            + '\n\nEs descomptarà del teu wallet personal. Continua?'
+        );
+        if (!ok) return;
+        try {
+            const { recordWorkshopUnlock } = await import('../core/workshopRevenueService.js');
+            const { personalWalletIdFor }  = await import('../core/walletService.js');
+            // Resol handle de l'usuari · matriu_member primari o fallback '@alvaro'
+            let userHandle = '@alvaro';
+            try {
+                const members = await KB.query({ type: 'matriu_member' });
+                const primary = (members || []).find(m => m && (m.content?.isPrimary || m.isPrimary));
+                if (primary && primary.content?.handle) userHandle = primary.content.handle;
+            } catch (_) {}
+            const payerProjectId = personalWalletIdFor(userHandle);
+            const result = await recordWorkshopUnlock({
+                workshop: w,
+                payerProjectId,
+                priceEur,
+                kb: KB,
+                store,
+            });
+            alert('✓ Desbloquejat! · ' + result.unlockId.slice(0, 24) + '…\n\nEl contingut ara és accessible.');
+            this._unlockedIds = this._unlockedIds || new Set();
+            this._unlockedIds.add(workshopId);
+            this._render();
+        } catch (e) {
+            alert('✗ ' + (e?.message || 'unlock va fallar'));
+        }
     }
 
     _cardHtml(w, s) {
@@ -281,9 +444,32 @@ export default class WorkshopsView {
         const audSize = c.audienceSize ? `${c.audienceSize} pers.` : '—';
         const isProposal = s.id === 'propuesta';
         const isAfterDelivery = s.id === 'impartido' || s.id === 'cobrado';
+        // WORKSHOPS-FED-001 sprint A · accessTier pill + projectId badge
+        const tier = c.accessTier || 'public';
+        const tierMeta = TIER_OPTS.find(t => t.id === tier) || TIER_OPTS[1];
+        const tierPill = `<span style="background:${tierMeta.color}22;color:${tierMeta.color};border:1px solid ${tierMeta.color};padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">${tierMeta.label}</span>`;
+        // WORKSHOPS-FED-001 sprint B2 · paywall UI per a tiers > public
+        const isLocked     = tier !== 'public' && !this._unlockedIds?.has(w.id);
+        const priceEur     = typeof c.priceEur === 'number' ? c.priceEur : 2.50;
+        const unlockBtn    = isLocked
+            ? `<button class="ws-btn" data-ws-unlock="${w.id}" data-ws-price="${priceEur}" title="Desbloca el contingut íntegre · 70/20/10 split · creator/project/cohort" style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:0;font-weight:700;">🔓 ${priceEur.toFixed(2)}€</button>`
+            : '';
+        const lockedNote   = isLocked
+            ? `<div class="meta" style="background:rgba(168,85,247,0.06);border-left:3px solid #a855f7;padding:6px 8px;border-radius:4px;font-size:11px;color:var(--text-secondary);">🔒 Preview · contingut íntegre desbloca al pagament. Es reparteix 70/20/10 (creator/project/cohort).</div>`
+            : '';
+        const pidRaw = c.projectId || w.projectId || null;
+        const pidName = pidRaw ? (this.projectsById.get(pidRaw)?.nombre || this.projectsById.get(pidRaw)?.name || pidRaw) : null;
+        const projBadge = pidName && this.scopeFilter === 'all'
+            ? `<a href="/project/${encodeURIComponent(pidRaw)}" data-link style="background:rgba(99,102,241,0.10);color:var(--accent-indigo);border:1px solid rgba(99,102,241,0.3);padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;text-decoration:none;">🏷 ${this._esc(pidName.slice(0,28))}</a>`
+            : '';
+        const titleRow = `<div class="row" style="justify-content:space-between;align-items:center;gap:6px;">
+            <h4 style="margin:0;flex:1;min-width:0;">${this._esc(c.clientName || c.title || '(sense títol)')}</h4>
+            ${tierPill}
+        </div>`;
         return `
             <div class="ws-card" style="--accent:${s.color};">
-                <h4>${this._esc(c.clientName || '(sin cliente)')}</h4>
+                ${titleRow}
+                ${projBadge ? `<div class="meta">${projBadge}</div>` : ''}
                 <div class="meta">${this._esc(svc.label)}</div>
                 <div class="meta">${this._esc(c.sector || '—')} · ${audSize}</div>
                 <div class="meta">📅 ${fmtDate(c.date)}</div>
@@ -296,7 +482,9 @@ export default class WorkshopsView {
                         ${STATUSES.map(st => `<option value="${st.id}" ${st.id===s.id?'selected':''}>${st.emoji} ${st.label}</option>`).join('')}
                     </select>
                 </div>
+                ${lockedNote}
                 <div class="actions">
+                    ${unlockBtn}
                     ${isProposal       ? `<button class="ws-btn ws-btn-primary" data-ws-ai="${w.id}">✨ Propuesta IA</button>` : ''}
                     ${isAfterDelivery  ? `<button class="ws-btn ws-btn-primary" data-ws-report="${w.id}">📝 Generar informe</button>` : ''}
                     <button class="ws-btn danger" data-ws-del="${w.id}">Borrar</button>

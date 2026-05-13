@@ -244,5 +244,54 @@ t(subnavLow.includes('+'),                                           'G · subna
 const subnavEmpty = renderProjectSubnavHtml({});
 t(subnavEmpty === '',                                                'G · sense projecte · subnav buit');
 
+// ─── Sprint F · excludedQualityDims (dim exclusion + rebalanceig) ──────
+const rFullCheck = q.computeQualityScore(fullProject, { sops: fullSops, workshops: fullWorkshops, marketItems: fullMarket });
+t(rFullCheck.total === 100,                                          'H · full project (sense exclusions) · total 100');
+t(Array.isArray(rFullCheck.excludedDims) && rFullCheck.excludedDims.length === 0, 'H · excludedDims buit per default');
+
+const projExclWs = { ...fullProject, excludedQualityDims: ['workshops'] };
+const rExclWs = q.computeQualityScore(projExclWs, { sops: fullSops, workshops: fullWorkshops, marketItems: fullMarket });
+t(rExclWs.total === 100,                                             'H · exclude workshops · total segueix 100');
+t(rExclWs.excludedDims.length === 1,                                 'H · excludedDims · 1 entry');
+t(rExclWs.excludedDims[0] === 'workshops',                           'H · excludedDims · workshops');
+t(rExclWs.byDim.workshops.excluded === true,                         'H · byDim.workshops.excluded=true');
+t(rExclWs.byDim.workshops.effectiveWeight === 0,                     'H · workshops · effectiveWeight 0 quan excluida');
+t(Math.abs(rExclWs.byDim.landing.effectiveWeight - 23.5) < 0.1,      'H · landing · effectiveWeight ~23.5% (20/85)');
+
+const partialP = {
+    id: 'p-mix', nombre: 'Mix',
+    description: 'A description long enough to pass the sixty character minimum threshold here.',
+    presentation_narrative_v1: 'narrative',
+    vna_roles: [], vna_transactions: [],
+};
+const partialW = [{ id:'w1', content:{ projectId:'p-mix', audience:'founders', accessTier:'public' } }];
+const partialM = [{ id:'m1', content:{ projectId:'p-mix' } }];
+const rMix1 = q.computeQualityScore(partialP, { workshops: partialW, marketItems: partialM });
+// landing 100 (20%) · valueMap 0 (30%) · deliverables 0 (15%) · sops 0 (20%) · workshops 100 (15%) → 20+15=35
+t(rMix1.total === 35,                                                'H · partial mix (sense exclusions) · total 35');
+
+// Excloure valueMap, deliverables, sops · queden landing+workshops · sumen 35→normalitzats → total ~100
+const rMix2 = q.computeQualityScore(
+    { ...partialP, excludedQualityDims: ['valueMap', 'deliverables', 'sops'] },
+    { workshops: partialW, marketItems: partialM },
+);
+t(rMix2.total === 100,                                               'H · exclude 3 dims dolentes · total 100');
+t(rMix2.excludedDims.length === 3,                                   'H · excludedDims length 3');
+t(rMix2.byDim.valueMap.excluded,                                     'H · valueMap excluded');
+t(rMix2.byDim.deliverables.excluded,                                 'H · deliverables excluded');
+t(rMix2.byDim.sops.excluded,                                         'H · sops excluded');
+t(!rMix2.byDim.landing.excluded,                                     'H · landing NO excluded');
+
+// Missing items NO inclou els de dims excloses
+const sansMissingFromExcluded = rMix2.missing.every(m => m.dim !== 'valueMap' && m.dim !== 'deliverables' && m.dim !== 'sops');
+t(sansMissingFromExcluded,                                           'H · missing exclou dims marcades no-aplicables');
+
+// excludedQualityDims invàlid (dim que no existeix) · ignorat
+const rBadExcl = q.computeQualityScore(
+    { ...partialP, excludedQualityDims: ['workshops', 'unknown-dim', null, undefined] },
+    { workshops: partialW, marketItems: partialM },
+);
+t(rBadExcl.excludedDims.length === 1,                                'H · excludedDims filtra entries no-existents');
+
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);
