@@ -54,6 +54,16 @@ const rNoOp = svc.canPerform({ planId: 'pro', op: 'unknown-op' });
 t(!rNoOp.allowed,                                                     'F · op desconegut · denied');
 t(/unknown-op/.test(rNoOp.reason),                                    'F · reason inclou unknown-op');
 
+// ─── G · PUBLISH-SELECT-001 · permaweb-publish-paid · free OK pagant fee ─
+const rFreePaid = svc.canPerform({ planId: 'free', op: 'permaweb-publish-paid' });
+t(rFreePaid.allowed,                                                  'G · free + permaweb-publish-paid · OK (pagant fee)');
+const rProPaid  = svc.canPerform({ planId: 'pro', op: 'permaweb-publish-paid' });
+t(rProPaid.allowed,                                                   'G · pro + permaweb-publish-paid · OK');
+// Op unpaid segueix bloquejat per a free
+const rFreeUnpaid = svc.canPerform({ planId: 'free', op: 'permaweb-publish' });
+t(!rFreeUnpaid.allowed,                                               'G · free + permaweb-publish (no-paid) · denied');
+t(svc.VALID_OPS.includes('permaweb-publish-paid'),                    'G · VALID_OPS inclou permaweb-publish-paid');
+
 // sense op · throw shape · allowed=false
 const rNoOpAt = svc.canPerform({ planId: 'pro' });
 t(!rNoOpAt.allowed,                                                   'F · sense op · denied');
