@@ -144,6 +144,94 @@ export default class OpportunitiesView {
         // PROJ-VERSIONING-001 sprint D · async fetch latest version per card
         // (cache TTL 15min · NO bloca render · update banner inline si latest > current)
         this._checkLatestVersions().catch(e => console.warn('[opportunities] latest check', e?.message));
+        // TRUST-001 sprint B · delegat global per al botó "✓ Endorse"
+        // Captura clicks dins de qualsevol card · stopPropagation per evitar
+        // navegació SPA al detail del node.
+        document.addEventListener('click', this._endorseClickHandler = (ev) => {
+            const btn = ev.target.closest('[data-endorse-id]');
+            if (!btn) return;
+            ev.preventDefault(); ev.stopPropagation();
+            this._handleEndorse(btn.getAttribute('data-endorse-id'), btn.getAttribute('data-endorse-type'));
+        }, true);  // capture phase
+    }
+
+    destroy() {
+        if (this._endorseClickHandler) {
+            document.removeEventListener('click', this._endorseClickHandler, true);
+            this._endorseClickHandler = null;
+        }
+    }
+
+    // TRUST-001 sprint B · obre modal de endorse · crea attestation firmada
+    async _handleEndorse(attestedId, attestedType) {
+        if (!attestedId) return;
+        // Modal compacte amb kind selector + statement
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9990;display:flex;align-items:center;justify-content:center;padding:20px;';
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:1.4rem;max-width:480px;width:100%;color:var(--text-main);';
+        card.innerHTML = `
+            <h2 style="margin:0 0 8px 0;font-size:1.1rem;">✓ Endorse · ${escapeHtml(attestedType || 'node')}</h2>
+            <p style="color:var(--text-muted);font-size:0.78rem;line-height:1.5;margin:0 0 14px;">
+                Signaràs ECDSA P-256 una attestation amb el teu DID · queda persistida al KB local i sumarà al trust score visible a /opportunities. <strong>Sense cost</strong> (firmes locals).
+                <br>Target id · <code style="color:var(--accent-purple);font-size:11px;">${escapeHtml(attestedId.slice(0, 32))}…</code>
+            </p>
+            <label style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:700;display:block;margin-bottom:4px;">Tipus d'endorsement</label>
+            <select id="endorseKind" style="width:100%;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:6px 8px;margin-bottom:10px;font-size:0.85rem;">
+                <option value="endorses-operator">endorses-operator · respecte general</option>
+                <option value="endorses-founder">endorses-founder · ×3 weight</option>
+                <option value="cohort-member">cohort-member · ×1.5 weight</option>
+                <option value="workshop-quality">workshop-quality · qualitat detectada</option>
+            </select>
+            <label style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:700;display:block;margin-bottom:4px;">Statement (opcional · ≤500 chars)</label>
+            <textarea id="endorseStatement" rows="3" maxlength="500" placeholder="Per què el respectes? · context i evidència fan que els altres puguin pesar la teva endorsement." style="width:100%;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:6px 8px;font-size:0.82rem;resize:vertical;box-sizing:border-box;"></textarea>
+            <div id="endorseStatus" style="margin-top:10px;font-size:0.78rem;display:none;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+                <button id="endorseCancel" style="background:transparent;color:var(--text-muted);border:1px solid var(--border-default);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:11px;">Cancel·lar</button>
+                <button id="endorseConfirm" style="background:#22c55e;color:#fff;border:0;padding:6px 14px;border-radius:6px;font-weight:700;cursor:pointer;font-size:11px;">✓ Firma + persisteix</button>
+            </div>
+        `;
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+        const close = () => overlay.remove();
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        document.getElementById('endorseCancel').addEventListener('click', close);
+        document.getElementById('endorseConfirm').addEventListener('click', async () => {
+            const kind   = document.getElementById('endorseKind').value;
+            const stmt   = document.getElementById('endorseStatement').value.trim();
+            const status = document.getElementById('endorseStatus');
+            const setS   = (msg, ok = true) => { status.style.display = 'block'; status.textContent = msg; status.style.color = ok ? '#22c55e' : 'var(--accent-red)'; };
+            const btn    = document.getElementById('endorseConfirm');
+            btn.disabled = true; btn.textContent = '⏳ Firmant…';
+            try {
+                const { getOrCreateIdentity } = await import('../core/identityService.js');
+                const { getOrCreateSigningKey } = await import('../core/projectIO.js');
+                const { buildAttestation, recordAttestation } = await import('../core/attestationService.js');
+                const identity = await getOrCreateIdentity();
+                const did = identity?.content?.primaryDid || identity?.primaryDid;
+                if (!did) throw new Error('No s\'ha pogut crear identitat');
+                const keyMeta = await getOrCreateSigningKey();
+                const att = buildAttestation({
+                    attesterDid:       did,
+                    attesterHandle:    identity?.content?.handle || null,
+                    attestedId,
+                    attestedType:      attestedType === 'cv-nodal' ? 'profile' : 'project',
+                    attestationKind:   kind,
+                    statement:         stmt || null,
+                    attesterPublicJwk: keyMeta.publicJwk,
+                });
+                await recordAttestation({ attestation: att, privateJwk: keyMeta.privateJwk, kb: KB });
+                setS('✓ Endorsement persistit + firmat · re-renderitzant…', true);
+                setTimeout(async () => {
+                    close();
+                    await this._loadFromCache();   // re-compute trust scores
+                }, 700);
+            } catch (e) {
+                console.error('[endorse] failed', e);
+                setS('✗ ' + (e?.message || 'error'), false);
+                btn.disabled = false; btn.textContent = '✓ Firma + persisteix';
+            }
+        });
     }
 
     // PUBLISH-SELECT-001 · canvi de tab · update URL · re-render header + grid
@@ -427,6 +515,7 @@ export default class OpportunitiesView {
                     <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
                     <div style="display:flex;align-items:center;gap:6px;">
                         ${cloneBtn}
+                        <button class="op-endorse-btn" data-endorse-id="${escapeHtml(c.projectId || e.id)}" data-endorse-type="project" title="Endorse aquest projecte amb la teva identitat ECDSA" style="background:transparent;color:#22c55e;border:1px solid #22c55e;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">✓ Endorse</button>
                         <span>${typeof c.stakeholdersCount === 'number' ? c.stakeholdersCount + ' stakeholders' : ''}</span>
                     </div>
                 </div>
@@ -571,7 +660,10 @@ export default class OpportunitiesView {
                 </div>
                 <div class="op-card-foot">
                     <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
-                    <span>${publishedAt ? '📅 ' + new Date(publishedAt).toLocaleDateString() : ''}</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <button class="op-endorse-btn" data-endorse-id="${escapeHtml(e.id)}" data-endorse-type="cv-nodal" title="Endorse aquest CV nodal" style="background:transparent;color:#22c55e;border:1px solid #22c55e;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">✓ Endorse</button>
+                        <span>${publishedAt ? '📅 ' + new Date(publishedAt).toLocaleDateString() : ''}</span>
+                    </div>
                 </div>
             </a>
         `;
