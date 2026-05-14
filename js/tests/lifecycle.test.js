@@ -132,24 +132,18 @@ t(prodPh.detail.includes('1 producte'),                           'H · detail 1
 const wsPh = r10.phases.find(p => p.id === 'workshops');
 eq(wsPh.status, 'done',                                           'H · 1 workshop · done');
 
-// ─── I · proposals · pending Wave 1 · pitch/invoices/tokenomics live ─────
+// ─── I · TOTES les phases ja live (Wave 1 closes commercial) ─────────────
+// invoices/tokenomics/pitch/proposals · live amb href · pending si 0 data
 const r11 = computeProjectLifecycle({ project: proj4 });
+for (const id of ['invoices', 'tokenomics', 'pitch', 'proposals']) {
+    const ph = r11.phases.find(p => p.id === id);
+    eq(ph.status, 'pending',                                      'I · ' + id + ' 0 → pending');
+    t(ph.href !== null && ph.href.length > 0,                     'I · ' + id + ' href live (sprint A done)');
+}
 const propPh = r11.phases.find(p => p.id === 'proposals');
-eq(propPh.status, 'pending',                                      'I · proposals pending Wave 1');
-t(propPh.nextAction.includes('Wave 1') || propPh.nextAction.includes('generar'),
-                                                                  'I · proposals nextAction informatiu');
-// invoices · live amb href
-const invPh = r11.phases.find(p => p.id === 'invoices');
-eq(invPh.status, 'pending',                                       'I · invoices 0 → pending');
-t(invPh.href !== null && invPh.href.includes('/invoices'),        'I · invoices href live');
-// tokenomics · live amb href
-const tkPh = r11.phases.find(p => p.id === 'tokenomics');
-eq(tkPh.status, 'pending',                                        'I · tokenomics 0 → pending');
-t(tkPh.href !== null && tkPh.href.includes('/tokenomics'),        'I · tokenomics href live');
-// pitch · live amb href (sprint A done)
-const pitchPh = r11.phases.find(p => p.id === 'pitch');
-eq(pitchPh.status, 'pending',                                     'I · pitch 0 → pending');
-t(pitchPh.href !== null && pitchPh.href.includes('/pitch'),       'I · pitch href live (sprint A done)');
+t(propPh.href.includes('/proposals'),                             'I · proposals href · /proposals?project=...');
+t(propPh.nextAction.includes('Generar') || propPh.nextAction.includes('IA'),
+                                                                  'I · proposals CTA · Generar amb IA');
 
 // ─── J · overall completion · weighted ────────────────────────────────────
 // Projecte amb canvas done · accounting done · pacts done · kanban done ·
