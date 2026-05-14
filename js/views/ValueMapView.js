@@ -3175,27 +3175,28 @@ ${ctxResult.systemPrompt}`;
         const renderRoleCard = (r, levelColor) => {
             const outCount = txs.filter(t => t.from === r.id).length;
             const inCount  = txs.filter(t => t.to   === r.id).length;
-            return `<div style="background:#0e0e14;border:1px solid #1a1a22;border-left:3px solid ${levelColor};border-radius:8px;padding:0.7rem 0.9rem;min-width:180px;flex:0 0 auto;cursor:pointer;transition:transform 0.15s ease;" data-castell-role="${this._escHtml(r.id)}" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='';">
+            return `<div style="background:#0e0e14;border:1px solid #1a1a22;border-left:3px solid ${levelColor};border-radius:8px;padding:0.7rem 0.9rem;min-width:180px;flex:0 0 auto;cursor:grab;transition:transform 0.15s ease;" data-castell-role="${this._escHtml(r.id)}" draggable="true" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='';">
                 <div style="color:#fff;font-size:0.92rem;font-weight:700;margin-bottom:2px;">${this._escHtml(r.name || r.id)}</div>
                 <div style="color:#aaa;font-size:0.72rem;font-family:monospace;">${this._escHtml(r.typical_actor || r.id)}</div>
                 <div style="display:flex;gap:6px;margin-top:6px;font-size:0.7rem;font-family:monospace;">
                     <span style="color:#facc15;" title="Transactions out (origen)">↗ ${outCount}</span>
                     <span style="color:#22c55e;" title="Transactions in (destí)">↙ ${inCount}</span>
+                    <span style="color:#666;flex:1;text-align:right;font-size:0.65rem;" title="Arrossega per canviar de nivell castell">⠿</span>
                 </div>
             </div>`;
         };
 
         const levelRows = LEVEL_DEFS.map(def => {
             const list = rolesByLevel[def.id] || [];
-            return `<div style="margin-bottom:1.4rem;">
+            return `<div style="margin-bottom:1.4rem;" data-castell-drop-level="${def.id}">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
                     <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${def.color};"></span>
                     <h4 style="margin:0;color:${def.color};font-size:0.92rem;font-weight:800;letter-spacing:0.02em;">${this._escHtml(def.label)}</h4>
                     <span style="color:#666;font-size:0.72rem;font-family:monospace;">${list.length} rol${list.length === 1 ? '' : 's'}</span>
                 </div>
                 ${list.length === 0
-                    ? `<div style="color:#666;font-style:italic;font-size:0.78rem;padding:0.5rem 0.9rem;border:1px dashed #2a2a35;border-radius:6px;">— sense rols a aquest nivell —</div>`
-                    : `<div style="display:flex;gap:0.7rem;overflow-x:auto;padding-bottom:6px;">${list.map(r => renderRoleCard(r, def.color)).join('')}</div>`}
+                    ? `<div style="color:#666;font-style:italic;font-size:0.78rem;padding:0.5rem 0.9rem;border:1px dashed #2a2a35;border-radius:6px;min-height:54px;display:flex;align-items:center;" data-castell-drop-zone="${def.id}">— arrossega un rol aquí o crea'n des del mapa —</div>`
+                    : `<div style="display:flex;gap:0.7rem;overflow-x:auto;padding:6px 4px 8px;border:1px dashed transparent;border-radius:8px;transition:border-color 0.15s, background 0.15s;" data-castell-drop-zone="${def.id}">${list.map(r => renderRoleCard(r, def.color)).join('')}</div>`}
             </div>`;
         }).join('');
 
@@ -3236,6 +3237,67 @@ ${ctxResult.systemPrompt}`;
                 this._selectItem(rid, 'role');
             });
         });
+        // VMAP-CASTELL-DND-001 · drag-and-drop entre nivells
+        this._wireCastellDnd(() => this._openCastellModal());
+    }
+
+    // VMAP-CASTELL-DND-001 · DnD compartit entre modal castell i inline overlay
+    // refreshFn · callback per re-renderitzar la vista després del drop
+    _wireCastellDnd(refreshFn) {
+        let draggedId = null;
+        document.querySelectorAll('[data-castell-role]').forEach(el => {
+            el.addEventListener('dragstart', (ev) => {
+                draggedId = el.getAttribute('data-castell-role');
+                el.style.opacity = '0.4';
+                if (ev.dataTransfer) {
+                    ev.dataTransfer.effectAllowed = 'move';
+                    try { ev.dataTransfer.setData('text/plain', draggedId); } catch (_) {}
+                }
+            });
+            el.addEventListener('dragend', () => { el.style.opacity = ''; draggedId = null; });
+        });
+        document.querySelectorAll('[data-castell-drop-zone]').forEach(zone => {
+            zone.addEventListener('dragover', (ev) => {
+                ev.preventDefault();
+                if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+                zone.style.borderColor = 'rgba(168,85,247,0.6)';
+                zone.style.background = 'rgba(168,85,247,0.08)';
+            });
+            zone.addEventListener('dragleave', () => {
+                zone.style.borderColor = '';
+                zone.style.background = '';
+            });
+            zone.addEventListener('drop', async (ev) => {
+                ev.preventDefault();
+                zone.style.borderColor = '';
+                zone.style.background = '';
+                const rid = draggedId || ev.dataTransfer?.getData('text/plain');
+                const newLevel = zone.getAttribute('data-castell-drop-zone');
+                if (!rid || !newLevel) return;
+                const role = (this._state.roles || []).find(r => r.id === rid);
+                if (!role) return;
+                if ((role.castell_level || 'tronc') === newLevel) return;
+                role.castell_level = newLevel;
+                // Re-render del graph + persisteix al store si hi ha projectId
+                try {
+                    if (this._zoomGroup) this._rebuildGraph(this._zoomGroup);
+                    if (this._state.projectId) {
+                        const { store } = await import('../core/store.js');
+                        await store.dispatch({
+                            type:    'UPDATE_PROJECT_INFO',
+                            payload: { projectId: this._state.projectId, updates: { vna_roles: this._state.roles, updatedAt: Date.now() } },
+                        });
+                    }
+                } catch (e) { console.warn('[castell-dnd] persist failed', e?.message); }
+                this._toast('✓ Rol "' + (role.name || rid) + '" mogut a ' + newLevel);
+                if (typeof refreshFn === 'function') {
+                    // Tanca i re-obre per refrescar el render
+                    const existing = document.getElementById('vmapCastellRoot') || document.getElementById('vmapCastellInlineOverlay');
+                    if (existing) existing.remove();
+                    refreshFn();
+                }
+            });
+        });
     }
 
     // VMAP-CASTELL-INLINE-001 · toggle vista castell sobreposada al canvas.
@@ -3274,23 +3336,23 @@ ${ctxResult.systemPrompt}`;
         const renderCard = (r, color) => {
             const outCount = txs.filter(t => t.from === r.id).length;
             const inCount  = txs.filter(t => t.to   === r.id).length;
-            return `<div style="background:rgba(5,5,7,0.9);border:1px solid #1a1a22;border-left:3px solid ${color};border-radius:6px;padding:6px 9px;flex:0 0 auto;min-width:140px;cursor:pointer;backdrop-filter:blur(4px);" data-castell-inline-role="${this._escHtml(r.id)}">
+            return `<div style="background:rgba(5,5,7,0.9);border:1px solid #1a1a22;border-left:3px solid ${color};border-radius:6px;padding:6px 9px;flex:0 0 auto;min-width:140px;cursor:grab;backdrop-filter:blur(4px);" data-castell-role="${this._escHtml(r.id)}" data-castell-inline-role="${this._escHtml(r.id)}" draggable="true">
                 <div style="color:#fff;font-size:0.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${this._escHtml(r.name || r.id)}</div>
-                <div style="color:#aaa;font-size:0.66rem;font-family:monospace;margin-top:2px;">${outCount}↗ · ${inCount}↙</div>
+                <div style="color:#aaa;font-size:0.66rem;font-family:monospace;margin-top:2px;">${outCount}↗ · ${inCount}↙ <span style="color:#555;float:right;" title="Arrossega per canviar de nivell">⠿</span></div>
             </div>`;
         };
 
         const rows = LEVEL_DEFS.map(def => {
             const list = rolesByLevel[def.id] || [];
-            return `<div style="margin-bottom:0.7rem;">
+            return `<div style="margin-bottom:0.7rem;" data-castell-drop-level="${def.id}">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
                     <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${def.color};"></span>
                     <span style="color:${def.color};font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">${def.label}</span>
                     <span style="color:#666;font-size:0.66rem;font-family:monospace;">${list.length}</span>
                 </div>
                 ${list.length === 0
-                    ? `<div style="color:#444;font-size:0.7rem;font-style:italic;padding-left:18px;">— buit —</div>`
-                    : `<div style="display:flex;gap:6px;overflow-x:auto;padding-left:18px;padding-bottom:4px;">${list.map(r => renderCard(r, def.color)).join('')}</div>`}
+                    ? `<div style="color:#444;font-size:0.7rem;font-style:italic;padding:0.4rem 0.6rem;margin-left:18px;border:1px dashed #2a2a35;border-radius:6px;min-height:32px;display:flex;align-items:center;" data-castell-drop-zone="${def.id}">— arrossega un rol aquí —</div>`
+                    : `<div style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 4px 18px;border:1px dashed transparent;border-radius:6px;transition:border-color 0.15s, background 0.15s;" data-castell-drop-zone="${def.id}">${list.map(r => renderCard(r, def.color)).join('')}</div>`}
             </div>`;
         }).join('');
 
@@ -3311,10 +3373,19 @@ ${ctxResult.systemPrompt}`;
         canvas.appendChild(overlay);
         document.getElementById('vmapCastellInlineClose')?.addEventListener('click', () => overlay.remove());
         overlay.querySelectorAll('[data-castell-inline-role]').forEach(el => {
-            el.addEventListener('click', () => {
-                const rid = el.getAttribute('data-castell-inline-role');
-                this._selectItem(rid, 'role');
+            // Click obre inspector · NO interfereix amb drag (drag té diferent timing)
+            el.addEventListener('click', (ev) => {
+                if (ev.target === el && !el.hasAttribute('data-dragged-recent')) {
+                    const rid = el.getAttribute('data-castell-inline-role');
+                    this._selectItem(rid, 'role');
+                }
             });
+        });
+        // VMAP-CASTELL-DND-001 · DnD també a inline · re-render via _toggleCastellInline
+        this._wireCastellDnd(() => {
+            const ex = document.getElementById('vmapCastellInlineOverlay');
+            if (ex) ex.remove();
+            this._toggleCastellInline();
         });
     }
 
