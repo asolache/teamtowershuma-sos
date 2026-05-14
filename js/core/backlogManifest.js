@@ -119,12 +119,16 @@ export const INITIAL_BACKLOG = Object.freeze([
         title: 'Badge "🧪 mock" visual a cards de /opportunities',
         description: 'Indicador visual a cards quan txId comença per "mock-" (entries locals · no cross-device). Tanca el feedback loop del sync auditing.',
         principles: ['principle-1-nodes'],
-        status: 'pending',
+        status: 'completed',
         priority: 'low',
         complexity: 'XS',
         dependencies: ['sync-cross-001'],
-        testRequirements: [],
+        testRequirements: [
+            'opportunitiesMockBadge.test.js · isMockTxId helper · prefix detect',
+        ],
         suggestedFiles: ['js/views/OpportunitiesView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
     Object.freeze({
         id: 'opportunities-autosync',

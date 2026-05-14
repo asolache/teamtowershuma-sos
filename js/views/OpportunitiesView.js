@@ -47,6 +47,20 @@ function _gradientForId(id) {
     return `linear-gradient(135deg, hsl(${h1},55%,50%), hsl(${h2},55%,40%))`;
 }
 
+// BACKLOG · mock-badge-cards · entries amb txId començant per "mock-" són
+// locals (no cross-device). Helper centralitzat per a totes les cards.
+export function isMockTxId(tx) {
+    return typeof tx === 'string' && tx.startsWith('mock-');
+}
+function _renderTxBadge(tx) {
+    if (!tx) return '<span style="opacity:0.55;">(local)</span>';
+    if (isMockTxId(tx)) {
+        const short = escapeHtml(tx.slice(0, 14)) + '…';
+        return `<span title="Entry local (mock txId) · no cross-device · cal Wander o keyfile per a upload real" style="display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:999px;background:rgba(250,204,21,0.12);color:#facc15;border:1px solid rgba(250,204,21,0.35);font-size:10px;font-weight:800;font-family:var(--font-mono);">🧪 mock · ${short}</span>`;
+    }
+    return `<span title="Arweave txId · permaweb permanent" style="font-family:var(--font-mono);">🌐 ${escapeHtml(tx.slice(0, 10))}…</span>`;
+}
+
 export default class OpportunitiesView {
     constructor() {
         document.title = 'Oportunitats · Permaweb · SOS V11';
@@ -543,7 +557,7 @@ export default class OpportunitiesView {
                     ${sectors.map(s => `<span class="op-chip sector">🌐 ${escapeHtml(s)}</span>`).join('')}
                 </div>` : ''}
                 <div class="op-card-foot">
-                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${_renderTxBadge(tx)}</span>
                     <div style="display:flex;align-items:center;gap:6px;">
                         ${cloneBtn}
                         <button class="op-endorse-btn" data-endorse-id="${escapeHtml(c.projectId || e.id)}" data-endorse-type="project" title="Endorse aquest projecte amb la teva identitat ECDSA" style="background:transparent;color:#22c55e;border:1px solid #22c55e;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">✓ Endorse</button>
@@ -581,7 +595,7 @@ export default class OpportunitiesView {
                 ${c.description ? `<div class="op-card-desc">${escapeHtml(c.description)}</div>` : ''}
                 ${skills.length ? `<div class="op-card-chips">${skills.map(s => `<span class="op-chip skill">🧠 ${escapeHtml(s)}</span>`).join('')}</div>` : ''}
                 <div class="op-card-foot">
-                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${_renderTxBadge(tx)}</span>
                     <span>${c.deadline ? '⏰ ' + new Date(c.deadline).toLocaleDateString() : ''}</span>
                 </div>
             </a>
@@ -613,7 +627,7 @@ export default class OpportunitiesView {
                 ${c.description ? `<div class="op-card-desc">${escapeHtml(c.description)}</div>` : ''}
                 ${Array.isArray(c.deliverables) && c.deliverables.length ? `<div class="op-card-chips">${c.deliverables.slice(0, 4).map(d => `<span class="op-chip skill">📦 ${escapeHtml(d)}</span>`).join('')}</div>` : ''}
                 <div class="op-card-foot">
-                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${_renderTxBadge(tx)}</span>
                     <span>${c.savingsCompareTo ? '💰 estalvi ' + escapeHtml(c.savingsCompareTo) : ''}</span>
                 </div>
             </a>
@@ -645,7 +659,7 @@ export default class OpportunitiesView {
                 </div>
                 ${c.description ? `<div class="op-card-desc">${escapeHtml(c.description)}</div>` : ''}
                 <div class="op-card-foot">
-                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${_renderTxBadge(tx)}</span>
                     <span>${c.date ? '📅 ' + new Date(c.date).toLocaleDateString() : ''}</span>
                 </div>
             </a>
@@ -690,7 +704,7 @@ export default class OpportunitiesView {
                     Context bundle publicat · curat com a flux de valor per a agents IA · CV nodal verificable
                 </div>
                 <div class="op-card-foot">
-                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${_renderTxBadge(tx)}</span>
                     <div style="display:flex;align-items:center;gap:6px;">
                         <button class="op-endorse-btn" data-endorse-id="${escapeHtml(e.id)}" data-endorse-type="cv-nodal" title="Endorse aquest CV nodal" style="background:transparent;color:#22c55e;border:1px solid #22c55e;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">✓ Endorse</button>
                         <span>${publishedAt ? '📅 ' + new Date(publishedAt).toLocaleDateString() : ''}</span>
