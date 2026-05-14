@@ -70,6 +70,8 @@ const ROUTES = [
     { path: '/sprint',       view: () => import('./views/SprintView.js') },
     // CANVAS-WIZARD sprint A · /canvas?project=X · 5-step project canvas
     { path: '/canvas',       view: () => import('./views/ProjectCanvasView.js') },
+    // LEDGER-ACCOUNTING sprint A · /accounting?project=X · double-entry
+    { path: '/accounting',   view: () => import('./views/AccountingView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
