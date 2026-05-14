@@ -22,6 +22,11 @@ import {
     buildPactDraft, addSignature, pactSummary, renderPactMarkdown,
     signPactWithKey, verifyPactSignature,
 } from '../core/pactService.js';
+import {
+    buildEnrichedPactDraft, buildAiPromptForPactClauses, applyAIDraftToPact,
+} from '../core/pactEnrichmentService.js';
+import { attachAIFormFeedback, renderInlineFeedbackHtml } from '../core/aiFormFeedback.js';
+import { label } from '../core/sosCopy.js';
 import { getOrCreateSigningKey } from '../core/projectIO.js';
 import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
 
@@ -311,7 +316,23 @@ export default class PactBuilderView {
             <button class="pb-btn pb-btn-large" id="pbSaveAll">💾 Guardar canvis al pacte</button>
             <button class="pb-btn-secondary" id="pbReset">↺ Reiniciar amb defaults</button>
         </div>
+
+        <!-- PACT-AI sprint A · enriquir des del projecte + IA -->
+        <div class="pb-actions" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border-default);flex-direction:column;align-items:stretch;gap:8px;">
+            <div style="font-size:0.78rem;color:var(--text-secondary);">
+                ✨ <strong>Connectat amb el projecte</strong> · agafa parties dels rols cohort manager · capital del ledger · vesting del tokenomics · sunset metric dels invoices.
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="pb-btn-secondary" id="pbEnrich" style="background:rgba(34,197,94,0.12);color:#22c55e;border-color:rgba(34,197,94,0.4);">🔮 Enriquir des del projecte</button>
+                <button class="pb-btn-secondary" id="pbAiGenerate" style="background:rgba(168,85,247,0.12);color:#a855f7;border-color:rgba(168,85,247,0.4);">${this._esc(label('cta.generate'))} clàusules</button>
+            </div>
+            ${renderInlineFeedbackHtml({ id: 'pbAiFeedback' })}
+        </div>
         `;
+    }
+
+    _esc(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     _renderStyle() {
@@ -394,6 +415,9 @@ export default class PactBuilderView {
         document.querySelectorAll('[data-sign]').forEach(btn => btn.addEventListener('click', (e) => this._handleSign(e.target.dataset.sign)));
         document.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', (e) => this._handleRemoveParty(parseInt(e.target.dataset.remove, 10))));
         document.getElementById('pbCopyMarkdown')?.addEventListener('click', () => this._handleCopyMarkdown());
+        // PACT-AI · enrich + AI generate
+        document.getElementById('pbEnrich')?.addEventListener('click', () => this._handleEnrich());
+        document.getElementById('pbAiGenerate')?.addEventListener('click', () => this._handleAiGenerate());
         // Render markdown preview
         const md = renderPactMarkdown(this.pact);
         const pre = document.getElementById('pbMarkdownPreview');
@@ -551,6 +575,113 @@ export default class PactBuilderView {
             alert('✓ Markdown copiat al clipboard.');
         } catch (e) {
             alert('Error copiant: ' + (e?.message || e));
+        }
+    }
+
+    // ─── PACT-AI sprint A · enriquir des del projecte + IA ────────────────
+    async _gatherEnrichContext() {
+        // Carrega totes les fonts en paral·lel · defensive
+        const [roles, attestations, members, ledger, tokenomics, invoices, marketItems] = await Promise.all([
+            KB.query({ type: 'role',             projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'attestation'                                 }).catch(() => []),
+            KB.query({ type: 'matriu_member'                               }).catch(() => []),
+            KB.query({ type: 'ledger_entry',     projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'token_design',     projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'invoice',          projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'market_item',      projectId: this.projectId }).catch(() => []),
+        ]);
+        return { roles: roles || [], attestations: attestations || [], members: members || [], ledger: ledger || [], tokenomics: tokenomics || [], invoices: invoices || [], marketItems: marketItems || [] };
+    }
+
+    async _handleEnrich() {
+        if (!this.pact || !this.project) return;
+        const fb = attachAIFormFeedback(document.getElementById('pbAiFeedback'), { autoFadeOk: 4000 });
+        try {
+            fb.addEvent({ kind: 'message', icon: '🔮', title: 'Llegint context del projecte…', detail: 'roles · ledger · tokenomics · invoices · attestations', level: 'info' });
+            const ctx = await this._gatherEnrichContext();
+            const draft = buildEnrichedPactDraft({
+                project:           this.project,
+                canvas:            this.project.content?.canvas,
+                tokenomicsDesigns: ctx.tokenomics,
+                ledgerEntries:     ctx.ledger,
+                roles:             ctx.roles,
+                attestations:      ctx.attestations,
+                members:           ctx.members,
+                invoices:          ctx.invoices,
+                marketItems:       ctx.marketItems,
+            });
+            // Apply enriched clauses + parties al pact actual (no sobreescriu signatures)
+            const next = {
+                ...this.pact,
+                content: {
+                    ...this.pact.content,
+                    clauses: draft.clauses,
+                    // Sols afegim parties noves · no esborrem les que ja hi són
+                    parties: this._mergeParties(this.pact.content.parties || [], draft.parties),
+                },
+                updatedAt: Date.now(),
+            };
+            this.pact = next;
+            await KB.upsert(next);
+            fb.setOk('Enriquit · ' + draft.parties.length + ' parties · capital €' + draft.context.capitalSnapshot.equityRaised + ' · vesting ' + draft.clauses.vesting.cliffMonths + 'm+' + draft.clauses.vesting.months + 'm');
+            setTimeout(() => window.location.reload(), 1200);
+        } catch (e) {
+            fb.setError(e?.message || label('state.error'));
+        }
+    }
+
+    _mergeParties(existing, fromEnrich) {
+        const out = (existing || []).slice();
+        const existingIds = new Set(out.map(p => p.identityId));
+        for (const p of fromEnrich || []) {
+            if (!existingIds.has(p.identityId)) out.push(p);
+        }
+        return out;
+    }
+
+    async _handleAiGenerate() {
+        if (!this.pact || !this.project) return;
+        const fb = attachAIFormFeedback(document.getElementById('pbAiFeedback'), { autoFadeOk: 0 });
+        try {
+            const ctx = await this._gatherEnrichContext();
+            const draft = buildEnrichedPactDraft({
+                project:           this.project,
+                canvas:            this.project.content?.canvas,
+                tokenomicsDesigns: ctx.tokenomics,
+                ledgerEntries:     ctx.ledger,
+                roles:             ctx.roles,
+                attestations:      ctx.attestations,
+                members:           ctx.members,
+                invoices:          ctx.invoices,
+                marketItems:       ctx.marketItems,
+            });
+            fb.setThinking({ kind: 'runner-start', sopTitle: 'Pacte · ' + (this.project.nombre || this.project.id), iteration: 1 });
+            const { runEscalation } = await import('../core/aiRouterService.js');
+            const prompt = buildAiPromptForPactClauses(draft);
+            const result = await runEscalation({ prompt, taskKind: 'creative-narrative', maxAttempts: 3 });
+            const raw = (result && (result.output || result.text || result.result)) || '';
+            const applied = applyAIDraftToPact(draft, raw);
+            if (!applied.applied) {
+                fb.setWarning('IA · ' + (applied.error || 'output no parsejable') + ' · pots refrescar i tornar a provar');
+                return;
+            }
+            // Aplica object + ai notes al pact actual
+            const next = {
+                ...this.pact,
+                content: {
+                    ...this.pact.content,
+                    clauses: applied.enrichedDraft.clauses,
+                    aiNotes: applied.enrichedDraft.aiNotes,
+                },
+                updatedAt: Date.now(),
+            };
+            this.pact = next;
+            await KB.upsert(next);
+            fb.setOk(label('state.done') + ' · clàusules refinades amb IA · revisa abans de signar');
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (e) {
+            console.warn('[pact] AI generate failed', e);
+            fb.setError(e?.message || label('err.ai_failed'));
         }
     }
 
