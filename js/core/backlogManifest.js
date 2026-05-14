@@ -416,6 +416,21 @@ export const INITIAL_BACKLOG = Object.freeze([
     }),
 
     Object.freeze({
+        id: 'ikigai-profile',
+        title: 'Ikigai profile editor + display · 4 dimensions + 5 intersections',
+        description: 'Servei pure ikigaiService · 4 IKIGAI_DIMENSIONS (loves/goodAt/worldNeeds/paidFor) + 5 INTERSECTIONS (passion/profession/vocation/mission/ikigai · centre). buildEmptyIkigai · applyIkigaiDimension (dedupe case + max 15) · addIkigaiItem · removeIkigaiItem · validateIkigai · computeIkigaiCompleteness · computeIntersections (case-insensitive · retorna grafia original) · applyIkigaiToMember · ikigaiBadge (levels none/partial/growing/almost/ikigai). ProfileView card amb 4 dimensions visualitzades + 5 intersections + progress bar + edit modal interactiu. Persisteix a matriu_member.content.ikigai. Tab Usuaris a /opportunities mostra 🌸 badge si té ikigai.',
+        principles: ['principle-1-nodes', 'principle-2-roles'],
+        status: 'completed',
+        priority: 'medium',
+        complexity: 'M',
+        dependencies: ['profile-public-view'],
+        testRequirements: ['ikigai.test.js · 75 tests · 4 dims + 5 intersections · applyDimension dedupe+normalize · validate missing dims · completeness · intersections case-insensitive · ikigaiBadge 5 levels'],
+        suggestedFiles: ['js/core/ikigaiService.js', 'js/views/ProfileView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
+    }),
+
+    Object.freeze({
         id: 'market-permaweb-federation',
         title: 'Market permaweb federation + Users tab a /opportunities',
         description: '/market ara agrega també public_market_item_entry + public_workshop_entry del permaweb cross-device (5 sources totals). Stats strip mostra count permaweb separat. Cards amb badge 🌐 verd quan són permaweb · dedupe local+permaweb · permaweb sempre visible (ignora visibleProjectIds). Nou tab Usuaris a /opportunities · llista matriu_member federats amb avatar + skills + cohort + 🌸 ikigai badge. Filter de search inclou displayName/handle/bio/skills/sectors. Cards usuaris linkables a /u/{handle}.',
