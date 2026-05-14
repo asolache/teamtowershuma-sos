@@ -82,6 +82,8 @@ const ROUTES = [
     { path: '/pitch',        view: () => import('./views/ProjectPitchView.js') },
     // PROPOSAL-GENERATOR sprint A · /proposals?project=X · IA brief + skill match
     { path: '/proposals',    view: () => import('./views/ProposalView.js') },
+    // SWARM-PARALLEL sprint A · /swarm?project=X · DAG executor paral·lel
+    { path: '/swarm',        view: () => import('./views/SwarmFlowView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
