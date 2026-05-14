@@ -76,6 +76,8 @@ const ROUTES = [
     { path: '/lifecycle',    view: () => import('./views/ProjectLifecycleView.js') },
     // INVOICE-BILLING sprint A · /invoices?project=X · CRUD + auto-ledger
     { path: '/invoices',     view: () => import('./views/InvoiceView.js') },
+    // TOKENOMICS sprint A · /tokenomics?project=X · designer + vesting
+    { path: '/tokenomics',   view: () => import('./views/TokenomicsView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 

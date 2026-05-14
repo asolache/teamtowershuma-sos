@@ -16,6 +16,7 @@
 import { computeCanvasCompletion } from './projectCanvasService.js';
 import { computeBalanceSheet, computePLForPeriod, LEDGER_ENTRY_TYPE } from './ledgerService.js';
 import { computeInvoicesStatusBreakdown } from './invoiceService.js';
+import { computeQualityScore as computeTokenomicsScore, TOKEN_DESIGN_TYPE } from './tokenomicsService.js';
 
 // Lifecycle phases · ordre fix · referent per al dashboard.
 export const LIFECYCLE_PHASES = Object.freeze([
@@ -230,23 +231,28 @@ function _phasePacts(p, pacts, pid) {
 
 function _phaseTokenomics(p, tokenomics, pid) {
     const relevant = (tokenomics || []).filter(x => x?.projectId === pid);
+    const href = '/tokenomics?project=' + encodeURIComponent(pid);
     if (relevant.length === 0) {
         return {
             ...p,
             status:     'pending',
             completion: 0,
-            detail:     'Cap token design · Wave 1 pendent',
-            nextAction: 'Wave 1 · dissenyar tokenomics',
-            href:       null,
+            detail:     'Cap token design encara',
+            nextAction: 'Dissenyar tokenomics',
+            href,
         };
     }
+    // Take most recent · compute quality
+    const latest = relevant.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+    const q = computeTokenomicsScore(latest);
+    const status = q.score >= 75 ? 'done' : (q.score > 0 ? 'partial' : 'pending');
     return {
         ...p,
-        status:     'done',
-        completion: 1,
-        detail:     relevant.length + ' token design(s)',
-        nextAction: null,
-        href:       null,
+        status,
+        completion: q.score / 100,
+        detail:     latest.content?.symbol + ' · supply ' + (latest.content?.totalSupply || 0).toLocaleString() + ' · quality ' + q.score + '/100',
+        nextAction: status === 'done' ? null : 'Millorar design (score < 75)',
+        href,
     };
 }
 

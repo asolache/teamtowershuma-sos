@@ -132,19 +132,23 @@ t(prodPh.detail.includes('1 producte'),                           'H · detail 1
 const wsPh = r10.phases.find(p => p.id === 'workshops');
 eq(wsPh.status, 'done',                                           'H · 1 workshop · done');
 
-// ─── I · pitch / tokenomics / proposals · pending Wave 1 ──────────────────
-// invoices ja és live (sprint A done) · té href · pending si 0 invoices
+// ─── I · pitch / proposals · pending Wave 1 ──────────────────────────────
+// invoices i tokenomics ja són live (sprint A done) · té href · pending si 0
 const r11 = computeProjectLifecycle({ project: proj4 });
-for (const id of ['pitch', 'tokenomics', 'proposals']) {
+for (const id of ['pitch', 'proposals']) {
     const ph = r11.phases.find(p => p.id === id);
     eq(ph.status, 'pending',                                      'I · ' + id + ' pending Wave 1');
-    t(ph.nextAction.includes('Wave 1') || ph.nextAction.includes('crear') || ph.nextAction.includes('dissenyar') || ph.nextAction.includes('generar'),
+    t(ph.nextAction.includes('Wave 1') || ph.nextAction.includes('crear') || ph.nextAction.includes('generar'),
                                                                   'I · ' + id + ' nextAction informatiu');
 }
-// invoices · ja és live · pending amb href si 0 invoices
+// invoices · live amb href · pending si 0 invoices
 const invPh = r11.phases.find(p => p.id === 'invoices');
 eq(invPh.status, 'pending',                                       'I · invoices 0 → pending');
-t(invPh.href !== null && invPh.href.includes('/invoices'),        'I · invoices href live (sprint A done)');
+t(invPh.href !== null && invPh.href.includes('/invoices'),        'I · invoices href live');
+// tokenomics · live amb href · pending si 0 designs
+const tkPh = r11.phases.find(p => p.id === 'tokenomics');
+eq(tkPh.status, 'pending',                                        'I · tokenomics 0 → pending');
+t(tkPh.href !== null && tkPh.href.includes('/tokenomics'),        'I · tokenomics href live (sprint A done)');
 
 // ─── J · overall completion · weighted ────────────────────────────────────
 // Projecte amb canvas done · accounting done · pacts done · kanban done ·

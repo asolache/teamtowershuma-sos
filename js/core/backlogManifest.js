@@ -325,15 +325,17 @@ export const INITIAL_BACKLOG = Object.freeze([
 
     Object.freeze({
         id: 'tokenomics-designer',
-        title: 'Tokenomics Designer · /p/{id}/tokenomics distribució + vesting',
-        description: 'Generalitza el fairfractal existent · token name · symbol · supply · distribution (sliders per role/founder/treasury/community) · vesting schedule (cliff + linear). Persisteix com a token_design node. Reusa fairfractal compute.',
+        title: 'Tokenomics Designer · /tokenomics?project=X distribució + vesting',
+        description: 'Generalitza el patró fairfractal · token name · symbol · totalSupply · decimals · distribution (sliders 6 groups · founders/operators/treasury/community/investors/liquidity · normalize auto) · vesting schedule per group (cliff + linear · simulació mensual). Persisteix com a token_design node. Quality score live 0-100 (penalitza concentració · sense vesting · treasury baix). Integrat al lifecycle.',
         principles: ['principle-4-tea', 'principle-4-smart-contracts'],
-        status: 'pending',
+        status: 'completed',
         priority: 'high',
         complexity: 'M',
         dependencies: ['project-canvas-wizard'],
-        testRequirements: ['tokenomicsService.test.js · distribution sum=1 · vesting schedule per epoch'],
+        testRequirements: ['tokenomics.test.js · 65 tests · sum=1 invariant · vesting schedule (cliff + linear · monthly) · quality score · normalize · immutability'],
         suggestedFiles: ['js/core/tokenomicsService.js', 'js/views/TokenomicsView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
 
     Object.freeze({
