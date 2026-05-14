@@ -11,6 +11,12 @@ import {
     buildPublicProfile, computeProfileBadges, shareUrlForProfile,
     normalizeHandle,
 } from '../core/profileService.js';
+import {
+    IKIGAI_DIMENSIONS, IKIGAI_INTERSECTIONS,
+    buildEmptyIkigai, applyIkigaiDimension,
+    computeIkigaiCompleteness, computeIntersections,
+    applyIkigaiToMember, ikigaiBadge,
+} from '../core/ikigaiService.js';
 
 const AVAIL_META = {
     'normal':       { color: '#22c55e', icon: '✓',  label: 'Disponible' },
@@ -32,8 +38,11 @@ export default class ProfileView {
             const path = window.location.pathname || '';
             const m = path.match(/^\/u\/([^\/]+)/);
             this.handle = m ? normalizeHandle(decodeURIComponent(m[1])) : null;
-        } catch (_) { this.handle = null; }
+            const u = new URL(window.location.href);
+            this.editIkigai = u.searchParams.get('edit') === 'ikigai';
+        } catch (_) { this.handle = null; this.editIkigai = false; }
         this.profile = null;
+        this.memberNode = null;
     }
 
     async getHtml() {
@@ -59,6 +68,10 @@ export default class ProfileView {
             workshops: workshops || [],
             sops: sops || [],
         });
+        // Keep raw member node for Ikigai edit/persist
+        this.memberNode = (members || []).find(m => m && m.id === this.profile.memberNodeId) || null;
+        // Read current Ikigai from member node (content.ikigai)
+        this.ikigai = (this.memberNode?.content?.ikigai) || buildEmptyIkigai();
         return this._htmlMain();
     }
 
@@ -66,6 +79,112 @@ export default class ProfileView {
         if (!this.profile) return;
         this._injectOG();
         this._bindShare();
+        this._bindIkigai();
+    }
+
+    _bindIkigai() {
+        // Edit Ikigai button → open modal
+        const editBtn = document.getElementById('profIkigaiEdit');
+        if (editBtn) editBtn.addEventListener('click', () => this._openIkigaiEditor());
+        // Auto-open si query param
+        if (this.editIkigai && this.profile.exists) {
+            // Small delay perquè el DOM ja estigui
+            setTimeout(() => this._openIkigaiEditor(), 100);
+        }
+    }
+
+    _openIkigaiEditor() {
+        if (!this.memberNode) {
+            alert('No es pot editar · cal node matriu_member primer (afegeix-te a /matriu)');
+            return;
+        }
+        // Snapshot mutable per editar al modal
+        let working = JSON.parse(JSON.stringify(this.ikigai || buildEmptyIkigai()));
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;';
+        const render = () => {
+            const complete = computeIkigaiCompleteness(working);
+            const dimsHtml = IKIGAI_DIMENSIONS.map(d => {
+                const items = (working.dimensions[d.id]?.items) || [];
+                return `<div class="iki-edit-dim" data-dim="${d.id}" style="border-left:4px solid ${d.color};padding:10px 12px;background:${d.color}10;border-radius:6px;margin-bottom:10px;">
+                    <div style="font-weight:700;font-size:0.95rem;color:${d.color};">${d.icon} ${this._esc(d.label)}</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);margin:4px 0 8px;">${this._esc(d.prompt)}</div>
+                    <div data-items="${d.id}" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">
+                        ${items.map((it, i) => `<span class="iki-chip" data-rm="${d.id}:${i}" style="background:${d.color}25;color:${d.color};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;cursor:pointer;" title="Click per esborrar">${this._esc(it)} ✗</span>`).join('') || '<span style="font-size:11px;color:var(--text-muted);font-style:italic;">cap encara</span>'}
+                    </div>
+                    <input type="text" data-input="${d.id}" placeholder="Afegir item (Enter)..." style="width:100%;box-sizing:border-box;background:#000;color:var(--text-main);border:1px solid var(--border-default);border-radius:4px;padding:6px 8px;font-size:0.82rem;">
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:3px;font-family:var(--font-mono);">${items.length}/${d.maxItems}</div>
+                </div>`;
+            }).join('');
+            modal.innerHTML = `
+            <div style="max-width:760px;width:100%;background:var(--bg-panel);border:1px solid var(--border-default);border-radius:8px;padding:1.5rem;color:var(--text-main);font-family:var(--font-base);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                    <h2 style="margin:0;">🌸 Editar Ikigai · ${this._esc(this.profile.displayName)}</h2>
+                    <button id="ikiClose" style="background:transparent;border:1px solid var(--border-default);color:var(--text-main);padding:6px 12px;border-radius:4px;cursor:pointer;">✗ Tancar</button>
+                </div>
+                <div style="margin-bottom:0.8rem;font-size:0.82rem;color:var(--text-secondary);line-height:1.55;">
+                    Ikigai (生き甲斐 · "raó de ser") · intersecció de 4 dimensions. Omple cadascuna amb items concrets (skills · activitats · temes). Les interseccions et donen passió · professió · vocació · missió · i el centre (Ikigai). <strong>Local-first · es desa al teu matriu_member.</strong>
+                </div>
+                <div style="height:6px;background:#0008;border-radius:3px;overflow:hidden;margin-bottom:1rem;">
+                    <div style="height:100%;width:${complete.percent}%;background:linear-gradient(90deg,#ec4899,#22c55e,#3b82f6,#facc15);transition:width 0.3s;"></div>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:1rem;">${complete.filled}/${complete.total} dimensions · ${complete.totalItems} items</div>
+                ${dimsHtml}
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:1rem;">
+                    <button id="ikiSave" style="padding:10px 18px;border-radius:4px;border:1px solid #ec4899;background:#ec4899;color:#fff;font-weight:700;cursor:pointer;">💾 Desar Ikigai</button>
+                    <button id="ikiClose2" style="padding:10px 18px;border-radius:4px;border:1px solid var(--border-default);background:transparent;color:var(--text-main);cursor:pointer;">Cancel·lar</button>
+                    <span id="ikiMsg" style="font-size:11px;font-family:var(--font-mono);align-self:center;"></span>
+                </div>
+            </div>`;
+            // Bind handlers post-render
+            const close = () => modal.remove();
+            modal.querySelector('#ikiClose')?.addEventListener('click', close);
+            modal.querySelector('#ikiClose2')?.addEventListener('click', close);
+            modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+            // Per dimension · input Enter + chip click remove
+            for (const d of IKIGAI_DIMENSIONS) {
+                const input = modal.querySelector('[data-input="' + d.id + '"]');
+                if (input) input.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    const val = input.value.trim();
+                    if (!val) return;
+                    const items = ((working.dimensions[d.id]?.items) || []).slice();
+                    items.push(val);
+                    try {
+                        working = applyIkigaiDimension(working, d.id, items);
+                        render();
+                    } catch (err) {
+                        const msg = modal.querySelector('#ikiMsg');
+                        if (msg) { msg.textContent = '✗ ' + (err?.message || 'error'); msg.style.color = '#ef4444'; }
+                    }
+                });
+            }
+            modal.querySelectorAll('[data-rm]').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const [dimId, idx] = chip.dataset.rm.split(':');
+                    const items = ((working.dimensions[dimId]?.items) || []).slice();
+                    items.splice(parseInt(idx, 10), 1);
+                    working = applyIkigaiDimension(working, dimId, items);
+                    render();
+                });
+            });
+            // Save
+            modal.querySelector('#ikiSave')?.addEventListener('click', async () => {
+                try {
+                    const updatedMember = applyIkigaiToMember(this.memberNode, working);
+                    await KB.upsert(updatedMember);
+                    const msg = modal.querySelector('#ikiMsg');
+                    if (msg) { msg.textContent = '✓ Ikigai desat'; msg.style.color = '#22c55e'; }
+                    setTimeout(() => { close(); window.location.reload(); }, 400);
+                } catch (e) {
+                    const msg = modal.querySelector('#ikiMsg');
+                    if (msg) { msg.textContent = '✗ ' + (e?.message || 'error'); msg.style.color = '#ef4444'; }
+                }
+            });
+        };
+        render();
+        document.body.appendChild(modal);
     }
 
     _htmlNotFound(reason) {
@@ -129,6 +248,10 @@ export default class ProfileView {
         const badges = computeProfileBadges(p);
         const av = AVAIL_META[p.availability] || AVAIL_META.normal;
         const trust = p.trustScore;
+        const iki = this.ikigai || buildEmptyIkigai();
+        const ikiComplete = computeIkigaiCompleteness(iki);
+        const ikiInter = computeIntersections(iki);
+        const ikiBadge = ikigaiBadge(iki);
 
         // Hero
         const avatarHtml = p.avatar
@@ -289,6 +412,43 @@ export default class ProfileView {
                 <div class="prof-card-section">
                     <h3>🤝 Trust · ${p.attestationsReceived.length} attestations rebudes · ${p.attestationsSent.length} emeses</h3>
                     ${attRcvHtml}
+                </div>
+                <div class="prof-card-section" style="grid-column:1/-1;border:1px solid ${ikiBadge.color}40;background:linear-gradient(135deg,${ikiBadge.color}08,transparent);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:0.6rem;">
+                        <h3 style="margin:0;">🌸 Ikigai · raó de ser</h3>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <span style="background:${ikiBadge.color}25;color:${ikiBadge.color};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${ikiBadge.icon} ${this._esc(ikiBadge.label)}</span>
+                            ${p.exists ? `<button id="profIkigaiEdit" class="prof-btn prof-btn-secondary" style="font-size:0.78rem;">✎ Editar Ikigai</button>` : ''}
+                        </div>
+                    </div>
+                    ${ikiComplete.filled === 0 ? `
+                        <div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:0.4rem 0;">
+                            ${p.exists ? 'Encara no has definit el teu Ikigai · prem <strong>✎ Editar</strong> per a començar.' : 'Aquest usuari encara no ha definit el seu Ikigai.'}
+                        </div>
+                    ` : `
+                        <div style="height:6px;background:#0008;border-radius:3px;overflow:hidden;margin-bottom:10px;">
+                            <div style="height:100%;width:${ikiComplete.percent}%;background:linear-gradient(90deg,#ec4899,#22c55e,#3b82f6,#facc15);"></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1rem;">
+                            ${IKIGAI_DIMENSIONS.map(d => {
+                                const items = iki.dimensions?.[d.id]?.items || [];
+                                return `<div style="border-left:3px solid ${d.color};padding:6px 10px;background:${d.color}10;border-radius:4px;">
+                                    <div style="font-weight:700;color:${d.color};font-size:0.82rem;">${d.icon} ${this._esc(d.label)} <span style="font-family:var(--font-mono);font-size:10px;opacity:0.7;">${items.length}</span></div>
+                                    ${items.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${items.slice(0, 6).map(it => `<span style="background:${d.color}20;color:${d.color};padding:1px 7px;border-radius:999px;font-size:10px;font-family:var(--font-mono);">${this._esc(it)}</span>`).join('')}${items.length > 6 ? `<span style="color:var(--text-muted);font-size:10px;">+${items.length - 6}</span>` : ''}</div>` : '<div style="font-size:10px;color:var(--text-muted);font-style:italic;">cap encara</div>'}
+                                </div>`;
+                            }).join('')}
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
+                            ${IKIGAI_INTERSECTIONS.map(i => {
+                                const items = ikiInter[i.id] || [];
+                                const has = items.length > 0;
+                                return `<div style="padding:6px 10px;border:1px solid ${i.color}${has ? '50' : '20'};background:${i.color}${has ? '15' : '05'};border-radius:5px;">
+                                    <div style="font-size:0.78rem;font-weight:700;color:${has ? i.color : 'var(--text-muted)'};">${i.icon} ${this._esc(i.label)} <span style="font-family:var(--font-mono);font-size:10px;">${items.length}</span></div>
+                                    ${has ? `<div style="font-size:10px;color:${i.color};margin-top:3px;font-family:var(--font-mono);">${items.slice(0, 3).map(x => this._esc(x)).join(' · ')}${items.length > 3 ? '…' : ''}</div>` : `<div style="font-size:10px;color:var(--text-muted);margin-top:3px;font-style:italic;">${this._esc(i.tagline)}</div>`}
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    `}
                 </div>
                 ${p.roles.length > 0 ? `<div class="prof-card-section" style="grid-column:1/-1;">
                     <h3>🧑‍💼 Roles assignats · ${p.roles.length}</h3>
