@@ -16,9 +16,8 @@ import {
     pickNextSOP,
     runImprovementCycle, runImprovementLoop,
 } from '../core/improvementLoopService.js';
-import {
-    formatActivityEvent, renderActivityEntryHtml, THINKING_PULSE_CSS, levelColor,
-} from '../core/aiActivityFeedback.js';
+import { attachAIFormFeedback, renderInlineFeedbackHtml } from '../core/aiFormFeedback.js';
+import { label } from '../core/sosCopy.js';
 
 export default class ImprovementLoopView {
 
@@ -168,10 +167,7 @@ export default class ImprovementLoopView {
             .il-empty { font-size:0.82rem; color:var(--text-muted); font-style:italic; padding:0.6rem; }
             .il-chip { display:inline-block; background:#6366f120; color:#a5b4fc; padding:2px 7px; border-radius:999px; font-size:10px; font-weight:600; font-family:var(--font-mono); margin:2px 3px 2px 0; }
             .il-enrich-chips { margin-top:6px; }
-            .il-log { background:#0008; padding:10px; border-radius:6px; max-height:320px; overflow:auto; margin-top:8px; border:1px solid var(--border-default); }
-            .il-thinking-now { padding:10px 14px; border-radius:6px; background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(99,102,241,0.10)); border:1px solid rgba(168,85,247,0.35); margin-bottom:8px; display:none; }
-            .il-thinking-now.active { display:block; }
-            ${THINKING_PULSE_CSS}
+            /* DESIGN-SYSTEM v2 · feedback widget gestiona els seus propis estils */
         </style>
         <div class="il-shell">
             <div class="il-topbar">
@@ -204,8 +200,7 @@ export default class ImprovementLoopView {
                     <span style="font-size:11px;color:var(--text-muted);margin-left:10px;">Cada cicle costa ~€0.01-0.05 · cap si IA off-line</span>
                 </div>
 
-                <div class="il-thinking-now" id="ilThinkingNow"></div>
-                <div class="il-log" id="ilLog" style="display:none;"></div>
+                ${renderInlineFeedbackHtml({ id: 'ilFeedback' })}
 
                 <div class="il-board">
                     <div class="il-col">
@@ -253,31 +248,8 @@ export default class ImprovementLoopView {
 
     async _runN(n) {
         if (!this.sops.length) return;
-        const log = document.getElementById('ilLog');
-        const thinkingBox = document.getElementById('ilThinkingNow');
-        if (log) { log.style.display = 'block'; log.innerHTML = ''; }
-
-        const setThinking = (entry) => {
-            if (!thinkingBox) return;
-            if (!entry) {
-                thinkingBox.classList.remove('active');
-                thinkingBox.innerHTML = '';
-                return;
-            }
-            thinkingBox.classList.add('active');
-            thinkingBox.innerHTML = renderActivityEntryHtml(entry);
-        };
-
-        const appendEntry = (entry) => {
-            if (!log || !entry) return;
-            const wrapper = document.createElement('div');
-            wrapper.innerHTML = renderActivityEntryHtml(entry);
-            const node = wrapper.firstElementChild;
-            if (node) {
-                log.appendChild(node);
-                log.scrollTop = log.scrollHeight;
-            }
-        };
+        // DESIGN-SYSTEM v2 · aiFormFeedback widget (DRY · 1 controller fa tot)
+        const fb = attachAIFormFeedback(document.getElementById('ilFeedback'), { autoFadeOk: 0 });
 
         try {
             // Assegura model
@@ -296,7 +268,7 @@ export default class ImprovementLoopView {
                 } catch (e) { throw new Error('ai-fail · ' + (e?.message || 'unknown')); }
             };
 
-            appendEntry(formatActivityEvent({ kind: 'message', icon: '▶', title: 'Iniciant ' + n + ' cicle(s)', detail: 'model · ' + this.model.id, level: 'info' }));
+            fb.addEvent({ kind: 'message', icon: '▶', title: label('cta.start') + ' · ' + n + ' cicle(s)', detail: 'model · ' + this.model.id, level: 'info' });
 
             const result = await runImprovementLoop({
                 project:       this.project,
@@ -304,27 +276,14 @@ export default class ImprovementLoopView {
                 model:         this.model,
                 runner:        aiRunner,
                 maxIterations: n,
-                onActivity:    (event) => {
-                    const entry = formatActivityEvent(event);
-                    if (entry.level === 'thinking') {
-                        // Reemplaça 'pensant ara' al box top · NO afegeix al log
-                        setThinking(entry);
-                    } else {
-                        // Si abans estava pensant · netegem el thinking box
-                        setThinking(null);
-                        appendEntry(entry);
-                    }
-                },
-                onIteration:   () => {},   // l'activity ja cobreix per ítem
+                onActivity:    fb.onActivity(),     // widget gestiona thinking + log auto
+                onIteration:   () => {},
             });
-
-            setThinking(null);
 
             // Persisteix
             for (const c of result.cycles) {
                 try { await KB.upsert(c); } catch (e) { console.warn('cycle upsert fail', e); }
             }
-            // Actualitza project amb mutacions accumulades
             if (result.finalProject && result.finalProject !== this.project) {
                 try {
                     await store.dispatch({ type: 'UPDATE_PROJECT', payload: result.finalProject });
@@ -333,10 +292,12 @@ export default class ImprovementLoopView {
                 }
             }
 
+            if (result.ok) fb.setOk(label('state.done') + ' · ' + result.cycles.length + ' cicles');
+            else           fb.setWarning('Cicles amb errors · revisa el log');
+
             setTimeout(() => window.location.reload(), 1500);
         } catch (e) {
-            setThinking(null);
-            appendEntry(formatActivityEvent({ kind: 'error', error: e?.message || 'error' }));
+            fb.setError(e?.message || label('state.error'));
         }
     }
 
