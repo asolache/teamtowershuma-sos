@@ -4,6 +4,7 @@
 import {
     computeTrustScore, renderTrustBadgeHtml,
     loadAttestationsForIds, computeTrustForBatch,
+    computeRecursiveTrustScores, computeRecursiveTrustForBatch,
 } from '../core/trustScoreService.js';
 
 let pass = 0, fail = 0;
@@ -96,6 +97,122 @@ const batch = await computeTrustForBatch({ kb: mockKb, attestedIds: ['p1', 'p2',
 eq(batch.p1.uniqueAttesters, 2,                                  'J · batch p1 · 2');
 eq(batch.p2.uniqueAttesters, 1,                                  'J · batch p2 · 1');
 eq(batch.p3.band, 'none',                                        'J · batch p3 · none (sense atts)');
+
+// ─── K · TRUST-002 sprint B · computeRecursiveTrustScores · PageRank ───────
+//
+// K1 · cas degenerate · sense attestations
+const recEmpty = computeRecursiveTrustScores({ attestations: [] });
+eq(recEmpty.scores.size, 0,                                      'K1 · sense atts · 0 scores');
+t(recEmpty.converged,                                            'K1 · trivially converged');
+
+// K2 · single attestation · attester i attested apareixen al map
+const recOne = computeRecursiveTrustScores({
+    attestations: [mkAtt('did:sos:alice', 'did:sos:bob')],
+    damping: 0.85, baseScore: 1.0,
+});
+eq(recOne.scores.size, 2,                                        'K2 · alice + bob al map');
+t(recOne.scores.has('did:sos:alice'),                            'K2 · alice present');
+t(recOne.scores.has('did:sos:bob'),                              'K2 · bob present');
+// bob rep d'alice → score bob > score alice (alice no rep res)
+t(recOne.scores.get('did:sos:bob') > recOne.scores.get('did:sos:alice'),
+                                                                 'K2 · bob > alice (asimètric)');
+
+// K3 · cross-endorse · alice ↔ bob · scores convergeixen iguals (simetria) i
+// > teleport (han rebut > 0 contribucions) · amb operator-weight 1 i outDeg 1,
+// el punt fix és s = (1−d) + d·s → s = 1.0 (igual a baseScore). Comprovem
+// SIMETRIA · ambdós ≥ teleport · clarament > una identitat sense in-edges.
+const recCross = computeRecursiveTrustScores({
+    attestations: [
+        mkAtt('did:sos:alice', 'did:sos:bob'),
+        mkAtt('did:sos:bob',   'did:sos:alice'),
+    ],
+});
+const sa = recCross.scores.get('did:sos:alice');
+const sb = recCross.scores.get('did:sos:bob');
+t(Math.abs(sa - sb) < 1e-3,                                      'K3 · cross-endorse · alice ≈ bob (simetria)');
+t(sa > 0.15 && sb > 0.15,                                        'K3 · ambdós > teleport · han rebut contribucions');
+
+// K4 · power user · power_dave endorsa power_dave i tothom el segueix
+// dave té molts in-edges (high pagerank) · els que dave endorsa hereten boost
+const power = [
+    // Tothom endorsa dave → dave high PR
+    mkAtt('did:sos:u1', 'did:sos:dave'),
+    mkAtt('did:sos:u2', 'did:sos:dave'),
+    mkAtt('did:sos:u3', 'did:sos:dave'),
+    mkAtt('did:sos:u4', 'did:sos:dave'),
+    // Dave endorsa mary · mary aprofita el high PR de dave
+    mkAtt('did:sos:dave', 'did:sos:mary'),
+    // Un new user u5 endorsa solo · score molt menor que mary
+    mkAtt('did:sos:u5', 'did:sos:solo'),
+];
+const recPower = computeRecursiveTrustScores({ attestations: power, iterations: 50, damping: 0.85 });
+const sMary = recPower.scores.get('did:sos:mary');
+const sSolo = recPower.scores.get('did:sos:solo');
+t(sMary > sSolo,                                                 'K4 · mary (endorsada per power-user) > solo (endorsada per new user)');
+
+// K5 · founder kind val 3x · contribució més gran
+const founderEndorse = [
+    mkAtt('did:sos:f1', 'did:sos:target_founder', 'endorses-founder'),
+    mkAtt('did:sos:o1', 'did:sos:target_op',     'endorses-operator'),
+];
+const recFounder = computeRecursiveTrustScores({ attestations: founderEndorse });
+t(recFounder.scores.get('did:sos:target_founder') > recFounder.scores.get('did:sos:target_op'),
+                                                                 'K5 · founder endorsement weight > operator');
+
+// K6 · convergeix amb epsilon estandard
+t(recCross.iterationsRun < 30,                                   'K6 · convergeix abans del màxim');
+t(recCross.converged,                                            'K6 · converged=true');
+
+// K7 · self-loop ignorat
+const selfLoop = [mkAtt('did:sos:x', 'did:sos:x')];
+const recSelf = computeRecursiveTrustScores({ attestations: selfLoop });
+eq(recSelf.scores.size, 0,                                       'K7 · self-loop ignorat · 0 scores');
+
+// ─── L · computeTrustScore amb attesterWeights · recursive variant ────────
+const attestations_L = [
+    mkAtt('did:sos:powerful', 'project-p1'),
+    mkAtt('did:sos:newbie',   'project-p1'),
+];
+// Flat (sense weights) · 2 attesters · totalScore=2 (1+1)
+const flatScore = computeTrustScore({ attestations: attestations_L });
+eq(flatScore.uniqueAttesters, 2,                                 'L · flat · 2 attesters');
+eq(flatScore.total, 2,                                           'L · flat · total 2');
+t(!flatScore.recursive,                                          'L · flat · recursive=false');
+
+// Recursive · powerful té weight 5, newbie weight 1
+const weights = new Map([
+    ['did:sos:powerful', 5.0],
+    ['did:sos:newbie',   1.0],
+]);
+const recScore = computeTrustScore({ attestations: attestations_L, attesterWeights: weights });
+eq(recScore.uniqueAttesters, 2,                                  'L · recursive · 2 attesters');
+eq(recScore.total, 6,                                            'L · recursive · total 5+1=6');
+t(recScore.recursive,                                            'L · recursive · recursive=true');
+
+// L2 · attester sense weight a la Map · fallback weight 1 (no fa caure tot)
+const partial = new Map([['did:sos:powerful', 3.0]]);
+const recPart = computeTrustScore({ attestations: attestations_L, attesterWeights: partial });
+eq(recPart.total, 4,                                             'L2 · partial weights · fallback 1 per attester sense entry');
+
+// ─── M · computeRecursiveTrustForBatch · helper async ─────────────────────
+const batchKb = {
+    query: async ({ type }) => type === 'attestation' ? [
+        mkAtt('did:sos:a', 'p1'),
+        mkAtt('did:sos:b', 'p1'),
+        mkAtt('did:sos:c', 'did:sos:b'),  // c endorsa b → b power
+        mkAtt('did:sos:b', 'p2'),         // b endorsa p2 (alt weight per power)
+    ] : [],
+};
+const recBatch = await computeRecursiveTrustForBatch({ kb: batchKb, attestedIds: ['p1', 'p2'] });
+t(recBatch.p1.recursive,                                          'M · batch p1 · recursive=true');
+t(recBatch.p2.recursive,                                          'M · batch p2 · recursive=true');
+// p2 té UN attester (b) però b és power-user (endorsat per c). El score
+// recursiu de p2 és kindWeight(1) × score[b] ≈ 0.85 × baseScore (b ha rebut
+// 1 endorse) · NO comparable directament a p1 sense normalitzar. Validem
+// sols que arriba a la UI amb un valor positiu i amb recursive=true.
+t(recBatch.p2.total > 0,                                          'M · batch p2 · score positiu');
+t(recBatch.__meta && typeof recBatch.__meta.iterationsRun === 'number',
+                                                                  'M · batch · meta amb iterationsRun');
 
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

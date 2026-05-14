@@ -106,7 +106,7 @@ export const INITIAL_BACKLOG = Object.freeze([
         title: 'Trust score recursive · PageRank style',
         description: 'El weight d\'una attestation depèn del trust score de l\'attester (recursiu). Power user endorsement val més que un nou usuari. Sprint B del trustScoreService · canvi pure de aggregation.',
         principles: ['principle-1-nodes', 'principle-4-tea'],
-        status: 'pending',
+        status: 'completed',
         priority: 'medium',
         complexity: 'M',
         dependencies: ['trust-001'],
@@ -115,6 +115,8 @@ export const INITIAL_BACKLOG = Object.freeze([
             'Edge case · attester sense pròpies attestations (weight 1.0 base)',
         ],
         suggestedFiles: ['js/core/trustScoreService.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
     Object.freeze({
         id: 'mind-graph-galaxy',
