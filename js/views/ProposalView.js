@@ -21,6 +21,8 @@ import {
     buildAiPromptForProposal,
     applyAIDraftToProposal,
 } from '../core/proposalService.js';
+import { attachAIFormFeedback, renderInlineFeedbackHtml } from '../core/aiFormFeedback.js';
+import { label } from '../core/sosCopy.js';
 
 export default class ProposalView {
 
@@ -128,9 +130,7 @@ export default class ProposalView {
             table.pr-rows { width:100%; border-collapse:collapse; font-size:0.82rem; }
             table.pr-rows th, table.pr-rows td { padding:8px; text-align:left; border-bottom:1px solid var(--border-default); }
             table.pr-rows th { background:#0008; font-size:11px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted); }
-            .pr-msg { font-size:11px; font-family:var(--font-mono); margin-left:10px; }
-            .pr-msg.ok { color:#22c55e; }
-            .pr-msg.err { color:#ef4444; }
+            /* DESIGN-SYSTEM v3 · feedback ara via aiFormFeedback widget */
             @media print { .pr-topbar, .pr-btn, .pr-btn-sm, button { display:none !important; } body { background:#fff !important; color:#000 !important; } .pr-card { border-color:#ccc !important; background:#fff !important; color:#000 !important; } }
         </style>
         <div class="pr-shell">
@@ -161,10 +161,10 @@ export default class ProposalView {
                     <textarea class="pr-brief" id="prBrief" placeholder="Brief · ex 'Necessitem dissenyar la governança cooperativa de la nostra coop tecnològica · 8 socis · sense experiència prèvia · volem decisions consensuades sense bloquejar'"></textarea>
                     <div id="prSkillMatches" class="pr-skill-matches"></div>
                     <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        <button class="pr-btn" id="prGenerate">🤖 Generar amb IA</button>
-                        <button class="pr-btn" id="prCreateManual" style="background:var(--bg-panel);color:var(--text-main);border-color:var(--border-default);">📝 Manual (sense IA)</button>
-                        <span class="pr-msg" id="prMsg"></span>
+                        <button class="pr-btn" id="prGenerate">${this._esc(label('cta.generate'))}</button>
+                        <button class="pr-btn" id="prCreateManual" style="background:var(--bg-panel);color:var(--text-main);border-color:var(--border-default);">📝 Manual</button>
                     </div>
+                    <div style="margin-top:8px;">${renderInlineFeedbackHtml({ id: 'prFeedback' })}</div>
                 </div>
 
                 <div class="pr-card">
@@ -199,6 +199,9 @@ export default class ProposalView {
     _bindCreate() {
         const genBtn = document.getElementById('prGenerate');
         const manualBtn = document.getElementById('prCreateManual');
+        // DESIGN-SYSTEM v3 · widget reutilitzable per a feedback IA i manuals (DRY)
+        const fb = attachAIFormFeedback(document.getElementById('prFeedback'), { autoFadeOk: 3500 });
+        this._fb = fb;
 
         const collectInputs = () => ({
             client:     document.getElementById('prClient')?.value.trim() || '',
@@ -209,52 +212,52 @@ export default class ProposalView {
 
         if (manualBtn) manualBtn.addEventListener('click', async () => {
             const { client, brief, validUntil, currency } = collectInputs();
-            if (!client) { this._setMsg('client requerit', 'err'); return; }
-            if (brief.length < 20) { this._setMsg('brief mínim 20 chars · summary', 'err'); return; }
+            if (!client) { fb.setError('client ' + label('hint.required')); return; }
+            if (brief.length < 20) { fb.setError(label('err.too_short').replace('{n}', '20') + ' · brief'); return; }
             try {
                 let prop = buildEmptyProposal({ projectId: this.projectId, client, summary: brief, validUntil, currency });
                 const matches = matchSkillsToBrief(brief, { topN: 8 });
                 prop = setSkillsRequired(prop, matches.map(m => m.skillId));
                 await KB.upsert(prop);
-                this._setMsg('✓ proposta creada (sense IA) · afegeix deliverables manualment', 'ok');
+                fb.setOk(label('state.done') + ' · afegeix deliverables manualment');
                 setTimeout(() => window.location.reload(), 600);
             } catch (e) {
-                this._setMsg('✗ ' + (e?.message || 'error'), 'err');
+                fb.setError(e?.message || label('state.error'));
             }
         });
 
         if (genBtn) genBtn.addEventListener('click', async () => {
             const { client, brief, validUntil, currency } = collectInputs();
-            if (!client) { this._setMsg('client requerit', 'err'); return; }
-            if (brief.length < 20) { this._setMsg('brief mínim 20 chars', 'err'); return; }
+            if (!client) { fb.setError('client ' + label('hint.required')); return; }
+            if (brief.length < 20) { fb.setError(label('err.too_short').replace('{n}', '20') + ' · brief'); return; }
             genBtn.disabled = true;
             const origText = genBtn.textContent;
-            genBtn.textContent = '⏳ generant…';
-            this._setMsg('', '');
+            genBtn.textContent = '⏳ ' + label('state.thinking');
             try {
                 const { runEscalation } = await import('../core/aiRouterService.js');
                 const matches = matchSkillsToBrief(brief, { topN: 8 });
                 const projectName = this.project.nombre || this.project.name || this.project.id;
                 const projectCanvas = this.project.content?.canvas;
+                // Mostra thinking · client + brief com a context al usuari
+                fb.setThinking({ kind: 'runner-start', sopTitle: 'Proposta · ' + client, iteration: 1 });
                 const prompt = buildAiPromptForProposal({ brief, client, projectName, projectCanvas, matchedSkills: matches });
                 const result = await runEscalation({ prompt, taskKind: 'creative-narrative', maxAttempts: 3 });
                 const raw = (result && (result.output || result.text || result.result)) || '';
-                if (!raw) { this._setMsg('✗ IA buida', 'err'); return; }
+                if (!raw) { fb.setError(label('err.ai_failed')); return; }
                 let prop = buildEmptyProposal({ projectId: this.projectId, client, summary: brief, validUntil, currency });
                 prop = setSkillsRequired(prop, matches.map(m => m.skillId));
                 try {
                     prop = applyAIDraftToProposal(prop, raw);
                 } catch (e) {
-                    // Si IA no retorna JSON · igualment guardem amb brief com a summary
                     console.warn('[proposal] AI parse failed · saved as summary-only', e);
-                    this._setMsg('⚠ IA no JSON · desat com a summary · afegeix deliverables', 'err');
+                    fb.setWarning('IA no JSON · desat com a summary · afegeix deliverables manualment');
                 }
                 await KB.upsert(prop);
-                this._setMsg('✓ proposta generada · ' + prop.content.deliverables.length + ' deliverables', 'ok');
+                fb.setOk(label('state.done') + ' · ' + prop.content.deliverables.length + ' deliverables');
                 setTimeout(() => window.location.reload(), 800);
             } catch (e) {
                 console.warn('[proposal] generation failed', e);
-                this._setMsg('✗ ' + (e?.message || 'error'), 'err');
+                fb.setError(e?.message || label('err.ai_failed'));
             } finally {
                 genBtn.disabled = false;
                 genBtn.textContent = origText;
@@ -326,11 +329,6 @@ export default class ProposalView {
             </div>`;
         modal.addEventListener('click', (e) => { if (e.target === modal || e.target.id === 'closeModal') modal.remove(); });
         document.body.appendChild(modal);
-    }
-
-    _setMsg(text, kind) {
-        const msg = document.getElementById('prMsg');
-        if (msg) { msg.textContent = text; msg.className = 'pr-msg ' + (kind || ''); }
     }
 
     _esc(s) {
