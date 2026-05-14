@@ -121,8 +121,9 @@ export default class WalletView {
         // BIZ-MODEL-001 sprint A · detect ?session_id=cs_... post-Stripe redirect
         // i auto-aplica el top-up al wallet del projecte (o personal)
         this._autoClaimStripeSession().catch(e => console.warn('[wallet] stripe claim', e?.message));
-        // WALLET-ACC-001 · render in-place del panel "comptabilitat unificada"
-        this._renderUnifiedAccounting().catch(e => console.warn('[wallet] unified', e?.message));
+        // WALLET-ACC-001 · NOTA · el panel "comptabilitat unificada" es renderitza
+        // al final de `_render()` · així el target `#wAccGlobalBody` ja existeix
+        // i es refresca automàticament després de cada topup/transfer/adjust.
         // FUND-FLOW-001 sprint A · si no hi ha projectId · obre el wallet personal
         if (!this.projectId) {
             try {
@@ -299,6 +300,10 @@ export default class WalletView {
             if (!confirm('¿Confirmar ajuste manual de ' + (delta > 0 ? '+' : '') + delta.toFixed(2) + ' €?\n\n' + (note || '(sin nota)'))) return;
             this._doAdjust(delta, note);
         });
+
+        // WALLET-ACC-001 · render del panel "comptabilitat unificada" un cop
+        // el DOM està reconstruït · es refresca automàticament a cada _render().
+        this._renderUnifiedAccounting().catch(e => console.warn('[wallet] unified', e?.message));
     }
 
     async _doTopUp(amountEur, source, note) {
@@ -357,9 +362,22 @@ export default class WalletView {
             const { KB } = await import('../core/kb.js');
             const { aggregateMovementsForOwner, summarizeAccounting, loadAllAccountingNodes } = await import('../core/unifiedAccountingService.js');
             const { store } = await import('../core/store.js');
+            // WALLET-ACC-002 · assegura store init abans de llegir projects ·
+            // sense això la primera càrrega filtraria OUT tots els wallets
+            // de projecte ja que `store.getState().projects` seria `null`/`[]`.
+            if (typeof store.init === 'function') {
+                await store.init().catch(() => {});
+            }
             const { walletNodes, receiptNodes, aiAuditNodes, workshopUnlockNodes } = await loadAllAccountingNodes({ kb: KB });
             // ownerProjectIds · projectes propietat de l'usuari (store.projects)
-            const myProjects = (store.getState().projects || []).map(p => p.id).filter(Boolean);
+            const projects = (store.getState().projects || []);
+            const myProjects = projects.map(p => p.id).filter(Boolean);
+            // WALLET-ACC-002 · inclou sempre el projectId actualment vist (defensiu
+            // si l'store no l'ha registrat encara · evita panel buit en cas de
+            // race entre store.init i el render del wallet del projecte).
+            if (this.projectId && !myProjects.includes(this.projectId)) {
+                myProjects.push(this.projectId);
+            }
             // ownerHandle · agafem el handle de la primera identity (TODO sprint B · multi-handle)
             const identities = await KB.query({ type: 'user_identity' }).catch(() => []);
             const ownerHandle = identities[0]?.content?.handle || '@alvaro';
@@ -414,7 +432,8 @@ export default class WalletView {
                 </div>
             `;
         } catch (e) {
-            body.innerHTML = '<div style="color:var(--accent-orange);">⚠ ' + this._esc(e?.message || 'no s\'ha pogut carregar la comptabilitat unificada') + '</div>';
+            console.warn('[wallet-acc] unified render failed', e);
+            body.innerHTML = '<div style="color:var(--accent-orange);">⚠ Comptabilitat unificada · ' + this._esc(e?.message || 'no s\'ha pogut carregar') + '<br><span style="color:var(--text-muted);font-size:10px;">(stack trace a la consola del navegador)</span></div>';
         }
     }
 

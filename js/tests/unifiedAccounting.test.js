@@ -49,9 +49,9 @@ const wallet2 = {
     },
 };
 const walletPersonal = {
-    id: 'wallet-__personal_@alvaro__', type: 'wallet',
+    id: 'wallet-__personal_alvaro__', type: 'wallet',
     content: {
-        projectId: '__personal_@alvaro__', balanceEur: 70,
+        projectId: '__personal_alvaro__', balanceEur: 70,
         movements: [
             { ts: 600, kind: 'topup', amountEur: 70, source: 'workshop-revenue-creator', balanceAfter: 70 },
         ],
@@ -100,7 +100,23 @@ const aggHandleOnly = aggregateMovementsForOwner({
     ownerHandle: '@alvaro',
 });
 eq(aggHandleOnly.walletCount, 1,                                      'D · sols handle · 1 wallet (personal)');
-eq(aggHandleOnly.movements[0].walletId, 'wallet-__personal_@alvaro__','D · sols handle · personal wallet');
+eq(aggHandleOnly.movements[0].walletId, 'wallet-__personal_alvaro__','D · sols handle · personal wallet');
+
+// ─── D2 · WALLET-ACC-002 regression · handle amb i sense '@' tots dos matchejen ─
+// Bug original · ownerHandle='@alvaro' generava '__personal_@alvaro__' (amb @)
+// que NO matchejava amb la convenció real `__personal_alvaro__` · resultat ·
+// personal wallet sempre filtrat OUT. Aquesta prova garanteix que delegant
+// a personalWalletIdFor el match funciona amb 'alvaro' o '@alvaro'.
+const aggHandleNoAt = aggregateMovementsForOwner({
+    walletNodes: [walletPersonal],
+    ownerHandle: 'alvaro',   // sense @
+});
+eq(aggHandleNoAt.walletCount, 1,                                      'D2 · handle sense @ · matched');
+const aggHandleWithAt = aggregateMovementsForOwner({
+    walletNodes: [walletPersonal],
+    ownerHandle: '@alvaro',  // amb @
+});
+eq(aggHandleWithAt.walletCount, 1,                                    'D2 · handle amb @ · matched');
 
 // ─── E · agg buit ────────────────────────────────────────────────────────
 const aggEmpty = aggregateMovementsForOwner({});

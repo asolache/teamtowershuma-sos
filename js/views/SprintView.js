@@ -175,7 +175,15 @@ export default class SprintView {
             await persistSprintRun({ kb: KB, run: result.run });
             this._showRunOutput(result);
         } catch (e) {
-            alert('Run failed: ' + (e?.message || e));
+            // SWARM-OP-002 · UX més útil quan tots els proveïdors fallen
+            const attempts = e?.attempts || [];
+            const trace = attempts.length
+                ? '\n\nIntents:\n' + attempts.map(a => `  ${a.evalOk ? '✓' : '✗'} ${a.modelKey}${a.evalReason ? ' · ' + a.evalReason : ''}`).join('\n')
+                : '';
+            const hint = /credit balance|insufficient_quota|http 4[01]\d/i.test(e?.message || '')
+                ? '\n\n💡 Solució · obre /settings i configura una API key alternativa (OpenAI · Gemini · DeepSeek · Minimax) · l\'escalation chain agafarà la primera que funcioni.'
+                : '';
+            alert('Run failed · ' + (e?.message || e) + trace + hint);
         }
         if (btn) { btn.disabled = false; btn.textContent = orig; }
         this._history = await queryHistory({ kb: KB, limit: 50 });
@@ -207,6 +215,17 @@ export default class SprintView {
                         <code style="color:var(--accent-purple);font-size:11px;">${esc(c.modelKey || '?')} · ${c.durationMs ? Math.round(c.durationMs/100)/10 + 's' : ''}</code>
                     </div>
                     ${c.error ? `<div style="color:var(--accent-red);font-size:12px;margin-bottom:10px;">✗ ${esc(c.error)}</div>` : ''}
+                    ${Array.isArray(c.attempts) && c.attempts.length > 1 ? `
+                        <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:var(--text-muted);">
+                            <strong style="color:var(--text-secondary);">🔄 Failover chain · ${c.attempts.length} intents:</strong><br>
+                            ${c.attempts.map(a => {
+                                const ok = a.evalOk;
+                                const icon = ok ? '✓' : '✗';
+                                const color = ok ? '#22c55e' : '#facc15';
+                                const reason = a.evalReason ? ' · ' + esc(String(a.evalReason).slice(0, 90)) : '';
+                                return `<span style="color:${color};">${icon} ${esc(a.modelKey)}${reason}</span>`;
+                            }).join('<br>')}
+                        </div>` : ''}
                     <pre>${esc(c.output || '(empty)')}</pre>
                     <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
                         <button id="spModalCopy" class="sp-btn">📋 Copiar</button>
