@@ -9,6 +9,7 @@
 
 import { store } from '../core/store.js';
 import { KB }    from '../core/kb.js';
+import { loadConventionalRanges } from '../core/conventionalRangesService.js';
 import {
     computeProjectSavings, buildSavingsTable, accumulateAllProjects,
 } from '../core/savingsService.js';
@@ -179,6 +180,17 @@ export default class SavingsView {
         this.efficiencyLogs = await KB.query({ type: 'efficiency_log' });
         this.wallets        = await KB.query({ type: 'wallet' });
         this.workOrders     = await KB.query({ type: 'work_order' });
+        // MKT-003 · ranges convencionals · si l'usuari els ha personalitzat
+        // via /settings (tab Mercat · pendent) els llegim del KB · si no,
+        // fallback a DEFAULT_CONVENTIONAL_RANGES de marketService.
+        try {
+            const cfg = await loadConventionalRanges({ kb: KB });
+            this.conventionalRanges       = cfg.ranges;
+            this.conventionalRangesSource = cfg.source;
+        } catch (_) {
+            this.conventionalRanges       = null;   // fallback intern de buildSavingsTable
+            this.conventionalRangesSource = 'default-fallback-load-failed';
+        }
     }
 
     _render() {
@@ -205,7 +217,7 @@ export default class SavingsView {
             efficiencyLogs: this.efficiencyLogs,
             workOrders:    this.workOrders,
         });
-        const cards = buildSavingsTable(stats);
+        const cards = buildSavingsTable(stats, this.conventionalRanges || undefined);
 
         main.innerHTML = `
             <div class="sa-hero">
@@ -280,7 +292,7 @@ export default class SavingsView {
             return;
         }
 
-        const cards = buildSavingsTable(acc.totals);
+        const cards = buildSavingsTable(acc.totals, this.conventionalRanges || undefined);
         const rows = acc.byProject.map(s => {
             const proj = this.allProjects.find(p => p.id === s.projectId);
             const name = this._esc(proj?.nombre || proj?.id || s.projectId);

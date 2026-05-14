@@ -446,11 +446,31 @@ export default class KanbanView {
                 taskContext: 'Ejecutar Work Order: ' + (c.title || woId),
             });
 
+            // KANBAN-IA-SOS sprint A · pre-pend SOS-branded WO context bundle
+            // (principis canònics · sector · subtype · roles · transactions ·
+            // accounting hints) ABANS del context KnowledgeLoader.
+            let sosHeader = '';
+            try {
+                const { buildWoContext } = await import('../core/woContextBuilder.js');
+                const project = (this.projects || []).find(p => p && p.id === wo.projectId) || null;
+                const roleNodes = project?.roles || project?.vna_roles || [];
+                const txNodes   = project?.vna_transactions || project?.transactions || [];
+                const woCtx = buildWoContext({
+                    wo:           { ...wo, content: c },
+                    project,
+                    roles:        roleNodes,
+                    transactions: txNodes,
+                });
+                sosHeader = woCtx.systemPrompt;
+            } catch (e) {
+                console.warn('[kanban] buildWoContext failed · fallback al base context', e?.message);
+            }
+
             // Cache-bust dinámico para Orchestrator (ver BUG-002/003)
             const { Orchestrator } = await import('../core/Orchestrator.js?v=' + Date.now());
             const result = await Orchestrator.callLLM({
                 preferredEngine: c.assignee?.engine || 'anthropic',
-                systemPrompt:    ctx.systemPrompt,
+                systemPrompt:    sosHeader ? (sosHeader + '\n\n---\n\n' + ctx.systemPrompt) : ctx.systemPrompt,
                 userPrompt:      buildExecutionPrompt({ ...wo, content: c }),
                 responseFormat:  'text',
                 temperature:     0.3,
