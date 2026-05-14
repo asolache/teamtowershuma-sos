@@ -15,6 +15,7 @@
 
 import { computeCanvasCompletion } from './projectCanvasService.js';
 import { computeBalanceSheet, computePLForPeriod, LEDGER_ENTRY_TYPE } from './ledgerService.js';
+import { computeInvoicesStatusBreakdown } from './invoiceService.js';
 
 // Lifecycle phases · ordre fix · referent per al dashboard.
 export const LIFECYCLE_PHASES = Object.freeze([
@@ -342,24 +343,26 @@ function _phaseWorkshops(p, workshops, pid) {
 
 function _phaseInvoices(p, invoices, pid) {
     const relevant = (invoices || []).filter(x => x?.projectId === pid);
+    const href = '/invoices?project=' + encodeURIComponent(pid);
     if (relevant.length === 0) {
         return {
             ...p,
             status:     'pending',
             completion: 0,
-            detail:     'Cap factura · Wave 1 pendent',
-            nextAction: 'Wave 1 · facturació CRUD',
-            href:       null,
+            detail:     'Cap factura encara',
+            nextAction: 'Crear primera factura',
+            href,
         };
     }
-    const paid = relevant.filter(x => x?.content?.status === 'paid');
-    const completion = paid.length / relevant.length;
+    const br = computeInvoicesStatusBreakdown(relevant);
+    const completion = br.paidRatio;
+    const status = completion === 1 ? 'done' : (completion > 0 ? 'partial' : 'pending');
     return {
         ...p,
-        status:     completion === 1 ? 'done' : 'partial',
+        status,
         completion,
-        detail:     paid.length + '/' + relevant.length + ' factures pagades',
-        nextAction: completion === 1 ? null : 'Cobrar factures pendents',
-        href:       null,
+        detail:     br.paid + '/' + br.total + ' pagades · €' + br.paidAmount.toFixed(0) + ' cobrat de €' + br.totalAmount.toFixed(0),
+        nextAction: status === 'done' ? null : 'Cobrar factures pendents',
+        href,
     };
 }

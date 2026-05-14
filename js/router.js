@@ -74,6 +74,8 @@ const ROUTES = [
     { path: '/accounting',   view: () => import('./views/AccountingView.js') },
     // LIFECYCLE-DASHBOARD sprint A · /lifecycle?project=X · 10 phases status
     { path: '/lifecycle',    view: () => import('./views/ProjectLifecycleView.js') },
+    // INVOICE-BILLING sprint A · /invoices?project=X · CRUD + auto-ledger
+    { path: '/invoices',     view: () => import('./views/InvoiceView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 

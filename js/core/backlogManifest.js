@@ -366,15 +366,17 @@ export const INITIAL_BACKLOG = Object.freeze([
 
     Object.freeze({
         id: 'invoice-billing',
-        title: 'Invoice Billing · /p/{id}/invoices CRUD + PDF + status',
-        description: 'CRUD invoice nodes · client · items · total · IVA · due date · payment proof. Estats issued/sent/paid/overdue. PDF via print-css. Hook a wallet per a marcar paid automàticament si arriba payment. Future · Stripe Connect (separat backlog).',
+        title: 'Invoice Billing · /invoices?project=X CRUD + auto-ledger + print',
+        description: 'CRUD invoice nodes · client · items · IVA · due date · status (draft/sent/paid/overdue/cancelled · auto-overdue per dueDate < today). markInvoicePaid genera automàticament ledger entry (debit cash · credit revenue + tax-payable). 3-leg amb IVA · 2-leg sense IVA. Print-css per a PDF. computeInvoicesStatusBreakdown integrat al lifecycle dashboard.',
         principles: ['principle-3-stripe-stakeholders'],
-        status: 'pending',
+        status: 'completed',
         priority: 'medium',
         complexity: 'M',
         dependencies: ['ledger-accounting'],
-        testRequirements: ['invoiceService.test.js · totals (IVA inclòs) · status transitions'],
+        testRequirements: ['invoice.test.js · 74 tests · totals IVA · status transitions (terminal/valid) · auto ledger entry integration · breakdown · overdue detection'],
         suggestedFiles: ['js/core/invoiceService.js', 'js/views/InvoiceView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
 
     Object.freeze({
