@@ -121,8 +121,9 @@ export default class WalletView {
         // BIZ-MODEL-001 sprint A · detect ?session_id=cs_... post-Stripe redirect
         // i auto-aplica el top-up al wallet del projecte (o personal)
         this._autoClaimStripeSession().catch(e => console.warn('[wallet] stripe claim', e?.message));
-        // WALLET-ACC-001 · render in-place del panel "comptabilitat unificada"
-        this._renderUnifiedAccounting().catch(e => console.warn('[wallet] unified', e?.message));
+        // WALLET-ACC-001 · NOTA · el panel "comptabilitat unificada" es renderitza
+        // al final de `_render()` · així el target `#wAccGlobalBody` ja existeix
+        // i es refresca automàticament després de cada topup/transfer/adjust.
         // FUND-FLOW-001 sprint A · si no hi ha projectId · obre el wallet personal
         if (!this.projectId) {
             try {
@@ -299,6 +300,10 @@ export default class WalletView {
             if (!confirm('¿Confirmar ajuste manual de ' + (delta > 0 ? '+' : '') + delta.toFixed(2) + ' €?\n\n' + (note || '(sin nota)'))) return;
             this._doAdjust(delta, note);
         });
+
+        // WALLET-ACC-001 · render del panel "comptabilitat unificada" un cop
+        // el DOM està reconstruït · es refresca automàticament a cada _render().
+        this._renderUnifiedAccounting().catch(e => console.warn('[wallet] unified', e?.message));
     }
 
     async _doTopUp(amountEur, source, note) {
