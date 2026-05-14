@@ -1304,6 +1304,8 @@ export default class DashboardView {
                     '</a>' +
                     '<div class="dash-card-footer-row">' +
                         nextChip +
+                        // LIFECYCLE-DASHBOARD sprint A · CTA al dashboard /lifecycle?project=X
+                        '<a class="dash-card-action-btn" href="/lifecycle?project=' + p.id + '" data-link title="Lifecycle · 10 fases del projecte · canvas/kanban/comptabilitat/etc">🌀</a>' +
                         '<button class="dash-card-action-btn" data-archive="' + p.id + '" title="Archivar">📦</button>' +
                     '</div>' +
                 '</div>';
