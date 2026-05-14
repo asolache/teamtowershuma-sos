@@ -17,6 +17,8 @@
 //       totalExpense, netBalance, walletCount }
 // =============================================================================
 
+import { personalWalletIdFor } from './walletService.js';
+
 // MOVEMENT_CATEGORIES · mapeig kind/source → categoria humanitzada
 const CATEGORY_BY_SOURCE = Object.freeze({
     'stripe-verified':           'topup',
@@ -88,15 +90,25 @@ export function aggregateMovementsForOwner({
     ownerHandle        = null,
     ownerProjectIds    = null,
 } = {}) {
-    // Filtra wallets de l'owner si es proporciona projectIds o handle
+    // Filtra wallets de l'owner si es proporciona projectIds o handle.
+    //
+    // BUG-FIX (WALLET-ACC-002) · abans aquesta funció construïa el personal
+    // walletId com '__personal_@{handle}__' (mantenint el `@`) però la
+    // convenció real és `__personal_{handle-sense-@}__` · resultat · el
+    // personal wallet quedava fora del filtre i la UI mostrava sempre 0
+    // moviments. Ara delegem a `personalWalletIdFor` per a evitar drift.
+    //
+    // A més · si `ownerProjectIds` és null/undefined (store no carregat encara
+    // o usuari sense projectes), abans això filtrava OUT tots els project
+    // wallets · ara, sense projectIds proveïts, NO apliquem filtre per
+    // projectId i deixem que ownerHandle (si existeix) afegeixi sols el
+    // personal. Si vols filtrar projectes concretament, passa un array buit
+    // explícit per a "només personal".
     let myWallets = walletNodes;
     if (Array.isArray(ownerProjectIds) || ownerHandle) {
         const allowedProjects = new Set(Array.isArray(ownerProjectIds) ? ownerProjectIds : []);
         if (ownerHandle) {
-            // personalWalletIdFor convention · '__personal_{handle}__'
-            const handle = ownerHandle.startsWith('@') ? ownerHandle : ('@' + ownerHandle);
-            const personalProjectId = '__personal_' + handle + '__';
-            allowedProjects.add(personalProjectId);
+            allowedProjects.add(personalWalletIdFor(ownerHandle));
         }
         myWallets = walletNodes.filter(w => {
             const pid = w?.content?.projectId || w?.projectId;

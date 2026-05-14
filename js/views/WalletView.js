@@ -362,9 +362,22 @@ export default class WalletView {
             const { KB } = await import('../core/kb.js');
             const { aggregateMovementsForOwner, summarizeAccounting, loadAllAccountingNodes } = await import('../core/unifiedAccountingService.js');
             const { store } = await import('../core/store.js');
+            // WALLET-ACC-002 · assegura store init abans de llegir projects ·
+            // sense això la primera càrrega filtraria OUT tots els wallets
+            // de projecte ja que `store.getState().projects` seria `null`/`[]`.
+            if (typeof store.init === 'function') {
+                await store.init().catch(() => {});
+            }
             const { walletNodes, receiptNodes, aiAuditNodes, workshopUnlockNodes } = await loadAllAccountingNodes({ kb: KB });
             // ownerProjectIds · projectes propietat de l'usuari (store.projects)
-            const myProjects = (store.getState().projects || []).map(p => p.id).filter(Boolean);
+            const projects = (store.getState().projects || []);
+            const myProjects = projects.map(p => p.id).filter(Boolean);
+            // WALLET-ACC-002 · inclou sempre el projectId actualment vist (defensiu
+            // si l'store no l'ha registrat encara · evita panel buit en cas de
+            // race entre store.init i el render del wallet del projecte).
+            if (this.projectId && !myProjects.includes(this.projectId)) {
+                myProjects.push(this.projectId);
+            }
             // ownerHandle · agafem el handle de la primera identity (TODO sprint B · multi-handle)
             const identities = await KB.query({ type: 'user_identity' }).catch(() => []);
             const ownerHandle = identities[0]?.content?.handle || '@alvaro';
@@ -419,7 +432,8 @@ export default class WalletView {
                 </div>
             `;
         } catch (e) {
-            body.innerHTML = '<div style="color:var(--accent-orange);">⚠ ' + this._esc(e?.message || 'no s\'ha pogut carregar la comptabilitat unificada') + '</div>';
+            console.warn('[wallet-acc] unified render failed', e);
+            body.innerHTML = '<div style="color:var(--accent-orange);">⚠ Comptabilitat unificada · ' + this._esc(e?.message || 'no s\'ha pogut carregar') + '<br><span style="color:var(--text-muted);font-size:10px;">(stack trace a la consola del navegador)</span></div>';
         }
     }
 
