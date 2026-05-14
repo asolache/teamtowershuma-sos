@@ -30,6 +30,9 @@ const MENU_ORIGINAL = Object.freeze([
     'Inicio', 'Operaciones', 'Conocimiento', 'Mercado & ROI', 'Cuenta',
 ]);
 
+// BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
+const BUILD_STAMP = '2026-05-14T22:00 · v22 · PR #75+';
+
 export default class DesignSystemView {
 
     constructor() {
@@ -187,6 +190,7 @@ export default class DesignSystemView {
             <div class="ds-topbar">
                 <a href="/dashboard" data-link class="ds-logo">🗼 Team<span>Towers</span></a>
                 <span style="color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Disseny SOS · v2 mockup</span>
+                <code style="font-size:10px;color:#22c55e;background:rgba(34,197,94,0.12);padding:2px 8px;border-radius:999px;border:1px solid rgba(34,197,94,0.3);font-family:var(--font-mono);" title="Si veus aquest stamp, el bundle JS és el més recent">🏷 ${BUILD_STAMP}</code>
                 <span style="flex:1;"></span>
                 <a href="/dashboard" data-link style="color:var(--text-secondary);text-decoration:none;font-size:0.78rem;">← ${this._esc(label('cta.back'))} Dashboard</a>
             </div>
