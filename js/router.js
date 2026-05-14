@@ -78,6 +78,8 @@ const ROUTES = [
     { path: '/invoices',     view: () => import('./views/InvoiceView.js') },
     // TOKENOMICS sprint A · /tokenomics?project=X · designer + vesting
     { path: '/tokenomics',   view: () => import('./views/TokenomicsView.js') },
+    // PITCH-PUBLIC sprint A · /pitch?project=X · public one-pager + edit
+    { path: '/pitch',        view: () => import('./views/ProjectPitchView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 

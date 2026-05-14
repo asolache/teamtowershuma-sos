@@ -41,7 +41,7 @@ export default class ProjectLifecycleView {
         if (!this.project) return this._htmlNotFound();
 
         // Fetch totes les entitats relacionades · defensive
-        const [ledgerEntries, sops, workOrders, pacts, workshops, marketItems, invoices, tokenomics] = await Promise.all([
+        const [ledgerEntries, sops, workOrders, pacts, workshops, marketItems, invoices, tokenomics, pitches] = await Promise.all([
             KB.query({ type: LEDGER_ENTRY_TYPE,   projectId: this.projectId }).catch(() => []),
             KB.query({ type: 'sop',               projectId: this.projectId }).catch(() => []),
             KB.query({ type: 'work_order',        projectId: this.projectId }).catch(() => []),
@@ -50,6 +50,7 @@ export default class ProjectLifecycleView {
             KB.query({ type: 'market_item',       projectId: this.projectId }).catch(() => []),
             KB.query({ type: 'invoice',           projectId: this.projectId }).catch(() => []),
             KB.query({ type: 'token_design',      projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'project_pitch',     projectId: this.projectId }).catch(() => []),
         ]);
 
         this.lifecycle = computeProjectLifecycle({
@@ -62,6 +63,7 @@ export default class ProjectLifecycleView {
             marketItems:   marketItems   || [],
             invoices:      invoices      || [],
             tokenomics:    tokenomics    || [],
+            pitches:       pitches       || [],
         });
         return this._htmlMain();
     }

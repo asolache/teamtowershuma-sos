@@ -17,6 +17,7 @@ import { computeCanvasCompletion } from './projectCanvasService.js';
 import { computeBalanceSheet, computePLForPeriod, LEDGER_ENTRY_TYPE } from './ledgerService.js';
 import { computeInvoicesStatusBreakdown } from './invoiceService.js';
 import { computeQualityScore as computeTokenomicsScore, TOKEN_DESIGN_TYPE } from './tokenomicsService.js';
+import { computePitchCompletion, PROJECT_PITCH_TYPE } from './projectPitchService.js';
 
 // Lifecycle phases · ordre fix · referent per al dashboard.
 export const LIFECYCLE_PHASES = Object.freeze([
@@ -152,28 +153,45 @@ function _phaseCanvas(p, project) {
 }
 
 function _phasePitch(p, project, pitches, pid) {
-    // Pitch · busquem nodes de tipus project_pitch o presentation_narrative
-    // a project.content. Fallback · project.presentation_narrative_v1.
     const relevant = (pitches || []).filter(x => x?.projectId === pid || x?.content?.projectId === pid);
-    const hasNarrative = !!(project.presentation_narrative_v1 || project.content?.pitch);
-    if (relevant.length === 0 && !hasNarrative) {
+    const href = '/pitch?project=' + encodeURIComponent(pid);
+    if (relevant.length === 0) {
+        // Fallback al narrative inline · si existeix · partial
+        const hasNarrative = !!(project.presentation_narrative_v1 || project.content?.pitch);
+        if (hasNarrative) {
+            return {
+                ...p,
+                status:     'partial',
+                completion: 0.3,
+                detail:     'narrative inline al project · sense node pitch',
+                nextAction: 'Crear pitch dedicat per a OG/share',
+                href,
+            };
+        }
         return {
             ...p,
             status:     'pending',
             completion: 0,
-            detail:     'Cap pitch encara · Wave 1 pendent',
-            nextAction: 'Wave 1 · crear pitch públic',
-            href:       null,    // sprint pending · ruta no existeix encara
+            detail:     'Cap pitch encara',
+            nextAction: 'Crear pitch públic shareable',
+            href,
         };
     }
-    const completion = relevant.length > 0 ? 1 : 0.5;
+    // Take most recent · compute completion
+    const latest = relevant.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+    const c = computePitchCompletion(latest);
+    const published = !!latest.content?.publishedAt;
+    let status;
+    if (c.filled === c.total && published) status = 'done';
+    else if (c.filled >= 3 || published)   status = 'partial';
+    else                                    status = 'pending';
     return {
         ...p,
-        status:     completion === 1 ? 'done' : 'partial',
-        completion,
-        detail:     relevant.length > 0 ? (relevant.length + ' pitch node(s)') : 'narrative inline al project',
-        nextAction: completion === 1 ? null : 'Wave 1 · pitch públic shareable',
-        href:       null,
+        status,
+        completion: published ? Math.max(0.6, c.ratio) : c.ratio * 0.6,
+        detail:     c.filled + '/' + c.total + ' seccions' + (published ? ' · 📡 publicat' : ' · draft'),
+        nextAction: status === 'done' ? null : (published ? 'Completar seccions restants' : 'Omplir seccions (mín 3) i publicar'),
+        href,
     };
 }
 

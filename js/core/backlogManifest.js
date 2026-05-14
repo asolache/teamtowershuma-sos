@@ -312,15 +312,17 @@ export const INITIAL_BACKLOG = Object.freeze([
 
     Object.freeze({
         id: 'project-pitch-public',
-        title: 'Project Pitch · one-pager públic /p/{id}/pitch shareable',
-        description: 'Vista pública (no requereix wallet) amb pitch del projecte · vision · team (roles) · traction (quality score) · CTA endorsar. OG meta tags · share link curt. Reusa quality + roles + attestations.',
+        title: 'Project Pitch · one-pager públic /pitch?project=X shareable amb OG meta',
+        description: 'Pitch one-pager · 6 seccions (problem · solution · traction · team · ask · vision) · públic per defecte (read-only) · ?edit=1 per autoria. OG meta tags + Twitter cards injectades al head per a previews quan es comparteixen. Slug kebab-case ASCII-safe. Pre-fill auto des de canvas (vision/mission mappats). Publish/unpublish · cal mínim 3 seccions per publicar.',
         principles: ['principle-1-nodes', 'principle-3-stripe-stakeholders'],
-        status: 'pending',
+        status: 'completed',
         priority: 'high',
         complexity: 'M',
         dependencies: ['project-canvas-wizard'],
-        testRequirements: ['projectPitchService.test.js · buildPitchData pure · OG meta gen'],
+        testRequirements: ['projectPitch.test.js · 67 tests · 6-sections validation · OG meta gen · publish/unpublish · slug ASCII safe · prefillFromCanvas (no overwrite) · OG HTML escape'],
         suggestedFiles: ['js/core/projectPitchService.js', 'js/views/ProjectPitchView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
 
     Object.freeze({
