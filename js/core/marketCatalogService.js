@@ -38,8 +38,17 @@
 // =============================================================================
 
 import { MARKET_ITEM_KINDS, MARKET_VISIBILITY } from './marketService.js';
+import {
+    PUBLIC_MARKET_ITEM_TYPE, PUBLIC_WORKSHOP_TYPE,
+} from './publicEntityService.js';
 
-export const CATALOG_SOURCE_TYPES = Object.freeze(['market_item', 'workshop', 'sop']);
+export const CATALOG_SOURCE_TYPES = Object.freeze([
+    'market_item',
+    'workshop',
+    'sop',
+    'public_market_item_entry',     // PERMAWEB · cross-device discovery
+    'public_workshop_entry',        // PERMAWEB
+]);
 
 // SELLABLE_SOP_KEYWORD · marca als SOP nodes que els fa visibles al market.
 // L'usuari pot afegir aquesta keyword o `content.marketSellable = true`.
@@ -121,6 +130,62 @@ export function fromSop(sop) {
     };
 }
 
+// fromPublicMarketItem · pura · converteix public_market_item_entry (permaweb)
+// a CatalogEntry. Aquests nodes són mirrors lleugers federats · sense `raw`
+// payload complet (cal sync per a obtenir-lo).
+export function fromPublicMarketItem(node) {
+    if (!node || node.type !== PUBLIC_MARKET_ITEM_TYPE) return null;
+    const c = node.content || {};
+    return {
+        id:                c.itemId || node.id,
+        sourceType:        'public_market_item_entry',
+        kind:              c.kind || 'product',
+        title:             c.title || (c.itemId || node.id),
+        description:       c.description || '',
+        priceEur:          (typeof c.priceEur === 'number') ? c.priceEur : (typeof c.price === 'number' ? c.price : null),
+        currency:          c.currency || 'EUR',
+        providerProjectId: c.projectId || null,
+        providerHandle:    c.ownerHandle || null,
+        ownerDid:          c.ownerDid || null,
+        visibility:        'public',     // sempre · és permaweb
+        tags:              Array.isArray(c.tags) ? c.tags.slice() : [],
+        cnae:              c.cnae || null,
+        sectorTT:          c.sectorTT || null,
+        createdAt:         c.createdAt || node.createdAt || 0,
+        updatedAt:         node.updatedAt || c.updatedAt || 0,
+        txId:              c.txId || node.txId || null,    // arweave txId si publicat
+        isPermaweb:        true,
+        raw:               node,
+    };
+}
+
+// fromPublicWorkshop · pura · análogo per a workshops permaweb
+export function fromPublicWorkshop(node) {
+    if (!node || node.type !== PUBLIC_WORKSHOP_TYPE) return null;
+    const c = node.content || {};
+    return {
+        id:                c.workshopId || node.id,
+        sourceType:        'public_workshop_entry',
+        kind:              'workshop',
+        title:             c.title || (c.workshopId || node.id),
+        description:       c.outline || c.description || '',
+        priceEur:          (typeof c.priceEur === 'number') ? c.priceEur : (typeof c.price === 'number' ? c.price : null),
+        currency:          c.currency || 'EUR',
+        providerProjectId: c.projectId || null,
+        providerHandle:    c.ownerHandle || null,
+        ownerDid:          c.ownerDid || null,
+        visibility:        'public',
+        tags:              ['workshop', c.audience || 'general', c.accessTier || 'free'],
+        cnae:              null,
+        sectorTT:          null,
+        createdAt:         c.createdAt || node.createdAt || 0,
+        updatedAt:         node.updatedAt || c.updatedAt || 0,
+        txId:              c.txId || node.txId || null,
+        isPermaweb:        true,
+        raw:               node,
+    };
+}
+
 // buildCatalog · pura · agrega entries de múltiples sources en una llista única.
 //
 // args ·
@@ -135,6 +200,8 @@ export function buildCatalog({
     marketItems         = [],
     workshops           = [],
     sops                = [],
+    publicMarketItems   = [],   // permaweb federation · public_market_item_entry
+    publicWorkshops     = [],   // permaweb federation · public_workshop_entry
     visibleProjectIds   = null,
 } = {}) {
     const entries = [];
@@ -150,10 +217,29 @@ export function buildCatalog({
         const e = fromSop(s);
         if (e) entries.push(e);
     }
-    // Filter per visibleProjectIds
-    let filtered = entries;
+    // Permaweb federation · cross-device discovery
+    for (const p of publicMarketItems || []) {
+        const e = fromPublicMarketItem(p);
+        if (e) entries.push(e);
+    }
+    for (const p of publicWorkshops || []) {
+        const e = fromPublicWorkshop(p);
+        if (e) entries.push(e);
+    }
+    // Dedupe · si un item té duplicat local + permaweb (mateix id) · prefer permaweb (té txId)
+    const dedupeMap = new Map();
+    for (const e of entries) {
+        const existing = dedupeMap.get(e.id);
+        if (!existing) { dedupeMap.set(e.id, e); continue; }
+        // Prefer permaweb (té txId) sobre local
+        if (e.isPermaweb && !existing.isPermaweb) dedupeMap.set(e.id, e);
+    }
+    let filtered = Array.from(dedupeMap.values());
     if (visibleProjectIds instanceof Set && visibleProjectIds.size > 0) {
-        filtered = entries.filter(e => !e.providerProjectId || visibleProjectIds.has(e.providerProjectId));
+        filtered = filtered.filter(e => {
+            if (e.isPermaweb) return true;             // permaweb · sempre visible
+            return !e.providerProjectId || visibleProjectIds.has(e.providerProjectId);
+        });
     }
     filtered.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     return filtered;

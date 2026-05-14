@@ -24,6 +24,9 @@ import {
 import {
     buildCatalog, computeCatalogStats, SELLABLE_SOP_KEYWORD,
 } from '../core/marketCatalogService.js';
+import {
+    PUBLIC_MARKET_ITEM_TYPE, PUBLIC_WORKSHOP_TYPE,
+} from '../core/publicEntityService.js';
 import { searchCnae, getCnae } from '../core/cnaeSeed.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
@@ -195,12 +198,13 @@ export default class MarketView {
         const allProjects = (store.getState().projects || []);
         this.projects = visibleProjects(allProjects);
         const visibleIds = new Set(this.projects.map(p => p.id));
-        // MARKET-CATALOG sprint A · agreguem 3 fonts · market_item + workshop
-        // + sop (sols si flagged 'market-sellable')
-        const [rawItems, rawWorkshops, rawSops] = await Promise.all([
+        // MARKET-CATALOG · agreguem 5 fonts · 3 locals + 2 permaweb (cross-device)
+        const [rawItems, rawWorkshops, rawSops, pubItems, pubWorkshops] = await Promise.all([
             KB.query({ type: 'market_item' }).catch(() => []),
             KB.query({ type: 'workshop'    }).catch(() => []),
             KB.query({ type: 'sop'         }).catch(() => []),
+            KB.query({ type: PUBLIC_MARKET_ITEM_TYPE }).catch(() => []),
+            KB.query({ type: PUBLIC_WORKSHOP_TYPE }).catch(() => []),
         ]);
         this.itemsAll = rawItems || [];
         // Items NO associats a un projecte (sense providerProjectId) → visibles
@@ -213,11 +217,13 @@ export default class MarketView {
         });
         this.items.sort((a, b) => (b.content?.createdAt || b.createdAt || 0) - (a.content?.createdAt || a.createdAt || 0));
 
-        // Catalog unificat (market_item + workshop + sop flagged) · pure
+        // Catalog unificat · local + permaweb federation · pure
         this.catalog = buildCatalog({
             marketItems:       this.items,
             workshops:         rawWorkshops || [],
             sops:              rawSops || [],
+            publicMarketItems: pubItems || [],
+            publicWorkshops:   pubWorkshops || [],
             visibleProjectIds: visibleIds,
         });
         this.catalogStats = computeCatalogStats(this.catalog);
@@ -273,9 +279,11 @@ export default class MarketView {
 
         // Stats strip · per kind + per source
         const stats = this.catalogStats || { total: 0, byKind: {}, bySourceType: {} };
+        const permawebCount = (stats.bySourceType.public_market_item_entry || 0) + (stats.bySourceType.public_workshop_entry || 0);
         const statsHtml = `
             <div class="mk-stats">
                 <span class="mk-stat-chip"><strong>${stats.total}</strong> total</span>
+                ${permawebCount > 0                     ? `<span class="mk-stat-chip" style="color:#22c55e;border-color:#22c55e50;" title="Cross-device · federated">🌐 ${permawebCount} permaweb</span>` : ''}
                 ${(stats.byKind.product || 0) > 0       ? `<span class="mk-stat-chip" style="color:#86efac;">📦 ${stats.byKind.product} prod</span>` : ''}
                 ${(stats.byKind.service || 0) > 0       ? `<span class="mk-stat-chip" style="color:#a5b4fc;">💡 ${stats.byKind.service} serv</span>` : ''}
                 ${(stats.byKind.workshop || 0) > 0      ? `<span class="mk-stat-chip" style="color:#fbbf24;">🎓 ${stats.byKind.workshop} workshop</span>` : ''}
@@ -284,6 +292,7 @@ export default class MarketView {
                 ${(stats.byKind.template || 0) > 0      ? `<span class="mk-stat-chip" style="color:#fb7185;">📋 ${stats.byKind.template} plt</span>` : ''}
                 ${(stats.bySourceType.sop || 0) > 0     ? `<span class="mk-stat-chip" style="color:#cbd5e1;">📜 ${stats.bySourceType.sop} sop</span>` : ''}
                 ${stats.avgPrice != null                ? `<span class="mk-stat-chip" style="color:var(--accent-green);">💰 €${stats.avgPrice} promig</span>` : ''}
+                <a href="/opportunities" data-link class="mk-stat-chip" style="color:var(--accent-indigo);text-decoration:none;border-color:var(--accent-indigo)50;">↻ Sync permaweb</a>
             </div>`;
 
         if (!filtered.length) {
@@ -335,11 +344,13 @@ export default class MarketView {
             : '#6366f1';
         const provider = entry.providerProjectId ? this.projects.find(p => p.id === entry.providerProjectId) : null;
         const tags = (Array.isArray(entry.tags) ? entry.tags : []).slice(0, 5);
-        const sourceBadge = entry.sourceType === 'workshop'
-            ? '<span style="background:#fbbf2418;color:#fbbf24;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;">📥 workshop</span>'
-            : entry.sourceType === 'sop'
-                ? '<span style="background:#cbd5e118;color:#cbd5e1;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;">📥 sop</span>'
-                : '';
+        const sourceBadge = entry.isPermaweb
+            ? `<span style="background:#22c55e18;color:#22c55e;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;" title="Cross-device · ${entry.txId ? this._esc(entry.txId.slice(0, 10)) + '…' : 'permaweb'}">🌐 permaweb</span>`
+            : entry.sourceType === 'workshop'
+                ? '<span style="background:#fbbf2418;color:#fbbf24;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;">📥 workshop</span>'
+                : entry.sourceType === 'sop'
+                    ? '<span style="background:#cbd5e118;color:#cbd5e1;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;">📥 sop</span>'
+                    : '';
         return `
             <div class="mk-card" data-cat-id="${this._esc(entry.id)}" style="--mk-color:${kindColor};">
                 <div class="mk-kind">${KIND_LABELS[entry.kind] || entry.kind}${entry.visibility && entry.visibility !== 'public' ? ' · 🔒 ' + entry.visibility : ''} ${sourceBadge}</div>
