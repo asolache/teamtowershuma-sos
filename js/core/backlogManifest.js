@@ -117,6 +117,22 @@ export const INITIAL_BACKLOG = Object.freeze([
         suggestedFiles: ['js/core/trustScoreService.js'],
     }),
     Object.freeze({
+        id: 'mind-graph-galaxy',
+        title: 'Mind-graph · galàxies per sector + capes ceba per tipus (φ àuria) + pseudo-3D',
+        description: 'Layout galàctic per al mind-graph · cada sector és una galàxia (centres en espiral Vogel/golden-angle) · dins de cada galàxia els nodes formen capes de ceba per tipus (project → role → sop → market → identity) amb radis seguint la proporció àuria φ. Pseudo-3D via opacitat/escala per cz (depth) sense Three.js.',
+        principles: ['principle-1-nodes'],
+        status: 'completed',
+        priority: 'low',
+        complexity: 'M',
+        dependencies: [],
+        testRequirements: [
+            'mindGraphGalaxy.test.js · assignSpatialLayout pure · 44 tests',
+        ],
+        suggestedFiles: ['js/core/mindGraphService.js', 'js/views/MindGraphView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
+    }),
+    Object.freeze({
         id: 'mock-badge-cards',
         title: 'Badge "🧪 mock" visual a cards de /opportunities',
         description: 'Indicador visual a cards quan txId comença per "mock-" (entries locals · no cross-device). Tanca el feedback loop del sync auditing.',

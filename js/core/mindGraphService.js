@@ -173,3 +173,147 @@ export function graphStats(graph) {
         byEdgeKind,
     };
 }
+
+// =============================================================================
+// MIND-GRAPH GALAXY LAYOUT (H8.2 · sprint A)
+//
+// "Galàxies per afinitat dimensional" · cada sector → 1 galàxia.
+// Dins de cada galàxia · capes de ceba per tipus de node usant la
+// proporció àuria φ = (1+√5)/2 ≈ 1.618 per a separar tiers radialment.
+//
+// Disposició dels centres de galàxia · Vogel spiral (golden-angle) ·
+// reparteix N galàxies sense sobreposició amb apariència orgànica.
+//
+// Pseudo-3D · cada galàxia rep un `cz` ∈ [0..1] · 0 = primer pla,
+// 1 = fons. La capa renderització · usa cz per modular opacitat i
+// escala (efecte parallax / profunditat) sense Three.js / WebGL.
+// =============================================================================
+
+export const PHI         = 1.618033988749895;
+const GOLDEN_ANGLE       = Math.PI * (3 - Math.sqrt(5)); // ≈ 2.39996
+
+// Capes de ceba per tipus de node · tier 0 (project · centre) ··· 4 (perifèria)
+// El radi de cada capa · baseRingR * φ^(tier·0.6)
+export const TYPE_TIER = Object.freeze({
+    project:          0,
+    client_vna_model: 0,
+    role:             1,
+    transaction:      1,
+    sop:              2,
+    workshop:         2,
+    work_order:       2,
+    market_item:      3,
+    deliverable:      3,
+    ledger_entry:     3,
+    user_identity:    4,
+    smart_folder:     4,
+    soc:              4,
+    config:           4,
+    sprint_run:       4,
+});
+
+export function tierForType(type) {
+    return TYPE_TIER[type] ?? 3;
+}
+
+// Resol sectorKey per a un node · projecte: content.sectorId · altres: heretat
+// del parent project. Fallback · 'misc'.
+function _resolveSectorMap(nodes) {
+    const projectSector = {};
+    for (const n of nodes) {
+        if (n.type === 'project' || n.type === 'client_vna_model') {
+            const sec = n.sectorId || n.content?.sectorId || n.sector_id || 'misc';
+            projectSector[n.id] = sec || 'misc';
+        }
+    }
+    return projectSector;
+}
+
+// assignSpatialLayout · PURA · muta graph.nodes afegint
+//   sectorKey · tier · sectorCx · sectorCy · sectorCz · ringRadius · cx · cy
+// i retorna metadata { sectorCenters, sectors, sectorCount }.
+//
+// width/height · viewport · baseRingR · radi de la capa 0 (project center)
+export function assignSpatialLayout(graph, {
+    width      = 1400,
+    height     = 1000,
+    baseRingR  = 90,
+    seed       = null,   // determinisme opcional per a tests
+} = {}) {
+    if (!graph || !Array.isArray(graph.nodes)) return { sectorCenters: {}, sectors: [], sectorCount: 0 };
+    const nodes = graph.nodes;
+    const projectSector = _resolveSectorMap(nodes);
+
+    // Resol sectorKey per a tots els nodes
+    for (const n of nodes) {
+        if (n.type === 'project' || n.type === 'client_vna_model') {
+            n.sectorKey = projectSector[n.id] || 'misc';
+        } else if (n.projectId && projectSector[n.projectId]) {
+            n.sectorKey = projectSector[n.projectId];
+        } else {
+            n.sectorKey = 'misc';
+        }
+    }
+
+    // Recull sectors únics ordenats (deterministic)
+    const sectorSet = new Set(nodes.map(n => n.sectorKey));
+    const sectors = Array.from(sectorSet).sort();
+    if (sectors.length === 0) {
+        // Degenerate · 0 nodes · res a posicionar
+        return { sectorCenters: {}, sectors: [], sectorCount: 0 };
+    }
+    const N = sectors.length;
+
+    // Centres de galàxia · Vogel spiral · r = maxR · √(i/(N−1)) · θ = i·GA
+    const cx0  = width  / 2;
+    const cy0  = height / 2;
+    const maxR = Math.min(width, height) * 0.38;
+    const sectorCenters = {};
+    for (let i = 0; i < N; i++) {
+        const r     = N === 1 ? 0 : maxR * Math.sqrt(i / (N - 1));
+        const theta = i * GOLDEN_ANGLE;
+        sectorCenters[sectors[i]] = {
+            cx:    cx0 + r * Math.cos(theta),
+            cy:    cy0 + r * Math.sin(theta),
+            cz:    N === 1 ? 0 : i / (N - 1),   // depth 0..1 (alt index → més profund)
+            index: i,
+            key:   sectors[i],
+        };
+    }
+
+    // Assigna posicions inicials per a cada node · cebola dins de la galàxia.
+    // Dins d'un mateix tier · els nodes es distribueixen angularment via
+    // golden-angle deterministic perquè no es sobreposin.
+    const tierCount = {}; // counter de quants nodes ja ha rebut cada (sector,tier)
+    const rng = _seededRng(seed);
+    for (const n of nodes) {
+        n.tier = tierForType(n.type);
+        const s = sectorCenters[n.sectorKey] || sectorCenters[sectors[0]];
+        n.sectorCx = s ? s.cx : cx0;
+        n.sectorCy = s ? s.cy : cy0;
+        n.sectorCz = s ? s.cz : 0;
+        // Radi de la capa de ceba · creix exponencialment amb tier via φ
+        n.ringRadius = baseRingR * Math.pow(PHI, n.tier * 0.6);
+        // Angle dins del tier · golden angle deterministic (+ petit jitter si rng)
+        const tierKey = n.sectorKey + ':' + n.tier;
+        const idxInTier = (tierCount[tierKey] = (tierCount[tierKey] || 0) + 1) - 1;
+        const baseAngle = idxInTier * GOLDEN_ANGLE;
+        const jitter    = rng ? (rng() - 0.5) * 0.4 : 0;
+        n.cx = n.sectorCx + n.ringRadius * Math.cos(baseAngle + jitter);
+        n.cy = n.sectorCy + n.ringRadius * Math.sin(baseAngle + jitter);
+    }
+
+    return { sectorCenters, sectors, sectorCount: N };
+}
+
+// Mulberry32 · RNG determinístic petit per a tests (sense Math.random)
+function _seededRng(seed) {
+    if (seed === null || seed === undefined) return null;
+    let s = seed >>> 0;
+    return function() {
+        s |= 0; s = (s + 0x6D2B79F5) | 0;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
