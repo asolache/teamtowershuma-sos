@@ -23,6 +23,8 @@ import {
     applyCanvasToProject,
     buildAiPromptForStep,
 } from '../core/projectCanvasService.js';
+import { label } from '../core/sosCopy.js';
+import { attachAIFormFeedback } from '../core/aiFormFeedback.js';
 
 export default class ProjectCanvasView {
 
@@ -109,12 +111,13 @@ export default class ProjectCanvasView {
                         </div>
                         <div>${badge}</div>
                     </div>
-                    <textarea class="cv-textarea" data-step-input="${s.id}" rows="4" placeholder="Min ${s.minLength} · max ${s.maxLength} caràcters · escriu o pulsa 🤖 per a draft IA…">${this._esc(state.value)}</textarea>
+                    <textarea class="cv-textarea" data-step-input="${s.id}" rows="4" placeholder="Min ${s.minLength} · max ${s.maxLength} caràcters · escriu o prem 🤖 per draft IA…">${this._esc(state.value)}</textarea>
                     <div class="cv-card-actions">
-                        <button class="cv-btn cv-btn-ai" data-step-ai="${s.id}" title="Genera draft amb IA failover">🤖 IA draft</button>
-                        <button class="cv-btn cv-btn-save" data-step-save="${s.id}">✓ Validar &amp; desar</button>
-                        <span class="cv-step-msg" data-step-msg="${s.id}"></span>
+                        <button class="cv-btn cv-btn-ai" data-step-ai="${s.id}" title="${this._esc(label('hint.ai_powered', 'Genera draft amb IA failover'))}">${this._esc(label('cta.generate'))}</button>
+                        <button class="cv-btn cv-btn-save" data-step-save="${s.id}">✓ ${this._esc(label('cta.save'))}</button>
                     </div>
+                    <!-- DESIGN-SYSTEM sprint B · aiFormFeedback mount-point per step -->
+                    <div data-step-feedback="${s.id}" style="margin-top:8px;"></div>
                 </div>
             `;
         }).join('');
@@ -190,12 +193,16 @@ export default class ProjectCanvasView {
     }
 
     _bindSteps() {
+        // DESIGN-SYSTEM sprint B · 1 controller aiFormFeedback per step (KISS · DRY)
+        this._stepFeedback = {};
         for (const step of CANVAS_STEPS) {
             const sid = step.id;
             const ta  = document.querySelector('[data-step-input="' + sid + '"]');
             const saveBtn = document.querySelector('[data-step-save="' + sid + '"]');
             const aiBtn   = document.querySelector('[data-step-ai="' + sid + '"]');
-            const msg     = document.querySelector('[data-step-msg="' + sid + '"]');
+            const fbEl    = document.querySelector('[data-step-feedback="' + sid + '"]');
+            const fb      = fbEl ? attachAIFormFeedback(fbEl, { showLog: false, autoFadeOk: 4000 }) : null;
+            if (fb) this._stepFeedback[sid] = fb;
 
             if (saveBtn) saveBtn.addEventListener('click', async () => {
                 if (!ta) return;
@@ -206,11 +213,10 @@ export default class ProjectCanvasView {
                     const updatedProject = applyCanvasToProject(this.project, next);
                     await KB.upsert(updatedProject);
                     this.project = updatedProject;
-                    if (msg) { msg.textContent = '✓ desat'; msg.className = 'cv-step-msg ok'; }
-                    // Re-render lleuger · actualitzem progress sense innerHTML total
+                    if (fb) fb.setOk(label('state.done'));
                     this._refreshProgress();
                 } catch (e) {
-                    if (msg) { msg.textContent = '✗ ' + (e.reason || e.message); msg.className = 'cv-step-msg err'; }
+                    if (fb) fb.setError(e.reason || e.message);
                 }
             });
 
@@ -218,10 +224,11 @@ export default class ProjectCanvasView {
                 if (!ta) return;
                 aiBtn.disabled = true;
                 const origText = aiBtn.textContent;
-                aiBtn.textContent = '⏳ generant…';
-                if (msg) { msg.textContent = ''; msg.className = 'cv-step-msg'; }
+                aiBtn.textContent = '⏳ ' + label('state.thinking');
                 try {
                     const { runEscalation } = await import('../core/aiRouterService.js');
+                    // Mostra "Pensant…" amb context del SOP/step
+                    if (fb) fb.setThinking({ kind: 'runner-start', sopTitle: step.label, iteration: 1 });
                     const prompt = buildAiPromptForStep(sid, {
                         projectName:   this.project.nombre || this.project.name,
                         sector:        this.project.sector_id,
@@ -236,13 +243,13 @@ export default class ProjectCanvasView {
                     const text = (result && (result.output || result.text || result.result)) || '';
                     if (text && typeof text === 'string') {
                         ta.value = text.trim().slice(0, step.maxLength);
-                        if (msg) { msg.textContent = '🤖 draft · revisa i valida'; msg.className = 'cv-step-msg ok'; }
+                        if (fb) fb.setOk(label('hint.ai_powered'));
                     } else {
-                        if (msg) { msg.textContent = '✗ IA buida'; msg.className = 'cv-step-msg err'; }
+                        if (fb) fb.setError(label('err.ai_failed'));
                     }
                 } catch (e) {
                     console.warn('[canvas] IA failover failed', e);
-                    if (msg) { msg.textContent = '✗ IA · ' + (e?.message || 'error'); msg.className = 'cv-step-msg err'; }
+                    if (fb) fb.setError(label('err.ai_failed') + ' · ' + (e?.message || ''));
                 } finally {
                     aiBtn.disabled = false;
                     aiBtn.textContent = origText;

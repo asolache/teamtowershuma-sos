@@ -416,6 +416,21 @@ export const INITIAL_BACKLOG = Object.freeze([
     }),
 
     Object.freeze({
+        id: 'design-system-v2-rollout',
+        title: 'SOS Design System v2 · sosComponents + navService restructure v2 + ProjectCanvas IA-aware',
+        description: 'Pas 2 del rollout · 1) sosComponents.js · 8 HTML helpers pure (chip · statCard · statGrid · emptyState · progressBar · badge · card · infoBanner) · safe HTML escape per defecte · usa TOKENS de sosCopy · ensureBadgePulseCss. 2) navService restructure v2 · NAV_CATEGORIES re-organitzat als 7 grups del Design System v1 (foundation/execution/value/commercial/swarm/discovery/identity) · NAV_DESTINATIONS amb 33 destins (afegits canvas/pitch/tokenomics/accounting/proposals/invoices/lifecycle/swarm/improve/design + recategoritzats existents) · copy human-readable català coherent. 3) ProjectCanvasView showcase · usa label() de sosCopy + attachAIFormFeedback per cada step · feedback "Pensant…" amb pulse animation durant draft IA · clear ok/err post-runner · DRY · cap DOM manual.',
+        principles: ['principle-1-nodes'],
+        status: 'completed',
+        priority: 'high',
+        complexity: 'M',
+        dependencies: ['design-system-v1'],
+        testRequirements: ['sosComponents.test.js · 61 tests · 8 helpers · XSS escape · null/empty safe · clamp percent · custom args · gradient · href data-link · footer divider · kind fallback'],
+        suggestedFiles: ['js/core/sosComponents.js', 'js/core/navService.js', 'js/views/ProjectCanvasView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
+    }),
+
+    Object.freeze({
         id: 'design-system-v1',
         title: 'SOS Design System v1 · sosCopy + aiFormFeedback + /design mockup',
         description: 'Tres entregables · 1) sosCopy.js · SINGLE SOURCE OF TRUTH per a copy human-readable (DRY) · 64+ labels organitzats en 8 categories (nav/cta/state/hint/err/help/group/empty) · label(key, fallback?) + labelN(key, n) + applyToNavDestinations. 2) aiFormFeedback.js · widget reutilitzable (KISS) · attachAIFormFeedback(container) → controller amb setThinking/addEvent/setOk/setError/clear/onActivity. Auto-injecta CSS pulse animation. 3) /design view · mockup deluxe Dashboard (hero amb IA box + 6 cards stats) + arquitectura informació v2 (7 grups per viatge fundador · max 5 items) + side-by-side comparison original vs v2 + live demo aiFormFeedback + component library (chips · tokens · buttons · stats).',
