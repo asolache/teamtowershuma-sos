@@ -275,6 +275,144 @@ export const INITIAL_BACKLOG = Object.freeze([
         testRequirements: ['voteService.test.js · weighted tally · quorum'],
         suggestedFiles: ['js/core/voteService.js', 'js/views/VoteView.js'],
     }),
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PROJECT-LIFECYCLE blueprint · sprint planning multi-PR
+    //
+    // OBJECTIU · SOS guia un fundador des de la idea fins a la facturació:
+    //   1. definir projecte (canvas)         · canvas-wizard
+    //   2. presentar (one-pager públic)      · pitch-public
+    //   3. organitzar (kanban + WO context)  · ✓ ja existeix (KanbanView)
+    //   4. pactar (signatures ECDSA)         · ✓ ja existeix (PactBuilderView)
+    //   5. tokenomics                        · tokenomics-designer
+    //   6. comptabilitat (ledger)            · ledger-accounting
+    //   7. propostes (a clients)             · proposal-generator
+    //   8. productes/workshops               · ✓ ja existeix (market_item, workshop)
+    //   9. facturació (invoices)             · invoice-billing
+    //  10. dashboard de cicle (status %)     · lifecycle-dashboard
+    //
+    // En paral·lel · millora del swarm (value-flow-schema + swarm-parallel-flow)
+    // per que pugui orquestrar el cicle automàticament.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    Object.freeze({
+        id: 'project-canvas-wizard',
+        title: 'Project Canvas Wizard · /canvas?project=X guiat per IA',
+        description: 'Wizard 5-passes per a definir un projecte · vision · mission · values · stakeholders · north-star. IA omple drafts (runEscalation failover) · el fundador valida o edita. Persisteix com a content.canvas al node project. Pure logic a projectCanvasService.',
+        principles: ['principle-1-nodes', 'principle-2-roles'],
+        status: 'completed',
+        priority: 'high',
+        complexity: 'S',
+        dependencies: [],
+        testRequirements: ['projectCanvas.test.js · 69 tests · 5-step state machine · validation · IA mock · immutability'],
+        suggestedFiles: ['js/core/projectCanvasService.js', 'js/views/ProjectCanvasView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
+    }),
+
+    Object.freeze({
+        id: 'project-pitch-public',
+        title: 'Project Pitch · one-pager públic /p/{id}/pitch shareable',
+        description: 'Vista pública (no requereix wallet) amb pitch del projecte · vision · team (roles) · traction (quality score) · CTA endorsar. OG meta tags · share link curt. Reusa quality + roles + attestations.',
+        principles: ['principle-1-nodes', 'principle-3-stripe-stakeholders'],
+        status: 'pending',
+        priority: 'high',
+        complexity: 'M',
+        dependencies: ['project-canvas-wizard'],
+        testRequirements: ['projectPitchService.test.js · buildPitchData pure · OG meta gen'],
+        suggestedFiles: ['js/core/projectPitchService.js', 'js/views/ProjectPitchView.js'],
+    }),
+
+    Object.freeze({
+        id: 'tokenomics-designer',
+        title: 'Tokenomics Designer · /p/{id}/tokenomics distribució + vesting',
+        description: 'Generalitza el fairfractal existent · token name · symbol · supply · distribution (sliders per role/founder/treasury/community) · vesting schedule (cliff + linear). Persisteix com a token_design node. Reusa fairfractal compute.',
+        principles: ['principle-4-tea', 'principle-4-smart-contracts'],
+        status: 'pending',
+        priority: 'high',
+        complexity: 'M',
+        dependencies: ['project-canvas-wizard'],
+        testRequirements: ['tokenomicsService.test.js · distribution sum=1 · vesting schedule per epoch'],
+        suggestedFiles: ['js/core/tokenomicsService.js', 'js/views/TokenomicsView.js'],
+    }),
+
+    Object.freeze({
+        id: 'ledger-accounting',
+        title: 'Ledger Accounting · /p/{id}/accounting double-entry simple',
+        description: 'CRUD ledger_entry nodes · debit/credit · account · amount · currency · proof URL (txHash o invoice). Balance sheet senzill + P&L per mes. Integra wallet income (cobraments cripto reals) si hi ha.',
+        principles: ['principle-1-nodes', 'principle-3-stripe-stakeholders'],
+        status: 'pending',
+        priority: 'medium',
+        complexity: 'M',
+        dependencies: [],
+        testRequirements: ['ledgerService.test.js · double-entry invariant · balance per account'],
+        suggestedFiles: ['js/core/ledgerService.js', 'js/views/AccountingView.js'],
+    }),
+
+    Object.freeze({
+        id: 'proposal-generator',
+        title: 'Proposal Generator · /p/{id}/proposals amb IA · skill matching',
+        description: 'Generador de propostes a clients · pren brief · matcheja skills disponibles al projecte · IA genera escope/deliverables/pricing · estats draft/sent/accepted/rejected. PDF print-css per descarregar.',
+        principles: ['principle-2-roles', 'principle-3-stripe-stakeholders'],
+        status: 'pending',
+        priority: 'medium',
+        complexity: 'M',
+        dependencies: ['project-canvas-wizard'],
+        testRequirements: ['proposalService.test.js · skillMatch · state transitions'],
+        suggestedFiles: ['js/core/proposalService.js', 'js/views/ProposalView.js'],
+    }),
+
+    Object.freeze({
+        id: 'invoice-billing',
+        title: 'Invoice Billing · /p/{id}/invoices CRUD + PDF + status',
+        description: 'CRUD invoice nodes · client · items · total · IVA · due date · payment proof. Estats issued/sent/paid/overdue. PDF via print-css. Hook a wallet per a marcar paid automàticament si arriba payment. Future · Stripe Connect (separat backlog).',
+        principles: ['principle-3-stripe-stakeholders'],
+        status: 'pending',
+        priority: 'medium',
+        complexity: 'M',
+        dependencies: ['ledger-accounting'],
+        testRequirements: ['invoiceService.test.js · totals (IVA inclòs) · status transitions'],
+        suggestedFiles: ['js/core/invoiceService.js', 'js/views/InvoiceView.js'],
+    }),
+
+    Object.freeze({
+        id: 'lifecycle-dashboard',
+        title: 'Project Lifecycle Dashboard · /p/{id} status % de cada peça',
+        description: 'Dashboard a /p/{id} mostrant completion % per a cada fase (canvas · pitch · kanban · pactes · tokenomics · accounting · proposals · workshops · invoices). Quality score global. CTA next-best-action.',
+        principles: ['principle-1-nodes'],
+        status: 'pending',
+        priority: 'high',
+        complexity: 'M',
+        dependencies: ['project-canvas-wizard', 'project-pitch-public', 'tokenomics-designer', 'ledger-accounting'],
+        testRequirements: ['lifecycleService.test.js · computeCompletion pure · next action pick'],
+        suggestedFiles: ['js/core/lifecycleService.js', 'js/views/ProjectLifecycleView.js'],
+    }),
+
+    Object.freeze({
+        id: 'value-flow-schema',
+        title: 'Value Flow schema · DAG roles · transactions · deliverables',
+        description: 'Schema ValueFlow node · roles (kind+evaluator) · transactions (from/to/deliverable) · deliverables (DAG). Topo-sort utility. Foundation per a swarm-parallel-flow.',
+        principles: ['principle-2-roles'],
+        status: 'pending',
+        priority: 'high',
+        complexity: 'S',
+        dependencies: [],
+        testRequirements: ['valueFlowService.test.js · topoSort · cycle detection · DAG validation'],
+        suggestedFiles: ['js/core/valueFlowService.js'],
+    }),
+
+    Object.freeze({
+        id: 'swarm-parallel-flow',
+        title: 'Swarm Parallel Flow · DAG executor sobre runUntilGreen',
+        description: 'Estèn runUntilGreen amb DAG-aware executor · cada level del DAG corre en Promise.all (paral·lel viable) · transactions passen output com context inter-rol · budget per-rol + per-flow. Reusa attestationService per signar deliverables.',
+        principles: ['principle-2-roles', 'principle-4-tea'],
+        status: 'pending',
+        priority: 'medium',
+        complexity: 'L',
+        dependencies: ['value-flow-schema', 'tdd-autonomous-agent'],
+        testRequirements: ['swarmParallelFlow.test.js · parallel level execution · transaction passing · attestation signing'],
+        suggestedFiles: ['js/core/swarmParallelFlow.js'],
+    }),
 ]);
 
 // Helper · stats globals
