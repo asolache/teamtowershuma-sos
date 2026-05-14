@@ -73,6 +73,89 @@ export default class NodeView {
             return;
         }
         this._bindTagsEditor();
+        // WEBOF-TRUST sprint A · render del panell d'attesters (fire-and-forget)
+        this._renderWebOfTrust().catch(e => console.warn('[node-view] web-of-trust', e?.message));
+    }
+
+    // WEBOF-TRUST sprint A · render del panell "🤝 Web of Trust"
+    // Llegeix les attestations del KB · les filtra per attestedId=this.nodeId ·
+    // calcula trust score recursive (PageRank) · verifica signatures inline ·
+    // mostra cada attester amb el seu propi trust score normalitzat.
+    async _renderWebOfTrust() {
+        const body = document.getElementById('nvTrustBody');
+        if (!body) return;
+        try {
+            const { buildTrustPanelData } = await import('../core/trustScoreService.js');
+            const { verifyAttestation }   = await import('../core/attestationService.js');
+            const allAtts = await KB.query({ type: 'attestation' }).catch(() => []);
+
+            const data = buildTrustPanelData({
+                attestations: allAtts,
+                nodeId:       this.node.id,
+                projectId:    this.node.content?.projectId || this.node.projectId || null,
+            });
+
+            if (data.relevant.length === 0) {
+                body.innerHTML = `<div style="color:var(--text-muted);font-style:italic;font-size:0.82rem;">Cap attestation encara per a aquest node. Una entitat amb identitat ECDSA pot endorsar-lo des d'<a href="/opportunities" data-link style="color:var(--accent-indigo);">/opportunities</a> (cards) o des d'aquesta vista (sprint B · CTA "✓ Endorse aquest node").</div>`;
+                return;
+            }
+
+            const agg = data.aggregate;
+            const aggBadge = `<span title="Trust score recursive · ${agg.uniqueAttesters} attesters · PageRank weighted" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:${agg.color}25;color:${agg.color};border:1px solid ${agg.color}50;font-size:11px;font-weight:700;font-family:var(--font-mono);">${agg.icon} ${agg.total.toFixed(2)} · ${agg.uniqueAttesters} attester${agg.uniqueAttesters === 1 ? '' : 's'}</span>`;
+
+            // Verify signatures (parallel · defensiu) · index per attesterDid
+            const verifMap = new Map();
+            await Promise.all(data.relevant.map(async (a) => {
+                try {
+                    const ok = await verifyAttestation(a);
+                    verifMap.set(a.content?.attesterDid, ok ? 'ok' : 'bad');
+                } catch (_) {
+                    verifMap.set(a.content?.attesterDid, 'unknown');
+                }
+            }));
+
+            const rows = data.attesters.map(att => {
+                const v = verifMap.get(att.did);
+                const issued = att.issuedAt ? new Date(att.issuedAt).toLocaleString('es-ES') : '';
+                const verifyBadge = v === 'ok'
+                    ? '<span title="Signatura ECDSA verificada" style="color:#22c55e;font-weight:700;font-size:11px;">🔐 verified</span>'
+                    : v === 'bad'
+                        ? '<span title="Signatura no vàlida" style="color:#ef4444;font-weight:700;font-size:11px;">✗ invalid</span>'
+                        : '<span title="Sense signatura o error de verificació" style="color:var(--text-muted);font-size:11px;">— unverified</span>';
+                const kindColor = att.kind === 'endorses-founder' ? '#22c55e' : (att.kind === 'cohort-member' ? '#a855f7' : '#3b82f6');
+                return `
+                    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px 0;border-top:1px solid var(--border-default);font-size:0.82rem;">
+                        <div style="min-width:0;">
+                            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:4px;">
+                                <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:11px;">${this._esc(att.did.slice(0, 24))}…</code>
+                                ${att.handle ? `<span style="color:var(--accent-indigo);font-size:11px;font-weight:600;">${this._esc(att.handle)}</span>` : ''}
+                                <span title="kind weight ${att.kindWeight}×" style="background:${kindColor}25;color:${kindColor};padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">${this._esc(att.kind)} · ${att.kindWeight}×</span>
+                                ${verifyBadge}
+                            </div>
+                            ${att.statement ? `<div style="color:var(--text-secondary);font-size:0.78rem;line-height:1.45;font-style:italic;">"${this._esc(att.statement)}"</div>` : ''}
+                            ${issued ? `<div style="color:var(--text-muted);font-size:10px;font-family:var(--font-mono);margin-top:2px;">📅 ${this._esc(issued)}</div>` : ''}
+                        </div>
+                        <div style="text-align:right;font-family:var(--font-mono);color:var(--text-muted);font-size:11px;">
+                            <div title="Trust score PageRank de l'attester">PR ${att.pagerank.toFixed(2)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            body.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px;padding-bottom:8px;border-bottom:1px dashed var(--border-default);">
+                    <div>${aggBadge}</div>
+                    <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">PageRank · ${data.recursive.iterationsRun} iter · Δ ${data.recursive.finalDelta.toFixed(5)}${data.recursive.converged ? ' · converged' : ' · max iter'}</div>
+                </div>
+                ${rows}
+                <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border-default);font-size:11px;color:var(--text-muted);line-height:1.5;">
+                    Web of Trust · cada attester contribueix <code>kindWeight × scorePageRank(attester)</code>. Power-user endorsements valen més. Verifies via Web Crypto ECDSA P-256.
+                </div>
+            `;
+        } catch (e) {
+            console.warn('[node-view] _renderWebOfTrust failed', e);
+            body.innerHTML = '<div style="color:var(--accent-orange);font-size:0.8rem;">⚠ ' + this._esc(e?.message || 'no s\'ha pogut carregar el web of trust') + '</div>';
+        }
     }
 
     _htmlError(msg) {
@@ -130,6 +213,12 @@ export default class NodeView {
                         <div style="font-size:0.88rem;line-height:1.5;color:#ddd;">${linkifyMultiline(c.description || c.summary)}</div>
                     </div>
                 ` : ''}
+
+                <!-- WEBOF-TRUST sprint A · panell d'attesters · llistat verificable inline -->
+                <div class="nv-card" id="nvTrustCard">
+                    <div class="nv-label">🤝 Web of Trust · attesters d'aquest node</div>
+                    <div id="nvTrustBody" style="font-size:0.85rem;color:var(--text-muted);">Carregant…</div>
+                </div>
 
                 <div class="nv-card">
                     <div class="nv-label">Contenido completo · JSON</div>

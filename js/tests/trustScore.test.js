@@ -5,6 +5,7 @@ import {
     computeTrustScore, renderTrustBadgeHtml,
     loadAttestationsForIds, computeTrustForBatch,
     computeRecursiveTrustScores, computeRecursiveTrustForBatch,
+    buildTrustPanelData,
 } from '../core/trustScoreService.js';
 
 let pass = 0, fail = 0;
@@ -213,6 +214,66 @@ t(recBatch.p2.recursive,                                          'M · batch p2
 t(recBatch.p2.total > 0,                                          'M · batch p2 · score positiu');
 t(recBatch.__meta && typeof recBatch.__meta.iterationsRun === 'number',
                                                                   'M · batch · meta amb iterationsRun');
+
+// ─── N · WEBOF-TRUST · buildTrustPanelData · pure data prep ───────────────
+//
+// N1 · sense nodeId · empty defaults
+const n1 = buildTrustPanelData({});
+eq(n1.aggregate.uniqueAttesters, 0,                               'N1 · sense nodeId · 0 attesters');
+eq(n1.attesters.length,         0,                                'N1 · attesters []');
+
+// N2 · cas bàsic · 2 attesters al mateix node
+const wotKb = [
+    mkAtt('did:sos:alice', 'project-x'),
+    mkAtt('did:sos:bob',   'project-x', 'endorses-founder'),
+    mkAtt('did:sos:c',     'other-node'),     // exclòs · no és el target
+];
+const n2 = buildTrustPanelData({ attestations: wotKb, nodeId: 'project-x' });
+eq(n2.attesters.length, 2,                                        'N2 · 2 attesters per project-x');
+eq(n2.aggregate.uniqueAttesters, 2,                               'N2 · agregat 2 attesters');
+t(n2.relevant.length === 2,                                       'N2 · relevant filtered (2/3)');
+// founder (3x) ha de tenir kindWeight=3 al row
+const bobRow = n2.attesters.find(a => a.did === 'did:sos:bob');
+eq(bobRow.kindWeight, 3,                                          'N2 · bob founder kindWeight 3');
+const aliceRow = n2.attesters.find(a => a.did === 'did:sos:alice');
+eq(aliceRow.kindWeight, 1,                                        'N2 · alice operator kindWeight 1');
+
+// N3 · projectId fallback · attestations al projecte (no al node directament)
+const wotKb2 = [
+    mkAtt('did:sos:alice', 'project-x'),
+];
+const n3 = buildTrustPanelData({
+    attestations: wotKb2,
+    nodeId:       'wo-1',          // un WO concret
+    projectId:    'project-x',     // del projecte de l'WO
+});
+eq(n3.attesters.length, 1,                                        'N3 · attestation al projectId · inclosa');
+
+// N4 · attesters ordenats per pagerank DESC
+const wotKb3 = [
+    mkAtt('did:sos:newbie',   'tgt'),
+    mkAtt('did:sos:powerful', 'tgt'),
+    mkAtt('did:sos:u1', 'did:sos:powerful'),
+    mkAtt('did:sos:u2', 'did:sos:powerful'),
+    mkAtt('did:sos:u3', 'did:sos:powerful'),
+];
+const n4 = buildTrustPanelData({ attestations: wotKb3, nodeId: 'tgt' });
+eq(n4.attesters.length, 2,                                        'N4 · 2 attesters per tgt');
+eq(n4.attesters[0].did, 'did:sos:powerful',                       'N4 · powerful primer (PR més alt)');
+t(n4.attesters[0].pagerank > n4.attesters[1].pagerank,            'N4 · ordre DESC');
+
+// N5 · meta info · iterationsRun + converged
+t(n4.recursive.iterationsRun > 0,                                 'N5 · iterationsRun >0');
+t(typeof n4.recursive.converged === 'boolean',                    'N5 · converged boolean');
+t(n4.recursive.attesterCount > 0,                                 'N5 · attesterCount > 0');
+
+// N6 · dedupe · mateix DID 2 cops · sols 1 entry al attesters
+const wotKb6 = [
+    mkAtt('did:sos:alice', 'tgt'),
+    mkAtt('did:sos:alice', 'tgt'),  // duplicat
+];
+const n6 = buildTrustPanelData({ attestations: wotKb6, nodeId: 'tgt' });
+eq(n6.attesters.length, 1,                                        'N6 · dedupe per attesterDid');
 
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

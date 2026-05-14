@@ -223,6 +223,92 @@ export async function computeRecursiveTrustForBatch({ kb, attestedIds = [], opti
     return result;
 }
 
+// =============================================================================
+// WEBOF-TRUST sprint A · buildTrustPanelData
+//
+// Pure helper · prepara les dades per al panell "🤝 Web of Trust" del
+// detail view (NodeView). El render és UI · aquí sols agreguem els numbers ·
+// així podem testejar sense DOM.
+//
+// args ·
+//   attestations · TOTES les attestations del KB (per a recursive accuracy)
+//   nodeId       · id del node target
+//   projectId    · projectId opcional · si el node forma part d'un projecte
+//                  també incloem attestations al propi projecte
+//   options      · forwarded a computeRecursiveTrustScores
+//
+// Retorna · {
+//   aggregate:    { total, uniqueAttesters, band, color, icon, recursive:true },
+//   attesters:    [{ did, handle, kind, statement, issuedAt, kindWeight,
+//                    pagerank }, ...],
+//   recursive:    { iterationsRun, converged, finalDelta, attesterCount },
+//   relevant:     [{ ...attestation }],   // les attestations filtered
+// }
+// =============================================================================
+export function buildTrustPanelData({
+    attestations = [],
+    nodeId       = null,
+    projectId    = null,
+    options      = {},
+} = {}) {
+    if (!nodeId) {
+        return {
+            aggregate: { total: 0, uniqueAttesters: 0, band: 'none', recursive: false },
+            attesters: [],
+            recursive: { iterationsRun: 0, converged: true, finalDelta: 0, attesterCount: 0 },
+            relevant:  [],
+        };
+    }
+    const all = Array.isArray(attestations) ? attestations : [];
+
+    // 1. Recursive scores sobre TOT el grafo (no només les del node) ·
+    //    així els attesters externs també contribueixen a la PageRank
+    const rec = computeRecursiveTrustScores({ attestations: all, ...(options || {}) });
+
+    // 2. Filtra attestations rellevants per a aquest node (o el seu project)
+    const relevant = all.filter(a => {
+        const aid = a?.content?.attestedId;
+        return aid === nodeId || (projectId && aid === projectId);
+    });
+
+    // 3. Agregat amb attesterWeights (recursive · power user val més)
+    const aggregate = computeTrustScore({ attestations: relevant, attesterWeights: rec.scores });
+
+    // 4. Llista d'attesters · enriquits amb el seu PR + kindWeight
+    const seen = new Set();
+    const attesters = [];
+    for (const a of relevant) {
+        const c = a.content || {};
+        const did = c.attesterDid;
+        if (!did || seen.has(did)) continue;
+        seen.add(did);
+        const kind = c.attestationKind || '?';
+        const kindWeight = (kind === 'endorses-founder') ? 3 : (kind === 'cohort-member') ? 1.5 : 1;
+        attesters.push({
+            did,
+            handle:    c.attesterHandle || null,
+            kind,
+            statement: c.statement || null,
+            issuedAt:  c.issuedAt || null,
+            kindWeight,
+            pagerank:  Number(rec.scores.get(did) ?? 0),
+        });
+    }
+    attesters.sort((a, b) => b.pagerank - a.pagerank);
+
+    return {
+        aggregate,
+        attesters,
+        recursive: {
+            iterationsRun: rec.iterationsRun,
+            converged:     rec.converged,
+            finalDelta:    rec.finalDelta,
+            attesterCount: rec.scores.size,
+        },
+        relevant,
+    };
+}
+
 function _bandFor(agg) {
     const n = agg.uniqueAttesters;
     const score = agg.totalScore;
