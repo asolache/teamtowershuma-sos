@@ -21,7 +21,7 @@ import {
 // PR-K · CV nodals · neural_path_bundle publicat al permaweb
 import { NEURAL_PATH_BUNDLE_TYPE } from '../core/neuralPathService.js';
 // TRUST-001 · trust score badges per a cards
-import { computeTrustForBatch, renderTrustBadgeHtml } from '../core/trustScoreService.js';
+import { computeTrustForBatch, computeRecursiveTrustForBatch, renderTrustBadgeHtml } from '../core/trustScoreService.js';
 
 // Mapeig tab → public type · ORDER importa per a la UI
 const TAB_DEFS = Object.freeze([
@@ -317,7 +317,16 @@ export default class OpportunitiesView {
                     if (pid && !allIds.includes(pid)) allIds.push(pid);
                 }
             }
-            this._trustByAttestedId = await computeTrustForBatch({ kb: KB, attestedIds: allIds });
+            // TRUST-002 · prefer recursive PageRank-style scores · fallback a flat
+            // si el càlcul recursiu falla per qualsevol raó (defensiu)
+            try {
+                this._trustByAttestedId = await computeRecursiveTrustForBatch({
+                    kb: KB, attestedIds: allIds,
+                    options: { iterations: 30, damping: 0.85, epsilon: 1e-4 },
+                });
+            } catch (_) {
+                this._trustByAttestedId = await computeTrustForBatch({ kb: KB, attestedIds: allIds });
+            }
         } catch (_) { this._trustByAttestedId = {}; }
         this._render();
     }

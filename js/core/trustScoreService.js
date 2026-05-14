@@ -22,12 +22,22 @@
 import { aggregateAttestations } from './attestationService.js';
 
 // computeTrustScore · pure · prima del aggregateAttestations
-//   { attestations:[], attestedId?, attesterDidsFilter? }
+//   { attestations:[], attestedId?, attesterDidsFilter?, attesterWeights? }
 // Retorna · {
 //   total, uniqueAttesters, byKind, founderEndorsements,
 //   band:'none'|'low'|'mid'|'high', label, color, icon
 // }
-export function computeTrustScore({ attestations = [], attestedId = null, attesterDidsFilter = null } = {}) {
+//
+// TRUST-002 sprint B · `attesterWeights` (Map<did,score>) opcional · si es
+// proveeix, cada attester contribueix `kindWeight × attesterWeights.get(did)`
+// en lloc del flat kindWeight clàssic. Habilita PageRank-style scoring ·
+// vegis computeRecursiveTrustScores.
+export function computeTrustScore({
+    attestations       = [],
+    attestedId         = null,
+    attesterDidsFilter = null,
+    attesterWeights    = null,
+} = {}) {
     let list = attestations;
     if (attestedId) {
         list = list.filter(a => a?.content?.attestedId === attestedId);
@@ -36,7 +46,9 @@ export function computeTrustScore({ attestations = [], attestedId = null, attest
         const allowed = new Set(attesterDidsFilter);
         list = list.filter(a => allowed.has(a?.content?.attesterDid));
     }
-    const agg = aggregateAttestations(list);
+    const agg = (attesterWeights && (attesterWeights instanceof Map))
+        ? _aggregateWeighted(list, attesterWeights)
+        : aggregateAttestations(list);
     const band = _bandFor(agg);
     return {
         total:             agg.totalScore,
@@ -47,7 +59,168 @@ export function computeTrustScore({ attestations = [], attestedId = null, attest
         label:             band.label,
         color:             band.color,
         icon:              band.icon,
+        recursive:         !!attesterWeights,
     };
+}
+
+// _aggregateWeighted · variant de aggregateAttestations on cada attester
+// es pondera amb el seu propi pagerank-style score (passat via Map).
+// Reusa la mateixa lògica de kindWeight + dedup per did, sols multiplica.
+function _aggregateWeighted(attestations, attesterWeights) {
+    const byAttester = new Map();   // did → maxWeightContributed (després de ponderar)
+    const byKind = {};
+    let founderEndorsements = 0;
+    for (const a of attestations) {
+        if (!a || !a.content) continue;
+        if (a._verified === false) continue;
+        const c = a.content;
+        const did = c.attesterDid;
+        if (!did) continue;
+        const kind = c.attestationKind;
+        const baseKind = (kind === 'endorses-founder') ? 3
+                       : (kind === 'cohort-member')   ? 1.5
+                       : 1;
+        const attesterRank = Number(attesterWeights.get(did) ?? 1);
+        const weight = baseKind * attesterRank;
+        if (!byAttester.has(did) || byAttester.get(did) < weight) {
+            byAttester.set(did, weight);
+        }
+        byKind[kind] = (byKind[kind] || 0) + 1;
+        if (kind === 'endorses-founder') founderEndorsements++;
+    }
+    let totalScore = 0;
+    for (const w of byAttester.values()) totalScore += w;
+    return {
+        uniqueAttesters: byAttester.size,
+        totalScore:      Number(totalScore.toFixed(3)),
+        byKind,
+        founderEndorsements,
+    };
+}
+
+// =============================================================================
+// TRUST-002 sprint B · TRUST PAGERANK
+//
+// Score recursiu · power user endorsement val més que un new user. L'algorisme
+// és PageRank adaptat al web of trust:
+//
+//   score[v] = (1−d) · baseScore + d · Σ_(u→v) weight(u,v) · score[u] / outW(u)
+//
+// On ·
+//   d        · damping factor (default 0.85 · clàssic PageRank)
+//   baseScore · valor de partida per a tots els nodes (default 1.0)
+//   weight(u,v) · kindWeight de l'attestation u→v (1 · 1.5 · 3)
+//   outW(u)   · suma de weights de tots els out-edges de u (normalització)
+//
+// Iteració fins a |Δmax| < epsilon (default 1e-4) o iterations màx (default 30).
+// Retorna · { scores:Map<id,score>, iterationsRun, converged, finalDelta }
+//
+// Nota · `id` pot ser tant un attesterDid com un attestedId. El score d'un
+// attester és el que el converteix en "power user" · el score d'un attested
+// és el que es mostraria a la UI (computeTrustScore reusant attesterWeights).
+// =============================================================================
+export function computeRecursiveTrustScores({
+    attestations = [],
+    iterations   = 30,
+    damping      = 0.85,
+    epsilon      = 1e-4,
+    baseScore    = 1.0,
+} = {}) {
+    if (!Array.isArray(attestations) || attestations.length === 0) {
+        return { scores: new Map(), iterationsRun: 0, converged: true, finalDelta: 0 };
+    }
+    // 1. Build adjacency · in-edges per attestedId + out-DEGREE per attester
+    //    (count distinct out-targets · NO weight sum) · així founder-weight
+    //    no es cancel·la per la normalització. Per a un attester amb K
+    //    endorsements de pesos w1..wK · cada recipient v rep `w(u,v) × score[u] / K`
+    //    (no `/ Σwi`). Resultat · pesos kind (1 · 1.5 · 3) modulen la contribució real.
+    const inEdges  = new Map();   // attestedId → [{ attesterDid, w }]
+    const outDeg   = new Map();   // attesterDid → count of distinct out-targets
+    const seenEdge = new Set();   // dedupe (u,v) duplicats
+    const allIds   = new Set();
+    for (const a of attestations) {
+        if (!a || !a.content) continue;
+        if (a._verified === false) continue;
+        const c = a.content;
+        const u = c.attesterDid;
+        const v = c.attestedId;
+        if (!u || !v || u === v) continue;
+        const edgeKey = u + '→' + v;
+        const isFirstEdge = !seenEdge.has(edgeKey);
+        seenEdge.add(edgeKey);
+        const kind = c.attestationKind;
+        const w = (kind === 'endorses-founder') ? 3
+                : (kind === 'cohort-member')   ? 1.5
+                : 1;
+        if (!inEdges.has(v)) inEdges.set(v, []);
+        inEdges.get(v).push({ from: u, w });
+        if (isFirstEdge) outDeg.set(u, (outDeg.get(u) || 0) + 1);
+        allIds.add(u);
+        allIds.add(v);
+    }
+    if (allIds.size === 0) {
+        return { scores: new Map(), iterationsRun: 0, converged: true, finalDelta: 0 };
+    }
+    // 2. Init · tothom amb baseScore
+    let scores = new Map();
+    for (const id of allIds) scores.set(id, baseScore);
+    // 3. Itera · normalitza per out-DEGREE (count) · founder weight (3x) survives
+    let iterationsRun = 0;
+    let finalDelta = Infinity;
+    let converged = false;
+    const teleport = (1 - damping) * baseScore;
+    for (let it = 0; it < iterations; it++) {
+        const next = new Map();
+        let maxDelta = 0;
+        for (const v of allIds) {
+            let contrib = 0;
+            const ins = inEdges.get(v) || [];
+            for (const { from: u, w } of ins) {
+                const su = scores.get(u) || baseScore;
+                const ou = outDeg.get(u) || 1;
+                contrib += w * su / ou;
+            }
+            const newScore = teleport + damping * contrib;
+            next.set(v, newScore);
+            const d = Math.abs(newScore - (scores.get(v) || baseScore));
+            if (d > maxDelta) maxDelta = d;
+        }
+        scores = next;
+        iterationsRun = it + 1;
+        finalDelta = maxDelta;
+        if (maxDelta < epsilon) { converged = true; break; }
+    }
+    // 4. Round per a estabilitat numèrica
+    const rounded = new Map();
+    for (const [id, s] of scores) rounded.set(id, Number(s.toFixed(4)));
+    return { scores: rounded, iterationsRun, converged, finalDelta: Number(finalDelta.toFixed(6)) };
+}
+
+// computeRecursiveTrustForBatch · async · helper · 1 query al KB +
+// computeRecursiveTrustScores + applyem els weights a cada attestedId
+// objectiu. Optimitzat per a UI grids.
+export async function computeRecursiveTrustForBatch({ kb, attestedIds = [], options = {} } = {}) {
+    if (!kb) throw new Error('computeRecursiveTrustForBatch requires kb');
+    if (!Array.isArray(attestedIds) || attestedIds.length === 0) return {};
+    let all = [];
+    try { all = await kb.query({ type: 'attestation' }); }
+    catch (_) { return {}; }
+    const recursive = computeRecursiveTrustScores({ attestations: all, ...(options || {}) });
+    const result = {};
+    for (const id of attestedIds) {
+        const subset = all.filter(a => a?.content?.attestedId === id);
+        result[id] = computeTrustScore({
+            attestations:   subset,
+            attesterWeights: recursive.scores,
+        });
+    }
+    result.__meta = {
+        iterationsRun: recursive.iterationsRun,
+        converged:     recursive.converged,
+        finalDelta:    recursive.finalDelta,
+        attesterCount: recursive.scores.size,
+    };
+    return result;
 }
 
 function _bandFor(agg) {
