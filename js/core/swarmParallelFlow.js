@@ -55,7 +55,9 @@ export async function runValueFlow({
     budgetEur              = 5,
     maxRetriesPerDel       = 1,
     onLevelStart           = null,
+    onDeliverableStart     = null,    // (event) → void · BEFORE runner (UI 'thinking')
     onDeliverableDone      = null,
+    onActivity             = null,    // (event) → void · fine-grained for UI feedback
     evaluator              = null,
     signer                 = null,
     ts                     = null,
@@ -115,17 +117,31 @@ export async function runValueFlow({
         upstreamFor.set(d.id, upstream);
     }
 
+    // Helper · emit + log + onActivity callback
+    const emitActivity = (event) => {
+        const enriched = { ts: Date.now(), ...event };
+        if (onActivity) { try { onActivity(enriched); } catch (_) { /* swallow */ } }
+    };
+
     for (let levelIdx = 0; levelIdx < levels.length; levelIdx++) {
         const levelIds = levels[levelIdx];
+        // Role labels per UI feedback
+        const roleLabels = levelIds.map(did => {
+            const d = delById.get(did);
+            const r = d ? roleById.get(d.producer) : null;
+            return r?.label || r?.kind || (d?.producer || '?');
+        });
         if (onLevelStart) {
             try { onLevelStart({ levelIndex: levelIdx, deliverableIds: levelIds }); } catch (_) {}
         }
+        emitActivity({ kind: 'level-start', level: levelIdx, deliverableIds: levelIds, roleLabels });
         out.log.push({ kind: 'level-start', level: levelIdx, deliverables: levelIds, ts: Date.now() });
 
         // Budget gate · si ja superat · marcar i parar
         if (out.totalCostEur >= budgetEur) {
             out.budgetExceeded = true;
             out.log.push({ kind: 'budget-exceeded', level: levelIdx, totalCostEur: out.totalCostEur, ts: Date.now() });
+            emitActivity({ kind: 'budget-exceeded', level: levelIdx, totalCostEur: out.totalCostEur });
             break;
         }
 
@@ -144,6 +160,13 @@ export async function runValueFlow({
                 }
             }
             const prompt = _buildDeliverablePrompt({ deliverable, role, contextOutputs, transactions });
+
+            // Pre-runner activity emit · UI mostra 'Pensant' per aquest deliverable
+            const upstreamCount = Object.keys(contextOutputs).length;
+            if (onDeliverableStart) {
+                try { onDeliverableStart({ deliverableId: did, roleLabel: role.label || role.kind, upstreamCount, level: levelIdx }); } catch (_) {}
+            }
+            emitActivity({ kind: 'deliverable-start', deliverableId: did, roleLabel: role.label || role.kind, upstreamCount, level: levelIdx });
 
             let attempts = 0;
             let lastErr = null;
@@ -199,6 +222,7 @@ export async function runValueFlow({
                 out.errors.push({ deliverableId: r.id, message: r.error, level: levelIdx, attempts: r.attempts });
                 out.results.set(r.id, { error: r.error, attempts: r.attempts, level: levelIdx });
                 out.log.push({ kind: 'deliverable-fail', id: r.id, level: levelIdx, error: r.error, ts: Date.now() });
+                emitActivity({ kind: 'deliverable-fail', id: r.id, level: levelIdx, error: r.error });
                 if (onDeliverableDone) { try { onDeliverableDone({ id: r.id, status: 'fail', level: levelIdx }); } catch (_) {} }
             } else {
                 out.totalCostEur += (r.costEur || 0);
@@ -212,6 +236,7 @@ export async function runValueFlow({
                     level:      levelIdx,
                 });
                 out.log.push({ kind: 'deliverable-done', id: r.id, level: levelIdx, costEur: r.costEur || 0, ts: Date.now() });
+                emitActivity({ kind: 'deliverable-done', id: r.id, level: levelIdx, costEur: r.costEur || 0, signed: !!r.signature });
                 if (onDeliverableDone) { try { onDeliverableDone({ id: r.id, status: 'ok', output: r.output, costEur: r.costEur, level: levelIdx }); } catch (_) {} }
             }
         }

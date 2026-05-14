@@ -416,6 +416,21 @@ export const INITIAL_BACKLOG = Object.freeze([
     }),
 
     Object.freeze({
+        id: 'ai-activity-feedback',
+        title: 'AI Activity Feedback · human-readable live status quan agent pensa',
+        description: 'Helper pure aiActivityFeedback · formatActivityEvent({ kind, ... }) → { icon, title, detail, nodeRef, nodeLabel, level, color } per a UI temps real. Coneix events de improvementLoopService + swarmParallelFlow + genèric (cycle-start · runner-start · wo-executed · analyzed · enrichments-applied · level-start · deliverable-start/done/fail · budget-exceeded · loop-start/end · message · error). Both services ara emeten pre-runner events (runner-start, deliverable-start) amb level=thinking · views mostren mini-box "Pensant…" amb pulse animation + node label · log entries renderitzats amb icon + color border + node badge.',
+        principles: ['principle-1-nodes', 'principle-4-tea'],
+        status: 'completed',
+        priority: 'medium',
+        complexity: 'M',
+        dependencies: ['improvement-loop', 'swarm-parallel-flow'],
+        testRequirements: ['aiActivityFeedback.test.js · 93 tests · 14 event kinds + fallback · levelColor · summarizeActivity · renderActivityEntryHtml escape + thinking pulse · null/empty safe'],
+        suggestedFiles: ['js/core/aiActivityFeedback.js', 'js/views/ImprovementLoopView.js', 'js/views/SwarmFlowView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
+    }),
+
+    Object.freeze({
         id: 'improvement-loop',
         title: 'Improvement Loop · TDD WO + feedback agent · kanban millora contínua',
         description: '/improve?project=X · pickNextSOP → buildWOFromSOP amb context dels darrers 3 deliverables → runner (runEscalation) executa TDD-style amb evaluator retry → analyzeDeliverable detecta enrichments (add-tag · evidence-cited · suggest-role) + suggestedNext WOs + score per focusAreas (8 standard · canvas/role/transaction/commercial/accounting/governance/tokenomics/workshop) → applyEnrichmentsToProject muta tags + counters. runImprovementLoop({ maxIterations }) executa N seqüencials acumulant context. Kanban 3-col · SOPs · Cicles recents · Enrichments + suggested-next.',
