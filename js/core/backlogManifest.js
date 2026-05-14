@@ -417,15 +417,17 @@ export const INITIAL_BACKLOG = Object.freeze([
 
     Object.freeze({
         id: 'swarm-parallel-flow',
-        title: 'Swarm Parallel Flow · DAG executor sobre runUntilGreen',
-        description: 'Estèn runUntilGreen amb DAG-aware executor · cada level del DAG corre en Promise.all (paral·lel viable) · transactions passen output com context inter-rol · budget per-rol + per-flow. Reusa attestationService per signar deliverables.',
+        title: 'Swarm Parallel Flow · DAG executor paral·lel sobre ValueFlow · Antigravity capstone',
+        description: 'Pillar Antigravity capstone · runValueFlow(flow, { runner, budgetEur, maxRetries, onLevelStart, onDeliverableDone, evaluator, signer }) · cada level del DAG corre en Promise.all · transaction outputs es passen com a context al downstream automàticament · budget guard + retry + cycle detection + log timeline. Vista /swarm?project=X · botó "Run paral·lel" amb live event log · darreres execucions persistides com a swarm_flow_run.',
         principles: ['principle-2-roles', 'principle-4-tea'],
-        status: 'pending',
+        status: 'completed',
         priority: 'medium',
         complexity: 'L',
         dependencies: ['value-flow-schema', 'tdd-autonomous-agent'],
-        testRequirements: ['swarmParallelFlow.test.js · parallel level execution · transaction passing · attestation signing'],
-        suggestedFiles: ['js/core/swarmParallelFlow.js'],
+        testRequirements: ['swarmParallelFlow.test.js · 58 tests · 2-level seq · paral·lel timing (3×40ms < 100ms) · context passing · budget exceeded · retry · cycle detection · signer opcional · callback errors · log timeline · buildSwarmRunNode serialization'],
+        suggestedFiles: ['js/core/swarmParallelFlow.js', 'js/views/SwarmFlowView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
 ]);
 
