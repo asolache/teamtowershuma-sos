@@ -391,14 +391,16 @@ export const INITIAL_BACKLOG = Object.freeze([
     Object.freeze({
         id: 'value-flow-schema',
         title: 'Value Flow schema · DAG roles · transactions · deliverables',
-        description: 'Schema ValueFlow node · roles (kind+evaluator) · transactions (from/to/deliverable) · deliverables (DAG). Topo-sort utility. Foundation per a swarm-parallel-flow.',
+        description: 'Schema ValueFlow node · roles (kind+evaluator) · transactions (from/to/deliverable) · deliverables (DAG). Topological levels (paral·lel per level) · cycle detection via DFS 3-color · estimateFlowComplexity heuristic. Foundation per a swarm-parallel-flow.',
         principles: ['principle-2-roles'],
-        status: 'pending',
+        status: 'completed',
         priority: 'high',
         complexity: 'S',
         dependencies: [],
-        testRequirements: ['valueFlowService.test.js · topoSort · cycle detection · DAG validation'],
+        testRequirements: ['valueFlow.test.js · 49 tests · topoSort · cycle detection · DAG validation · immutability · estimateFlowComplexity'],
         suggestedFiles: ['js/core/valueFlowService.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
 
     Object.freeze({
