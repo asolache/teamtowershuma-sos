@@ -297,15 +297,17 @@ export const INITIAL_BACKLOG = Object.freeze([
 
     Object.freeze({
         id: 'project-canvas-wizard',
-        title: 'Project Canvas Wizard · /p/{id}/canvas guiat per IA',
-        description: 'Wizard 5-passes per a definir un projecte · vision · mission · values · stakeholders · north-star. IA omple drafts (callable via runEscalation) · el fundador valida o edita. Persisteix com a content.canvas al node project.',
+        title: 'Project Canvas Wizard · /canvas?project=X guiat per IA',
+        description: 'Wizard 5-passes per a definir un projecte · vision · mission · values · stakeholders · north-star. IA omple drafts (runEscalation failover) · el fundador valida o edita. Persisteix com a content.canvas al node project. Pure logic a projectCanvasService.',
         principles: ['principle-1-nodes', 'principle-2-roles'],
-        status: 'pending',
+        status: 'completed',
         priority: 'high',
         complexity: 'S',
         dependencies: [],
-        testRequirements: ['projectCanvasService.test.js · 5-step state machine · IA mock'],
+        testRequirements: ['projectCanvas.test.js · 69 tests · 5-step state machine · validation · IA mock · immutability'],
         suggestedFiles: ['js/core/projectCanvasService.js', 'js/views/ProjectCanvasView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
 
     Object.freeze({
