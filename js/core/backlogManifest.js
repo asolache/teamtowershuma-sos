@@ -416,6 +416,21 @@ export const INITIAL_BACKLOG = Object.freeze([
     }),
 
     Object.freeze({
+        id: 'design-system-v1',
+        title: 'SOS Design System v1 · sosCopy + aiFormFeedback + /design mockup',
+        description: 'Tres entregables · 1) sosCopy.js · SINGLE SOURCE OF TRUTH per a copy human-readable (DRY) · 64+ labels organitzats en 8 categories (nav/cta/state/hint/err/help/group/empty) · label(key, fallback?) + labelN(key, n) + applyToNavDestinations. 2) aiFormFeedback.js · widget reutilitzable (KISS) · attachAIFormFeedback(container) → controller amb setThinking/addEvent/setOk/setError/clear/onActivity. Auto-injecta CSS pulse animation. 3) /design view · mockup deluxe Dashboard (hero amb IA box + 6 cards stats) + arquitectura informació v2 (7 grups per viatge fundador · max 5 items) + side-by-side comparison original vs v2 + live demo aiFormFeedback + component library (chips · tokens · buttons · stats).',
+        principles: ['principle-1-nodes', 'principle-4-tea'],
+        status: 'completed',
+        priority: 'high',
+        complexity: 'M',
+        dependencies: ['ai-activity-feedback'],
+        testRequirements: ['sosCopy.test.js · 43 tests · label/labelOr/labelN/hasLabel/listLabels · applyToNavDestinations · TOKENS constants · coverage 8 categories ≥3 keys cadascuna · zero malformed keys (lowercase·dot·single·level)'],
+        suggestedFiles: ['js/core/sosCopy.js', 'js/core/aiFormFeedback.js', 'js/views/DesignSystemView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
+    }),
+
+    Object.freeze({
         id: 'ikigai-profile',
         title: 'Ikigai profile editor + display · 4 dimensions + 5 intersections',
         description: 'Servei pure ikigaiService · 4 IKIGAI_DIMENSIONS (loves/goodAt/worldNeeds/paidFor) + 5 INTERSECTIONS (passion/profession/vocation/mission/ikigai · centre). buildEmptyIkigai · applyIkigaiDimension (dedupe case + max 15) · addIkigaiItem · removeIkigaiItem · validateIkigai · computeIkigaiCompleteness · computeIntersections (case-insensitive · retorna grafia original) · applyIkigaiToMember · ikigaiBadge (levels none/partial/growing/almost/ikigai). ProfileView card amb 4 dimensions visualitzades + 5 intersections + progress bar + edit modal interactiu. Persisteix a matriu_member.content.ikigai. Tab Usuaris a /opportunities mostra 🌸 badge si té ikigai.',
