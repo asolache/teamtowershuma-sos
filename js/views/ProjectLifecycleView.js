@@ -192,6 +192,7 @@ export default class ProjectLifecycleView {
                 <a href="/dashboard" data-link class="lf-logo">🗼 Team<span>Towers</span></a>
                 <span style="color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Lifecycle</span>
                 <span style="flex:1;"></span>
+                <a href="/improve?project=${encodeURIComponent(this.projectId)}" data-link style="color:#22c55e;text-decoration:none;font-size:0.78rem;font-weight:700;" title="Bucle TDD continu · alimenta agent amb deliverables nous">🔁 Improvement</a>
                 <a href="/project/${encodeURIComponent(this.projectId)}" data-link style="color:var(--text-secondary);text-decoration:none;font-size:0.78rem;">← Hub</a>
             </div>
             <div class="lf-main">

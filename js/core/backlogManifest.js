@@ -416,6 +416,21 @@ export const INITIAL_BACKLOG = Object.freeze([
     }),
 
     Object.freeze({
+        id: 'improvement-loop',
+        title: 'Improvement Loop · TDD WO + feedback agent · kanban millora contínua',
+        description: '/improve?project=X · pickNextSOP → buildWOFromSOP amb context dels darrers 3 deliverables → runner (runEscalation) executa TDD-style amb evaluator retry → analyzeDeliverable detecta enrichments (add-tag · evidence-cited · suggest-role) + suggestedNext WOs + score per focusAreas (8 standard · canvas/role/transaction/commercial/accounting/governance/tokenomics/workshop) → applyEnrichmentsToProject muta tags + counters. runImprovementLoop({ maxIterations }) executa N seqüencials acumulant context. Kanban 3-col · SOPs · Cicles recents · Enrichments + suggested-next.',
+        principles: ['principle-1-nodes', 'principle-2-roles', 'principle-4-tea'],
+        status: 'completed',
+        priority: 'high',
+        complexity: 'L',
+        dependencies: ['max-project-bootstrap', 'tdd-autonomous-agent', 'swarm-parallel-flow'],
+        testRequirements: ['improvementLoop.test.js · 101 tests · pickNextSOP · buildWOFromSOP context (darrers 3) · analyzeDeliverable mentions/enrichments/suggested-next/score · applyEnrichmentsToProject immutability · runImprovementCycle TDD retry · runImprovementLoop multi-iter context acumula'],
+        suggestedFiles: ['js/core/improvementLoopService.js', 'js/views/ImprovementLoopView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
+    }),
+
+    Object.freeze({
         id: 'max-project-bootstrap',
         title: 'Max Project Bootstrap · 108 cohort managers + 100/100 lifecycle baseline',
         description: 'buildMaxQualityProject({ creatorHandle, projectName, ts }) · pure · genera projecte amb 108 cohort_manager roles (1 per skill nuclear · 90 unique + 18 padding generalistes), canvas 5/5 + pitch 6/6 publicat + tokenomics (COHO 10.8M supply), 3 ledger entries balanced + 2 invoices (1 paid auto-ledger 4t entry) + 2 proposals (1 accepted + 1 sent) + 2 market_items + SOPs + workshops. Lifecycle dashboard ≥85% immediat. Servirà com a baseline per a improvement-loop sprint B.',

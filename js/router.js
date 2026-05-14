@@ -84,6 +84,8 @@ const ROUTES = [
     { path: '/proposals',    view: () => import('./views/ProposalView.js') },
     // SWARM-PARALLEL sprint A · /swarm?project=X · DAG executor paral·lel
     { path: '/swarm',        view: () => import('./views/SwarmFlowView.js') },
+    // IMPROVEMENT-LOOP sprint A · /improve?project=X · TDD WO + feedback agent kanban
+    { path: '/improve',      view: () => import('./views/ImprovementLoopView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
