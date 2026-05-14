@@ -86,6 +86,8 @@ const ROUTES = [
     { path: '/swarm',        view: () => import('./views/SwarmFlowView.js') },
     // IMPROVEMENT-LOOP sprint A · /improve?project=X · TDD WO + feedback agent kanban
     { path: '/improve',      view: () => import('./views/ImprovementLoopView.js') },
+    // DESIGN-SYSTEM sprint A · /design · mockup deluxe + arquitectura informació + components
+    { path: '/design',       view: () => import('./views/DesignSystemView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
