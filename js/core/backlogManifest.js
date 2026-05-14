@@ -416,6 +416,21 @@ export const INITIAL_BACKLOG = Object.freeze([
     }),
 
     Object.freeze({
+        id: 'profile-public-view',
+        title: 'Profile públic /u/{handle} · skills + roles + projects + trust + offerings + badges',
+        description: 'Vista pública shareable a /u/{handle} agregant matriu_member (identitat base + skillsDeclared + sectorsExperience + cohort) + projects (creatorHandle match · case-insensitive) + roles (createdBy match · primarySkillId derivat) + attestations (rebudes + emeses · trust score recursive) + market entries (providerHandle match · 3 sources) + auto-badges (cohort-0/master/founder/multi-project/trusted/provider/attester). OG meta tags + share button + share URL /u/{handle}.',
+        principles: ['principle-1-nodes', 'principle-2-roles', 'principle-4-tea'],
+        status: 'completed',
+        priority: 'high',
+        complexity: 'M',
+        dependencies: ['market-catalog-multi-source', 'trust-pagerank'],
+        testRequirements: ['profile.test.js · 68 tests · normalizeHandle/matchesHandle case-insensitive · buildPublicProfile agrega 7 fonts · skills declared+role merge sort per tier · projects creatorHandle · attestations rebudes/emeses + trust recursive · offerings (item+ws+sop) · computeProfileBadges 7 tipus · shareUrlForProfile · listKnownHandles dedupe'],
+        suggestedFiles: ['js/core/profileService.js', 'js/views/ProfileView.js', 'js/router.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
+    }),
+
+    Object.freeze({
         id: 'market-catalog-multi-source',
         title: 'Market catalog · multi-source aggregation + detail view + sellable SOPs',
         description: '/market ara agrega market_item + workshop + sop (flagged market-sellable) a un catàleg unificat amb stats per kind (product/service/workshop/subscription/skill/template/SOP). Nou /market/{id} detail view amb OG meta + share button + accions contactar/perfil/share/node KB. Pure marketCatalogService · fromMarketItem/fromWorkshop/fromSop · filterCatalog · computeCatalogStats · markSopAsSellable helper.',
