@@ -338,15 +338,17 @@ export const INITIAL_BACKLOG = Object.freeze([
 
     Object.freeze({
         id: 'ledger-accounting',
-        title: 'Ledger Accounting · /p/{id}/accounting double-entry simple',
-        description: 'CRUD ledger_entry nodes · debit/credit · account · amount · currency · proof URL (txHash o invoice). Balance sheet senzill + P&L per mes. Integra wallet income (cobraments cripto reals) si hi ha.',
+        title: 'Ledger Accounting · /accounting?project=X double-entry',
+        description: 'CRUD ledger_entry nodes · debit/credit · multi-leg · validation Σdebit=Σcredit (tol 0.01) · mixed currencies refusades · STANDARD_ACCOUNTS (cash/bank/wallet/revenue/expenses/equity/payable/tax). Balance Sheet (assets/liabilities/equity + retained earnings) · P&L per període · accounts custom auto-asset.',
         principles: ['principle-1-nodes', 'principle-3-stripe-stakeholders'],
-        status: 'pending',
+        status: 'completed',
         priority: 'medium',
         complexity: 'M',
         dependencies: [],
-        testRequirements: ['ledgerService.test.js · double-entry invariant · balance per account'],
+        testRequirements: ['ledger.test.js · 60 tests · validate · balance per account · P&L · balance sheet (A=L+E) · asOf filter · custom accounts · quickEntry helper'],
         suggestedFiles: ['js/core/ledgerService.js', 'js/views/AccountingView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
 
     Object.freeze({
