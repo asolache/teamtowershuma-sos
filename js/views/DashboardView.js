@@ -935,6 +935,17 @@ export default class DashboardView {
                     </div>
                 </div>
 
+                <!-- MAX-BOOTSTRAP sprint A · clonar 108-cohort 100/100 demo -->
+                <div class="dash-form-group" style="background:linear-gradient(135deg,rgba(34,197,94,0.06),rgba(250,204,21,0.04));border:1px solid rgba(34,197,94,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.8rem;">
+                    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-size:0.88rem;font-weight:700;color:var(--text-main);">
+                        <input type="checkbox" id="newProjMaxBoot" style="cursor:pointer;">
+                        <span>🌟🌟 Clonar <strong>MAX bootstrap</strong> · 108 cohort managers · lifecycle 85%+</span>
+                    </label>
+                    <div style="font-size:0.74rem;color:var(--text-muted);margin-top:4px;line-height:1.45;">
+                        Genera projecte amb <strong>108 cohort managers</strong> (1 per skill nuclear), canvas + pitch publicat + tokenomics + 3 ledger entries balanced + 2 invoices (1 paid auto-ledger) + 2 proposals (1 accepted) + 2 market items + workshops + SOPs. 10 fases lifecycle pre-omplertes per a demo o continuous improvement baseline.
+                    </div>
+                </div>
+
                 <div class="dash-form-group">
                     <label class="dash-form-label">Nombre del proyecto *</label>
                     <input type="text" class="dash-form-input" id="newProjName" placeholder="e.g. IKEA Madrid · Servicios">
@@ -2118,9 +2129,19 @@ export default class DashboardView {
             const sector = document.getElementById('newProjSector')?.value || '';
             const desc   = (document.getElementById('newProjDesc')?.value || '').trim();
             const founder = !!document.getElementById('newProjFounder')?.checked;
+            const maxBoot = !!document.getElementById('newProjMaxBoot')?.checked;
             const hint   = document.getElementById('newProjModeHint');
             const btn    = document.getElementById('newProjConfirm');
             if (!hint) return;
+            // MAX-BOOTSTRAP · prioritat màxima
+            if (maxBoot) {
+                hint.style.background = 'rgba(34,197,94,0.12)';
+                hint.style.borderLeftColor = '#22c55e';
+                hint.style.color = '#86efac';
+                hint.innerHTML = '🌟🌟 <strong>MAX bootstrap</strong> · 108 cohort managers · canvas + pitch + tokenomics + 3 ledger + 2 invoices (1 paid) + 2 proposals (1 accepted) + 2 market + workshops + SOPs. Lifecycle ≥85% al instant. Ideal per a demo o baseline d\'improvement loop.';
+                if (btn) btn.textContent = '🌟🌟 Clonar MAX';
+                return;
+            }
             // FOUNDER-001 sprint B · si checkbox actiu, salta tota la resta
             if (founder) {
                 hint.style.background = 'rgba(168,85,247,0.10)';
@@ -2195,6 +2216,8 @@ export default class DashboardView {
         document.getElementById('newProjDesc')?.addEventListener('input',  refreshModeHint);
         // FOUNDER-001 sprint B · toggle founder bootstrap
         document.getElementById('newProjFounder')?.addEventListener('change', refreshModeHint);
+        // MAX-BOOTSTRAP sprint A · toggle MAX (108 cohort)
+        document.getElementById('newProjMaxBoot')?.addEventListener('change', refreshModeHint);
 
         document.getElementById('newProjConfirm')?.addEventListener('click', async function() {
             const btn  = this;
@@ -2204,8 +2227,54 @@ export default class DashboardView {
             const projectType = document.getElementById('newProjType')?.value || null;
             const description = (document.getElementById('newProjDesc').value || '').trim();
             const founderMode = !!document.getElementById('newProjFounder')?.checked;
+            const maxBootMode = !!document.getElementById('newProjMaxBoot')?.checked;
             const status      = document.getElementById('newProjStatus');
             if (!name) { document.getElementById('newProjName').focus(); return; }
+
+            // MAX-BOOTSTRAP sprint A · 108-cohort 100/100 demo · prioritat màxima
+            if (maxBootMode) {
+                btn.disabled = true; btn.textContent = '⏳ Clonant MAX (108)…';
+                status.style.display = 'block';
+                status.style.color = '#22c55e';
+                status.textContent = '🌟🌟 Generant 108 cohort managers + lifecycle complet…';
+                try {
+                    let creatorHandle = FOUNDER_PROJECT_DEFAULTS.creatorHandle;
+                    try {
+                        const members = await KB.query({ type: 'matriu_member' });
+                        const primary = (members || []).find(m => m && (m.content?.isPrimary || m.isPrimary));
+                        if (primary && primary.content?.handle) creatorHandle = primary.content.handle;
+                    } catch (_) {}
+                    const { buildMaxQualityProject } = await import('../core/maxProjectBootstrap.js');
+                    const result = buildMaxQualityProject({ creatorHandle, projectName: name });
+                    result.project.nombre = name;
+                    result.project.name = name;
+                    await store.dispatch({ type: 'CREATE_PROJECT', payload: result.project });
+                    // Persisteix tots els nodes auxiliars al KB
+                    for (const r of result.roles)         await KB.upsert(r);
+                    for (const s of result.sops)          await KB.upsert(s);
+                    for (const w of result.workshops)     await KB.upsert(w);
+                    for (const e of result.ledgerEntries) await KB.upsert(e);
+                    for (const i of result.invoices)      await KB.upsert(i);
+                    for (const p of result.proposals)     await KB.upsert(p);
+                    for (const m of result.marketItems)   await KB.upsert(m);
+                    await KB.upsert(result.pitch);
+                    await KB.upsert(result.tokenomics);
+                    status.style.color = '#22c55e';
+                    status.textContent = '✓ MAX clonat · ' + result.stats.cohortManagers + ' cohort managers · ' +
+                        result.stats.skillsCovered + ' skills · ' + result.stats.sopsCount + ' SOPs · ' +
+                        result.stats.invoicesCount + ' invoices · ' + result.stats.proposalsCount + ' proposals · lifecycle ≥85%';
+                    document.getElementById('dashModalNew').classList.remove('open');
+                    btn.disabled = false; btn.textContent = 'Crear & abrir mapa';
+                    window.navigateTo('/lifecycle?project=' + result.project.id);
+                    return;
+                } catch (err) {
+                    console.error('[MAX-BOOTSTRAP] failed', err);
+                    status.style.color = '#ff5252';
+                    status.textContent = '✗ Error · ' + (err?.message || 'unknown');
+                    btn.disabled = false; btn.textContent = 'Crear & abrir mapa';
+                    return;
+                }
+            }
 
             // FOUNDER-001 sprint B · clonar founder bootstrap · prioritari · usa
             // el handle de l'usuari actual (matriu_member resolts) o '@alvaro' fallback

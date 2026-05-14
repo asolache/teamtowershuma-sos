@@ -416,6 +416,21 @@ export const INITIAL_BACKLOG = Object.freeze([
     }),
 
     Object.freeze({
+        id: 'max-project-bootstrap',
+        title: 'Max Project Bootstrap · 108 cohort managers + 100/100 lifecycle baseline',
+        description: 'buildMaxQualityProject({ creatorHandle, projectName, ts }) · pure · genera projecte amb 108 cohort_manager roles (1 per skill nuclear · 90 unique + 18 padding generalistes), canvas 5/5 + pitch 6/6 publicat + tokenomics (COHO 10.8M supply), 3 ledger entries balanced + 2 invoices (1 paid auto-ledger 4t entry) + 2 proposals (1 accepted + 1 sent) + 2 market_items + SOPs + workshops. Lifecycle dashboard ≥85% immediat. Servirà com a baseline per a improvement-loop sprint B.',
+        principles: ['principle-1-nodes', 'principle-2-roles'],
+        status: 'completed',
+        priority: 'high',
+        complexity: 'M',
+        dependencies: ['project-canvas-wizard', 'project-pitch-public', 'tokenomics-designer', 'ledger-accounting', 'invoice-billing', 'proposal-generator'],
+        testRequirements: ['maxProjectBootstrap.test.js · 64 tests · 108 cohort managers (90 unique + 18 padding) · canvas 100% · pitch publicat · tokenomics valid · ledger balanced · invoices/proposals valids · lifecycle ≥60% (mesurat 85%) · determinism'],
+        suggestedFiles: ['js/core/maxProjectBootstrap.js', 'js/views/DashboardView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
+    }),
+
+    Object.freeze({
         id: 'swarm-parallel-flow',
         title: 'Swarm Parallel Flow · DAG executor paral·lel sobre ValueFlow · Antigravity capstone',
         description: 'Pillar Antigravity capstone · runValueFlow(flow, { runner, budgetEur, maxRetries, onLevelStart, onDeliverableDone, evaluator, signer }) · cada level del DAG corre en Promise.all · transaction outputs es passen com a context al downstream automàticament · budget guard + retry + cycle detection + log timeline. Vista /swarm?project=X · botó "Run paral·lel" amb live event log · darreres execucions persistides com a swarm_flow_run.',
