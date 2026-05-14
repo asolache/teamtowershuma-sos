@@ -66,6 +66,8 @@ const ROUTES = [
     { path: '/quality',      view: () => import('./views/ProjectQualityView.js') },
     // NEURAL-PATH-001 sprint B · timeline d'activitat + bundle builder
     { path: '/path',         view: () => import('./views/NeuralPathView.js') },
+    // SWARM-OP-001 · sprint orchestrator · backlog autonomous + IA runs
+    { path: '/sprint',       view: () => import('./views/SprintView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
