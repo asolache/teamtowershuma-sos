@@ -91,6 +91,10 @@ const ROUTES = [
 
 // UX-001 · prefijo dinámico /n/{nodeId} resuelto por NodeView
 const NODE_PATH_PREFIX    = '/n/';
+// MARKET-CATALOG sprint A · /market/{id} · detail view multi-source
+const MARKET_PATH_PREFIX  = '/market/';
+// PROFILE sprint A · /u/{handle} · perfil públic d'usuari amb skills + projects
+const PROFILE_PATH_PREFIX = '/u/';
 // UX-001 sprint C · prefijo dinámico /project/{projectId} resuelto por ProjectHubView
 const PROJECT_PATH_PREFIX = '/project/';
 
@@ -99,6 +103,10 @@ async function router() {
     let match;
     if (path.startsWith(NODE_PATH_PREFIX)) {
         match = { path, view: () => import('./views/NodeView.js') };
+    } else if (path.startsWith(MARKET_PATH_PREFIX)) {
+        match = { path, view: () => import('./views/MarketDetailView.js') };
+    } else if (path.startsWith(PROFILE_PATH_PREFIX)) {
+        match = { path, view: () => import('./views/ProfileView.js') };
     } else if (path.startsWith(PROJECT_PATH_PREFIX)) {
         match = { path, view: () => import('./views/ProjectHubView.js') };
     } else {

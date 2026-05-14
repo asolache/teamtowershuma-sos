@@ -416,6 +416,21 @@ export const INITIAL_BACKLOG = Object.freeze([
     }),
 
     Object.freeze({
+        id: 'market-catalog-multi-source',
+        title: 'Market catalog · multi-source aggregation + detail view + sellable SOPs',
+        description: '/market ara agrega market_item + workshop + sop (flagged market-sellable) a un catàleg unificat amb stats per kind (product/service/workshop/subscription/skill/template/SOP). Nou /market/{id} detail view amb OG meta + share button + accions contactar/perfil/share/node KB. Pure marketCatalogService · fromMarketItem/fromWorkshop/fromSop · filterCatalog · computeCatalogStats · markSopAsSellable helper.',
+        principles: ['principle-1-nodes', 'principle-3-stripe-stakeholders'],
+        status: 'completed',
+        priority: 'high',
+        complexity: 'M',
+        dependencies: [],
+        testRequirements: ['marketCatalog.test.js · 75 tests · 3 source converters · buildCatalog aggregation + visibleProjectIds filter · filterCatalog (kind/source/visibility/price/text/tags/project) · computeCatalogStats · markSopAsSellable immutability + dedupe keyword'],
+        suggestedFiles: ['js/core/marketCatalogService.js', 'js/views/MarketView.js', 'js/views/MarketDetailView.js', 'js/router.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
+    }),
+
+    Object.freeze({
         id: 'ai-activity-feedback',
         title: 'AI Activity Feedback · human-readable live status quan agent pensa',
         description: 'Helper pure aiActivityFeedback · formatActivityEvent({ kind, ... }) → { icon, title, detail, nodeRef, nodeLabel, level, color } per a UI temps real. Coneix events de improvementLoopService + swarmParallelFlow + genèric (cycle-start · runner-start · wo-executed · analyzed · enrichments-applied · level-start · deliverable-start/done/fail · budget-exceeded · loop-start/end · message · error). Both services ara emeten pre-runner events (runner-start, deliverable-start) amb level=thinking · views mostren mini-box "Pensant…" amb pulse animation + node label · log entries renderitzats amb icon + color border + node badge.',
