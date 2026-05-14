@@ -365,22 +365,31 @@ export async function runImprovementCycle({
     runner        = null,
     evaluator     = null,
     iteration     = 1,
+    onActivity    = null,
     ts            = null,
 } = {}) {
     const now = (typeof ts === 'number') ? ts : Date.now();
     const startedAt = new Date(now).toISOString();
     const log = [];
 
+    // Helper · emit + log + onActivity callback
+    const emit = (event) => {
+        const enriched = { ts: Date.now(), ...event };
+        log.push(enriched);
+        if (onActivity) { try { onActivity(enriched); } catch (_) { /* swallow */ } }
+    };
+
     if (!project) return { ok: false, error: 'project-required', log };
     if (!sop)     return { ok: false, error: 'sop-required', log };
     if (!runner || typeof runner !== 'function') return { ok: false, error: 'runner-required', log };
 
-    log.push({ kind: 'cycle-start', iteration, sopId: sop.id, ts: Date.now() });
+    const sopTitle = sop.content?.title || sop.title || sop.id;
+    emit({ kind: 'cycle-start', iteration, sopId: sop.id, sopTitle });
 
     let wo;
     try { wo = buildWOFromSOP({ sop, project, prevCycles, iteration, ts: now }); }
     catch (e) { return { ok: false, error: 'wo-build-fail · ' + e.message, log }; }
-    log.push({ kind: 'wo-built', woId: wo.id, ts: Date.now() });
+    emit({ kind: 'wo-built', woId: wo.id, contextCount: Math.min(prevCycles?.length || 0, 3) });
 
     // Runner execution (TDD-style · 1 retry si evaluator rebutja)
     let output = '';
@@ -388,6 +397,8 @@ export async function runImprovementCycle({
     const maxAttempts = evaluator ? 2 : 1;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
+            // Pre-runner event · UI mostra 'Pensant…' mentre esperem
+            emit({ kind: 'runner-start', sopId: sop.id, sopTitle, iteration, attempt, woId: wo.id });
             const r = await runner({
                 prompt:       wo.content.description,
                 sop,
@@ -403,7 +414,7 @@ export async function runImprovementCycle({
                 const ev = await evaluator(output, wo);
                 if (!ev?.ok) { lastErr = 'eval-fail · ' + (ev?.reason || ''); continue; }
             }
-            log.push({ kind: 'wo-executed', attempt, ts: Date.now() });
+            emit({ kind: 'wo-executed', attempt, woId: wo.id, outputLen: output.length, costEur: r?.costEur || 0 });
             lastErr = null;
             break;
         } catch (e) {
@@ -412,7 +423,7 @@ export async function runImprovementCycle({
     }
 
     if (lastErr) {
-        log.push({ kind: 'wo-failed', error: lastErr, ts: Date.now() });
+        emit({ kind: 'wo-failed', woId: wo.id, error: lastErr });
         const failCycle = buildImprovementCycleNode({
             projectId: project.id, iteration, sourceSopId: sop.id, woId: wo.id,
             deliverableOutput: '', analysis: null, modelId: model?.id,
@@ -423,11 +434,11 @@ export async function runImprovementCycle({
 
     // Analitzar deliverable
     const analysis = analyzeDeliverable({ output, model, project });
-    log.push({ kind: 'analyzed', enrichments: analysis.enrichments.length, score: analysis.score, ts: Date.now() });
+    emit({ kind: 'analyzed', enrichments: analysis.enrichments.length, score: analysis.score, mentionsCount: (analysis.mentions || []).length });
 
     // Aplicar enrichments al project (pura · retorna nou node)
     const applied = applyEnrichmentsToProject({ project, enrichments: analysis.enrichments });
-    log.push({ kind: 'enrichments-applied', mutations: applied.mutations.length, ts: Date.now() });
+    emit({ kind: 'enrichments-applied', mutations: applied.mutations.length });
 
     // Marca WO completed
     wo.content.status = 'completed';
@@ -473,6 +484,7 @@ export async function runImprovementLoop({
     evaluator      = null,
     maxIterations  = 5,
     onIteration    = null,    // callback ({ iteration, cycle, mutations }) → void
+    onActivity     = null,    // callback ({ kind, ts, ...payload }) → void (fine-grained)
     ts             = null,
 } = {}) {
     if (!project) return { ok: false, error: 'project-required', cycles: [] };
@@ -488,6 +500,8 @@ export async function runImprovementLoop({
     let totalEnrichments = 0;
     const baseTs = (typeof ts === 'number') ? ts : Date.now();
 
+    if (onActivity) { try { onActivity({ kind: 'loop-start', iterations: maxIterations, ts: Date.now() }); } catch (_) {} }
+
     for (let i = 1; i <= maxIterations; i++) {
         const sop = pickNextSOP({ sops, prevCycles: cycles });
         if (!sop) break;
@@ -499,6 +513,7 @@ export async function runImprovementLoop({
             runner,
             evaluator,
             iteration:  i,
+            onActivity,
             ts:         baseTs + i,
         });
         if (!result.ok) {
@@ -517,7 +532,7 @@ export async function runImprovementLoop({
         }
     }
 
-    return {
+    const final = {
         ok:                errors.length === 0,
         cycles,
         finalProject:      currentProject,
@@ -526,4 +541,18 @@ export async function runImprovementLoop({
         errors,
         iterations:        cycles.length,
     };
+    if (onActivity) {
+        try {
+            onActivity({
+                kind: 'loop-end',
+                ok:   final.ok,
+                iterations: final.iterations,
+                totalEnrichments,
+                mutations: mutationsLog.length,
+                errors: errors.length,
+                ts: Date.now(),
+            });
+        } catch (_) {}
+    }
+    return final;
 }
