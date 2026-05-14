@@ -41,13 +41,15 @@ export default class ProjectLifecycleView {
         if (!this.project) return this._htmlNotFound();
 
         // Fetch totes les entitats relacionades · defensive
-        const [ledgerEntries, sops, workOrders, pacts, workshops, marketItems] = await Promise.all([
-            KB.query({ type: LEDGER_ENTRY_TYPE, projectId: this.projectId }).catch(() => []),
-            KB.query({ type: 'sop',             projectId: this.projectId }).catch(() => []),
-            KB.query({ type: 'work_order',      projectId: this.projectId }).catch(() => []),
-            KB.query({ type: 'pact',            projectId: this.projectId }).catch(() => []),
-            KB.query({ type: 'workshop',        projectId: this.projectId }).catch(() => []),
-            KB.query({ type: 'market_item',     projectId: this.projectId }).catch(() => []),
+        const [ledgerEntries, sops, workOrders, pacts, workshops, marketItems, invoices, tokenomics] = await Promise.all([
+            KB.query({ type: LEDGER_ENTRY_TYPE,   projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'sop',               projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'work_order',        projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'pact',              projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'workshop',          projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'market_item',       projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'invoice',           projectId: this.projectId }).catch(() => []),
+            KB.query({ type: 'token_design',      projectId: this.projectId }).catch(() => []),
         ]);
 
         this.lifecycle = computeProjectLifecycle({
@@ -58,6 +60,8 @@ export default class ProjectLifecycleView {
             pacts:         pacts         || [],
             workshops:     workshops     || [],
             marketItems:   marketItems   || [],
+            invoices:      invoices      || [],
+            tokenomics:    tokenomics    || [],
         });
         return this._htmlMain();
     }
