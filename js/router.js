@@ -80,6 +80,8 @@ const ROUTES = [
     { path: '/tokenomics',   view: () => import('./views/TokenomicsView.js') },
     // PITCH-PUBLIC sprint A · /pitch?project=X · public one-pager + edit
     { path: '/pitch',        view: () => import('./views/ProjectPitchView.js') },
+    // PROPOSAL-GENERATOR sprint A · /proposals?project=X · IA brief + skill match
+    { path: '/proposals',    view: () => import('./views/ProposalView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 

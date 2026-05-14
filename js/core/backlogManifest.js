@@ -357,15 +357,17 @@ export const INITIAL_BACKLOG = Object.freeze([
 
     Object.freeze({
         id: 'proposal-generator',
-        title: 'Proposal Generator · /p/{id}/proposals amb IA · skill matching',
-        description: 'Generador de propostes a clients · pren brief · matcheja skills disponibles al projecte · IA genera escope/deliverables/pricing · estats draft/sent/accepted/rejected. PDF print-css per descarregar.',
+        title: 'Proposal Generator · /proposals?project=X amb IA + skill matching + PDF',
+        description: 'Generador de propostes a clients · brief curt → IA failover (runEscalation amb canvas context) genera draft JSON (summary + deliverables + pricing). Skill matching live · text-match contra SKILL_TAXONOMY · score amb domain bonus. Status state machine (draft/sent/accepted/rejected/expired · transicions validades). Quality score · win rate. Print-css PDF inline detail modal.',
         principles: ['principle-2-roles', 'principle-3-stripe-stakeholders'],
-        status: 'pending',
+        status: 'completed',
         priority: 'medium',
         complexity: 'M',
         dependencies: ['project-canvas-wizard'],
-        testRequirements: ['proposalService.test.js · skillMatch · state transitions'],
+        testRequirements: ['proposal.test.js · 89 tests · status transitions · skill match (govern + finance) · AI JSON parse (markdown fence + partial skip) · quality score · breakdown winRate'],
         suggestedFiles: ['js/core/proposalService.js', 'js/views/ProposalView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
 
     Object.freeze({

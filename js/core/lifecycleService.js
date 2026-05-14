@@ -18,6 +18,7 @@ import { computeBalanceSheet, computePLForPeriod, LEDGER_ENTRY_TYPE } from './le
 import { computeInvoicesStatusBreakdown } from './invoiceService.js';
 import { computeQualityScore as computeTokenomicsScore, TOKEN_DESIGN_TYPE } from './tokenomicsService.js';
 import { computePitchCompletion, PROJECT_PITCH_TYPE } from './projectPitchService.js';
+import { computeProposalsBreakdown, PROPOSAL_TYPE } from './proposalService.js';
 
 // Lifecycle phases · ordre fix · referent per al dashboard.
 export const LIFECYCLE_PHASES = Object.freeze([
@@ -301,23 +302,26 @@ function _phaseAccounting(p, ledgerEntries, pid) {
 
 function _phaseProposals(p, proposals, pid) {
     const relevant = (proposals || []).filter(x => x?.projectId === pid);
+    const href = '/proposals?project=' + encodeURIComponent(pid);
     if (relevant.length === 0) {
         return {
             ...p,
             status:     'pending',
             completion: 0,
-            detail:     'Cap proposta encara · Wave 1 pendent',
-            nextAction: 'Wave 1 · generar proposta amb IA',
-            href:       null,
+            detail:     'Cap proposta encara',
+            nextAction: 'Generar primera proposta amb IA',
+            href,
         };
     }
+    const br = computeProposalsBreakdown(relevant);
+    const status = br.accepted > 0 ? 'done' : (br.total > 0 ? 'partial' : 'pending');
     return {
         ...p,
-        status:     'done',
-        completion: 1,
-        detail:     relevant.length + ' proposal(s)',
-        nextAction: null,
-        href:       null,
+        status,
+        completion: br.accepted > 0 ? Math.min(1, br.acceptedRatio + 0.3) : 0.4,
+        detail:     br.accepted + '/' + br.total + ' acceptades · €' + br.acceptedValue.toFixed(0) + ' guanyat',
+        nextAction: status === 'done' ? (br.sent > 0 ? 'Tancar propostes pendents' : null) : 'Enviar propostes draft',
+        href,
     };
 }
 
