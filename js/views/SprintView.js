@@ -77,6 +77,9 @@ export default class SprintView {
             <header class="sp-hero">
                 <h1>🐝 Swarm Operative · Sprint loop</h1>
                 <p>Honor SOS · Swarm Operative System. Backlog estructurat alineat amb els <a href="#" data-link style="color:var(--accent-indigo);">4 principis canònics</a>. Tria un item · l'agent IA genera el pla d'implementació · històric persistit al KB com a <code>sprint_run</code> nodes (TEA-auditable).</p>
+                <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="sp-btn" id="spAgentLoop" title="Auto-loop · l'agent IA processa el backlog amb TDD fins a verd (cap a budget · cap a iteracions)" style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:0;">🤖 Run autonomous loop</button>
+                </div>
                 <div class="sp-stats">
                     <div class="sp-stat"><div class="val">${this._items.length}</div><div class="lbl">Total items</div></div>
                     <div class="sp-stat"><div class="val">${stats.byStatus.pending || 0}</div><div class="lbl">Pending</div></div>
@@ -164,6 +167,128 @@ export default class SprintView {
         document.querySelectorAll('[data-sp-history-id]').forEach(el => {
             el.addEventListener('click', () => this._openHistoryDetail(el.getAttribute('data-sp-history-id')));
         });
+        // TDD-AGENT sprint A · autonomous loop launcher
+        document.getElementById('spAgentLoop')?.addEventListener('click', () => this._openAgentModal());
+    }
+
+    // TDD-AGENT sprint A · modal de configuració + run loop autònom
+    _openAgentModal() {
+        const root = document.getElementById('spModalRoot');
+        if (!root) return;
+        const dry = (() => {
+            try {
+                const queue = this._items.filter(it => it.status === 'pending');
+                return { queueLength: queue.length };
+            } catch (_) { return { queueLength: 0 }; }
+        })();
+        root.innerHTML = `
+            <div class="sp-modal-bg" id="spAgentModalBg">
+                <div class="sp-modal">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+                        <h2 style="margin:0;font-size:1.2rem;">🤖 Autonomous loop · TDD agent</h2>
+                        <button id="spAgentClose" class="sp-btn secondary">×</button>
+                    </div>
+                    <p style="color:var(--text-muted);font-size:0.85rem;line-height:1.5;">
+                        L'agent processa el backlog pending (${dry.queueLength} items) amb cadena de fallback IA · evaluator sentinel · cap a budget €. Cada run es persisteix com a <code>sprint_run</code> al KB i pot revisar-se a la columna lateral.
+                    </p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;">
+                        <label style="font-size:12px;color:var(--text-secondary);">
+                            <div>Budget € (cap dur)</div>
+                            <input id="spAgentBudget" type="number" min="0.1" step="0.5" value="2" style="width:100%;padding:6px 8px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:6px;color:var(--text-main);font-family:var(--font-mono);" />
+                        </label>
+                        <label style="font-size:12px;color:var(--text-secondary);">
+                            <div>Max iteracions</div>
+                            <input id="spAgentMaxIter" type="number" min="1" max="50" value="5" style="width:100%;padding:6px 8px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:6px;color:var(--text-main);font-family:var(--font-mono);" />
+                        </label>
+                        <label style="font-size:12px;color:var(--text-secondary);">
+                            <div>Task kind (escalation chain)</div>
+                            <select id="spAgentTaskKind" style="width:100%;padding:6px 8px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:6px;color:var(--text-main);">
+                                <option value="creative-narrative">creative-narrative · Anthropic primary</option>
+                                <option value="code-generation">code-generation · DeepSeek primary</option>
+                                <option value="quality-audit">quality-audit · DeepSeek-R1</option>
+                                <option value="deep-reasoning">deep-reasoning · DeepSeek-R1</option>
+                            </select>
+                        </label>
+                        <label style="font-size:12px;color:var(--text-secondary);">
+                            <div>Max intents per item</div>
+                            <input id="spAgentMaxAttempts" type="number" min="1" max="5" value="1" style="width:100%;padding:6px 8px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:6px;color:var(--text-main);font-family:var(--font-mono);" />
+                        </label>
+                    </div>
+                    <div id="spAgentProgress" style="margin-top:14px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);max-height:240px;overflow-y:auto;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:6px;padding:8px 10px;display:none;"></div>
+                    <div id="spAgentSummary" style="margin-top:10px;display:none;"></div>
+                    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+                        <button id="spAgentRun" class="sp-btn" style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:0;">▶ Run loop</button>
+                        <button id="spAgentCloseBtn" class="sp-btn secondary">Tancar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        const close = () => { root.innerHTML = ''; };
+        document.getElementById('spAgentClose').addEventListener('click', close);
+        document.getElementById('spAgentCloseBtn').addEventListener('click', close);
+        document.getElementById('spAgentModalBg').addEventListener('click', e => { if (e.target.id === 'spAgentModalBg') close(); });
+        document.getElementById('spAgentRun').addEventListener('click', () => this._handleAgentRun());
+    }
+
+    async _handleAgentRun() {
+        const btn       = document.getElementById('spAgentRun');
+        const progress  = document.getElementById('spAgentProgress');
+        const summary   = document.getElementById('spAgentSummary');
+        const budgetEur     = parseFloat(document.getElementById('spAgentBudget').value)        || 2;
+        const maxIterations = parseInt(document.getElementById('spAgentMaxIter').value, 10)     || 5;
+        const taskKind      = document.getElementById('spAgentTaskKind').value                  || 'creative-narrative';
+        const maxAttemptsPerItem = parseInt(document.getElementById('spAgentMaxAttempts').value, 10) || 1;
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Running…'; }
+        if (progress) {
+            progress.style.display = 'block';
+            progress.innerHTML = '· Loop iniciat · budget €' + budgetEur.toFixed(2) + ' · max ' + maxIterations + ' iter · task ' + taskKind + '<br>';
+        }
+        try {
+            const { runUntilGreen, buildAgentRunNode } = await import('../core/backlogAutonomousAgent.js');
+            const result = await runUntilGreen({
+                items:    this._items,
+                budgetEur, maxIterations, taskKind, maxAttemptsPerItem,
+                kb:       KB,
+                persist:  true,
+                onIteration: (ev) => {
+                    if (!progress) return;
+                    const icon = ev.status === 'green' ? '✓' : '✗';
+                    const color = ev.status === 'green' ? '#22c55e' : '#facc15';
+                    progress.insertAdjacentHTML('beforeend',
+                        `<span style="color:${color};">${icon}</span> #${ev.iteration} <code>${esc(ev.itemId)}</code> · ${ev.modelKey || 'n/a'} · €${ev.costEur.toFixed(4)} · cum €${ev.totalCostEur.toFixed(4)}` +
+                        (ev.evalReason ? ` · <span style="color:var(--text-muted);">${esc(String(ev.evalReason).slice(0, 80))}</span>` : '') + '<br>');
+                    progress.scrollTop = progress.scrollHeight;
+                },
+            });
+            // Persisteix un node AGENT_RUN_TYPE com a audit-trail TEA del loop
+            try {
+                await KB.upsert(buildAgentRunNode(result));
+            } catch (e) { console.warn('[agent] persist agent-run-node failed', e?.message); }
+
+            if (summary) {
+                summary.style.display = 'block';
+                const greenList = result.greenItems.map(id => `<code style="color:#22c55e;">${esc(id)}</code>`).join(' · ') || '—';
+                const redList   = result.failedItems.map(id => `<code style="color:#facc15;">${esc(id)}</code>`).join(' · ') || '—';
+                summary.innerHTML = `
+                    <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.55;">
+                        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;">
+                            <span><strong style="color:#22c55e;">${result.completedCount}</strong> ✓ green</span>
+                            <span><strong style="color:#facc15;">${result.failedItems.length}</strong> ✗ red</span>
+                            <span><strong>${result.iterationsRun}</strong> iter</span>
+                            <span><strong>€${result.totalCostEur.toFixed(4)}</strong> cost</span>
+                            ${result.budgetExhausted ? '<span style="color:#facc15;">⚠ budget exhausted</span>' : ''}
+                        </div>
+                        <div style="color:var(--text-muted);"><strong>Green:</strong> ${greenList}</div>
+                        <div style="color:var(--text-muted);"><strong>Red:</strong> ${redList}</div>
+                    </div>
+                `;
+            }
+            // Refresca la història al sidebar (queryHistory dispara recàrrega)
+            this._history = await queryHistory({ kb: KB, limit: 50 });
+        } catch (e) {
+            if (progress) progress.insertAdjacentHTML('beforeend', `<span style="color:#ef4444;">✗ ERROR · ${esc(e?.message || e)}</span><br>`);
+        }
+        if (btn) { btn.disabled = false; btn.textContent = '▶ Run loop'; }
     }
 
     async _handleRun(itemId, kind, btn) {

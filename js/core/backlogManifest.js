@@ -121,17 +121,19 @@ export const INITIAL_BACKLOG = Object.freeze([
     Object.freeze({
         id: 'tdd-autonomous-agent',
         title: 'Backlog Autonomous Agent · TDD loop fins a verd',
-        description: 'Agent IA que processa WOs/backlog items amb TDD · runUntilGreen({items, evaluator, maxIterations, budgetEur}). Failover chain via runEscalation · evaluator sentinel reusa aiEvaluatorService + KanbanView._evalTdd patterns. UI a SprintView botó "🤖 Run autonomous loop". Veure docs/SPRINT-PLAN.md Àrea 3 sprint B.',
+        description: 'Agent IA que processa WOs/backlog items amb TDD · runUntilGreen({items, evaluator, maxIterations, budgetEur, maxAttemptsPerItem}). Failover chain via runEscalation · evaluator sentinel reusa aiEvaluatorService. UI a SprintView botó "🤖 Run autonomous loop" amb modal config + progress + summary.',
         principles: ['principle-1-nodes', 'principle-2-comptabilitza'],
-        status: 'pending',
+        status: 'completed',
         priority: 'high',
         complexity: 'L',
         dependencies: ['swarm-op-001'],
         testRequirements: [
-            'backlogAutonomousAgent.test.js · runUntilGreen · mock runner + evaluator · budget enforce',
+            'backlogAutonomousAgent.test.js · 46 tests · runUntilGreen · budget enforce · attempts cap · TDD eval',
             'Cost tracking · estimateCostEur per sprint_run',
         ],
         suggestedFiles: ['js/core/backlogAutonomousAgent.js', 'js/views/SprintView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
     Object.freeze({
         id: 'kanban-wo-context-sos',
