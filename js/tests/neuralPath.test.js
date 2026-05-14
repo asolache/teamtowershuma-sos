@@ -4,9 +4,10 @@
 import {
     NEURAL_PATH_STEP_TYPE, NEURAL_PATH_BUNDLE_TYPE,
     PATH_STEP_KINDS,
-    buildNeuralPathStep, appendStep, queryStepsForOwner,
+    buildNeuralPathStep, appendStep, queryStepsForOwner, purgeOldSteps,
     buildContextBundle, resolveBundleSteps, renderBundleAsContextString,
     summarizeStepsByKind, summarizeStepsByProject,
+    PATH_STEP_RETENTION_DAYS,
 } from '../core/neuralPathService.js';
 import { CANONICAL_NODE_TYPES } from '../core/canonicalPrinciples.js';
 
@@ -175,6 +176,55 @@ eq(byKind['ai-fill'], 1,                                  'H · 1 ai-fill');
 const byProj = summarizeStepsByProject(sample);
 eq(byProj.p1, 3,                                          'H · p1 · 3 steps');
 eq(byProj.p2, 1,                                          'H · p2 · 1 step');
+
+// ─── I · purgeOldSteps · TTL retention ─────────────────────────────────
+// Backlog · wo-attestation-mock (renombrat) · purga steps >90d sense
+// trencar bundles ja firmats.
+const now = Date.now();
+const DAY = 24 * 3600 * 1000;
+const stepsKb = (() => {
+    const store = new Map();
+    return {
+        nodes: store,
+        upsert: async (n) => { store.set(n.id, n); return n; },
+        query: async ({ type }) => Array.from(store.values()).filter(n => n.type === type),
+        deleteNode: async (id) => { store.delete(id); return true; },
+    };
+})();
+// 3 steps molt antics (200 dies) + 2 recents (1 dia)
+await stepsKb.upsert(buildNeuralPathStep({ ownerHandle: '@a', kind: 'visit', ts: now - 200 * DAY }));
+await stepsKb.upsert(buildNeuralPathStep({ ownerHandle: '@a', kind: 'edit',  ts: now - 200 * DAY }));
+await stepsKb.upsert(buildNeuralPathStep({ ownerHandle: '@b', kind: 'visit', ts: now - 200 * DAY }));
+await stepsKb.upsert(buildNeuralPathStep({ ownerHandle: '@a', kind: 'visit', ts: now - 1 * DAY }));
+await stepsKb.upsert(buildNeuralPathStep({ ownerHandle: '@a', kind: 'publish', ts: now }));
+
+// I1 · dryRun · compta sense esborrar
+const dry = await purgeOldSteps({ kb: stepsKb, retentionDays: 90, nowTs: now, dryRun: true });
+eq(dry.purgedCount, 3,                                    'I1 · dryRun · 3 antics comptats');
+eq(dry.retainedCount, 2,                                  'I1 · dryRun · 2 recents retinguts');
+eq(stepsKb.nodes.size, 5,                                 'I1 · dryRun · res esborrat realment');
+
+// I2 · real purge · esborra els 3 antics
+const real = await purgeOldSteps({ kb: stepsKb, retentionDays: 90, nowTs: now });
+eq(real.purgedCount, 3,                                   'I2 · 3 esborrats');
+eq(real.retainedCount, 2,                                 'I2 · 2 retinguts');
+eq(stepsKb.nodes.size, 2,                                 'I2 · KB ara té 2 nodes');
+t(real.errors.length === 0,                               'I2 · sense errors');
+
+// I3 · idempotent · 2a crida no esborra res
+const second = await purgeOldSteps({ kb: stepsKb, retentionDays: 90, nowTs: now });
+eq(second.purgedCount, 0,                                 'I3 · idempotent · 0 esborrats');
+eq(stepsKb.nodes.size, 2,                                 'I3 · KB intacta');
+
+// I4 · ownerHandle filter · sols esborra d'un usuari
+await stepsKb.upsert(buildNeuralPathStep({ ownerHandle: '@x', kind: 'visit', ts: now - 200 * DAY }));
+await stepsKb.upsert(buildNeuralPathStep({ ownerHandle: '@y', kind: 'visit', ts: now - 200 * DAY }));
+const onlyX = await purgeOldSteps({ kb: stepsKb, retentionDays: 90, nowTs: now, ownerHandle: '@x' });
+eq(onlyX.purgedCount, 1,                                  'I4 · sols @x esborrat');
+t(Array.from(stepsKb.nodes.values()).some(n => n?.content?.ownerHandle === '@y'), 'I4 · @y intacte');
+
+// I5 · default retention · PATH_STEP_RETENTION_DAYS=90
+eq(PATH_STEP_RETENTION_DAYS, 90,                          'I5 · default retention 90 dies');
 
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

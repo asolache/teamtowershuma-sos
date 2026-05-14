@@ -90,7 +90,7 @@ export const INITIAL_BACKLOG = Object.freeze([
         title: 'TTL purge automàtic dels neural_path_step >90 dies',
         description: 'Cron / background sync · purgar steps antics segons PATH_STEP_RETENTION_DAYS=90. Manté el KB lleuger · els bundles ja firmats no es perden (queden com a node independent).',
         principles: ['principle-1-nodes'],
-        status: 'pending',
+        status: 'completed',
         priority: 'medium',
         complexity: 'S',
         dependencies: ['neural-path-001'],
@@ -98,6 +98,8 @@ export const INITIAL_BACKLOG = Object.freeze([
             'neuralPathService.test.js · purgeOldSteps · respect PATH_STEP_RETENTION_DAYS',
         ],
         suggestedFiles: ['js/core/neuralPathService.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
     Object.freeze({
         id: 'trust-pagerank',
