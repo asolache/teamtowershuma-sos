@@ -150,6 +150,15 @@ export default class MarketView {
                 <span id="mkCount" class="mk-count">cargando…</span>
             </div>
 
+            <!-- MKT-002 · banner cross-link · /market és l'EDITOR local · per al
+                 descobridor federat (items publicats al permaweb d'altres usuaris)
+                 cal anar a /opportunities?tab=market -->
+            <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.30);border-radius:6px;padding:8px 14px;margin:8px 1.5rem;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-secondary);line-height:1.45;">
+                <span style="font-size:16px;">💡</span>
+                <span><strong>Aquesta vista és l'<u>editor local</u></strong> · els teus productes/serveis. Per a descobrir el <strong>mercat federat cross-device</strong> (items publicats al permaweb) ves a
+                    <a href="/opportunities?tab=market" data-link style="color:var(--accent-indigo);font-weight:600;">/opportunities · 🛍 Productes</a>.
+                </span>
+            </div>
             <div class="mk-main" id="mkMain">
                 <p style="color:var(--text-muted);">Cargando…</p>
             </div>
@@ -174,9 +183,25 @@ export default class MarketView {
 
     async _load() {
         await KB.init();
-        this.items = await KB.query({ type: 'market_item' });
+        // MKT-002 · els projects que omplen el dropdown són `visibleProjects()`
+        // (exclou arxivats/test). Així el set de projectes disponibles és
+        // coherent · però aquí carreguem TOTS els items (incloent òrfens i
+        // dels arxivats per si l'usuari activa `showArchived`).
+        const allProjects = (store.getState().projects || []);
+        this.projects = visibleProjects(allProjects);
+        const visibleIds = new Set(this.projects.map(p => p.id));
+        const rawItems = await KB.query({ type: 'market_item' });
+        // Items NO associats a un projecte (sense providerProjectId) → visibles
+        // sempre. Items d'un projecte concret · visibles sols si el projecte
+        // és a `visibleProjects` (no arxivat · no test). Així evitem
+        // "només mostra usuaris afegits" causat per projects fora del dropdown.
+        this.itemsAll = rawItems;
+        this.items = rawItems.filter(it => {
+            const pid = it?.content?.providerProjectId;
+            if (!pid) return true;
+            return visibleIds.has(pid);
+        });
         this.items.sort((a, b) => (b.content?.createdAt || b.createdAt || 0) - (a.content?.createdAt || a.createdAt || 0));
-        this.projects = visibleProjects(store.getState().projects);
     }
 
     _populateProjectSelect() {

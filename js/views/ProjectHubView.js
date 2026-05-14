@@ -244,6 +244,10 @@ export default class ProjectHubView {
         const modal = document.getElementById('phSwarmModal');
         modal?.addEventListener('click', (e) => { if (e.target === modal) this._closeSwarmModal(); });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this._closeSwarmModal(); });
+
+        // SWARM-DISCOVERY sprint A · render del panell de descoberta
+        // (fire-and-forget · panel "Projectes afins · propostes de connexió")
+        this._renderSwarmDiscoveryPanel().catch(e => console.warn('[ph] swarm discovery', e?.message));
     }
 
     // ── MAT-003 sprint F UI · Enjambre Cohort 0 ────────────────────
@@ -366,6 +370,15 @@ export default class ProjectHubView {
                         ? 'Encara no hi ha plaçes registrades · genera 5 demo per provar.'
                         : `${totalSeats} plaçes registrades · clica "Activar" per a córrer matchmaker.`}
                 </span>
+            </div>
+
+            <!-- SWARM-DISCOVERY sprint A · panell de descobriment d'altres projectes afins -->
+            <div id="phSwarmDiscovery" style="margin-top:1.4rem;border-top:1px dashed rgba(192,132,252,0.25);padding-top:1.2rem;">
+                <h3 style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:1.2rem;color:var(--accent-purple);margin:0 0 0.6rem 0;">🔗 Projectes afins · propostes de connexió</h3>
+                <div style="color:#888;font-size:0.78rem;line-height:1.5;margin-bottom:0.8rem;">
+                    Altres projectes del SOS amb sectorial · skill · guardian overlap · pondera amb el trust score recursive (PageRank). Click → veure detall · CTA "connectar" (sprint B).
+                </div>
+                <div id="phSwarmDiscoveryBody" style="font-size:0.85rem;color:#888;">Carregant projectes afins…</div>
             </div>
 
             <!-- Modal matchmaker -->
@@ -577,6 +590,120 @@ export default class ProjectHubView {
             <div style="color:var(--accent-red);">${msg}</div>
             <a href="/dashboard" data-link style="color:#6366f1;font-size:0.85rem;">← Dashboard</a>
         </div>`;
+    }
+
+    // SWARM-DISCOVERY sprint A · render del panell "🔗 Projectes afins"
+    // a sota del matchmaker · llegeix projectes públics del KB + projects
+    // visibles del store · calcula affinity (sector/skill/guardian) vs aquest
+    // projecte · pondera amb trust score recursive (PageRank) · mostra top-5.
+    async _renderSwarmDiscoveryPanel() {
+        const body = document.getElementById('phSwarmDiscoveryBody');
+        if (!body) return;
+        try {
+            const { rankAffinity } = await import('../core/swarmAffinityService.js');
+            const { computeRecursiveTrustForBatch } = await import('../core/trustScoreService.js');
+            const { KB } = await import('../core/kb.js');
+            const { store } = await import('../core/store.js');
+            const { visibleProjects } = await import('../core/projectFilter.js');
+
+            // El projecte actual · target de la cerca
+            const target = this.project || (this.projectId ? { id: this.projectId } : null);
+            if (!target) { body.innerHTML = '<span style="color:#888;">Sense projecte actiu</span>'; return; }
+
+            // Candidates · projectes locals (store) + entries públics del permaweb
+            // (cross-device) merged · dedupe per id.
+            const localProjects = visibleProjects(store.getState().projects || []);
+            const publicEntries = await KB.query({ type: 'public_project_entry' }).catch(() => []);
+
+            const candById = new Map();
+            for (const p of localProjects) {
+                if (p && p.id && p.id !== target.id) candById.set(p.id, p);
+            }
+            for (const e of publicEntries) {
+                const c = e?.content || {};
+                const pid = c.projectId || e.id;
+                if (!pid || pid === target.id) continue;
+                if (candById.has(pid)) continue;
+                candById.set(pid, {
+                    id:       pid,
+                    nombre:   c.name,
+                    content:  {
+                        name:              c.name,
+                        sectorId:          c.sectorId,
+                        projectType:       c.projectType,
+                        lookingForSkills:  c.lookingForSkills,
+                        requiredGuardians: c.requiredGuardians,
+                        description:       c.description,
+                    },
+                    arweaveTxId: c.arweaveTxId,
+                });
+            }
+            const candidates = Array.from(candById.values());
+
+            // Trust scores recursive · si falla, fallback sense trust
+            let trustScores = null;
+            try {
+                const ids = candidates.map(c => c.id);
+                const batch = await computeRecursiveTrustForBatch({ kb: KB, attestedIds: ids });
+                trustScores = new Map();
+                for (const id of ids) {
+                    const t = batch[id];
+                    if (t && typeof t.total === 'number') trustScores.set(id, t.total);
+                }
+            } catch (_) { trustScores = null; }
+
+            // Affinity ranking
+            const ranked = rankAffinity(target, candidates, { topN: 5, trustScores });
+
+            if (ranked.length === 0) {
+                body.innerHTML = `<div style="background:rgba(192,132,252,0.05);border:1px dashed rgba(192,132,252,0.25);border-radius:8px;padding:1rem 1.2rem;font-size:0.82rem;color:#888;line-height:1.5;">
+                    Cap projecte afí encara · cal més projectes a la xarxa o ampliar la descripció (sector · skills · guardians) del teu projecte per al matching.
+                    <br><br>
+                    <a href="/opportunities?tab=projects" data-link style="color:var(--accent-indigo);font-weight:600;">Explora projectes públics →</a>
+                </div>`;
+                return;
+            }
+
+            const cards = ranked.map(r => {
+                const p   = r.project;
+                const c   = p.content || p;
+                const pct = Math.round(r.finalScore * 100);
+                const breakdown = r.affinity.breakdown;
+                const trustBadge = r.trust > 0
+                    ? `<span title="Trust score recursive (PageRank) · ${r.trust.toFixed(2)}" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.30);font-size:10px;font-weight:700;font-family:var(--font-mono);">★ ${r.trust.toFixed(1)}</span>`
+                    : '';
+                const arwBadge = p.arweaveTxId
+                    ? `<span title="Permaweb · ${this._esc(p.arweaveTxId)}" style="font-size:10px;color:var(--accent-indigo);font-family:var(--font-mono);">🌐</span>`
+                    : '';
+                const subtitle = [
+                    c.sectorId ? 'sector ' + c.sectorId : null,
+                    c.projectType,
+                ].filter(Boolean).map(s => this._esc(s)).join(' · ');
+                return `
+                    <a href="/n/${encodeURIComponent(p.id)}" data-link style="text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:6px;background:var(--bg-panel);border:1px solid var(--border-default);border-radius:8px;padding:10px 12px;transition:all var(--dur-fast);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                            <strong style="font-size:0.88rem;color:var(--text-main);line-height:1.3;">${this._esc(c.name || c.nombre || p.id)}</strong>
+                            <span style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${pct}%</span>
+                        </div>
+                        <div style="font-size:0.72rem;color:var(--text-muted);font-family:var(--font-mono);">${subtitle || '—'}</div>
+                        <div style="font-size:0.70rem;color:var(--text-secondary);line-height:1.45;display:flex;flex-wrap:wrap;gap:6px;">
+                            <span title="Sector overlap (Jaccard)">🏷 ${Math.round(breakdown.sectorScore*100)}%</span>
+                            <span title="Skill overlap">🧠 ${Math.round(breakdown.skillScore*100)}%</span>
+                            <span title="Guardian alignment">🌙 ${Math.round(breakdown.guardianScore*100)}%</span>
+                            ${trustBadge}
+                            ${arwBadge}
+                        </div>
+                    </a>`;
+            }).join('');
+
+            body.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">${cards}</div>
+                <div style="margin-top:10px;font-size:0.70rem;color:var(--text-muted);">
+                    Top ${ranked.length} de ${candidates.length} candidats · affinity·0.7 + trust·0.3 (si attesters) · sector 50% · skill 30% · guardian 20%.
+                </div>`;
+        } catch (e) {
+            console.warn('[swarm-discovery] failed', e);
+            body.innerHTML = '<div style="color:var(--accent-orange);font-size:0.78rem;">⚠ ' + this._esc(e?.message || 'no s\'ha pogut carregar el panell de descoberta') + '</div>';
+        }
     }
 
     _esc(s) {
