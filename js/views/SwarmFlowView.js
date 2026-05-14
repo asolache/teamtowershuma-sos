@@ -16,9 +16,8 @@ import {
 import {
     SWARM_RUN_TYPE, runValueFlow, buildSwarmRunNode,
 } from '../core/swarmParallelFlow.js';
-import {
-    formatActivityEvent, renderActivityEntryHtml, THINKING_PULSE_CSS,
-} from '../core/aiActivityFeedback.js';
+import { attachAIFormFeedback, renderInlineFeedbackHtml } from '../core/aiFormFeedback.js';
+import { label } from '../core/sosCopy.js';
 
 export default class SwarmFlowView {
 
@@ -90,8 +89,7 @@ export default class SwarmFlowView {
                         Roles · ${(c.roles || []).map(r => this._esc(r.kind)).join(' · ') || '—'} ·
                         maxParallel · ${complexity.maxParallel}
                     </div>
-                    <div data-thinking="${f.id}" class="sw-thinking-now"></div>
-                    <div data-runlog="${f.id}" class="sw-runlog"></div>
+                    ${renderInlineFeedbackHtml({ id: 'swFeedback-' + f.id })}
                 </div>`;
             }).join('');
 
@@ -135,10 +133,7 @@ export default class SwarmFlowView {
             .sw-btn { padding:8px 14px; border-radius:4px; border:1px solid var(--accent-indigo); background:var(--accent-indigo); color:#fff; font-size:0.82rem; font-weight:600; cursor:pointer; }
             .sw-btn:disabled { opacity:0.5; cursor:not-allowed; }
             .sw-btn-run { background:#22c55e; border-color:#22c55e; }
-            .sw-runlog { margin-top:8px; max-height:320px; overflow:auto; }
-            .sw-thinking-now { padding:10px 14px; border-radius:6px; background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(99,102,241,0.10)); border:1px solid rgba(168,85,247,0.35); margin:8px 0; display:none; }
-            .sw-thinking-now.active { display:block; }
-            ${THINKING_PULSE_CSS}
+            /* DESIGN-SYSTEM v2 · aiFormFeedback widget gestiona estils */
             details.sw-run-row { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:6px; padding:8px 12px; margin-bottom:6px; }
             details.sw-run-row summary { cursor:pointer; font-size:0.85rem; list-style:none; }
             details.sw-run-row summary::-webkit-details-marker { display:none; }
@@ -192,27 +187,11 @@ export default class SwarmFlowView {
                 const flowId = btn.dataset.run;
                 const flow = this.flows.find(f => f.id === flowId);
                 if (!flow) return;
-                const logEl = document.querySelector('[data-runlog="' + flowId + '"]');
-                const thinkEl = document.querySelector('[data-thinking="' + flowId + '"]');
+                // DESIGN-SYSTEM v2 · widget per flow card (DRY)
+                const fb = attachAIFormFeedback(document.getElementById('swFeedback-' + flowId), { autoFadeOk: 0 });
                 btn.disabled = true;
                 const origTxt = btn.textContent;
-                btn.textContent = '⏳ executant…';
-                if (logEl) logEl.innerHTML = '';
-                if (thinkEl) { thinkEl.innerHTML = ''; thinkEl.classList.remove('active'); }
-
-                const setThinking = (entry) => {
-                    if (!thinkEl) return;
-                    if (!entry) { thinkEl.classList.remove('active'); thinkEl.innerHTML = ''; return; }
-                    thinkEl.classList.add('active');
-                    thinkEl.innerHTML = renderActivityEntryHtml(entry);
-                };
-                const appendEntry = (entry) => {
-                    if (!logEl || !entry) return;
-                    const wrap = document.createElement('div');
-                    wrap.innerHTML = renderActivityEntryHtml(entry);
-                    const node = wrap.firstElementChild;
-                    if (node) { logEl.appendChild(node); logEl.scrollTop = logEl.scrollHeight; }
-                };
+                btn.textContent = '⏳ ' + label('state.loading');
 
                 try {
                     const { runEscalation } = await import('../core/aiRouterService.js');
@@ -230,30 +209,18 @@ export default class SwarmFlowView {
                         },
                         budgetEur:         2,
                         maxRetriesPerDel:  1,
-                        onActivity: (event) => {
-                            const entry = formatActivityEvent(event);
-                            if (entry.level === 'thinking') {
-                                setThinking(entry);
-                            } else {
-                                setThinking(null);
-                                appendEntry(entry);
-                            }
-                        },
+                        onActivity:        fb.onActivity(),
                     });
-                    setThinking(null);
-                    appendEntry(formatActivityEvent({
-                        kind: 'message',
-                        icon: result.ok ? '🎉' : '⚠',
-                        title: result.ok ? 'Flow completat' : 'Flow amb errors',
-                        detail: result.levelsExecuted + ' levels · €' + result.totalCostEur.toFixed(4) + ' · ' + result.durationMs + 'ms' + (result.errors.length ? ' · ' + result.errors.length + ' errors' : ''),
-                        level: result.ok ? 'ok' : 'warn',
-                    }));
+                    if (result.ok) {
+                        fb.setOk(label('state.done') + ' · ' + result.levelsExecuted + ' levels · €' + result.totalCostEur.toFixed(4) + ' · ' + result.durationMs + 'ms');
+                    } else {
+                        fb.setWarning('Flow amb errors · ' + result.errors.length + ' errors');
+                    }
                     const runNode = buildSwarmRunNode({ result, flowId, projectId: this.projectId });
                     await KB.upsert(runNode);
                     setTimeout(() => window.location.reload(), 1200);
                 } catch (e) {
-                    setThinking(null);
-                    appendEntry(formatActivityEvent({ kind: 'error', error: e?.message || 'error' }));
+                    fb.setError(e?.message || label('state.error'));
                 } finally {
                     btn.disabled = false;
                     btn.textContent = origTxt;
