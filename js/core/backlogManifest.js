@@ -379,15 +379,17 @@ export const INITIAL_BACKLOG = Object.freeze([
 
     Object.freeze({
         id: 'lifecycle-dashboard',
-        title: 'Project Lifecycle Dashboard · /p/{id} status % de cada peça',
-        description: 'Dashboard a /p/{id} mostrant completion % per a cada fase (canvas · pitch · kanban · pactes · tokenomics · accounting · proposals · workshops · invoices). Quality score global. CTA next-best-action.',
+        title: 'Project Lifecycle Dashboard · /lifecycle?project=X status % de cada fase',
+        description: 'Dashboard a /lifecycle?project=X mostrant completion % per 10 fases agrupades en 4 capes (fundació · execució · valor · comercial). Next-best-action prominent. Items Wave 1 pendents mostrats amb 🔜 (graceful degradation). Reusa canvas + ledger + sops + wos + pacts + market_items + workshops.',
         principles: ['principle-1-nodes'],
-        status: 'pending',
+        status: 'completed',
         priority: 'high',
         complexity: 'M',
-        dependencies: ['project-canvas-wizard', 'project-pitch-public', 'tokenomics-designer', 'ledger-accounting'],
-        testRequirements: ['lifecycleService.test.js · computeCompletion pure · next action pick'],
+        dependencies: ['project-canvas-wizard', 'ledger-accounting'],
+        testRequirements: ['lifecycle.test.js · 56 tests · 10 phases pure · status/completion/nextAction · weighted overall · graceful degradation Wave 1'],
         suggestedFiles: ['js/core/lifecycleService.js', 'js/views/ProjectLifecycleView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
     }),
 
     Object.freeze({
