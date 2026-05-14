@@ -47,6 +47,23 @@ t(landing.userPrompt.includes('Mentoria'),                            'B · user
 t(landing.contextTokens > 0,                                          'B · contextTokens estimat > 0');
 eq(landing.dim, 'landing',                                            'B · dim = landing');
 t(Array.isArray(landing.refs) && landing.refs.length >= 1,            'B · refs array no buit');
+// LANDING-UNIFY-001 · el prompt ha de demanar heroTitle/heroTag/heroMantra
+t(landing.userPrompt.includes('heroTitle'),                           'B · prompt demana heroTitle');
+t(landing.userPrompt.includes('heroTag'),                             'B · prompt demana heroTag');
+t(landing.userPrompt.includes('heroMantra'),                          'B · prompt demana heroMantra');
+t(landing.userPrompt.includes('bodyMarkdown'),                        'B · prompt demana bodyMarkdown');
+t(landing.userPrompt.includes('roleDescriptions'),                    'B · prompt demana roleDescriptions');
+// roles del projecte injectats al prompt per roleDescriptions
+t(landing.userPrompt.includes('"r1"') || landing.userPrompt.includes("r1 ·"), 'B · roles incloses al prompt per roleDescriptions');
+
+// LANDING-UNIFY-001 · audienceId propaga to específic
+const landingFund = ctx.buildLandingContext({ project, marketItems: market, audienceId: 'fundadors' });
+t(landingFund.userPrompt.includes('Fundadors'),                       'B · audienceId=fundadors · prompt nomena audiència');
+t(landingFund.systemPrompt.includes('Fundadors'),                     'B · audienceId=fundadors · system prompt adapta to');
+
+const landingUser = ctx.buildLandingContext({ project, marketItems: market, audienceId: 'usuaris' });
+t(landingUser.userPrompt.includes('Usuaris'),                         'B · audienceId=usuaris · prompt nomena audiència');
+t(landingUser.userPrompt !== landingFund.userPrompt,                  'B · diferents audiences · prompts diferents');
 
 // ─── C · buildValueMapContext · roles+tx incloses ────────────────────────
 const vmap = ctx.buildValueMapContext({ project });
@@ -60,11 +77,39 @@ const deliv = ctx.buildDeliverablesContext({ project });
 t(deliv.userPrompt.includes('r2'),                                    'D · deliverables · role sense entregable detectat');
 eq(deliv.dim, 'deliverables',                                         'D · dim = deliverables');
 
+// ─── C2 · VALUEMAP-GEN-001 · sectorSeed + subtypeHint propagats al prompt ─
+const sectorSeedFixture = {
+    sectorId: 'A',
+    sectorName: 'Agricultura',
+    roles: [
+        { id: 'farmer',  name: 'Pagès', castell_level: 'tronc', description: 'Cultiva i recol·lecta.' },
+        { id: 'broker',  name: 'Intermediari', castell_level: 'tronc' },
+    ],
+    transactions: [
+        { from: 'farmer', to: 'broker', deliverable: 'producte fresc', type: 'tangible' },
+        { from: 'broker', to: 'farmer', deliverable: 'remuneració justa', type: 'tangible' },
+    ],
+};
+const vmapSeed = ctx.buildValueMapContext({
+    project,
+    sectorSeed:  sectorSeedFixture,
+    subtypeHint: 'Cooperativa de consum · operativa típica: caixa setmanal',
+});
+t(vmapSeed.userPrompt.includes('REFERÈNCIA · roles típics del sector'), 'C2 · prompt menciona REFERÈNCIA sector roles');
+t(vmapSeed.userPrompt.includes('farmer'),                             'C2 · seed role injectat al prompt');
+t(vmapSeed.userPrompt.includes('producte fresc'),                     'C2 · seed transaction injectada al prompt');
+t(vmapSeed.userPrompt.includes('Cooperativa de consum'),              'C2 · subtypeHint al prompt');
+t(vmapSeed.systemPrompt.includes('REFERÈNCIA sectorial'),             'C2 · system instrueix usar REFERÈNCIA');
+
+// Sense seed · cap menció de REFERÈNCIA
+const vmapNoSeed = ctx.buildValueMapContext({ project });
+t(!vmapNoSeed.userPrompt.includes('REFERÈNCIA · roles típics'),       'C2 · sense seed · sense REFERÈNCIA al prompt');
+
 // ─── E · buildSopsContext · roles sense SOP ──────────────────────────────
 const sopsCtx = ctx.buildSopsContext({ project, sops });
 // r1 té SOP · r2 no → ha de sortir r2 al prompt
 t(sopsCtx.userPrompt.includes('r2'),                                  'E · sops · role sense SOP detectat');
-t(sopsCtx.userPrompt.includes('r1') === false || sopsCtx.userPrompt.includes('Roles que necessiten SOP (1)'), 'E · sops · counts coherents');
+t(/Roles que necessiten SOP \(1\/2\)|Roles que necessiten SOP \(1\)/.test(sopsCtx.userPrompt), 'E · sops · counts coherents (1 missing / 2 totals)');
 eq(sopsCtx.dim, 'sops',                                               'E · dim = sops');
 
 // ─── F · buildWorkshopsContext ──────────────────────────────────────────
@@ -89,8 +134,9 @@ t(threw && /requires project/.test(threw.message),                    'H · land
 const mockProvider = async (modelKey, payload) => ({
     text: JSON.stringify({
         description: 'Generated description longer than 60 characters for landing dim test fixture.',
+        heroTag: 'Test Tag', heroTitle: 'Test Project', heroMantra: 'Frase potent del test.',
+        bodyMarkdown: '## Que oferim\nQualitat.',
         productSuggestions: [],
-        presentationNarrative: '# Hero\n\nGenerated.',
     }),
     usage: { inputTokens: 500, outputTokens: 200 },
     modelKey,
@@ -121,6 +167,12 @@ t(result.modelKey,                                                    'I · mode
 t(Array.isArray(result.refs),                                         'I · refs propagat');
 t(auditPersistedWith && auditPersistedWith.dimId === 'landing',       'I · persistAudit cridat amb dim');
 
+// WALLET-ACC-001 · audit log inclou walletDebit (encara que falli per
+// project sense wallet · marquem walletDebit.ok=false sense bloquejar el draft)
+t('walletDebit' in auditPersistedWith,                                'I · auditPersistedWith inclou walletDebit');
+t(auditPersistedWith.walletDebit !== null && typeof auditPersistedWith.walletDebit === 'object', 'I · walletDebit és objecte');
+t(typeof result.walletDebit === 'object',                             'I · result inclou walletDebit');
+
 // ─── J · aiFillDim · provider falla primary · escalate ──────────────────
 let callCount = 0;
 const escalatingProvider = async (modelKey, payload) => {
@@ -130,7 +182,7 @@ const escalatingProvider = async (modelKey, payload) => {
         return { text: 'not valid json', usage: { inputTokens: 100, outputTokens: 20 }, modelKey, finishReason: 'end_turn' };
     }
     return {
-        text: JSON.stringify({ description: 'd'.repeat(80), productSuggestions: [], presentationNarrative: 'x' }),
+        text: JSON.stringify({ description: 'd'.repeat(80), heroTitle: 'Test Project Name', heroTag: 'Tag', heroMantra: 'Mantra', productSuggestions: [] }),
         usage: { inputTokens: 100, outputTokens: 20 },
         modelKey, finishReason: 'end_turn',
     };
@@ -152,6 +204,134 @@ try {
 } catch (e) { threw = e; }
 t(threw && /taskKind/.test(threw.message),                            'K · dimId invàlid · throw');
 
+// ─── K2 · VALUEMAP-GEN-001 · aiFillDim carrega sectorSeed via loader ───
+// El loader és injectable per a tests · default fa servir KnowledgeLoader.
+let seedLoaderCalls = [];
+const mockSectorSeedLoader = async (sectorId) => {
+    seedLoaderCalls.push(sectorId);
+    return {
+        sectorId,
+        sectorName: 'Test Sector',
+        roles: [{ id: 'seed-r1', name: 'Seed Role 1' }],
+        transactions: [{ from: 'seed-r1', to: 'client', deliverable: 'seed-deliv', type: 'tangible' }],
+    };
+};
+let promptReceived = null;
+const captureProvider = async (modelKey, payload) => {
+    promptReceived = payload.userPrompt;
+    return {
+        text: JSON.stringify({
+            addRoles: [{ id: 'r-new', name: 'Nou', castell_level: 'tronc', description: 'd' }],
+            addTransactions: [{ id: 'tx-new', from: 'r-new', to: 'r-new', deliverable: 'x', type: 'intangible' }],
+        }),
+        usage: { inputTokens: 100, outputTokens: 50 },
+        modelKey, finishReason: 'end_turn',
+    };
+};
+const projectWithSector = { ...project, sector_id: 'A', subtypeId: 'agric-bio' };
+const mockLoadWithSector = async () => ({ project: projectWithSector, sops, workshops, marketItems: market });
+const rValueMap = await fill.aiFillDim({
+    projectId:        'proj-test-1',
+    dimId:            'valueMap',
+    loadContext:      mockLoadWithSector,
+    provider:         captureProvider,
+    persistAudit:     async () => 'a-vm',
+    sectorSeedLoader: mockSectorSeedLoader,
+});
+eq(seedLoaderCalls.length,    1,                                       'K2 · sectorSeedLoader cridat 1 cop');
+eq(seedLoaderCalls[0],        'A',                                     'K2 · loader rep sectorId del projecte');
+t(promptReceived && promptReceived.includes('seed-r1'),                'K2 · seed role injectat al prompt aiFillDim');
+t(promptReceived && promptReceived.includes('seed-deliv'),             'K2 · seed transaction injectada al prompt');
+t(rValueMap.sectorSeed && rValueMap.sectorSeed.sectorId === 'A',       'K2 · sectorSeed metadata retornada a result');
+eq(rValueMap.subtypeId,       'agric-bio',                             'K2 · subtypeId propagat a result');
+
+// K3 · override · si l'usuari passa subtypeId explícit, sobreescriu project.subtypeId
+seedLoaderCalls = [];
+promptReceived = null;
+const rOverride = await fill.aiFillDim({
+    projectId:        'proj-test-1',
+    dimId:            'valueMap',
+    subtypeId:        'agric-coop',     // override
+    loadContext:      mockLoadWithSector,
+    provider:         captureProvider,
+    persistAudit:     async () => 'a-vm-2',
+    sectorSeedLoader: mockSectorSeedLoader,
+});
+eq(rOverride.subtypeId, 'agric-coop',                                  'K3 · subtypeId override aplicat');
+
+// K3b · IA-PROVIDER-PREF-001 · preferredProvider explicit propagat
+// Si l'usuari passa preferredProvider explícit, el chain prepend el model
+// adequat d'aquest provider. Els tests verifiquen el flow end-to-end via
+// captureProvider que registra els modelKey provats.
+let prefProviderCalls = [];
+const captureProviderTrack = async (modelKey, payload) => {
+    prefProviderCalls.push(modelKey);
+    return {
+        text: JSON.stringify({
+            addRoles: [{ id: 'r1', name: 'X', castell_level: 'tronc', description: 'd' }],
+            addTransactions: [{ id: 'tx1', from: 'r1', to: 'r1', deliverable: 'x', type: 'intangible' }],
+        }),
+        usage: { inputTokens: 100, outputTokens: 50 },
+        modelKey, finishReason: 'end_turn',
+    };
+};
+const projectMinSec = { ...project, sector_id: 'A' };
+const mockLoadMinSec = async () => ({ project: projectMinSec, sops, workshops, marketItems: market });
+const noopSeedLoader = async () => null;
+prefProviderCalls = [];
+await fill.aiFillDim({
+    projectId:         'proj-test-1',
+    dimId:             'valueMap',
+    loadContext:       mockLoadMinSec,
+    provider:          captureProviderTrack,
+    persistAudit:      async () => 'a-pref',
+    sectorSeedLoader:  noopSeedLoader,
+    preferredProvider: 'minimax',
+});
+t(prefProviderCalls.length >= 1 && prefProviderCalls[0].startsWith('minimax/'), 'K3b · preferredProvider=minimax · primer attempt és minimax');
+
+// K3c · sense preferredProvider explícit · respecta el default chain (anthropic per valueMap)
+prefProviderCalls = [];
+await fill.aiFillDim({
+    projectId:         'proj-test-1',
+    dimId:             'valueMap',
+    loadContext:       mockLoadMinSec,
+    provider:          captureProviderTrack,
+    persistAudit:      async () => 'a-pref-2',
+    sectorSeedLoader:  noopSeedLoader,
+    preferredProvider: null,    // explicit null sobreescriu auto-load del KB
+});
+eq(prefProviderCalls[0], 'anthropic/sonnet-4.6',                      'K3c · preferredProvider=null · agafa primary del chain (sonnet-4.6)');
+
+// K4 · loader pot fallar · degrade silenciós (no llança · prompt sense seed)
+seedLoaderCalls = [];
+promptReceived = null;
+const failingLoader = async () => { throw new Error('network fail'); };
+const rNoSeed = await fill.aiFillDim({
+    projectId:        'proj-test-1',
+    dimId:            'valueMap',
+    loadContext:      mockLoadWithSector,
+    provider:         captureProvider,
+    persistAudit:     async () => 'a-vm-3',
+    sectorSeedLoader: failingLoader,
+});
+t(rNoSeed.sectorSeed === null,                                         'K4 · loader fail · sectorSeed null · no throw');
+t(promptReceived && !promptReceived.includes('REFERÈNCIA · roles típics'), 'K4 · loader fail · prompt sense secció REFERÈNCIA');
+
+// ─── K5 · NEURAL-PATH-001 sprint B · bundleId · result inclou bundleInfo
+// (degrade silenciós si KB no està · sols verifica que la propietat existeix
+// al return shape · l'integració real necessita un KB amb un bundle persistit)
+prefProviderCalls = [];
+const rNoBundle = await fill.aiFillDim({
+    projectId:    'proj-test-1',
+    dimId:        'landing',
+    loadContext:  mockLoad,
+    provider:     mockProvider,
+    persistAudit: async () => 'a',
+});
+t('bundleInfo' in rNoBundle,                                          'K5 · result conté bundleInfo (null per defecte)');
+t(rNoBundle.bundleInfo === null,                                      'K5 · bundleInfo=null quan no es passa bundleId');
+
 // ─── L · makeJsonShapeEvaluator ─────────────────────────────────────────
 import * as prov from '../core/aiProviderService.js';
 const evOk = prov.makeJsonShapeEvaluator(['description']);
@@ -169,6 +349,26 @@ t(r6.ok,                                                              'L · fenc
 
 const r7 = await evOk(null);
 t(!r7.ok && /empty/.test(r7.reason),                                  'L · null output · empty-output');
+
+// IA-CONTEXT-001 sprint C · spec objecte amb minStringLength/minArrayLength
+const evStrict = prov.makeJsonShapeEvaluator([{ name: 'description', minStringLength: 60 }]);
+const tooShort = await evStrict({ text: JSON.stringify({ description: 'too short' }) });
+t(!tooShort.ok && /string-too-short/.test(tooShort.reason),           'L · spec · minStringLength rebutja string curta');
+
+const longEnough = await evStrict({ text: JSON.stringify({ description: 'x'.repeat(80) }) });
+t(longEnough.ok,                                                      'L · spec · minStringLength acceptat amb 80 chars');
+
+const evArr = prov.makeJsonShapeEvaluator([{ name: 'newSops', minArrayLength: 1 }]);
+const emptyArr = await evArr({ text: JSON.stringify({ newSops: [] }) });
+t(!emptyArr.ok && /array-too-short/.test(emptyArr.reason),            'L · spec · minArrayLength rebutja array buit');
+
+const filledArr = await evArr({ text: JSON.stringify({ newSops: [{ roleId: 'r1' }] }) });
+t(filledArr.ok,                                                       'L · spec · minArrayLength acceptat amb 1 element');
+
+// IA-CONTEXT-001 sprint C · evaluator robust a markdown extra al voltant del JSON
+const evRobust = prov.makeJsonShapeEvaluator(['description']);
+const wrapped = await evRobust({ text: 'Aquí tens el JSON:\n\n{"description":"valid"}\n\nEspero ajudi.' });
+t(wrapped.ok,                                                         'L · spec · extreu JSON envoltat de text');
 
 // ─── M · setApiKeyResolver injectable ───────────────────────────────────
 prov._resetApiKeyCache();

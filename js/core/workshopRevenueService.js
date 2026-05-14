@@ -213,7 +213,23 @@ export async function recordWorkshopUnlock({
             console.warn('[workshopRevenue] audit log persist failed', e?.message);
         }
     }
-    return { unlockId, split, moves, persisted: true };
+    // 4. CANONICAL-001 · workshop BUYER receipt · simetria amb seller revenue
+    // Tanca el gap del PR-B audit · "Workshop buyer no rep cap rebut".
+    let buyerReceipt = null;
+    try {
+        const { recordReceipt } = await import('./receiptService.js');
+        buyerReceipt = await recordReceipt({
+            topupRef:      'workshop-unlock-' + workshop.id,
+            sessionId:     null,
+            amountEur:     finalPrice,
+            currency:      'eur',
+            paymentMethod: 'wallet-balance',
+            lineItems:     [{ description: 'Workshop · ' + (c.title || workshop.id), amountEur: finalPrice }],
+        });
+    } catch (e) {
+        console.warn('[workshopRevenue] buyer receipt failed', e?.message);
+    }
+    return { unlockId, split, moves, persisted: true, buyerReceipt };
 }
 
 // canUnlockWithoutPaying · pur · helper per UI · retorna true si l'usuari

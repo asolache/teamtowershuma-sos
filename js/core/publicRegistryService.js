@@ -506,16 +506,18 @@ export async function publishToPermaweb({
     entry,
     projectId,
     pricing = PRICING,
+    allowPayPerPublish = true,
 } = {}) {
     if (!entry || !entry.content) throw new Error('publishToPermaweb requires entry');
     if (!projectId) throw new Error('publishToPermaweb requires projectId (wallet source)');
     if (!entry.content.signature) throw new Error('publishToPermaweb · entry not signed · call signRegistryEntry first');
 
-    // BIZ-MODEL-001 sprint C · plan enforcement · free no pot publish
-    // Pre-check abans de tocar wallet · evita gastar saldo si no pot acabar
+    // BIZ-MODEL-001 sprint C · plan enforcement
+    // PUBLISH-SELECT-001 · allowPayPerPublish (default true) permet a Free
+    // publicar pagant la fee · vegeu publicProjectService.publishProjectToPermaweb.
     try {
         const { requirePermission } = await import('./planEnforcer.js');
-        await requirePermission('permaweb-publish');
+        await requirePermission(allowPayPerPublish ? 'permaweb-publish-paid' : 'permaweb-publish');
     } catch (e) {
         if (e?.code === 'plan-required') throw e;
         // Altres errors silents · planEnforcer ja té defensives

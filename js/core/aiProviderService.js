@@ -334,6 +334,10 @@ export function actualCostUsd(modelKey, usage) {
 // ── Evaluator default per a dims · JSON shape check ────────────────────────
 // Si el provider retorna text que parsa com a JSON i té certs camps mínims,
 // l'evaluator passa. Si no, escalate (fallback/premium).
+//
+// `requiredFields` accepta:
+//   - string                          · clau requerida (qualsevol valor no-null)
+//   - { name, minArrayLength?, minStringLength? } · validació estricta
 export function makeJsonShapeEvaluator(requiredFields = []) {
     return async (output) => {
         if (!output || !output.text) {
@@ -343,12 +347,42 @@ export function makeJsonShapeEvaluator(requiredFields = []) {
         // Treu un possible fenced ```json block
         const fenced = text.match(/```(?:json)?\s*([\s\S]+?)\s*```/);
         if (fenced) text = fenced[1].trim();
+        // Defensiu · alguns models retornen text de marc abans/després del JSON
+        if (!text.startsWith('{') && !text.startsWith('[')) {
+            const firstBrace = text.indexOf('{');
+            const firstBracket = text.indexOf('[');
+            const start = (firstBrace === -1) ? firstBracket
+                        : (firstBracket === -1) ? firstBrace
+                        : Math.min(firstBrace, firstBracket);
+            if (start >= 0) {
+                const lastBrace = text.lastIndexOf('}');
+                const lastBracket = text.lastIndexOf(']');
+                const end = Math.max(lastBrace, lastBracket);
+                if (end > start) text = text.slice(start, end + 1);
+            }
+        }
         let parsed;
         try { parsed = JSON.parse(text); }
-        catch (e) { return { ok: false, reason: 'not-json · ' + (e?.message || '') }; }
-        for (const f of requiredFields) {
-            if (parsed[f] === undefined || parsed[f] === null) {
-                return { ok: false, reason: 'missing-field · ' + f };
+        catch (e) { return { ok: false, reason: 'not-json · ' + (e?.message || '').slice(0, 80) }; }
+        for (const spec of requiredFields) {
+            const field = (typeof spec === 'string') ? { name: spec } : (spec || {});
+            const name = field.name;
+            if (!name) continue;
+            const v = parsed[name];
+            if (v === undefined || v === null) {
+                return { ok: false, reason: 'missing-field · ' + name };
+            }
+            if (typeof field.minArrayLength === 'number') {
+                if (!Array.isArray(v)) return { ok: false, reason: 'expected-array · ' + name };
+                if (v.length < field.minArrayLength) {
+                    return { ok: false, reason: 'array-too-short · ' + name + ' (' + v.length + '<' + field.minArrayLength + ')' };
+                }
+            }
+            if (typeof field.minStringLength === 'number') {
+                if (typeof v !== 'string') return { ok: false, reason: 'expected-string · ' + name };
+                if (v.trim().length < field.minStringLength) {
+                    return { ok: false, reason: 'string-too-short · ' + name };
+                }
             }
         }
         return { ok: true, score: 1.0, parsed };

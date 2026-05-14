@@ -26,24 +26,49 @@ const baseProject = {
     ],
 };
 
-// ─── A · applyLanding ────────────────────────────────────────────────────
+// ─── A · applyLanding · LANDING-UNIFY-001 · structured shape ───────────
 const landingDraft = {
     description: 'A meaningful description longer than 60 characters that describes the project purpose.',
+    heroTag:    'Cooperativa Test',
+    heroTitle:  'Projecte Test',
+    heroMantra: 'Una frase potent del projecte.',
+    bodyMarkdown: '## Què oferim\nUn paràgraf.\n\n## Per qui\nUn altre paràgraf.',
+    roleDescriptions: {
+        'r1': 'r1 fa això des del punt de vista del client.',
+        'r2': 'r2 coordina la resta del sistema.',
+    },
     productSuggestions: [
         { title: 'Mentoria 1:1', kind: 'service', oneLiner: 'Sessió individual de 60 min' },
         { title: 'Workshop · Fent Pinya 101', kind: 'workshop', oneLiner: 'Intro al mètode SOS' },
     ],
-    presentationNarrative: '# Hero\n\nAquest projecte demostra X.',
 };
 const r1 = svc.applyLanding(landingDraft, baseProject);
 t(r1.applied,                                                         'A · landing · applied=true');
 t(typeof r1.updates.description === 'string' && r1.updates.description.length > 50, 'A · description omplerta');
-eq(r1.updates.presentation_narrative_v1.slice(0, 8), '# Hero\n\n',     'A · presentation narrative omplerta');
+t(typeof r1.updates.presentation_narrative_v1 === 'object',           'A · presentation_narrative_v1 · objecte (no string)');
+eq(r1.updates.presentation_narrative_v1.heroTitle, 'Projecte Test',   'A · narrative.heroTitle persistit');
+eq(r1.updates.presentation_narrative_v1.heroTag,   'Cooperativa Test', 'A · narrative.heroTag persistit');
+t(r1.updates.presentation_narrative_v1.heroMantra.length > 0,         'A · narrative.heroMantra persistit');
+t(r1.updates.presentation_narrative_v1.bodyMarkdown.includes('Què oferim'), 'A · narrative.bodyMarkdown persistit');
+eq(Object.keys(r1.updates.presentation_narrative_v1.roleDescriptions).length, 2, 'A · 2 roleDescriptions persistides');
+t(typeof r1.updates.presentation_narrative_v1.generatedAt === 'number', 'A · generatedAt timestamp present');
 eq(r1.kbWrites.length, 2,                                             'A · 2 productes generats al kbWrites');
 eq(r1.kbWrites[0].type, 'market_item',                                'A · primer kbWrite · type=market_item');
 eq(r1.kbWrites[0].content.projectId, 'proj-test',                     'A · kbWrite porta projectId');
 eq(r1.kbWrites[0].content.createdBy, 'ai-fill',                       'A · kbWrite createdBy ai-fill');
 t(r1.summary.includes('2 productes'),                                 'A · summary menciona productes');
+
+// ─── A2 · applyLanding · retro-compat draft legacy ─────────────────────
+//   Si la IA retorna sols `presentationNarrative` (shape antic), s'ha de
+//   conservar com a `bodyMarkdown` dins la narrative · zero pèrdua dades.
+const legacyDraft = {
+    description: 'A meaningful description longer than 60 characters that describes the project purpose.',
+    presentationNarrative: '# Hero\n\nLegacy markdown body.',
+};
+const rLeg = svc.applyLanding(legacyDraft, baseProject);
+t(rLeg.applied,                                                       'A2 · legacy draft · applied=true');
+t(typeof rLeg.updates.presentation_narrative_v1 === 'object',         'A2 · legacy · narrative és objecte (no string)');
+t(rLeg.updates.presentation_narrative_v1.bodyMarkdown.includes('Legacy markdown'), 'A2 · presentationNarrative migrat a bodyMarkdown');
 
 // ─── B · applyLanding · sense draft ─────────────────────────────────────
 const rNoOp = svc.applyLanding({}, baseProject);

@@ -14,6 +14,23 @@ import { KB }    from '../core/kb.js';
 import {
     PUBLIC_PROJECT_TYPE, projectRegistryEntryIdFor,
 } from '../core/publicProjectService.js';
+// PUBLISH-SELECT-001 sprint A · tabs per a noves entitats públiques
+import {
+    PUBLIC_WORK_ORDER_TYPE, PUBLIC_MARKET_ITEM_TYPE, PUBLIC_WORKSHOP_TYPE,
+} from '../core/publicEntityService.js';
+// PR-K · CV nodals · neural_path_bundle publicat al permaweb
+import { NEURAL_PATH_BUNDLE_TYPE } from '../core/neuralPathService.js';
+// TRUST-001 · trust score badges per a cards
+import { computeTrustForBatch, renderTrustBadgeHtml } from '../core/trustScoreService.js';
+
+// Mapeig tab → public type · ORDER importa per a la UI
+const TAB_DEFS = Object.freeze([
+    { id: 'projects',  type: PUBLIC_PROJECT_TYPE,    icon: '🏛', label: 'Projectes' },
+    { id: 'workorders', type: PUBLIC_WORK_ORDER_TYPE, icon: '📋', label: 'Work Orders' },
+    { id: 'market',    type: PUBLIC_MARKET_ITEM_TYPE, icon: '🛍', label: 'Productes' },
+    { id: 'workshops', type: PUBLIC_WORKSHOP_TYPE,    icon: '🎓', label: 'Workshops' },
+    { id: 'cvnodals',  type: NEURAL_PATH_BUNDLE_TYPE, icon: '🧠', label: 'CV nodals' },
+]);
 
 function escapeHtml(s) {
     if (s === null || s === undefined) return '';
@@ -33,10 +50,16 @@ function _gradientForId(id) {
 export default class OpportunitiesView {
     constructor() {
         document.title = 'Oportunitats · Permaweb · SOS V11';
-        this._entries = [];
+        this._entriesByTab = { projects: [], workorders: [], market: [], workshops: [], cvnodals: [] };
         this._filter  = '';
         this._syncing = false;
+        // PUBLISH-SELECT-001 · activeTab des de URL ?tab=workorders, default projects
+        const params = new URLSearchParams(window.location.search || '');
+        const tabParam = params.get('tab');
+        this._activeTab = TAB_DEFS.find(t => t.id === tabParam) ? tabParam : 'projects';
     }
+    // Helper · accés al cache del tab actiu
+    get _entries() { return this._entriesByTab[this._activeTab] || []; }
 
     async getHtml() {
         await store.init();
@@ -88,12 +111,17 @@ export default class OpportunitiesView {
             </div>
             <div class="op-main">
                 <header class="op-hero">
-                    <h1>🚀 Oportunitats · projectes públics</h1>
-                    <p>Descobreix projectes SOS publicats al permaweb · cada un porta el seu sector, descripció, skills que busca i ownerDid verificable. Quan trobis un que t'interessi, sol·licita unir-te com a stakeholder · els founders rebran la teva sol·licitud signada. <strong>Discovery i verify són sempre free</strong> · publish d'un projecte costa 0,05€ del wallet del projecte.</p>
+                    <h1>🚀 Oportunitats al permaweb</h1>
+                    <p>Descobreix <strong>projectes</strong>, <strong>work orders obertes</strong>, <strong>productes</strong>, <strong>workshops</strong> i <strong>CV nodals</strong> publicats per altres operadors SOS via permaweb · ownerDid verificable + signatura ECDSA · cross-device · <strong>Discovery sempre free</strong> · publish 0,02-0,05€ per entitat (Free pla ×1.5 fee).</p>
+                    <p style="font-size:12px;color:var(--text-muted);margin-top:6px;"><strong>⚠ Important</strong> · les entries amb txId que comença per <code>mock-</code> són locals · no es sincronitzen entre dispositius. Cal Wander connectat o keyfile Arweave a <a href="/identity" data-link style="color:var(--accent-indigo);">/identity</a> per a upload real.</p>
                 </header>
+                <!-- PUBLISH-SELECT-001 · tabs per tipus de contingut públic -->
+                <div class="op-tabs" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;border-bottom:1px solid var(--border-default);padding-bottom:6px;">
+                    ${TAB_DEFS.map(t => `<button class="op-tab" data-op-tab="${t.id}" style="background:${this._activeTab === t.id ? 'var(--accent-indigo)' : 'transparent'};color:${this._activeTab === t.id ? '#fff' : 'var(--text-secondary)'};border:1px solid ${this._activeTab === t.id ? 'var(--accent-indigo)' : 'var(--border-default)'};padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:0.82rem;font-weight:700;font-family:var(--font-base);">${t.icon} ${t.label}</button>`).join('')}
+                </div>
                 <div class="op-stats" id="opStats"></div>
                 <div class="op-search">
-                    <input type="search" id="opSearch" placeholder="🔍 Cerca per nom · descripció · sector · skill" autocomplete="off">
+                    <input type="search" id="opSearch" placeholder="🔍 Cerca per títol · descripció · sector · skill · status" autocomplete="off">
                 </div>
                 <div id="opList" class="op-grid">
                     <div class="op-empty">Carregant del cache local…</div>
@@ -110,9 +138,122 @@ export default class OpportunitiesView {
             this._filter = e.target.value.toLowerCase().trim();
             this._render();
         });
+        // PUBLISH-SELECT-001 · tabs · canviar entitat type
+        document.querySelectorAll('[data-op-tab]').forEach(btn => {
+            btn.addEventListener('click', () => this._switchTab(btn.getAttribute('data-op-tab')));
+        });
         // PROJ-VERSIONING-001 sprint D · async fetch latest version per card
         // (cache TTL 15min · NO bloca render · update banner inline si latest > current)
         this._checkLatestVersions().catch(e => console.warn('[opportunities] latest check', e?.message));
+        // TRUST-001 sprint B · delegat global per al botó "✓ Endorse"
+        // Captura clicks dins de qualsevol card · stopPropagation per evitar
+        // navegació SPA al detail del node.
+        document.addEventListener('click', this._endorseClickHandler = (ev) => {
+            const btn = ev.target.closest('[data-endorse-id]');
+            if (!btn) return;
+            ev.preventDefault(); ev.stopPropagation();
+            this._handleEndorse(btn.getAttribute('data-endorse-id'), btn.getAttribute('data-endorse-type'));
+        }, true);  // capture phase
+    }
+
+    destroy() {
+        if (this._endorseClickHandler) {
+            document.removeEventListener('click', this._endorseClickHandler, true);
+            this._endorseClickHandler = null;
+        }
+    }
+
+    // TRUST-001 sprint B · obre modal de endorse · crea attestation firmada
+    async _handleEndorse(attestedId, attestedType) {
+        if (!attestedId) return;
+        // Modal compacte amb kind selector + statement
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9990;display:flex;align-items:center;justify-content:center;padding:20px;';
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:1.4rem;max-width:480px;width:100%;color:var(--text-main);';
+        card.innerHTML = `
+            <h2 style="margin:0 0 8px 0;font-size:1.1rem;">✓ Endorse · ${escapeHtml(attestedType || 'node')}</h2>
+            <p style="color:var(--text-muted);font-size:0.78rem;line-height:1.5;margin:0 0 14px;">
+                Signaràs ECDSA P-256 una attestation amb el teu DID · queda persistida al KB local i sumarà al trust score visible a /opportunities. <strong>Sense cost</strong> (firmes locals).
+                <br>Target id · <code style="color:var(--accent-purple);font-size:11px;">${escapeHtml(attestedId.slice(0, 32))}…</code>
+            </p>
+            <label style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:700;display:block;margin-bottom:4px;">Tipus d'endorsement</label>
+            <select id="endorseKind" style="width:100%;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:6px 8px;margin-bottom:10px;font-size:0.85rem;">
+                <option value="endorses-operator">endorses-operator · respecte general</option>
+                <option value="endorses-founder">endorses-founder · ×3 weight</option>
+                <option value="cohort-member">cohort-member · ×1.5 weight</option>
+                <option value="workshop-quality">workshop-quality · qualitat detectada</option>
+            </select>
+            <label style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:700;display:block;margin-bottom:4px;">Statement (opcional · ≤500 chars)</label>
+            <textarea id="endorseStatement" rows="3" maxlength="500" placeholder="Per què el respectes? · context i evidència fan que els altres puguin pesar la teva endorsement." style="width:100%;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:6px 8px;font-size:0.82rem;resize:vertical;box-sizing:border-box;"></textarea>
+            <div id="endorseStatus" style="margin-top:10px;font-size:0.78rem;display:none;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+                <button id="endorseCancel" style="background:transparent;color:var(--text-muted);border:1px solid var(--border-default);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:11px;">Cancel·lar</button>
+                <button id="endorseConfirm" style="background:#22c55e;color:#fff;border:0;padding:6px 14px;border-radius:6px;font-weight:700;cursor:pointer;font-size:11px;">✓ Firma + persisteix</button>
+            </div>
+        `;
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+        const close = () => overlay.remove();
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        document.getElementById('endorseCancel').addEventListener('click', close);
+        document.getElementById('endorseConfirm').addEventListener('click', async () => {
+            const kind   = document.getElementById('endorseKind').value;
+            const stmt   = document.getElementById('endorseStatement').value.trim();
+            const status = document.getElementById('endorseStatus');
+            const setS   = (msg, ok = true) => { status.style.display = 'block'; status.textContent = msg; status.style.color = ok ? '#22c55e' : 'var(--accent-red)'; };
+            const btn    = document.getElementById('endorseConfirm');
+            btn.disabled = true; btn.textContent = '⏳ Firmant…';
+            try {
+                const { getOrCreateIdentity } = await import('../core/identityService.js');
+                const { getOrCreateSigningKey } = await import('../core/projectIO.js');
+                const { buildAttestation, recordAttestation } = await import('../core/attestationService.js');
+                const identity = await getOrCreateIdentity();
+                const did = identity?.content?.primaryDid || identity?.primaryDid;
+                if (!did) throw new Error('No s\'ha pogut crear identitat');
+                const keyMeta = await getOrCreateSigningKey();
+                const att = buildAttestation({
+                    attesterDid:       did,
+                    attesterHandle:    identity?.content?.handle || null,
+                    attestedId,
+                    attestedType:      attestedType === 'cv-nodal' ? 'profile' : 'project',
+                    attestationKind:   kind,
+                    statement:         stmt || null,
+                    attesterPublicJwk: keyMeta.publicJwk,
+                });
+                await recordAttestation({ attestation: att, privateJwk: keyMeta.privateJwk, kb: KB });
+                setS('✓ Endorsement persistit + firmat · re-renderitzant…', true);
+                setTimeout(async () => {
+                    close();
+                    await this._loadFromCache();   // re-compute trust scores
+                }, 700);
+            } catch (e) {
+                console.error('[endorse] failed', e);
+                setS('✗ ' + (e?.message || 'error'), false);
+                btn.disabled = false; btn.textContent = '✓ Firma + persisteix';
+            }
+        });
+    }
+
+    // PUBLISH-SELECT-001 · canvi de tab · update URL · re-render header + grid
+    async _switchTab(tabId) {
+        if (!TAB_DEFS.find(t => t.id === tabId)) return;
+        if (this._activeTab === tabId) return;
+        this._activeTab = tabId;
+        try {
+            const url = new URL(window.location.href);
+            if (tabId === 'projects') url.searchParams.delete('tab');
+            else url.searchParams.set('tab', tabId);
+            window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
+        } catch (_) {}
+        // Re-pinta tabs visualment (sense full re-render)
+        document.querySelectorAll('[data-op-tab]').forEach(btn => {
+            const isActive = btn.getAttribute('data-op-tab') === tabId;
+            btn.style.background = isActive ? 'var(--accent-indigo)' : 'transparent';
+            btn.style.color      = isActive ? '#fff' : 'var(--text-secondary)';
+            btn.style.borderColor= isActive ? 'var(--accent-indigo)' : 'var(--border-default)';
+        });
+        this._render();
     }
 
     async _checkLatestVersions() {
@@ -135,12 +276,35 @@ export default class OpportunitiesView {
     }
 
     async _loadFromCache() {
+        // PR-K · carrega cache dels 5 tabs en paral·lel · CV nodals filtrats
+        // a sols els publicats (arweaveTxId · ja són públics a la xarxa).
         try {
-            this._entries = await KB.query({ type: PUBLIC_PROJECT_TYPE });
+            const [projects, workorders, market, workshops, cvnodalsRaw] = await Promise.all(
+                TAB_DEFS.map(t => KB.query({ type: t.type }).catch(() => []))
+            );
+            // CV nodals · sols els publicats al permaweb (filtra els privats del propi usuari)
+            const cvnodals = (cvnodalsRaw || []).filter(n => !!n?.content?.arweaveTxId);
+            this._entriesByTab = {
+                projects, workorders, market, workshops, cvnodals,
+            };
         } catch (e) {
-            this._entries = [];
+            this._entriesByTab = { projects: [], workorders: [], market: [], workshops: [], cvnodals: [] };
             console.warn('[opportunities] KB.query failed', e);
         }
+        // TRUST-001 · pre-compute trust scores per a tots els ids visibles
+        // (1 query global + filtre per id · més eficient que N queries)
+        try {
+            const allIds = [];
+            for (const arr of Object.values(this._entriesByTab)) {
+                for (const e of (arr || [])) {
+                    if (e?.id) allIds.push(e.id);
+                    // Projecte attestation pot referenciar projectId (no entry id)
+                    const pid = e?.content?.projectId;
+                    if (pid && !allIds.includes(pid)) allIds.push(pid);
+                }
+            }
+            this._trustByAttestedId = await computeTrustForBatch({ kb: KB, attestedIds: allIds });
+        } catch (_) { this._trustByAttestedId = {}; }
         this._render();
     }
 
@@ -150,25 +314,55 @@ export default class OpportunitiesView {
         const btn = document.getElementById('opSyncBtn');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Sincronitzant…'; }
         try {
-            // Reuse el sync mechanism del publicRegistryService però per a projects
+            // SYNC-CROSS-001 · sincronitza els 5 entry types en paral·lel
+            // Cross-device discovery · qualsevol entry publicat al permaweb des
+            // de qualsevol màquina apareix aquí via Arweave GraphQL gateway.
             const { queryPermawebRegistry, fetchEntryByTxId } = await import('../core/publicRegistryService.js');
-            const descs = await queryPermawebRegistry({ entryType: 'public-project-entry', first: 50 });
-            let cached = 0;
-            for (const d of descs) {
+            const SYNC_TYPES = [
+                { tab: 'projects',   gqlType: 'public-project-entry',     kbType: PUBLIC_PROJECT_TYPE },
+                { tab: 'workorders', gqlType: 'public_work_order_entry',  kbType: PUBLIC_WORK_ORDER_TYPE },
+                { tab: 'market',     gqlType: 'public_market_item_entry', kbType: PUBLIC_MARKET_ITEM_TYPE },
+                { tab: 'workshops',  gqlType: 'public_workshop_entry',    kbType: PUBLIC_WORKSHOP_TYPE },
+                { tab: 'cvnodals',   gqlType: 'neural-path-bundle',       kbType: NEURAL_PATH_BUNDLE_TYPE },
+            ];
+            let totalDescs = 0, totalCached = 0;
+            const perTab = [];
+            for (const t of SYNC_TYPES) {
                 try {
-                    const { entry } = await fetchEntryByTxId(d.txId);
-                    if (entry && entry.type === PUBLIC_PROJECT_TYPE) {
-                        await KB.upsert({
-                            ...entry,
-                            content: { ...entry.content, _cachedAt: Date.now(), _fromPermaweb: true },
-                            updatedAt: Date.now(),
-                        });
-                        cached++;
+                    const descs = await queryPermawebRegistry({ entryType: t.gqlType, first: 50 });
+                    totalDescs += descs.length;
+                    let cached = 0;
+                    for (const d of descs) {
+                        try {
+                            const { entry } = await fetchEntryByTxId(d.txId);
+                            if (!entry) continue;
+                            const normalized = {
+                                ...entry,
+                                type: t.kbType,
+                                content: {
+                                    ...entry.content,
+                                    arweaveTxId:  entry.content?.arweaveTxId || d.txId,
+                                    _cachedAt:    Date.now(),
+                                    _fromPermaweb:true,
+                                    _verified:    true,
+                                },
+                                updatedAt: Date.now(),
+                            };
+                            await KB.upsert(normalized);
+                            cached++;
+                        } catch (e) {
+                            console.warn('[opportunities] fetch failed', t.tab, d.txId, e?.message);
+                        }
                     }
-                } catch (e) { console.warn('[opportunities] fetch failed', d.txId, e); }
+                    totalCached += cached;
+                    perTab.push(t.tab + ':' + cached);
+                } catch (e) {
+                    console.warn('[opportunities] sync tab failed', t.tab, e?.message);
+                    perTab.push(t.tab + ':err');
+                }
             }
             await this._loadFromCache();
-            this._toast(`✓ ${descs.length} oportunitats trobades · ${cached} al cache`);
+            this._toast(`✓ ${totalDescs} entries · ${totalCached} cachejades · ${perTab.join(' · ')}`);
         } catch (e) {
             console.error('[opportunities] sync failed', e);
             this._toast('✗ Sync ha fallat: ' + (e?.message || 'error'));
@@ -191,25 +385,83 @@ export default class OpportunitiesView {
         if (!stats || !list) return;
         const filtered = this._applyFilter(this._entries);
 
-        // Stats sectors únics + skills demanats
-        const sectors = new Set();
-        const skills  = new Set();
-        for (const e of filtered) {
-            const c = e?.content || {};
-            if (c.sectorId) sectors.add(c.sectorId);
-            (c.lookingForSkills || []).forEach(s => skills.add(s));
+        // Stats per tab · projects té sectors+skills, els altres tenen counts per status/kind/tier
+        let statsHtml;
+        if (this._activeTab === 'projects') {
+            const sectors = new Set(); const skills = new Set();
+            for (const e of filtered) {
+                const c = e?.content || {};
+                if (c.sectorId) sectors.add(c.sectorId);
+                (c.lookingForSkills || []).forEach(s => skills.add(s));
+            }
+            statsHtml = `
+                <div class="op-stat"><div class="op-stat-label">Total cache</div><div class="op-stat-value">${this._entries.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Filtrades</div><div class="op-stat-value">${filtered.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Sectors únics</div><div class="op-stat-value">${sectors.size}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Skills demanades</div><div class="op-stat-value">${skills.size}</div></div>
+            `;
+        } else if (this._activeTab === 'workorders') {
+            const skills = new Set(); let openCount = 0;
+            for (const e of filtered) {
+                const c = e?.content || {};
+                (c.lookingForSkills || []).forEach(s => skills.add(s));
+                if (c.status === 'backlog' || c.status === 'doing') openCount++;
+            }
+            statsHtml = `
+                <div class="op-stat"><div class="op-stat-label">Total WOs</div><div class="op-stat-value">${this._entries.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Filtrades</div><div class="op-stat-value">${filtered.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Obertes</div><div class="op-stat-value" style="color:#22c55e;">${openCount}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Skills cercades</div><div class="op-stat-value">${skills.size}</div></div>
+            `;
+        } else if (this._activeTab === 'market') {
+            const kinds = new Set(); let totalEur = 0;
+            for (const e of filtered) {
+                const c = e?.content || {};
+                if (c.kind) kinds.add(c.kind);
+                if (typeof c.priceEur === 'number') totalEur += c.priceEur;
+            }
+            statsHtml = `
+                <div class="op-stat"><div class="op-stat-label">Total productes</div><div class="op-stat-value">${this._entries.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Filtrats</div><div class="op-stat-value">${filtered.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Tipus</div><div class="op-stat-value">${kinds.size}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Valor agregat</div><div class="op-stat-value">${totalEur.toFixed(0)}€</div></div>
+            `;
+        } else if (this._activeTab === 'workshops') {
+            const tiers = new Set();
+            for (const e of filtered) {
+                const c = e?.content || {};
+                if (c.accessTier) tiers.add(c.accessTier);
+            }
+            statsHtml = `
+                <div class="op-stat"><div class="op-stat-label">Total workshops</div><div class="op-stat-value">${this._entries.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Filtrats</div><div class="op-stat-value">${filtered.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Tiers</div><div class="op-stat-value">${tiers.size}</div></div>
+                <div class="op-stat"><div class="op-stat-label">—</div><div class="op-stat-value">·</div></div>
+            `;
+        } else if (this._activeTab === 'cvnodals') {
+            // PR-K · stats CV nodals · owners únics + intents + signed count
+            const owners = new Set(); const intents = new Set(); let signedCount = 0;
+            for (const e of filtered) {
+                const c = e?.content || {};
+                if (c.ownerHandle) owners.add(c.ownerHandle);
+                if (c.intent)      intents.add(c.intent);
+                if (c.signature)   signedCount++;
+            }
+            statsHtml = `
+                <div class="op-stat"><div class="op-stat-label">CV nodals</div><div class="op-stat-value">${this._entries.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Filtrats</div><div class="op-stat-value">${filtered.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Owners únics</div><div class="op-stat-value">${owners.size}</div></div>
+                <div class="op-stat"><div class="op-stat-label">🔐 firmats</div><div class="op-stat-value" style="color:#22c55e;">${signedCount}</div></div>
+            `;
         }
-        stats.innerHTML = `
-            <div class="op-stat"><div class="op-stat-label">Total cache</div><div class="op-stat-value">${this._entries.length}</div></div>
-            <div class="op-stat"><div class="op-stat-label">Filtrades</div><div class="op-stat-value">${filtered.length}</div></div>
-            <div class="op-stat"><div class="op-stat-label">Sectors únics</div><div class="op-stat-value">${sectors.size}</div></div>
-            <div class="op-stat"><div class="op-stat-label">Skills demanades</div><div class="op-stat-value">${skills.size}</div></div>
-        `;
+        stats.innerHTML = statsHtml;
+
         if (filtered.length === 0) {
+            const tabLabel = (TAB_DEFS.find(t => t.id === this._activeTab) || {}).label || this._activeTab;
             list.innerHTML = '<div class="op-empty">'
                 + (this._entries.length === 0
-                    ? 'Cap projecte públic al cache · prem ↻ Sync per descobrir del permaweb'
-                    : 'Cap oportunitat coincideix amb el filtre · prova un terme més general')
+                    ? 'Cap ' + tabLabel.toLowerCase() + ' al cache · prem ↻ Sync per descobrir del permaweb · publica des de <a href="/dashboard" data-link style="color:var(--accent-indigo);">Configuració del projecte → Publica continguts</a>'
+                    : 'Cap entrada coincideix amb el filtre · prova un terme més general')
                 + '</div>';
             return;
         }
@@ -221,16 +473,29 @@ export default class OpportunitiesView {
         const q = this._filter;
         return entries.filter(e => {
             const c = e?.content || {};
+            // PUBLISH-SELECT-001 · cobertura per a 4 entity types · field set unificat
             const hay = [
-                c.name, c.description, c.sectorId, c.projectType, c.subtype, c.ownerDid,
+                c.name, c.title, c.description, c.sectorId, c.sectorTT, c.projectType,
+                c.subtype, c.ownerDid, c.kind, c.status, c.accessTier, c.cnae, c.type,
                 ...(c.lookingForSkills || []),
                 ...(c.lookingForSectors || []),
+                ...(c.tags || []),
+                ...(c.deliverables || []),
             ].filter(Boolean).join(' ').toLowerCase();
             return hay.includes(q);
         });
     }
 
+    // PUBLISH-SELECT-001 · render cards segons activeTab
     _cardHtml(e) {
+        if (this._activeTab === 'workorders') return this._cardHtmlWorkOrder(e);
+        if (this._activeTab === 'market')     return this._cardHtmlMarket(e);
+        if (this._activeTab === 'workshops')  return this._cardHtmlWorkshop(e);
+        if (this._activeTab === 'cvnodals')   return this._cardHtmlCvNodal(e);
+        return this._cardHtmlProject(e);
+    }
+
+    _cardHtmlProject(e) {
         const c = e?.content || {};
         const initials = (c.name || c.projectId || '?').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
         const gradient = _gradientForId(c.projectId || c.ownerDid || '');
@@ -252,13 +517,18 @@ export default class OpportunitiesView {
         const updateSlot = c.projectId
             ? `<span data-update-slot="${escapeHtml(c.projectId)}" data-current-version="${c.entryVersion || 1}" data-current-tx="${escapeHtml(c.arweaveTxId || '')}" style="display:none;"></span>`
             : '';
+        // TRUST-001 · badge inline derivat del cache pre-computat
+        const trustProj = (this._trustByAttestedId || {})[c.projectId] || (this._trustByAttestedId || {})[e.id];
+        const trustBadge = trustProj && trustProj.band !== 'none'
+            ? renderTrustBadgeHtml(trustProj, { compact: true })
+            : '';
         return `
             <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
                 <div class="op-card-head">
                     <div class="op-emblem" style="background:${gradient};">${escapeHtml(initials)}</div>
                     <div class="op-card-info">
                         ${founderBadge}
-                        <div class="op-card-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${escapeHtml(c.name || 'Projecte')}${ver}${updateSlot}</div>
+                        <div class="op-card-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${escapeHtml(c.name || 'Projecte')}${ver}${updateSlot}${trustBadge}</div>
                         <div class="op-card-sub">
                             ${c.sectorId ? `sector ${escapeHtml(c.sectorId)}` : 'sense sector'}
                             ${c.projectType ? ` · ${escapeHtml(c.projectType)}` : ''}
@@ -276,7 +546,154 @@ export default class OpportunitiesView {
                     <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
                     <div style="display:flex;align-items:center;gap:6px;">
                         ${cloneBtn}
+                        <button class="op-endorse-btn" data-endorse-id="${escapeHtml(c.projectId || e.id)}" data-endorse-type="project" title="Endorse aquest projecte amb la teva identitat ECDSA" style="background:transparent;color:#22c55e;border:1px solid #22c55e;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">✓ Endorse</button>
                         <span>${typeof c.stakeholdersCount === 'number' ? c.stakeholdersCount + ' stakeholders' : ''}</span>
+                    </div>
+                </div>
+            </a>
+        `;
+    }
+
+    // PUBLISH-SELECT-001 · card per a Work Order
+    _cardHtmlWorkOrder(e) {
+        const c = e?.content || {};
+        const title  = c.title || 'Work Order';
+        const status = c.status || 'unknown';
+        const statusColor = status === 'backlog' ? '#facc15' : (status === 'doing' ? '#3b82f6' : '#94a3b8');
+        const skills = (c.lookingForSkills || []).slice(0, 5);
+        const tx = c.arweaveTxId;
+        const projectId = c.projectId || e.projectId;
+        return `
+            <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
+                <div class="op-card-head">
+                    <div class="op-emblem" style="background:${_gradientForId(c.workOrderId || e.id)};">📋</div>
+                    <div class="op-card-info">
+                        <div style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:${statusColor}25;color:${statusColor};border:1px solid ${statusColor}50;font-size:10px;font-weight:700;margin-bottom:4px;">● ${escapeHtml(status)}</div>
+                        <div class="op-card-name">${escapeHtml(title)}</div>
+                        <div class="op-card-sub">
+                            ${projectId ? 'Projecte ' + escapeHtml(String(projectId).slice(0, 16)) + '…' : '(sense projecte)'}
+                            ${typeof c.estimatedHours === 'number' ? ' · ~' + c.estimatedHours + 'h' : ''}
+                            ${typeof c.fmvPerHour === 'number' ? ' · ' + c.fmvPerHour + '€/h' : ''}
+                            ${c.priority ? ` · pri ${escapeHtml(c.priority)}` : ''}
+                        </div>
+                    </div>
+                </div>
+                ${c.description ? `<div class="op-card-desc">${escapeHtml(c.description)}</div>` : ''}
+                ${skills.length ? `<div class="op-card-chips">${skills.map(s => `<span class="op-chip skill">🧠 ${escapeHtml(s)}</span>`).join('')}</div>` : ''}
+                <div class="op-card-foot">
+                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${c.deadline ? '⏰ ' + new Date(c.deadline).toLocaleDateString() : ''}</span>
+                </div>
+            </a>
+        `;
+    }
+
+    // PUBLISH-SELECT-001 · card per a Market item
+    _cardHtmlMarket(e) {
+        const c = e?.content || {};
+        const title = c.title || 'Producte';
+        const kind  = c.kind  || 'service';
+        const kindIcon = ({ service: '🛠', product: '📦', workshop: '🎓', skill: '🤲', template: '📋', subscription: '🔁' })[kind] || '✦';
+        const tx = c.arweaveTxId;
+        const projectId = c.projectId || e.projectId;
+        return `
+            <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
+                <div class="op-card-head">
+                    <div class="op-emblem" style="background:${_gradientForId(c.itemId || e.id)};">${kindIcon}</div>
+                    <div class="op-card-info">
+                        <div style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:rgba(99,102,241,0.12);color:var(--accent-indigo);border:1px solid rgba(99,102,241,0.30);font-size:10px;font-weight:700;margin-bottom:4px;">${escapeHtml(kind)}</div>
+                        <div class="op-card-name">${escapeHtml(title)}</div>
+                        <div class="op-card-sub">
+                            ${projectId ? 'Projecte ' + escapeHtml(String(projectId).slice(0, 16)) + '…' : ''}
+                            ${typeof c.priceEur === 'number' ? ' · <strong style="color:#22c55e;">' + c.priceEur + '€</strong>' : ''}
+                            ${c.cnae ? ` · CNAE ${escapeHtml(c.cnae)}` : ''}
+                        </div>
+                    </div>
+                </div>
+                ${c.description ? `<div class="op-card-desc">${escapeHtml(c.description)}</div>` : ''}
+                ${Array.isArray(c.deliverables) && c.deliverables.length ? `<div class="op-card-chips">${c.deliverables.slice(0, 4).map(d => `<span class="op-chip skill">📦 ${escapeHtml(d)}</span>`).join('')}</div>` : ''}
+                <div class="op-card-foot">
+                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${c.savingsCompareTo ? '💰 estalvi ' + escapeHtml(c.savingsCompareTo) : ''}</span>
+                </div>
+            </a>
+        `;
+    }
+
+    // PUBLISH-SELECT-001 · card per a Workshop
+    _cardHtmlWorkshop(e) {
+        const c = e?.content || {};
+        const title = c.title || 'Workshop';
+        const tier  = c.accessTier || 'public';
+        const tierColor = ({ public: '#22c55e', operator: '#3b82f6', matriu: '#a855f7', cohort: '#f59e0b' })[tier] || '#94a3b8';
+        const tx = c.arweaveTxId;
+        const projectId = c.projectId || e.projectId;
+        return `
+            <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
+                <div class="op-card-head">
+                    <div class="op-emblem" style="background:${_gradientForId(c.workshopId || e.id)};">🎓</div>
+                    <div class="op-card-info">
+                        <div style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:${tierColor}25;color:${tierColor};border:1px solid ${tierColor}50;font-size:10px;font-weight:700;margin-bottom:4px;">tier · ${escapeHtml(tier)}</div>
+                        <div class="op-card-name">${escapeHtml(title)}</div>
+                        <div class="op-card-sub">
+                            ${c.type ? escapeHtml(c.type) : ''}
+                            ${c.sector ? ` · sector ${escapeHtml(c.sector)}` : ''}
+                            ${typeof c.audienceSize === 'number' ? ` · ${c.audienceSize} pax` : ''}
+                            ${typeof c.priceEur === 'number' ? ' · <strong style="color:#22c55e;">' + c.priceEur + '€</strong>' : ''}
+                        </div>
+                    </div>
+                </div>
+                ${c.description ? `<div class="op-card-desc">${escapeHtml(c.description)}</div>` : ''}
+                <div class="op-card-foot">
+                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <span>${c.date ? '📅 ' + new Date(c.date).toLocaleDateString() : ''}</span>
+                </div>
+            </a>
+        `;
+    }
+
+    // PR-K · card per a neural_path_bundle publicat al permaweb
+    _cardHtmlCvNodal(e) {
+        const c = e?.content || {};
+        const title  = c.name || 'CV nodal';
+        const owner  = c.ownerHandle || '?';
+        const intent = c.intent || null;
+        const audience = c.audienceId || null;
+        const tx     = c.arweaveTxId;
+        const signed = !!c.signature;
+        const stepCount = c.stepCount || 0;
+        const publishedAt = c.permawebPublishedAt;
+        // TRUST-001 · trust score del CV nodal (per attestedId = bundleId)
+        const trustCv = (this._trustByAttestedId || {})[e.id];
+        const trustBadge = trustCv && trustCv.band !== 'none'
+            ? renderTrustBadgeHtml(trustCv, { compact: true })
+            : '';
+        return `
+            <a class="op-card" href="/n/${encodeURIComponent(e.id)}" data-link>
+                <div class="op-card-head">
+                    <div class="op-emblem" style="background:${_gradientForId(owner)};">🧠</div>
+                    <div class="op-card-info">
+                        <div style="display:flex;gap:4px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
+                            <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:rgba(168,85,247,0.15);color:var(--accent-purple);border:1px solid rgba(168,85,247,0.30);font-size:10px;font-weight:700;">${escapeHtml(owner)}</span>
+                            ${signed ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:999px;background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.30);font-size:10px;font-weight:700;" title="ECDSA P-256 firmat">🔐</span>' : ''}
+                            ${trustBadge}
+                        </div>
+                        <div class="op-card-name">${escapeHtml(title)}</div>
+                        <div class="op-card-sub">
+                            ${stepCount} steps nodals
+                            ${intent ? ` · intent: ${escapeHtml(intent)}` : ''}
+                            ${audience ? ` · audience: ${escapeHtml(audience)}` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="op-card-desc" style="font-size:0.78rem;color:var(--text-muted);">
+                    Context bundle publicat · curat com a flux de valor per a agents IA · CV nodal verificable
+                </div>
+                <div class="op-card-foot">
+                    <span>${tx ? '🌐 ' + tx.slice(0, 10) + '…' : '(local)'}</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <button class="op-endorse-btn" data-endorse-id="${escapeHtml(e.id)}" data-endorse-type="cv-nodal" title="Endorse aquest CV nodal" style="background:transparent;color:#22c55e;border:1px solid #22c55e;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">✓ Endorse</button>
+                        <span>${publishedAt ? '📅 ' + new Date(publishedAt).toLocaleDateString() : ''}</span>
                     </div>
                 </div>
             </a>

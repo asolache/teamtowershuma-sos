@@ -18,6 +18,8 @@ import {
     statusIcon,
 } from '../core/projectQualityService.js';
 import { suggestNextDim } from '../core/navService.js';
+// VALUEMAP-GEN-001 · subtype selector + seed reference per al panel valueMap
+import { getSubtypesForSector, getSubtypeById } from '../core/sectorSubtypes.js';
 
 function _esc(s) {
     if (s === null || s === undefined) return '';
@@ -30,6 +32,9 @@ export default class ProjectQualityView {
         this._projectId = null;
         this._project   = null;
         this._quality   = null;
+        // NEURAL-PATH-001 sprint B · bundle opcional via ?bundleId=...
+        const params = new URLSearchParams(window.location.search || '');
+        this._bundleId = params.get('bundleId') || null;
     }
 
     _readProjectId() {
@@ -45,11 +50,14 @@ export default class ProjectQualityView {
         const state = store.getState();
         this._project = (state.projects || []).find(p => p && p.id === pid) || null;
         if (!this._project) { this._quality = null; return; }
-        const [sops, workshops, marketItems] = await Promise.all([
+        const [sops, workshops, marketItems, providerNode] = await Promise.all([
             KB.query({ type: 'sop' }).catch(() => []),
             KB.query({ type: 'workshop' }).catch(() => []),
             KB.query({ type: 'market_item' }).catch(() => []),
+            // IA-PROVIDER-PREF-001 · llegim el provider preferit per al badge
+            KB.getNode('sos_ai_provider').catch(() => null),
         ]);
+        this._preferredProvider = providerNode?.value || null;
         this._quality = computeQualityScore(this._project, { sops, workshops, marketItems });
     }
 
@@ -174,7 +182,15 @@ export default class ProjectQualityView {
                 <header class="pq-hero">
                     <div class="pq-hero-title">
                         <h1 class="pq-hero-h1">${name}</h1>
-                        <div class="pq-hero-sub">Qualitat detall · 5 capes ponderades · objectiu ≥90 per a alfa Matriu</div>
+                        <div class="pq-hero-sub" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                            <span>Qualitat detall · 5 capes ponderades · objectiu ≥90 per a alfa Matriu</span>
+                            <span title="Provider IA preferit · es prova primer abans del fallback default · canvia a /settings"
+                                  style="background:rgba(168,85,247,0.12);color:var(--accent-purple);padding:2px 10px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border:1px solid rgba(168,85,247,0.30);">
+                                🧠 ${this._preferredProvider ? _esc(this._preferredProvider) : 'default chain'}
+                                <a href="/settings" data-link style="color:var(--accent-purple);text-decoration:underline;font-weight:700;margin-left:4px;">↻ canvia</a>
+                            </span>
+                            ${this._bundleId ? `<span title="Context bundle actiu · injectat al prompt IA" style="background:rgba(34,197,94,0.12);color:#22c55e;padding:2px 10px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border:1px solid rgba(34,197,94,0.30);">📦 bundle · <code style="font-size:10px;">${_esc(this._bundleId.slice(0, 14))}…</code> <a href="/path" data-link style="color:#22c55e;text-decoration:underline;font-weight:700;margin-left:4px;">↻ canvia</a></span>` : ''}
+                        </div>
                     </div>
                     <div class="pq-hero-score">
                         <div class="pq-hero-score-num">${q.total}<span class="pq-hero-score-tot">/100</span></div>
@@ -224,6 +240,32 @@ export default class ProjectQualityView {
             }
             const exclLabel = excluded ? '↩ Marcar com a aplicable' : 'no aplicable';
 
+            // VALUEMAP-GEN-001 · panel específic per a valueMap · subtype selector
+            // amb la llista pre-omplerta des de SECTOR_SUBTYPES + project.subtypeId
+            // com a default. Aquest selector es passa a aiFillDim per fer servir
+            // la seed sectorial/subsector com a REFERÈNCIA al prompt.
+            let valueMapSubtypePanel = '';
+            if (d.id === 'valueMap' && !excluded) {
+                const proj      = this._project || {};
+                const sectorId  = proj.sector_id || proj.sectorId || null;
+                const curSubId  = proj.subtypeId || proj.subtype_id || '';
+                const subtypes  = sectorId ? getSubtypesForSector(sectorId) : [];
+                const opts      = subtypes.map(s => `<option value="${_esc(s.id)}" ${curSubId === s.id ? 'selected' : ''}>${_esc(s.label)} · ${_esc(s.hint || '')}</option>`).join('');
+                const seedInfo  = sectorId
+                    ? `Sector base · <code>${_esc(sectorId)}</code> · els roles/transactions típics del sector ${subtypes.length ? '+ subtipus seleccionat ' : ''}s'injectaran com a <strong>REFERÈNCIA</strong> al prompt.`
+                    : `<span style="color:var(--accent-orange);">⚠ El projecte no té sector base · Edita'l a <a href="/project/${_esc(proj.id)}" data-link style="color:var(--accent-indigo);">Admin del projecte</a> per millorar el draft.</span>`;
+                valueMapSubtypePanel = `
+                    <div style="margin-top:8px;padding:10px 12px;border-radius:var(--radius-md);background:var(--bg-elevated);border:1px solid var(--border-default);">
+                        <label style="font-size:10px;color:var(--text-muted);font-weight:700;display:block;margin-bottom:6px;">🎯 Subtipus dins del sector ${sectorId ? '<code style="font-size:10px;">(' + _esc(sectorId) + ')</code>' : ''}</label>
+                        ${subtypes.length ? `
+                        <select data-valuemap-subtype="${_esc(d.id)}" style="width:100%;background:var(--bg-panel);color:var(--text-main);border:1px solid var(--border-default);border-radius:4px;padding:5px 8px;font-size:11px;margin-bottom:8px;">
+                            <option value="">(cap subtipus · sols sector base)</option>
+                            ${opts}
+                        </select>` : ''}
+                        <p style="font-size:11px;color:var(--text-muted);line-height:1.4;margin:0;">${seedInfo}</p>
+                    </div>`;
+            }
+
             return `<section class="pq-dim" id="dim-${_esc(d.id)}" style="${excluded ? 'opacity:0.7;' : ''}">
                 <div class="pq-dim-head">
                     <span class="pq-dim-icon">${d.icon}</span>
@@ -233,14 +275,15 @@ export default class ProjectQualityView {
                 </div>
                 <div class="pq-dim-bar"><div class="pq-dim-bar-fill" style="width:${excluded ? 0 : score}%;background:${color};"></div></div>
                 ${bodyHtml}
+                ${valueMapSubtypePanel}
                 <div class="pq-dim-foot">
                     ${excluded ? '' : `<button class="pq-dim-aibtn" data-aifill="${_esc(d.id)}" title="Genera un draft amb IA · escalation chain primary→fallback→premium">🧠 Ompli amb IA</button>`}
                     ${excluded ? '' : `<button class="pq-dim-noapp" data-toggle-ctx="${_esc(d.id)}" title="Afegir context extra (URLs/text/imatges futur · sprint B2)">📎 +context</button>`}
                     <button class="pq-dim-noapp" data-noapp="${_esc(d.id)}" title="${excluded ? 'Torna a comptabilitzar aquesta capa al score' : 'Marca aquesta capa com a no aplicable · els pesos restants es re-balancegen'}">${exclLabel}</button>
                 </div>
                 ${excluded ? '' : `<div data-ctx-panel-for="${_esc(d.id)}" style="display:none;margin-top:6px;padding-top:8px;border-top:1px solid var(--border-subtle);">
-                    <label style="font-size:10px;color:var(--text-muted);font-weight:700;display:block;margin-bottom:4px;">📎 Context addicional per a la IA · max 2000 chars · serà inclós al prompt</label>
-                    <textarea data-ctx-input="${_esc(d.id)}" placeholder="Pega text, links a docs, descripcions detallades… (ex. una landing existent, una guia tècnica, un brief de client)" style="width:100%;min-height:80px;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:6px 8px;font-family:var(--font-mono);font-size:11px;resize:vertical;box-sizing:border-box;"></textarea>
+                    <label style="font-size:10px;color:var(--text-muted);font-weight:700;display:block;margin-bottom:4px;">📎 ${d.id === 'valueMap' ? 'Prompt del creador · descriu intencions, rols clau, transactions o entregables que vols al mapa' : 'Context addicional per a la IA · max 2000 chars · serà inclós al prompt'}</label>
+                    <textarea data-ctx-input="${_esc(d.id)}" placeholder="${d.id === 'valueMap' ? 'Ex: \"Volem 3 rols · client / equip core / mentor extern · que el client rebi report setmanal i el mentor faci 1 sessió mensual\"' : 'Pega text, links a docs, descripcions detallades… (ex. una landing existent, una guia tècnica, un brief de client)'}" style="width:100%;min-height:80px;background:var(--bg-elevated);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;padding:6px 8px;font-family:var(--font-mono);font-size:11px;resize:vertical;box-sizing:border-box;"></textarea>
                 </div>`}
             </section>`;
         }).join('');
@@ -320,22 +363,39 @@ export default class ProjectQualityView {
         // l'ha omplert per aquesta dim
         const ctxTextarea = document.querySelector('[data-ctx-input="' + dimId + '"]');
         const extraContext = ctxTextarea ? (ctxTextarea.value || '').trim() : null;
+        // VALUEMAP-GEN-001 · per a dim=valueMap, llegir subtype del selector
+        // dedicat · serà passat a aiFillDim per al builder de context.
+        let subtypeId = null;
+        if (dimId === 'valueMap') {
+            const subSel = document.querySelector('[data-valuemap-subtype="' + dimId + '"]');
+            subtypeId = subSel ? (subSel.value || null) : null;
+        }
         let result;
         try {
             result = await aiFillDim({
                 projectId: this._projectId,
                 dimId,
                 extraContext,
-                maxOutputTokens: 800,
+                subtypeId,           // VALUEMAP-GEN-001 · override del project.subtypeId
+                bundleId: this._bundleId,  // NEURAL-PATH-001 sprint B · context bundle opcional
+                maxOutputTokens: dimId === 'valueMap' ? 1600 : 800,
                 temperature: 0.4,
             });
         } catch (e) {
             btn.disabled = false;
             btn.textContent = origText;
             if (e?.code === 'no-api-key') {
-                this._toast('⚠ Cal API key de ' + (e.provider || 'el provider') + ' · ves a /settings');
+                // IA-CONTEXT-001 sprint C · si la chain completa ha fallat per
+                // claus absents, el router posa `providers:[...]` per indicar
+                // qualsevol d'aquests serveix per desbloquejar la dim.
+                const provs = (e.providers && e.providers.length)
+                    ? e.providers.join(', ')
+                    : (e.provider || 'el provider');
+                this._showNoApiKeyModal(provs, e);
             } else {
-                this._toast('✗ ' + (e?.message || 'error desconegut'));
+                // Detall expandit · sovint la causa real està als `attempts`
+                const detail = this._summarizeAttempts(e?.attempts);
+                this._toast('✗ ' + (e?.message || 'error desconegut') + (detail ? ' · ' + detail : ''));
             }
             return;
         }
@@ -407,16 +467,21 @@ export default class ProjectQualityView {
                         this._toast('🛈 Draft acceptat però sense canvis aplicables · ' + apply.summary);
                     }
                     close();
-                    // Refresh score post-apply · re-navigate al mateix /quality
+                    // LANDING-UNIFY-001 · després d'aplicar landing, redirigeix a
+                    // /presentation perquè l'usuari vegi el text generat. Altres
+                    // dims es queden a /quality per veure el nou score.
+                    const targetUrl = (dimId === 'landing' && apply.applied)
+                        ? '/presentation?project=' + encodeURIComponent(this._projectId)
+                        : (window.location.pathname + window.location.search);
                     setTimeout(() => {
                         try {
                             if (typeof window.navigateTo === 'function') {
-                                window.navigateTo(window.location.pathname + window.location.search);
+                                window.navigateTo(targetUrl);
                             } else {
-                                window.location.reload();
+                                window.location.href = targetUrl;
                             }
                         } catch (_) { window.location.reload(); }
-                    }, 600);
+                    }, 700);
                 } catch (e) {
                     status.textContent = '✗ ' + (e?.message || 'apply va fallar');
                     status.style.color = 'var(--accent-red)';
@@ -436,6 +501,45 @@ export default class ProjectQualityView {
         t.className = 'pq-aitoast';
         t.textContent = msg;
         document.body.appendChild(t);
-        setTimeout(() => t.remove(), 3200);
+        setTimeout(() => t.remove(), 4500);
+    }
+
+    // IA-CONTEXT-001 sprint C · resum compacte de la chain quan fail no és no-api-key
+    _summarizeAttempts(attempts) {
+        if (!Array.isArray(attempts) || attempts.length === 0) return '';
+        return attempts.map(a => (a.modelKey || '?') + ' ✗ ' + (a.evalReason || '?')).join(' | ').slice(0, 240);
+    }
+
+    // Modal · explica al usuari que ha de configurar 1+ API key per fer servir
+    // l'escalation chain de la dim · llista providers acceptats + CTA cap a /settings
+    _showNoApiKeyModal(providersStr, err) {
+        const bg = document.createElement('div');
+        bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9990;display:flex;align-items:center;justify-content:center;padding:20px;';
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--bg-panel);border:1px solid var(--accent-orange);border-radius:var(--radius-lg);padding:1.5rem;max-width:520px;width:100%;color:var(--text-main);';
+        card.innerHTML = `
+            <div style="font-size:1.6rem;margin-bottom:8px;">🔑</div>
+            <h2 style="margin:0 0 8px 0;font-size:1.15rem;color:var(--text-main);">Falta API key</h2>
+            <p style="font-size:13px;color:var(--text-secondary);line-height:1.55;margin:0 0 12px;">
+                Per fer servir <strong>🧠 Ompli amb IA</strong> cal almenys una API key
+                configurada d'un dels providers de la <em>chain</em> d'aquesta dim:
+            </p>
+            <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:8px 12px;font-family:var(--font-mono);font-size:12px;color:var(--accent-indigo);margin-bottom:14px;">
+                ${_esc(providersStr)}
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);line-height:1.5;margin:0 0 14px;">
+                Els teus tokens es guarden encriptats localment · cada cèntim consumit
+                queda registrat a l'<code>ai_audit</code> del KB per a transparència.
+            </p>
+            <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+                <button class="pq-dim-noapp" id="pqNkClose">Tancar</button>
+                <a href="/settings" data-link class="pq-dim-aibtn" style="display:inline-block;text-decoration:none;text-align:center;">⚙ Anar a /settings</a>
+            </div>
+        `;
+        bg.appendChild(card);
+        document.body.appendChild(bg);
+        const close = () => bg.remove();
+        bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+        document.getElementById('pqNkClose')?.addEventListener('click', close);
     }
 }

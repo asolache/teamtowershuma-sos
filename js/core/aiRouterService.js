@@ -137,6 +137,46 @@ export function pickModelForBudget({ taskKind, budgetEur, inputTokens = 0, outpu
     return null;
 }
 
+// IA-PROVIDER-PREF-001 · pickBestModelForProvider · donat un providerId
+// (anthropic|openai|gemini|deepseek|minimax) i un taskKind, retorna el
+// modelKey d'aquell provider més adequat per a la task. Si el provider
+// no té cap model "encaixable" per al kind requerit, retorna el de més
+// alta qualitat del provider (degradació elegant).
+//
+// Estratègia · prioritza models del provider que coincideixen amb el
+// `kind` requerit (ex. taskKind 'sop-structured' → kind 'reasoner' o
+// 'general'). Si cap, agafa el de quality més alta del provider.
+const TASK_KIND_PREFERENCE = Object.freeze({
+    'creative-narrative': ['general', 'creative', 'multimodal'],
+    'value-map-design':   ['reasoner', 'general'],
+    'schema-fill-simple': ['general', 'multimodal'],
+    'sop-structured':     ['reasoner', 'general'],
+    'workshop-outline':   ['general', 'multimodal'],
+    'code-generation':    ['reasoner', 'general'],
+    'quality-audit':      ['reasoner', 'general'],
+    'deep-reasoning':     ['reasoner'],
+    'multimodal-image':   ['multimodal'],
+    'tag-generation':     ['general', 'multimodal'],
+    'summary-short':      ['general', 'multimodal'],
+});
+export function pickBestModelForProvider({ providerId, taskKind } = {}) {
+    if (!providerId) return null;
+    const candidates = MODEL_IDS.filter(k => AI_MODELS[k].provider === providerId);
+    if (candidates.length === 0) return null;
+    const preferredKinds = TASK_KIND_PREFERENCE[taskKind] || ['general'];
+    // Prioritat 1 · model del provider amb kind preferit · més qualitat
+    for (const kind of preferredKinds) {
+        const ofKind = candidates.filter(k => AI_MODELS[k].kind === kind);
+        if (ofKind.length > 0) {
+            ofKind.sort((a, b) => AI_MODELS[b].quality - AI_MODELS[a].quality);
+            return ofKind[0];
+        }
+    }
+    // Prioritat 2 · qualsevol model del provider · més qualitat (degradació)
+    candidates.sort((a, b) => AI_MODELS[b].quality - AI_MODELS[a].quality);
+    return candidates[0];
+}
+
 // runEscalation · helper d'execució estilitzat per al caller. Rep:
 //   - taskKind
 //   - generate(modelKey, ctx) · funció que crida el provider real i retorna text
@@ -155,18 +195,28 @@ export async function runEscalation({
     evaluate = null,
     ctx = {},
     stopAt = 'premium',
+    preferredProvider = null,   // IA-PROVIDER-PREF-001 · prepend al chain si l'usuari té preferència
 } = {}) {
     const r = getRouting(taskKind);
     if (!r) throw new Error('runEscalation · unknown taskKind: ' + taskKind);
     const order = [];
-    if (r.primary)  order.push(r.primary);
-    if (r.fallback && stopAt !== 'primary') order.push(r.fallback);
-    if (r.premium  && stopAt === 'premium') order.push(r.premium);
+    // IA-PROVIDER-PREF-001 · si hi ha preferred-provider, prova primer un
+    // model d'aquest provider per a la task (sense duplicar si ja és al chain)
+    if (preferredProvider) {
+        const preferredModel = pickBestModelForProvider({ providerId: preferredProvider, taskKind });
+        if (preferredModel) order.push(preferredModel);
+    }
+    if (r.primary  && !order.includes(r.primary))  order.push(r.primary);
+    if (r.fallback && stopAt !== 'primary' && !order.includes(r.fallback)) order.push(r.fallback);
+    if (r.premium  && stopAt === 'premium' && !order.includes(r.premium)) order.push(r.premium);
     const attempts = [];
+    const missingKeyProviders = new Set();
     let lastErr = null;
+    let anyGenerateSucceeded = false;
     for (const modelKey of order) {
         try {
             const output = await generate(modelKey, ctx);
+            anyGenerateSucceeded = true;
             if (!evaluate) {
                 attempts.push({ modelKey, evalOk: true });
                 return { output, modelKey, attempts };
@@ -179,15 +229,34 @@ export async function runEscalation({
             // continua la cadena
         } catch (e) {
             lastErr = e;
-            attempts.push({ modelKey, evalOk: false, evalReason: 'generate-failed: ' + (e?.message || e) });
+            // Track per-provider · si totes les claus falten, surface-them al caller
+            if (e?.code === 'no-api-key' && e.provider) missingKeyProviders.add(e.provider);
+            attempts.push({
+                modelKey,
+                evalOk:     false,
+                evalReason: 'generate-failed: ' + (e?.message || e),
+                errorCode:  e?.code || null,
+                provider:   e?.provider || null,
+            });
         }
     }
     // Cap modèl ha passat l'avaluador · si tenim almenys un output, retornem-lo
-    // amb un flag · si tots han fallat en throw, llencem.
+    // amb un flag · si tots han fallat en throw, llencem un error informatiu.
     const lastAttempt = attempts[attempts.length - 1];
     if (!lastAttempt) throw new Error('runEscalation · no attempts (chain buida)');
-    if (lastErr && !attempts.some(a => a.evalOk)) {
-        throw new Error('runEscalation · all models failed · last: ' + (lastErr?.message || lastErr));
+    if (lastErr && !attempts.some(a => a.evalOk) && !anyGenerateSucceeded) {
+        // Tots els intents han llançat. Si la causa única és "no-api-key", surface
+        // codi específic perquè la UI mostri CTA cap a /settings amb providers.
+        if (missingKeyProviders.size && attempts.every(a => a.errorCode === 'no-api-key')) {
+            const err = new Error('runEscalation · no API keys configurades · ' + Array.from(missingKeyProviders).join(', '));
+            err.code = 'no-api-key';
+            err.providers = Array.from(missingKeyProviders);
+            err.attempts = attempts;
+            throw err;
+        }
+        const err = new Error('runEscalation · all models failed · last: ' + (lastErr?.message || lastErr));
+        err.attempts = attempts;
+        throw err;
     }
     return { output: null, modelKey: null, attempts, escalatedExhausted: true };
 }

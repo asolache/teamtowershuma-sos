@@ -124,53 +124,33 @@ export default class ProjectHubView {
         <div class="ph-shell">
             <div class="ph-topbar">
                 <a href="/" data-link class="ph-logo">🗼 Team<span>Towers</span></a>
-                <span class="ph-title">Proyecto · panel</span>
+                <span class="ph-title">⚙ Admin del projecte</span>
                 <div class="ph-spacer"></div>
-                
+                <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link class="ph-link" style="font-weight:700;">👁 Veure presentació pública →</a>
+                <span style="color:var(--text-muted);">·</span>
                 <a href="/n/${encodeURIComponent(p.id)}" data-link class="ph-link">📂 Nodo</a>
             </div>
 
             <div class="ph-main">
-                <div class="ph-hero">
-                    <h1 class="mat-hero-h1">${this._esc(p.nombre || p.name || p.id)}</h1>
+                <!-- PRESENTATION-HUB-001 · banner orientació · separar admin de presentació pública -->
+                <div style="background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(168,85,247,0.06));border:1px solid var(--border-default);border-left:3px solid var(--accent-indigo);border-radius:var(--radius-md);padding:0.85rem 1.1rem;margin-bottom:1.5rem;display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+                    <span style="font-size:1.2rem;">⚙</span>
+                    <div style="flex:1;min-width:240px;">
+                        <div style="font-weight:800;color:var(--text-main);font-size:0.95rem;">Admin tècnic del projecte</div>
+                        <div style="color:var(--text-muted);font-size:11px;line-height:1.5;margin-top:2px;">Operacions tècniques · enjambre IA · publicació permaweb · vistes operatives. La <strong>presentació pública</strong> (hero, productes, equip, slicing pie) viu a <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link style="color:var(--accent-indigo);">/presentation</a> · la <strong>qualitat</strong> a <a href="/quality?project=${encodeURIComponent(p.id)}" data-link style="color:var(--accent-indigo);">/quality</a>.</div>
+                    </div>
+                </div>
+                <!-- PROJ-CONFIG-001 · hero compacte · stats + members viuen a /presentation -->
+                <div class="ph-hero" style="padding:1rem 1.2rem;">
+                    <h1 class="mat-hero-h1" style="font-size:1.15rem;">${this._esc(p.nombre || p.name || p.id)}</h1>
                     <div class="meta">
                         <span class="ph-badge status">● ${this._esc(p.cloneStatus || 'active')}</span>
                         ${sectorBadge}
                         ${p.readinessAtClone ? `<span class="ph-badge">${this._esc(p.readinessAtClone).toUpperCase()}</span>` : ''}
                         <span style="color:#888;font-family:monospace;font-size:0.72rem;">id: ${this._esc(p.id)}</span>
-                    </div>
-
-                    <div class="ph-stat-row">
-                        <div class="ph-stat" style="--ph-c:#6366f1;">
-                            <div class="label">Roles VNA</div>
-                            <div class="value">${(p.vna_roles || []).length}</div>
-                        </div>
-                        <div class="ph-stat" style="--ph-c:#a5b4fc;">
-                            <div class="label">Transacciones</div>
-                            <div class="value">${(p.vna_transactions || []).length}</div>
-                        </div>
-                        <div class="ph-stat" style="--ph-c:#22c55e;">
-                            <div class="label">SOPs</div>
-                            <div class="value">${s.sops}</div>
-                        </div>
-                        <div class="ph-stat" style="--ph-c:#facc15;">
-                            <div class="label">Work Orders</div>
-                            <div class="value">${s.workOrders.total}</div>
-                            <div class="sub">${s.workOrders.backlog} backlog · ${s.workOrders.doing} doing · ${s.workOrders.done} done · ${s.workOrders.ledgered} ledger</div>
-                        </div>
-                        <div class="ph-stat" style="--ph-c:#7dd3fc;">
-                            <div class="label">Ofertas Mercado</div>
-                            <div class="value">${s.marketItems.count}</div>
-                        </div>
-                        <div class="ph-stat" style="--ph-c:#86efac;">
-                            <div class="label">Ahorro acumulado</div>
-                            <div class="value">${s.savingEur.toFixed(2)} €</div>
-                            <div class="sub">${s.woRolesAi} WOs IA · ${s.woRolesHuman} humanas</div>
-                        </div>
+                        <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link class="ph-link" style="margin-left:auto;font-weight:700;">👁 Veure presentació pública →</a>
                     </div>
                 </div>
-
-                ${this._renderProjectMembersSection()}
 
                 ${this._renderSwarmSection()}
 
@@ -199,34 +179,18 @@ export default class ProjectHubView {
                     </div>
                 </div>
 
-                ${s.marketItems.count ? `
+                <!-- PRESENTATION-HUB-001 · les llistes de ofertes/SOPs ara viuen
+                     a /presentation · evitem duplicació. Si s'està buscant un SOP
+                     concret · /sops té el llistat editable. -->
+                ${(s.marketItems.count || s.sops > 0) ? `
                     <div class="ph-section">
-                        <h2>Ofertas publicadas (${s.marketItems.count})</h2>
-                        <div class="ph-list">
-                            ${s.marketItems.list.map(it => {
-                                const c = it.content || {};
-                                return `
-                                    <a class="ph-item" href="/n/${encodeURIComponent(it.id)}" data-link>
-                                        <span style="font-size:1.1rem;">${c.kind === 'workshop' ? '🎓' : c.kind === 'product' ? '📦' : c.kind === 'template' ? '📋' : c.kind === 'skill' ? '🤲' : c.kind === 'subscription' ? '🔁' : '💡'}</span>
-                                        <span class="pname">${this._esc(c.title || it.id)}</span>
-                                        <span class="pmeta">${c.cnae ? 'CNAE ' + this._esc(c.cnae) + ' · ' : ''}${c.priceEur != null ? c.priceEur + ' €' : '— €'}</span>
-                                    </a>`;
-                            }).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${s.sops > 0 ? `
-                    <div class="ph-section">
-                        <h2>SOPs del proyecto (${s.sops})</h2>
-                        <div class="ph-list">
-                            ${s.sopsList.slice(0, 8).map(n => `
-                                <a class="ph-item" href="/sops?project=${encodeURIComponent(this.projectId)}&focus=${encodeURIComponent(n.id)}" data-link>
-                                    <span style="font-size:1rem;">📜</span>
-                                    <span class="pname">${this._esc(n.content?.name || n.id)}</span>
-                                    <span class="pmeta">rol ${this._esc(n.content?.role_ref || '?')} · ${(n.content?.steps || []).length} steps</span>
-                                </a>`).join('')}
-                            ${s.sops > 8 ? `<a class="ph-link" href="/sops?project=${encodeURIComponent(this.projectId)}" data-link style="text-align:center;padding:0.5rem;">Ver los ${s.sops} SOPs ›</a>` : ''}
+                        <h2>📚 Contingut del projecte</h2>
+                        <p style="color:var(--text-secondary);font-size:0.82rem;line-height:1.6;margin:0 0 0.7rem 0;">
+                            La presentació pública dels productes/SOPs/equip viu a <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link style="color:var(--accent-indigo);font-weight:700;">/presentation</a>. Aquí pots accedir a les vistes operatives per editar.
+                        </p>
+                        <div class="ph-grid">
+                            ${s.marketItems.count ? `<a class="ph-tile" href="/market?project=${encodeURIComponent(p.id)}" data-link><div class="icon">🛍</div><div class="ttl">${s.marketItems.count} ofertes al market</div><div class="hint">Edita productes, serveis i preus</div></a>` : ''}
+                            ${s.sops > 0 ? `<a class="ph-tile" href="/sops?project=${encodeURIComponent(p.id)}" data-link><div class="icon">📜</div><div class="ttl">${s.sops} SOPs del projecte</div><div class="hint">Edita / regenera SOPs amb IA</div></a>` : ''}
                         </div>
                     </div>
                 ` : ''}
@@ -238,6 +202,18 @@ export default class ProjectHubView {
                     </p>
                     <div id="phPermawebBody" style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:0.85rem 1rem;">
                         <div style="color:var(--text-muted);font-style:italic;">Carregant estat…</div>
+                    </div>
+                </div>
+
+                <!-- PUBLISH-SELECT-001 · publicació selectiva (WO + Market + Workshop) -->
+                <div class="ph-section">
+                    <h2>📤 Publica continguts a /oportunitats</h2>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.6;margin:0 0 0.7rem 0;">
+                        Publica work orders obertes, productes i workshops al permaweb perquè altres operadors els puguin trobar a <a href="/opportunities" data-link style="color:var(--accent-indigo);">/oportunitats</a>.
+                        Cost · WO 0,02€ · Market 0,03€ · Workshop 0,04€ · usuaris <strong>Free paguen ×1.5 fee</strong>, Pro/Coop preu base. Es desconta del wallet del projecte.
+                    </p>
+                    <div id="phSelectivePublishBody" style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:0.85rem 1rem;">
+                        <div style="color:var(--text-muted);font-style:italic;">Carregant entitats publicables…</div>
                     </div>
                 </div>
             </div>
@@ -257,6 +233,8 @@ export default class ProjectHubView {
 
         // FUND-FLOW-001 sprint F · permaweb publish card
         this._renderPermawebPublishCard().catch(e => console.warn('[ph] permaweb publish', e));
+        // PUBLISH-SELECT-001 · publicació selectiva (WO + Market + Workshop)
+        this._renderSelectivePublishCard().catch(e => console.warn('[ph] selective publish', e));
 
         // MAT-003 sprint F · handlers de la sección Enjambre
         document.getElementById('phSeedSeats')?.addEventListener('click', () => this._handleSeedSeats());
@@ -605,6 +583,281 @@ export default class ProjectHubView {
         return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
     }
 
+    // PUBLISH-SELECT-001 · publicació selectiva d'entitats lligades al projecte.
+    // Mostra · llistat WOs (status='backlog' + 'doing'), market_items, workshops
+    // amb checkboxes · cost agregat segons pricing per kind + plan free fee.
+    // Botó "Publicar selecció" debita wallet del projecte i puja a Turbo
+    // (real) o KB (mock) per cada entitat seleccionada.
+    async _renderSelectivePublishCard() {
+        const body = document.getElementById('phSelectivePublishBody');
+        if (!body || !this.projectId) return;
+        try {
+            const {
+                ENTITY_PUBLISH_PRICING, computeBatchPublishCost,
+                buildPublicEntityEntry, publicEntityIdFor,
+            } = await import('../core/publicEntityService.js');
+            const { loadCurrentPlan } = await import('../core/stripeService.js');
+            const planObj = await loadCurrentPlan().catch(() => null);
+            const planId  = planObj?.planId || 'free';
+
+            const [woNodes, marketNodes, wsNodes] = await Promise.all([
+                KB.query({ type: 'work_order',  projectId: this.projectId }).catch(() => []),
+                KB.query({ type: 'market_item' }).catch(() => []),
+                KB.query({ type: 'workshop' }).catch(() => []),
+            ]);
+            // WO publicables · status='backlog' o 'doing' (oberts)
+            const publishableWO = (woNodes || []).filter(w => {
+                const st = w?.content?.status;
+                return st === 'backlog' || st === 'doing';
+            });
+            const publishableMarket = (marketNodes || []).filter(m =>
+                (m?.content?.projectId === this.projectId) || (m?.projectId === this.projectId)
+            );
+            const publishableWS = (wsNodes || []).filter(w =>
+                (w?.content?.projectId === this.projectId) || (w?.projectId === this.projectId)
+            );
+
+            const renderItems = (items, kind) => {
+                if (items.length === 0) {
+                    return `<div style="color:var(--text-muted);font-style:italic;padding:6px 0;font-size:0.8rem;">Cap ${kind} publicable.</div>`;
+                }
+                return items.map(it => {
+                    const c = it.content || {};
+                    const title = c.title || c.name || it.id;
+                    const isPublished = !!c.permawebTxId;
+                    const sub = kind === 'work_order' ? ('status: ' + (c.status || '?'))
+                              : kind === 'market_item' ? (c.kind + ' · ' + (c.priceEur || 0) + '€')
+                              : ('tier: ' + (c.accessTier || 'public'));
+                    return `<label style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--border-default);cursor:${isPublished ? 'not-allowed' : 'pointer'};opacity:${isPublished ? '0.6' : '1'};">
+                        <input type="checkbox" data-publish-kind="${kind}" data-publish-id="${this._esc(it.id)}" ${isPublished ? 'disabled checked' : ''}>
+                        <span style="flex:1;color:var(--text-main);font-size:0.85rem;">${this._esc(title)}</span>
+                        <span style="color:var(--text-muted);font-size:0.72rem;font-family:var(--font-mono);">${this._esc(sub)}</span>
+                        ${isPublished ? '<span style="color:#22c55e;font-size:0.72rem;">🌐 publicat</span>' : ''}
+                    </label>`;
+                }).join('');
+            };
+
+            const planBadge = planId === 'free'
+                ? '<span style="background:rgba(251,191,36,0.15);color:var(--accent-yellow);padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">Free · ×1.5 fee</span>'
+                : '<span style="background:rgba(34,197,94,0.15);color:var(--accent-green);padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">' + this._esc(planId) + ' · preu base</span>';
+
+            body.innerHTML = `
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                    <span style="font-weight:700;color:var(--text-main);font-size:0.85rem;">Pla actual:</span>
+                    ${planBadge}
+                    <span style="color:var(--text-muted);font-size:0.72rem;flex:1;">Pricing base · WO 0,02€ · Market 0,03€ · Workshop 0,04€</span>
+                </div>
+
+                <details open style="margin-bottom:6px;">
+                    <summary style="cursor:pointer;color:var(--text-main);font-weight:700;font-size:0.85rem;padding:5px 0;">📋 Work Orders obertes (${publishableWO.length})</summary>
+                    <div style="padding-left:14px;">${renderItems(publishableWO, 'work_order')}</div>
+                </details>
+                <details style="margin-bottom:6px;">
+                    <summary style="cursor:pointer;color:var(--text-main);font-weight:700;font-size:0.85rem;padding:5px 0;">🛍 Productes / serveis (${publishableMarket.length})</summary>
+                    <div style="padding-left:14px;">${renderItems(publishableMarket, 'market_item')}</div>
+                </details>
+                <details style="margin-bottom:6px;">
+                    <summary style="cursor:pointer;color:var(--text-main);font-weight:700;font-size:0.85rem;padding:5px 0;">🎓 Workshops (${publishableWS.length})</summary>
+                    <div style="padding-left:14px;">${renderItems(publishableWS, 'workshop')}</div>
+                </details>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:10px;border-top:1px solid var(--border-default);gap:10px;flex-wrap:wrap;">
+                    <div id="phPublishCostSummary" style="color:var(--text-muted);font-size:0.82rem;">Selecciona entitats per veure cost…</div>
+                    <button id="phPublishSelectedBtn" class="ph-link" style="background:var(--accent-indigo);color:#fff;border:0;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:0.85rem;" disabled>📤 Publicar selecció</button>
+                </div>
+                <div id="phPublishStatus" style="margin-top:10px;font-size:0.78rem;display:none;"></div>
+            `;
+
+            // Bind checkboxes · update cost summary
+            const updateCost = () => {
+                const checked = body.querySelectorAll('input[type=checkbox][data-publish-kind]:checked:not(:disabled)');
+                const items = {};
+                checked.forEach(cb => {
+                    const k = cb.getAttribute('data-publish-kind');
+                    items[k] = (items[k] || 0) + 1;
+                });
+                const itemsArr = Object.keys(items).map(k => ({ kind: k, count: items[k] }));
+                if (itemsArr.length === 0) {
+                    document.getElementById('phPublishCostSummary').textContent = 'Selecciona entitats per veure cost…';
+                    document.getElementById('phPublishSelectedBtn').disabled = true;
+                    return;
+                }
+                const cost = computeBatchPublishCost({ items: itemsArr, planId });
+                const partsTxt = cost.breakdown.map(b => b.count + '×' + b.kind + ' (' + b.subtotalEur.toFixed(3) + '€)').join(' + ');
+                document.getElementById('phPublishCostSummary').innerHTML = '<strong>Total · ' + cost.totalEur.toFixed(3) + '€</strong> · ' + this._esc(partsTxt) + (cost.feeEur > 0 ? ' <span style="color:var(--accent-yellow);">(+' + cost.feeEur.toFixed(3) + '€ free fee)</span>' : '');
+                document.getElementById('phPublishSelectedBtn').disabled = false;
+            };
+            body.querySelectorAll('input[type=checkbox][data-publish-kind]').forEach(cb => {
+                cb.addEventListener('change', updateCost);
+            });
+
+            // Bind publish button
+            document.getElementById('phPublishSelectedBtn')?.addEventListener('click', () =>
+                this._handleSelectivePublish({ planId, woNodes: publishableWO, marketNodes: publishableMarket, wsNodes: publishableWS, computeBatchPublishCost, buildPublicEntityEntry })
+            );
+        } catch (e) {
+            body.innerHTML = '<div style="color:var(--accent-orange);">⚠ ' + this._esc(e?.message || 'no s\'ha pogut carregar la publicació selectiva') + '</div>';
+        }
+    }
+
+    // PUBLISH-SELECT-001 · executa la publicació selectiva amb plan check + wallet debit
+    async _handleSelectivePublish({ planId, woNodes, marketNodes, wsNodes, computeBatchPublishCost, buildPublicEntityEntry }) {
+        const status = document.getElementById('phPublishStatus');
+        const btn    = document.getElementById('phPublishSelectedBtn');
+        const setStatus = (msg, ok = true) => {
+            if (!status) return;
+            status.style.display = 'block';
+            status.textContent = msg;
+            status.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)';
+        };
+        try {
+            // 1 · Recull seleccions
+            const checked = document.querySelectorAll('#phSelectivePublishBody input[type=checkbox][data-publish-kind]:checked:not(:disabled)');
+            const selected = [];
+            checked.forEach(cb => {
+                const kind = cb.getAttribute('data-publish-kind');
+                const id   = cb.getAttribute('data-publish-id');
+                const pool = kind === 'work_order' ? woNodes : (kind === 'market_item' ? marketNodes : wsNodes);
+                const entity = pool.find(n => n.id === id);
+                if (entity) selected.push({ kind, entity });
+            });
+            if (selected.length === 0) { setStatus('⚠ Cap entitat seleccionada', false); return; }
+
+            // 2 · Plan check · si free, requereix permaweb-publish-paid (que retorna true pagant fee)
+            const { canPerform } = await import('../core/planEnforcer.js');
+            const op = (planId === 'free') ? 'permaweb-publish-paid' : 'permaweb-publish';
+            const ok = canPerform({ planId, op });
+            if (!ok.allowed) {
+                setStatus('✗ Pla ' + planId + ' no permet ' + op, false);
+                return;
+            }
+
+            // 3 · Cost agregat
+            const items = {};
+            for (const s of selected) items[s.kind] = (items[s.kind] || 0) + 1;
+            const cost = computeBatchPublishCost({ items: Object.keys(items).map(k => ({ kind: k, count: items[k] })), planId });
+
+            // 4 · Verificar saldo wallet
+            const { getOrCreateWalletForProject, consumeAndPersist, refundWallet } = await import('../core/walletService.js');
+            const wallet = await getOrCreateWalletForProject(this.projectId);
+            const balance = Number(wallet.content?.balanceEur || 0);
+            if (balance < cost.totalEur) {
+                setStatus('✗ Saldo insuficient · cal ' + cost.totalEur.toFixed(3) + '€ · disponible ' + balance.toFixed(2) + '€ · ves a /wallet?project=' + this.projectId + ' a recarregar', false);
+                return;
+            }
+
+            // 5 · Identity · auto-create si cal
+            const { getOrCreateIdentity } = await import('../core/identityService.js');
+            const { getOrCreateSigningKey } = await import('../core/projectIO.js');
+            const identity = await getOrCreateIdentity();
+            const did = identity?.content?.primaryDid || identity?.primaryDid;
+            if (!did) { setStatus('✗ Identitat no s\'ha pogut crear', false); return; }
+            const keyMeta = await getOrCreateSigningKey();
+
+            // 6 · Debit wallet (un sol moviment agregat)
+            btn.disabled = true; btn.textContent = '⏳ Pagant ' + cost.totalEur.toFixed(3) + '€…';
+            const ref = 'selective-publish-' + Date.now().toString(36);
+            await consumeAndPersist({
+                projectId: this.projectId,
+                amountEur: cost.totalEur,
+                ref, source: 'selective-publish',
+                note: 'Publicació selectiva · ' + selected.length + ' entitats',
+            });
+
+            // 7 · Per cada entity · sign + Turbo upload real (fallback mock si Turbo no disponible)
+            //     TURBO-UNIFY-001 · usa turboUploadService unificat
+            btn.textContent = '⏳ Publicant ' + selected.length + ' entitats…';
+            const mockTxBase = 'mock-' + ref;
+            const { signNode, canonicalizeNode } = await import('../core/nodeSigningService.js');
+            const { uploadNodeToTurbo, buildSignedPayload, commonArweaveTags } = await import('../core/turboUploadService.js');
+            let okCount = 0, errCount = 0;
+            for (const s of selected) {
+                try {
+                    let node = buildPublicEntityEntry({
+                        kind: s.kind,
+                        entity: s.entity,
+                        project: this.project,
+                        ownerDid: did,
+                        ownerPublicJwk: keyMeta.publicJwk,
+                    });
+                    const now = Date.now();
+                    // Firma ECDSA P-256 abans del upload (TEA-SIGN-001)
+                    try { node = await signNode({ node, privateJwk: keyMeta.privateJwk }); }
+                    catch (e) { console.warn('[selective-publish] sign failed · puja sense firma', e?.message); }
+                    // Upload Turbo real · fallback mock txId
+                    let txId, uploadMode = 'mock';
+                    try {
+                        const canonical = canonicalizeNode(node);
+                        const payload = node.content.signature
+                            ? buildSignedPayload({
+                                canonicalString: canonical,
+                                signature:       node.content.signature,
+                                signatureFormat: node.content.signatureFormat,
+                            })
+                            : canonical;
+                        const tags = commonArweaveTags({
+                            entryType: node.type,
+                            extra: [
+                                { name: 'Entity-Kind', value: s.kind },
+                                { name: 'ProjectId',   value: this.projectId },
+                                { name: 'OwnerDid',    value: did },
+                            ],
+                        });
+                        const result = await uploadNodeToTurbo({ payload, tags });
+                        txId = result.txId;
+                        uploadMode = result.mode;
+                    } catch (uErr) {
+                        console.warn('[selective-publish] turbo upload failed · mock txId', uErr?.message);
+                        txId = mockTxBase + '-' + s.entity.id.slice(0, 8);
+                        uploadMode = 'mock';
+                    }
+                    node.content.arweaveTxId = txId;
+                    node.content.permawebPublishedAt = now;
+                    node.content._cachedAt = now;
+                    node.content._fromPermaweb = false;
+                    node.content._mockMode = uploadMode === 'mock';
+                    node.content._uploadMode = uploadMode;
+                    await KB.upsert(node);
+                    // També marquem l'entity origen com a "publicada" per UI
+                    const origUpdated = { ...s.entity, content: { ...s.entity.content,
+                        permawebTxId: txId,
+                        permawebPublishedAt: now,
+                    }};
+                    await KB.upsert(origUpdated);
+                    okCount++;
+                } catch (e) {
+                    console.warn('[selective-publish] entity fail', s.entity.id, e?.message);
+                    errCount++;
+                }
+            }
+
+            // 8 · Refund parcial si alguns han fallat
+            if (errCount > 0) {
+                const refundEur = Number((cost.totalEur * (errCount / selected.length)).toFixed(4));
+                try {
+                    const wallet2 = await getOrCreateWalletForProject(this.projectId);
+                    const refunded = refundWallet({
+                        wallet: wallet2,
+                        amountEur: refundEur,
+                        ref: ref + '-refund',
+                        source: 'selective-publish-refund',
+                        note: 'Refund ' + errCount + ' entitats fallides',
+                    });
+                    const { persistWallet } = await import('../core/walletService.js');
+                    await persistWallet(refunded);
+                } catch (_) {}
+            }
+
+            setStatus('✓ Publicat ' + okCount + '/' + selected.length + ' entitats · cost ' + cost.totalEur.toFixed(3) + '€' + (errCount > 0 ? ' · refund ' + errCount + ' fallides' : '') + ' · re-renderitzant…', true);
+            btn.disabled = false;
+            setTimeout(() => this._renderSelectivePublishCard(), 1000);
+        } catch (e) {
+            console.error('[selective-publish] failed', e);
+            setStatus('✗ ' + (e?.message || 'error desconegut'), false);
+            if (btn) { btn.disabled = false; btn.textContent = '📤 Publicar selecció'; }
+        }
+    }
+
     // FUND-FLOW-001 sprint F · publish project al permaweb
     // PROJ-VERSIONING-001 sprint B+C · publish update (v+1) + history visual
     async _renderPermawebPublishCard() {
@@ -615,7 +868,11 @@ export default class ProjectHubView {
             signProjectEntry, publishProjectToPermaweb, PROJECT_PRICING,
             getProjectVersionHistory,
         } = await import('../core/publicProjectService.js');
-        const { getCurrentIdentity }  = await import('../core/identityService.js');
+        // PROJ-PUBLISH-FIX · getOrCreateIdentity en lloc de getCurrentIdentity
+        // perquè els usuaris primerencs (sense /identity guardat) no quedin
+        // bloquejats · l'identity es deriva automàticament del keypair ECDSA
+        // P-256 que ja existeix al KB (getOrCreateSigningKey).
+        const { getOrCreateIdentity }  = await import('../core/identityService.js');
         const { getOrCreateSigningKey } = await import('../core/projectIO.js');
         const { isPermawebMockEnabled } = await import('../core/publicRegistryService.js');
         const { getOrCreateWalletForProject } = await import('../core/walletService.js');
@@ -676,16 +933,17 @@ export default class ProjectHubView {
                 btn.disabled = true; btn.textContent = '⏳ Construint v' + (currentVersion + 1) + '…';
                 setStatus('Construint nova versió · signant…', true);
                 try {
-                    const identity = await getCurrentIdentity();
-                    if (!identity?.primaryDid) {
-                        setStatus('✗ Necessites identitat · ves a /identity', false);
+                    const identity = await getOrCreateIdentity();
+                    if (!identity?.content?.primaryDid && !identity?.primaryDid) {
+                        setStatus('✗ Identitat no s\'ha pogut crear · revisa /identity', false);
                         btn.disabled = false; btn.textContent = '📝 Publica update (v' + (currentVersion + 1) + ')';
                         return;
                     }
+                    const did = identity.content?.primaryDid || identity.primaryDid;
                     const keyMeta = await getOrCreateSigningKey();
                     const entry = buildPublicProjectEntry({
                         project:        this.project,
-                        ownerDid:       identity.primaryDid,
+                        ownerDid:       did,
                         ownerPublicJwk: keyMeta.publicJwk,
                         entryVersion:   currentVersion + 1,
                         previousTxId:   tx,
@@ -745,16 +1003,20 @@ export default class ProjectHubView {
             btn.disabled = true; btn.textContent = '⏳ Construint…';
             setStatus('Construint entry · signant amb ECDSA P-256…', true);
             try {
-                const identity = await getCurrentIdentity();
-                if (!identity?.primaryDid) {
-                    setStatus('✗ Necessites identitat · ves a /identity i clica Guardar', false);
+                // PROJ-PUBLISH-FIX · auto-crea identity (deriva DID del keypair
+                // ECDSA P-256 ja al KB) en lloc de bloquejar l'usuari · zero
+                // fricció el primer cop que publica.
+                const identity = await getOrCreateIdentity();
+                const did = identity?.content?.primaryDid || identity?.primaryDid;
+                if (!did) {
+                    setStatus('✗ Identitat no s\'ha pogut crear · revisa /identity', false);
                     btn.disabled = false; btn.textContent = mockMode ? '🧪 Publicar (mock)' : '🚀 Publicar al permaweb';
                     return;
                 }
                 const keyMeta = await getOrCreateSigningKey();
                 const entry = buildPublicProjectEntry({
                     project:        this.project,
-                    ownerDid:       identity.primaryDid,
+                    ownerDid:       did,
                     ownerPublicJwk: keyMeta.publicJwk,
                 });
                 const signed = await signProjectEntry({ entry, privateJwk: keyMeta.privateJwk });

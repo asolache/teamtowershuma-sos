@@ -121,6 +121,8 @@ export default class WalletView {
         // BIZ-MODEL-001 sprint A · detect ?session_id=cs_... post-Stripe redirect
         // i auto-aplica el top-up al wallet del projecte (o personal)
         this._autoClaimStripeSession().catch(e => console.warn('[wallet] stripe claim', e?.message));
+        // WALLET-ACC-001 · render in-place del panel "comptabilitat unificada"
+        this._renderUnifiedAccounting().catch(e => console.warn('[wallet] unified', e?.message));
         // FUND-FLOW-001 sprint A · si no hi ha projectId · obre el wallet personal
         if (!this.projectId) {
             try {
@@ -267,6 +269,12 @@ export default class WalletView {
                 <h2>Movimientos · ${movements.length} total${movements.length === 1 ? '' : 'es'}${movements.length > 200 ? ' (mostrando últimos 200)' : ''}</h2>
                 <div class="w-mvts">${mvtsHtml}</div>
             </div>
+
+            <!-- WALLET-ACC-001 · panel de comptabilitat unificada · render in afterRender perquè és async -->
+            <div class="w-section">
+                <h2>🌐 Comptabilitat unificada · totes les meves transaccions</h2>
+                <div id="wAccGlobalBody" style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:1rem 1.2rem;color:var(--text-muted);font-size:0.85rem;">Carregant…</div>
+            </div>
         `;
 
         // Bind presets
@@ -336,6 +344,78 @@ export default class WalletView {
 
     _esc(s) {
         return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+    }
+
+    // WALLET-ACC-001 · render del panel "comptabilitat unificada · totes les
+    // meves transaccions" · agrega TOTS els wallets propietat de l'usuari.
+    // Lectura defensiva · si no hi ha receipts/audits/unlocks, secció igual
+    // funciona amb sols els wallet movements.
+    async _renderUnifiedAccounting() {
+        const body = document.getElementById('wAccGlobalBody');
+        if (!body) return;
+        try {
+            const { KB } = await import('../core/kb.js');
+            const { aggregateMovementsForOwner, summarizeAccounting, loadAllAccountingNodes } = await import('../core/unifiedAccountingService.js');
+            const { store } = await import('../core/store.js');
+            const { walletNodes, receiptNodes, aiAuditNodes, workshopUnlockNodes } = await loadAllAccountingNodes({ kb: KB });
+            // ownerProjectIds · projectes propietat de l'usuari (store.projects)
+            const myProjects = (store.getState().projects || []).map(p => p.id).filter(Boolean);
+            // ownerHandle · agafem el handle de la primera identity (TODO sprint B · multi-handle)
+            const identities = await KB.query({ type: 'user_identity' }).catch(() => []);
+            const ownerHandle = identities[0]?.content?.handle || '@alvaro';
+            const agg = aggregateMovementsForOwner({
+                walletNodes, receiptNodes, aiAuditNodes, workshopUnlockNodes,
+                ownerHandle,
+                ownerProjectIds: myProjects,
+            });
+
+            const catChips = Object.entries(agg.totalsByCategory)
+                .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+                .slice(0, 8)
+                .map(([cat, amt]) => `<span style="background:var(--bg-elevated);border:1px solid var(--border-default);padding:3px 9px;border-radius:999px;font-size:11px;font-family:var(--font-mono);">${this._esc(cat)} · ${amt.toFixed(2)}€</span>`)
+                .join(' ');
+
+            const recentMoves = agg.movements.slice(0, 12).map(m => `
+                <div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--border-default);font-size:12px;">
+                    <span style="color:var(--text-muted);font-family:var(--font-mono);width:120px;flex-shrink:0;">${this._esc(new Date(m.ts).toLocaleString('es-ES'))}</span>
+                    <span style="background:rgba(99,102,241,0.10);color:var(--accent-indigo);padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;">${this._esc(m.category)}</span>
+                    <span style="flex:1;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._esc(m.note || m.ref || m.source || '·')}</span>
+                    <span style="font-family:var(--font-mono);font-weight:700;color:${m.kind === 'consume' ? '#ef4444' : '#22c55e'};">${m.kind === 'consume' ? '−' : '+'}${m.amountEur.toFixed(4)}€</span>
+                </div>`).join('');
+
+            body.innerHTML = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px;">
+                    <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.20);border-radius:6px;padding:8px 10px;">
+                        <div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Total ingressos</div>
+                        <div style="color:#22c55e;font-size:1.3rem;font-weight:800;font-family:var(--font-mono);">+${agg.totalIncome.toFixed(2)} €</div>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.20);border-radius:6px;padding:8px 10px;">
+                        <div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Total despeses</div>
+                        <div style="color:#ef4444;font-size:1.3rem;font-weight:800;font-family:var(--font-mono);">−${agg.totalExpense.toFixed(2)} €</div>
+                    </div>
+                    <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:6px;padding:8px 10px;">
+                        <div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Net</div>
+                        <div style="color:${agg.netBalance >= 0 ? '#22c55e' : '#ef4444'};font-size:1.3rem;font-weight:800;font-family:var(--font-mono);">${agg.netBalance >= 0 ? '+' : ''}${agg.netBalance.toFixed(2)} €</div>
+                    </div>
+                    <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:6px;padding:8px 10px;">
+                        <div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Wallets</div>
+                        <div style="color:var(--text-main);font-size:1.3rem;font-weight:800;font-family:var(--font-mono);">${agg.walletCount}</div>
+                        <div style="color:var(--text-muted);font-size:10px;">${agg.movements.length} mvts</div>
+                    </div>
+                </div>
+                ${catChips ? `<div style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;margin-right:4px;">Per categoria:</span>
+                    ${catChips}
+                </div>` : ''}
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;margin-bottom:6px;">Últims 12 moviments (totes les wallets)</div>
+                ${recentMoves || '<div style="color:var(--text-muted);font-style:italic;padding:1rem 0;">Cap moviment encara · recarrega saldo o genera contingut amb IA per a començar.</div>'}
+                <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-default);font-size:11px;color:var(--text-muted);">
+                    🌐 Identity: <code>${this._esc(ownerHandle)}</code> · ${this._esc(summarizeAccounting(agg))}
+                </div>
+            `;
+        } catch (e) {
+            body.innerHTML = '<div style="color:var(--accent-orange);">⚠ ' + this._esc(e?.message || 'no s\'ha pogut carregar la comptabilitat unificada') + '</div>';
+        }
     }
 
     // BIZ-MODEL-001 sprint A · auto-claim de Stripe Checkout Session

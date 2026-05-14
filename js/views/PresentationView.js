@@ -15,9 +15,49 @@ import { store } from '../core/store.js';
 import { KB }    from '../core/kb.js';
 import { renderNavGroupedHtml } from '../core/navService.js';
 import { getProjectTypeById, getGuardianById } from '../core/critical108Roles.js';
-import { Orchestrator } from '../core/Orchestrator.js';
+// LANDING-UNIFY-001 · usem aiFillService (escalation chain · 5 providers ·
+// marge SOS + audit log) en lloc de Orchestrator.callLLM (Anthropic-only legacy)
 // UX-AUDIT-001 sprint F · PUBLIC_AUDIENCES per al selector de la narrativa IA
 import { PUBLIC_AUDIENCES } from '../core/skillTaxonomyExtension.js';
+
+// PRESENTATION-EDIT-001 · pure · construeix l'objecte `updates` per a
+// store.dispatch('UPDATE_PROJECT_INFO') a partir d'un snapshot (camps de
+// formulari) i el projecte existent. Exportat per a testar sense DOM.
+//   snapshot · { heroTag, heroTitle, heroMantra, description, bodyMarkdown, roleDescriptions }
+//   project  · objecte amb opcional `presentation_narrative_v1` previ
+export function buildPresentationEditUpdates(snapshot, project) {
+    if (!snapshot || !project) throw new Error('buildPresentationEditUpdates requires snapshot + project');
+    const existingNarr = (project.presentation_narrative_v1 && typeof project.presentation_narrative_v1 === 'object')
+        ? project.presentation_narrative_v1 : null;
+    const cleanRoleDescs = {};
+    for (const [rid, txt] of Object.entries(snapshot.roleDescriptions || {})) {
+        const trimmed = (txt || '').trim();
+        if (trimmed) cleanRoleDescs[String(rid).slice(0, 64)] = trimmed.slice(0, 240);
+    }
+    const _trim = (s, max) => (typeof s === 'string' ? s.trim().slice(0, max) : '');
+    const narrative = {
+        heroTag:      _trim(snapshot.heroTag, 80)     || null,
+        heroTitle:    _trim(snapshot.heroTitle, 120)  || null,
+        heroMantra:   _trim(snapshot.heroMantra, 240) || null,
+        bodyMarkdown: _trim(snapshot.bodyMarkdown, 4000) || null,
+        roleDescriptions: cleanRoleDescs,
+        audienceId:   existingNarr?.audienceId  || null,
+        generatedAt:  existingNarr?.generatedAt || null,
+        editedAt:     Date.now(),
+    };
+    const hasNarrative = narrative.heroTag || narrative.heroTitle || narrative.heroMantra
+        || narrative.bodyMarkdown || Object.keys(narrative.roleDescriptions).length > 0;
+    const updates = { updatedAt: Date.now() };
+    const descTrim = _trim(snapshot.description, 1000);
+    if (descTrim) {
+        updates.description = descTrim;
+    } else if (project.description) {
+        // L'usuari l'ha esborrat conscientment · neteja el camp
+        updates.description = '';
+    }
+    updates.presentation_narrative_v1 = hasNarrative ? narrative : null;
+    return updates;
+}
 import { getSubtypeById } from '../core/sectorSubtypes.js';
 
 function esc(s) {
@@ -45,6 +85,8 @@ export default class PresentationView {
         document.title = 'Presentació · SOS V11';
         const params = new URLSearchParams(window.location.search);
         this._projectId = params.get('project') || null;
+        // PRESENTATION-EDIT-001 · edit mode toggle · re-render quan canvia
+        this._editMode  = params.get('edit') === '1';
     }
 
     async getHtml() {
@@ -64,13 +106,20 @@ export default class PresentationView {
                 </div>`;
         }
 
-        // KB queries · roles, tx, sops, work_orders, soc
-        const [rolesNodes, txNodes, sops, wos, socs] = await Promise.all([
-            KB.query({ type: 'role',         projectId: project.id }),
-            KB.query({ type: 'transaction',  projectId: project.id }),
-            KB.query({ type: 'sop',          projectId: project.id }),
-            KB.query({ type: 'work_order',   projectId: project.id }),
-            KB.query({ type: 'soc',          projectId: project.id }),
+        // KB queries · roles, tx, sops, work_orders, soc, market_items,
+        // swarm_assignment, members, contributions (PRESENTATION-HUB-001)
+        const [rolesNodes, txNodes, sops, wos, socs, marketItems, assignments, allMembers, allSeats, contribNodes, permawebNodes] = await Promise.all([
+            KB.query({ type: 'role',                projectId: project.id }),
+            KB.query({ type: 'transaction',         projectId: project.id }),
+            KB.query({ type: 'sop',                 projectId: project.id }),
+            KB.query({ type: 'work_order',          projectId: project.id }),
+            KB.query({ type: 'soc',                 projectId: project.id }),
+            KB.query({ type: 'market_item' }).catch(() => []),  // filtrarem per projectId
+            KB.query({ type: 'swarm_assignment',    projectId: project.id }).catch(() => []),
+            KB.query({ type: 'matriu_member' }).catch(() => []),
+            KB.query({ type: 'cohort_seat' }).catch(() => []),
+            KB.query({ type: 'value_contribution', projectId: project.id }).catch(() => []),
+            KB.query({ type: 'permaweb_entry',     projectId: project.id }).catch(() => []),
         ]);
 
         // Fallback · si store té vna_roles/transactions, usar-los
@@ -128,14 +177,61 @@ export default class PresentationView {
         const txIntangibles = (transactions || []).filter(t => (t.kind || t.tipo) === 'intangible');
 
         // UX-AUDIT-001 sprint F · narrativa IA persistida (si existeix · sobreescriu hero + role descs)
-        const narrative = project.presentation_narrative_v1 || null;
+        // LANDING-UNIFY-001 · retro-compat · si està guardat com a string legacy
+        // (versions <2026-05) el tractem com a bodyMarkdown · zero pèrdua dades.
+        let narrative = project.presentation_narrative_v1 || null;
+        if (typeof narrative === 'string') {
+            narrative = { bodyMarkdown: narrative, audienceId: null, generatedAt: null, roleDescriptions: {} };
+        }
         const heroTitle = (narrative && narrative.heroTitle)  ? narrative.heroTitle  : (project.nombre || project.name || 'Projecte');
         const heroMantra = (narrative && narrative.heroMantra) ? narrative.heroMantra : hero.mantra;
         const heroTag    = (narrative && narrative.heroTag)    ? narrative.heroTag    : hero.tag;
         const narrativeAudience = narrative?.audienceId || null;
         const narrativeAt       = narrative?.generatedAt || null;
+        // LANDING-UNIFY-001 · description visible · prioritza la d'al projecte
+        // (s'omple amb /quality "Ompli amb IA" landing) · fallback purpose
+        const projectDescription = (project.description || project.purpose || '').toString().trim();
+        const bodyMarkdown = (narrative && typeof narrative.bodyMarkdown === 'string') ? narrative.bodyMarkdown : null;
         // Subtipus llegit per pintar al meta
         const subtype = (project.sectorId && project.subtypeId) ? getSubtypeById(project.sectorId, project.subtypeId) : null;
+
+        // PRESENTATION-HUB-001 · agregacions noves seccions ──────────────
+        // Products del market lligats al projecte
+        const projectMarketItems = (marketItems || []).filter(m =>
+            (m?.content?.projectId === project.id) || (m?.projectId === project.id)
+        ).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        // Team · members assignats al projecte via swarm_assignment + owner
+        const memberIdsInProj = new Set();
+        for (const a of (assignments || [])) {
+            if (a?.content?.seatId) memberIdsInProj.add(a.content.seatId);
+            if (a?.content?.memberId) memberIdsInProj.add(a.content.memberId);
+        }
+        for (const w of (wos || [])) {
+            if (w?.content?.assignedToSeatId) memberIdsInProj.add(w.content.assignedToSeatId);
+        }
+        const memberById = new Map([...(allMembers || []), ...(allSeats || [])].map(n => [n.id, n]));
+        const teamNodes = Array.from(memberIdsInProj).map(id => memberById.get(id)).filter(Boolean);
+        if (project.ownerMemberId && memberById.has(project.ownerMemberId) && !teamNodes.find(m => m.id === project.ownerMemberId)) {
+            teamNodes.unshift(memberById.get(project.ownerMemberId));
+        }
+        // Slicing pie · agregació pure des de contributions
+        let slicingPie = null;
+        try {
+            const { calculateSlices, calculatePieDistribution } = await import('../core/valueAccountingService.js');
+            const contributions = (contribNodes || []).map(n => ({
+                partyId:        n.content?.partyId,
+                slices:         n.content?.slices,
+            })).filter(c => typeof c.partyId === 'string' && typeof c.slices === 'number' && c.slices > 0);
+            if (contributions.length > 0) {
+                const slices = calculateSlices(contributions);
+                const dist   = calculatePieDistribution({ slices });
+                slicingPie   = { dist, totalParties: dist.length, totalSlices: dist.reduce((s, d) => s + (d.slices || 0), 0) };
+            }
+        } catch (_) { /* degrade · slicing pie opcional */ }
+        // Permaweb publish status · agafa l'última entrada del projecte (per version)
+        const latestPermaweb = (permawebNodes || [])
+            .filter(n => n?.content?.projectId === project.id || n?.projectId === project.id)
+            .sort((a, b) => (b?.content?.entryVersion || 0) - (a?.content?.entryVersion || 0))[0] || null;
 
         // Cache global · expose project + roles per als handlers async
         this._project       = project;
@@ -186,25 +282,75 @@ export default class PresentationView {
                 .pv-grid { grid-template-columns: 1fr; }
                 .pv-hero { padding: var(--space-8) 0 var(--space-6) 0; }
             }
+            /* PRESENTATION-EDIT-001 · edit mode styling */
+            .pv-edit-banner {
+                position: sticky; top: 0; z-index: 50;
+                background: linear-gradient(135deg, rgba(168,85,247,0.18), rgba(99,102,241,0.14));
+                border-bottom: 1px solid var(--accent-purple);
+                padding: 10px var(--space-6);
+                display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+                margin: calc(-1 * var(--space-8)) calc(-1 * var(--space-6)) var(--space-6);
+            }
+            .pv-edit-banner-icon { font-size: 1.2rem; }
+            .pv-edit-banner-text { flex: 1; color: var(--text-main); font-size: var(--text-xs); font-weight: 700; min-width: 200px; }
+            .pv-edit-btn {
+                padding: 6px 14px; border-radius: var(--radius-sm);
+                font-weight: 700; font-size: var(--text-xs); cursor: pointer;
+                border: 0; font-family: var(--font-base); transition: filter var(--dur-fast);
+            }
+            .pv-edit-btn:hover { filter: brightness(1.10); }
+            .pv-edit-btn-primary { background: var(--accent-purple); color: #fff; }
+            .pv-edit-btn-secondary { background: transparent; color: var(--accent-purple); border: 1px solid var(--accent-purple); }
+            .pv-edit-btn-cancel { background: transparent; color: var(--text-muted); border: 1px solid var(--border-default); }
+            .pv-input, .pv-textarea {
+                width: 100%; background: var(--bg-elevated); color: var(--text-main);
+                border: 1px solid var(--border-default); border-radius: var(--radius-sm);
+                padding: 8px 10px; font-family: inherit; font-size: inherit; box-sizing: border-box;
+                transition: border-color var(--dur-fast);
+            }
+            .pv-input:focus, .pv-textarea:focus { outline: none; border-color: var(--accent-purple); }
+            .pv-textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+            .pv-input-hero-tag { text-align: center; font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; max-width: 320px; margin: 0 auto var(--space-4); display: block; }
+            .pv-input-hero-h1  { text-align: center; font-size: clamp(1.5rem, 4vw, 2.4rem); font-weight: 900; max-width: 720px; margin: 0 auto var(--space-3); display: block; }
+            .pv-textarea-hero-mantra { text-align: center; font-style: italic; font-family: var(--font-serif); font-size: clamp(1rem, 2vw, 1.2rem); max-width: 720px; margin: 0 auto var(--space-6); display: block; min-height: 50px; }
+            .pv-edit-field-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); font-weight: 700; margin-bottom: 4px; display: block; }
         </style>
 
         <div class="pv-wrap">
+            ${this._editMode ? `
+            <div class="pv-edit-banner pv-print-hide-mobile">
+                <span class="pv-edit-banner-icon">✏</span>
+                <span class="pv-edit-banner-text">Mode edició actiu · canvis no desats fins clicar "💾 Desar"</span>
+                <button id="pvBtnEditSave"   class="pv-edit-btn pv-edit-btn-primary">💾 Desar canvis</button>
+                <button id="pvBtnEditCancel" class="pv-edit-btn pv-edit-btn-cancel">✕ Cancel·lar</button>
+            </div>` : ''}
             <div class="pv-topbar pv-print-hide-mobile">
                 <a href="/dashboard" data-link class="pv-back">← Dashboard</a>
                 <span style="color:var(--text-muted);">·</span>
-                <a href="/project/${esc(project.id)}" data-link class="pv-back">🎛 ${esc(project.nombre || project.name || project.id)}</a>
+                <a href="/quality?project=${encodeURIComponent(project.id)}" data-link class="pv-back">📊 Qualitat</a>
                 <span style="color:var(--text-muted);">·</span>
-                <a href="/map?project=${encodeURIComponent(project.id)}" data-link class="pv-back">🗺 Editar mapa</a>
+                <a href="/map?project=${encodeURIComponent(project.id)}" data-link class="pv-back">🗺 Mapa</a>
+                <span style="color:var(--text-muted);">·</span>
+                <a href="/project/${esc(project.id)}" data-link class="pv-back" title="Admin tècnic · archivar / exportar / swarm matchmaker / publish permaweb">⚙ Admin</a>
                 <div style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;">
-                    
+                    ${!this._editMode ? `<button id="pvBtnEditEnter" class="pv-edit-btn pv-edit-btn-secondary">✏ Editar presentació</button>` : ''}
                     <button id="pvBtnPrint" class="pv-back" style="background:transparent;border:1px solid var(--border-default);padding:6px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:var(--text-xs);">🖨 Imprimir / PDF</button>
                 </div>
             </div>
 
             <div class="pv-hero">
-                <div class="pv-tag">${esc(heroTag)}</div>
-                <h1>${esc(heroTitle)}</h1>
-                <div class="pv-mantra">${esc(heroMantra)}</div>
+                ${this._editMode ? `
+                    <span class="pv-edit-field-label" style="text-align:center;display:block;margin-bottom:2px;">Etiqueta (heroTag)</span>
+                    <input id="pvEditHeroTag" class="pv-input pv-input-hero-tag" type="text" maxlength="80" value="${esc(heroTag)}">
+                    <span class="pv-edit-field-label" style="text-align:center;display:block;margin-bottom:2px;">Títol (heroTitle)</span>
+                    <input id="pvEditHeroTitle" class="pv-input pv-input-hero-h1" type="text" maxlength="120" value="${esc(heroTitle)}">
+                    <span class="pv-edit-field-label" style="text-align:center;display:block;margin-bottom:2px;">Frase (heroMantra)</span>
+                    <textarea id="pvEditHeroMantra" class="pv-textarea pv-textarea-hero-mantra" maxlength="240">${esc(heroMantra)}</textarea>
+                ` : `
+                    <div class="pv-tag">${esc(heroTag)}</div>
+                    <h1>${esc(heroTitle)}</h1>
+                    <div class="pv-mantra">${esc(heroMantra)}</div>
+                `}
                 <div class="pv-meta">
                     ${ptype ? `<span>📦 ${esc(ptype.label)}</span>` : ''}
                     ${project.sectorId ? `<span>🏷 ${esc(project.sectorId)}</span>` : ''}
@@ -212,14 +358,50 @@ export default class PresentationView {
                     ${guardian ? `<span>🪶 ${esc(guardian.icon || '✦')} ${esc(guardian.name || guardian.id)}</span>` : ''}
                     ${project.matriuCohort === 0 ? `<span style="border-color:#c25a3a;color:#c25a3a;">✦ Matriu Cohort 0</span>` : ''}
                     ${narrative ? `<span style="border-color:var(--accent-purple);color:var(--accent-purple);" title="Narrativa generada amb IA · audiència ${esc(narrativeAudience || '·')} · ${narrativeAt ? new Date(narrativeAt).toLocaleString() : ''}">🤖 IA · ${esc(narrativeAudience || '·')}</span>` : ''}
+                    ${latestPermaweb ? `<span style="border-color:#22c55e;color:#22c55e;" title="Publicat al permaweb · v${esc(String(latestPermaweb.content?.entryVersion || '1'))} · txId ${esc(String(latestPermaweb.content?.txId || latestPermaweb.id || '').slice(0, 12))}…">🌐 Publicat v${esc(String(latestPermaweb.content?.entryVersion || '1'))}</span>` : ''}
                 </div>
             </div>
 
-            <!-- UX-AUDIT-001 sprint F · IA narrativa adaptable per audiència -->
+            ${this._editMode ? `
+            <!-- PRESENTATION-EDIT-001 · description + bodyMarkdown editables -->
+            <section class="pv-section pv-landing-block" style="max-width:780px;margin:0 auto var(--space-10);background:linear-gradient(135deg,rgba(168,85,247,0.06),rgba(99,102,241,0.04));border:1px solid var(--accent-purple);border-left:3px solid var(--accent-purple);border-radius:var(--radius-lg);padding:var(--space-6) var(--space-7);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:var(--space-3);font-size:11px;text-transform:uppercase;letter-spacing:0.15em;color:var(--accent-purple);font-weight:800;">
+                    <span>📊 Descripció del projecte (editable)</span>
+                </div>
+                <span class="pv-edit-field-label">description · 1-2 frases · apareix a /project + value map + landing</span>
+                <textarea id="pvEditDescription" class="pv-textarea" rows="3" maxlength="1000" placeholder="Una descripció directa · qui sou, què feu, per qui · sense buzzwords.">${esc(projectDescription)}</textarea>
+                <div style="height:var(--space-4);"></div>
+                <span class="pv-edit-field-label">bodyMarkdown · seccions extra de la landing (markdown · ## títols · - llistes)</span>
+                <textarea id="pvEditBodyMarkdown" class="pv-textarea" rows="8" maxlength="4000" style="font-family:var(--font-mono);font-size:12px;" placeholder="## Què oferim\n- punt 1\n- punt 2\n\n## Per qui\nParàgraf descriptiu.">${esc(bodyMarkdown || '')}</textarea>
+            </section>
+            ` : (projectDescription || bodyMarkdown ? `
+            <!-- LANDING-UNIFY-001 · description + bodyMarkdown generats des de /quality fill IA -->
+            <section class="pv-section pv-landing-block" style="max-width:780px;margin:0 auto var(--space-10);background:linear-gradient(135deg,rgba(168,85,247,0.04),rgba(99,102,241,0.03));border:1px solid var(--border-default);border-left:3px solid var(--accent-purple);border-radius:var(--radius-lg);padding:var(--space-6) var(--space-7);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:var(--space-3);font-size:11px;text-transform:uppercase;letter-spacing:0.15em;color:var(--accent-purple);font-weight:800;">
+                    <span>📊 Descripció del projecte</span>
+                    ${narrativeAt ? `<span style="color:var(--text-muted);font-weight:600;letter-spacing:0;text-transform:none;font-size:10px;">· generat amb IA · ${esc(new Date(narrativeAt).toLocaleDateString())}</span>` : ''}
+                </div>
+                ${projectDescription ? `<p style="font-size:1.05rem;color:var(--text-main);line-height:1.65;margin:0 0 ${bodyMarkdown ? 'var(--space-4)' : '0'};font-weight:500;">${esc(projectDescription)}</p>` : ''}
+                ${bodyMarkdown ? `<div class="pv-body-md" style="color:var(--text-secondary);font-size:var(--text-sm);line-height:1.7;">${this._renderMarkdown(bodyMarkdown)}</div>` : ''}
+            </section>` : `
+            <!-- LANDING-UNIFY-001 · empty state amb CTA cap a /quality -->
+            <section class="pv-section pv-print-hide-mobile" style="max-width:780px;margin:0 auto var(--space-10);background:var(--bg-elevated);border:1px dashed var(--border-default);border-radius:var(--radius-lg);padding:var(--space-6) var(--space-7);text-align:center;">
+                <div style="font-size:2rem;margin-bottom:8px;">📊</div>
+                <p style="color:var(--text-secondary);font-size:var(--text-sm);margin:0 0 var(--space-3);line-height:1.55;">
+                    Encara no hi ha descripció del projecte. Genera-la amb IA des de
+                    <a href="/quality?project=${encodeURIComponent(project.id)}" data-link style="color:var(--accent-indigo);font-weight:700;">📊 /quality → 🎨 Landing → 🧠 Ompli amb IA</a>
+                    · o clica <strong>✏ Editar presentació</strong> per escriure-la manualment.
+                </p>
+                <p style="color:var(--text-muted);font-size:11px;margin:0;">
+                    El text generat (description + bodyMarkdown + roleDescriptions) apareixerà aquí · escalation chain · 5 providers.
+                </p>
+            </section>`)}
+
+            <!-- LANDING-UNIFY-001 · regeneració per audiència · usa escalation chain · BIZ-MODEL marges + audit log -->
             <div class="pv-section pv-print-hide-mobile" style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:var(--space-6);">
                 <div style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;">
-                    <span style="font-weight:800;color:var(--accent-purple);">🤖 Narrativa IA</span>
-                    <span class="pv-mut" style="font-size:var(--text-xs);color:var(--text-muted);flex:1;min-width:200px;">Genera el hero + descripcions de rols adaptat al projectType + audiència seleccionada.</span>
+                    <span style="font-weight:800;color:var(--accent-purple);">🤖 Narrativa IA per audiència</span>
+                    <span class="pv-mut" style="font-size:var(--text-xs);color:var(--text-muted);flex:1;min-width:200px;">Regenera la landing adaptant el to a l'audiència triada · usa l'escalation chain (5 providers · cost auditat).</span>
                     <select id="pvAudience" class="pv-back" style="background:var(--bg-panel);color:var(--text-main);border:1px solid var(--border-default);padding:6px 10px;border-radius:var(--radius-sm);font-size:var(--text-xs);">
                         ${PUBLIC_AUDIENCES.map(a => `<option value="${a.id}" ${narrativeAudience === a.id ? 'selected' : ''}>${a.icon} ${esc(a.label)}</option>`).join('')}
                     </select>
@@ -227,6 +409,10 @@ export default class PresentationView {
                     ${narrative ? `<button id="pvBtnClearNarrative" class="pv-back" style="background:transparent;color:var(--accent-red);border:1px solid var(--accent-red);padding:8px 12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-size:var(--text-xs);">✕ Esborrar</button>` : ''}
                 </div>
                 <div id="pvNarrativeStatus" style="margin-top:var(--space-3);font-size:var(--text-xs);color:var(--text-muted);font-family:var(--font-mono);min-height:18px;"></div>
+                <div style="margin-top:var(--space-2);font-size:11px;color:var(--text-muted);">
+                    Es genera <strong>tota la landing</strong> · hero + description + body + roleDescriptions ·
+                    omplible inicialment des de <a href="/quality?project=${encodeURIComponent(project.id)}" data-link style="color:var(--accent-indigo);">📊 /quality → 🎨 Landing → 🧠 Ompli amb IA</a>.
+                </div>
             </div>
 
             <div class="pv-stat-strip">
@@ -247,6 +433,86 @@ export default class PresentationView {
                 </div>
             ` : ''}
 
+            <!-- PRESENTATION-HUB-001 · Productes/serveis del projecte -->
+            ${projectMarketItems.length ? `
+                <div class="pv-section">
+                    <div class="pv-section-title" style="display:flex;align-items:center;gap:8px;">
+                        🛍 Productes i serveis
+                        <span style="color:var(--text-muted);font-weight:400;letter-spacing:0;text-transform:none;font-size:11px;">${projectMarketItems.length} ofertes · <a href="/market?project=${encodeURIComponent(project.id)}" data-link style="color:var(--accent-indigo);">veure totes →</a></span>
+                    </div>
+                    <div class="pv-grid">
+                        ${projectMarketItems.slice(0, 6).map(m => {
+                            const c = m.content || m;
+                            const kindIcon = ({ service: '🛠', product: '📦', workshop: '🎓', membership: '🪪' })[c.kind] || '✦';
+                            return `<div class="pv-role-card">
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                                    <span style="font-size:1.3rem;">${kindIcon}</span>
+                                    <div class="pv-role-name" style="margin-bottom:0;flex:1;">${esc((c.title || c.name || 'sense títol').slice(0, 60))}</div>
+                                </div>
+                                ${c.description ? `<div class="pv-role-desc">${esc(c.description.slice(0, 200))}</div>` : ''}
+                                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+                                    <span class="pv-sop-pill">${esc(c.kind || 'service')}</span>
+                                    ${c.priceEur ? `<span class="pv-sop-pill" style="background:rgba(34,197,94,0.12);color:var(--accent-green);">${esc(String(c.priceEur))}€</span>` : ''}
+                                    ${c.accessTier && c.accessTier !== 'public' ? `<span class="pv-sop-pill" style="background:rgba(168,85,247,0.12);color:var(--accent-purple);">${esc(c.accessTier)}</span>` : ''}
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- PRESENTATION-HUB-001 · Equip / membres assignats al projecte -->
+            ${teamNodes.length ? `
+                <div class="pv-section">
+                    <div class="pv-section-title" style="display:flex;align-items:center;gap:8px;">
+                        🧑‍🤝‍🧑 Equip del projecte
+                        <span style="color:var(--text-muted);font-weight:400;letter-spacing:0;text-transform:none;font-size:11px;">${teamNodes.length} membre${teamNodes.length === 1 ? '' : 's'}${project.ownerMemberId ? ' · 1 owner' : ''}</span>
+                    </div>
+                    <div class="pv-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));">
+                        ${teamNodes.slice(0, 12).map(m => {
+                            const c = m.content || m;
+                            const isOwner = m.id === project.ownerMemberId;
+                            const handle = c.handle || c.displayName || c.name || m.id;
+                            const skills = Array.isArray(c.skills) ? c.skills.slice(0, 3) : [];
+                            const guardianArch = c.guardianArchetype || c.guardian || null;
+                            return `<div class="pv-role-card" style="${isOwner ? 'border-left:3px solid var(--accent-purple);' : ''}">
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent-indigo),var(--accent-purple));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;flex-shrink:0;">${esc((handle[0] || '?').toUpperCase())}</div>
+                                    <div style="flex:1;min-width:0;">
+                                        <div class="pv-role-name" style="margin-bottom:0;font-size:var(--text-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(handle)}${isOwner ? ' <span style="color:var(--accent-purple);font-size:0.7em;">★ owner</span>' : ''}</div>
+                                        ${guardianArch ? `<div style="color:var(--text-muted);font-size:11px;">🪶 ${esc(guardianArch)}</div>` : ''}
+                                    </div>
+                                </div>
+                                ${skills.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">${skills.map(s => `<span class="pv-sop-pill" style="font-size:9px;">${esc(typeof s === 'string' ? s : (s.id || ''))}</span>`).join('')}</div>` : ''}
+                            </div>`;
+                        }).join('')}
+                    </div>
+                    ${teamNodes.length > 12 ? `<p style="text-align:center;margin-top:var(--space-3);color:var(--text-muted);font-size:11px;"><a href="/project/${encodeURIComponent(project.id)}" data-link style="color:var(--accent-indigo);">+${teamNodes.length - 12} membres més a Admin del projecte →</a></p>` : ''}
+                </div>
+            ` : ''}
+
+            <!-- PRESENTATION-HUB-001 · Slicing pie summary -->
+            ${slicingPie ? `
+                <div class="pv-section">
+                    <div class="pv-section-title" style="display:flex;align-items:center;gap:8px;">
+                        🥧 Tarta del projecte · top stakeholders
+                        <span style="color:var(--text-muted);font-weight:400;letter-spacing:0;text-transform:none;font-size:11px;">${slicingPie.totalParties} parties · ${slicingPie.totalSlices.toFixed(0)} slices · <a href="/value-accounting?project=${encodeURIComponent(project.id)}" data-link style="color:var(--accent-indigo);">veure tarta sencera →</a></span>
+                    </div>
+                    <div style="display:grid;gap:8px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:var(--space-5);">
+                        ${slicingPie.dist.slice(0, 5).map(d => `
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div style="flex:0 0 auto;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(d.partyId)}</div>
+                                <div style="flex:1;background:rgba(99,102,241,0.10);border-radius:6px;height:18px;position:relative;overflow:hidden;">
+                                    <div style="width:${(d.sharePct || 0).toFixed(1)}%;background:linear-gradient(90deg,var(--accent-indigo),var(--accent-purple));height:100%;border-radius:6px;"></div>
+                                </div>
+                                <div style="flex:0 0 60px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-main);">${(d.sharePct || 0).toFixed(1)}%</div>
+                            </div>
+                        `).join('')}
+                        ${slicingPie.dist.length > 5 ? `<div style="text-align:center;color:var(--text-muted);font-size:11px;padding-top:4px;">+${slicingPie.dist.length - 5} parties més</div>` : ''}
+                    </div>
+                </div>
+            ` : ''}
+
             <div class="pv-section">
                 <div class="pv-section-title">👥 Rols i entregables</div>
                 <div class="pv-grid">
@@ -263,7 +529,10 @@ export default class PresentationView {
                             return `
                             <div class="pv-role-card">
                                 <div class="pv-role-name">${esc(r.label || r.name || r.id)}</div>
-                                ${showDesc ? `<div class="pv-role-desc">${esc(showDesc)}${iaDesc ? ' <span style="color:var(--accent-purple);font-size:0.7em;">🤖</span>' : ''}</div>` : ''}
+                                ${this._editMode ? `
+                                    <span class="pv-edit-field-label">roleDescription · ≤240 chars · 1 frase per a la landing</span>
+                                    <textarea class="pv-textarea pv-edit-role-desc" data-role-id="${esc(r.id)}" rows="3" maxlength="240" placeholder="(buit · fallback role.description del mapa de valor)">${esc(iaDesc || '')}</textarea>
+                                ` : (showDesc ? `<div class="pv-role-desc">${esc(showDesc)}${iaDesc ? ' <span style="color:var(--accent-purple);font-size:0.7em;">🤖</span>' : ''}</div>` : '')}
                                 ${out.length > 0 ? `
                                     <div class="pv-role-section">↗ Entregables (OUT)</div>
                                     ${out.slice(0, 8).map(t => {
@@ -300,119 +569,171 @@ export default class PresentationView {
         </div>`;
     }
 
+    // LANDING-UNIFY-001 · render mínim de markdown · sols #/##/###, **bold**,
+    // *italic*, llistes - · paràgrafs separats per \n\n · escapa HTML primer.
+    _renderMarkdown(md) {
+        if (!md || typeof md !== 'string') return '';
+        // 1 · escape HTML
+        const escaped = md.replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+        // 2 · process per blocs separats per \n\n
+        const blocks = escaped.split(/\n{2,}/);
+        const out = blocks.map(block => {
+            const trimmed = block.trim();
+            if (!trimmed) return '';
+            // Headings
+            if (trimmed.startsWith('### ')) return '<h3 style="margin:14px 0 6px;color:var(--text-main);font-size:1rem;">' + this._mdInline(trimmed.slice(4)) + '</h3>';
+            if (trimmed.startsWith('## '))  return '<h2 style="margin:18px 0 8px;color:var(--text-main);font-size:1.1rem;font-weight:800;">' + this._mdInline(trimmed.slice(3)) + '</h2>';
+            if (trimmed.startsWith('# '))   return '<h1 style="margin:22px 0 10px;color:var(--text-main);font-size:1.25rem;font-weight:900;">' + this._mdInline(trimmed.slice(2)) + '</h1>';
+            // Llista · totes les línies comencen per "- "
+            const lines = trimmed.split('\n');
+            if (lines.every(l => /^[-*]\s/.test(l.trim()))) {
+                return '<ul style="margin:6px 0;padding-left:1.4em;">' + lines.map(l => '<li>' + this._mdInline(l.trim().replace(/^[-*]\s+/, '')) + '</li>').join('') + '</ul>';
+            }
+            // Paràgraf normal
+            return '<p style="margin:8px 0;">' + this._mdInline(trimmed.replace(/\n/g, '<br>')) + '</p>';
+        }).filter(Boolean);
+        return out.join('\n');
+    }
+    _mdInline(s) {
+        // bold **x** · italic *x*
+        return s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    }
+
+    // PRESENTATION-EDIT-001 · pure · captura l'estat actual dels inputs editables
+    // així podem detectar `dirty` (canvis sense desar) abans de cancel·lar.
+    _captureEditSnapshot() {
+        if (!this._editMode) return null;
+        const roleDescs = {};
+        document.querySelectorAll('textarea.pv-edit-role-desc').forEach(ta => {
+            roleDescs[ta.getAttribute('data-role-id')] = ta.value;
+        });
+        return {
+            heroTag:        document.getElementById('pvEditHeroTag')?.value      ?? '',
+            heroTitle:      document.getElementById('pvEditHeroTitle')?.value    ?? '',
+            heroMantra:     document.getElementById('pvEditHeroMantra')?.value   ?? '',
+            description:    document.getElementById('pvEditDescription')?.value  ?? '',
+            bodyMarkdown:   document.getElementById('pvEditBodyMarkdown')?.value ?? '',
+            roleDescriptions: roleDescs,
+        };
+    }
+    _hasUnsavedChanges() {
+        if (!this._editMode || !this._initialEditSnapshot) return false;
+        const cur = this._captureEditSnapshot();
+        return JSON.stringify(cur) !== JSON.stringify(this._initialEditSnapshot);
+    }
+
+    // PRESENTATION-EDIT-001 · save · construeix updates compatibles amb la
+    // shape unificada de presentation_narrative_v1 i dispatch UPDATE_PROJECT_INFO.
+    async _saveEditMode() {
+        const saveBtn = document.getElementById('pvBtnEditSave');
+        const project = this._project;
+        if (!project) return;
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Desant…'; }
+        try {
+            const snap    = this._captureEditSnapshot();
+            const updates = buildPresentationEditUpdates(snap, project);
+            await store.dispatch({
+                type:    'UPDATE_PROJECT_INFO',
+                payload: { projectId: project.id, updates },
+            });
+            // Surt de edit mode · navegació clean
+            const url = new URL(window.location.href);
+            url.searchParams.delete('edit');
+            setTimeout(() => {
+                if (typeof window.navigateTo === 'function') window.navigateTo(url.pathname + (url.search ? url.search : ''));
+                else window.location.reload();
+            }, 200);
+        } catch (e) {
+            console.error('[PRESENTATION-EDIT-001] save failed:', e);
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Desar canvis'; }
+            alert('Error desant: ' + (e?.message || 'desconegut'));
+        }
+    }
+
     async afterRender() {
         document.getElementById('pvBtnPrint')?.addEventListener('click', () => {
             window.print();
         });
 
-        // UX-AUDIT-001 sprint F · generar narrativa IA adaptada per audiència
+        // PRESENTATION-EDIT-001 · toggle edit mode via URL ?edit=1 perquè
+        // sigui linkable + bookmarkable + el navegador push/back funcioni
+        document.getElementById('pvBtnEditEnter')?.addEventListener('click', () => {
+            const url = new URL(window.location.href);
+            url.searchParams.set('edit', '1');
+            if (typeof window.navigateTo === 'function') window.navigateTo(url.pathname + url.search);
+            else window.location.href = url.pathname + url.search;
+        });
+        document.getElementById('pvBtnEditCancel')?.addEventListener('click', () => {
+            if (this._hasUnsavedChanges() && !confirm('Hi ha canvis sense desar. Descartar?')) return;
+            const url = new URL(window.location.href);
+            url.searchParams.delete('edit');
+            if (typeof window.navigateTo === 'function') window.navigateTo(url.pathname + (url.search ? url.search : ''));
+            else window.location.href = url.pathname + (url.search ? url.search : '');
+        });
+        document.getElementById('pvBtnEditSave')?.addEventListener('click', async () => {
+            await this._saveEditMode();
+        });
+        // Tracker · marca "dirty" si l'usuari escriu
+        this._initialEditSnapshot = this._captureEditSnapshot();
+
+        // LANDING-UNIFY-001 · generar narrativa IA via aiFillService (escalation
+        // chain · 5 providers · marge SOS · audit log) · audienceId opcional.
         document.getElementById('pvBtnGenerateNarrative')?.addEventListener('click', async () => {
             const btn      = document.getElementById('pvBtnGenerateNarrative');
             const status   = document.getElementById('pvNarrativeStatus');
             const audience = document.getElementById('pvAudience')?.value || 'fundadors';
             if (!btn || !this._project) return;
-            const apiKey = await Orchestrator.getApiKey('anthropic');
-            if (!apiKey) {
-                if (status) {
-                    status.style.color = 'var(--accent-red)';
-                    status.innerHTML = 'Falta API key Anthropic · <a href="/settings" data-link style="color:var(--accent-indigo);text-decoration:underline;">obrir Settings</a>';
-                }
-                return;
-            }
             const audienceMeta = PUBLIC_AUDIENCES.find(a => a.id === audience);
-            const ptype = this._project.projectType ? getProjectTypeById(this._project.projectType) : null;
-            const subtype = (this._project.sectorId && this._project.subtypeId) ? getSubtypeById(this._project.sectorId, this._project.subtypeId) : null;
             const orig = btn.textContent;
             btn.disabled = true;
             btn.textContent = '⏳ Generant…';
             if (status) {
                 status.style.color = 'var(--text-muted)';
-                status.textContent = 'Cridant Claude · ~5-12s · cost ~150 tokens.';
+                status.textContent = 'Escalation chain · primary → fallback → premium · ~5-15s.';
             }
-
-            // System prompt · CONCISE · zero verbositat
-            const systemPrompt = `Ets un copywriter expert en projectes cooperatius i d'economia social. Generes textos breus, directes, motivadors, sense floritures, en català.
-Adapta tot el text al públic destinatari indicat. Sigues concret i basa't en les dades reals del projecte.
-Format obligatori · respon NOMÉS amb un objecte JSON vàlid amb aquesta forma exacta · sense markdown ni explicacions:
-{"heroTag":"3-6 paraules","heroTitle":"el mateix nom del projecte o un que el reflecteixi","heroMantra":"1 frase potent · max 18 paraules","roleDescriptions":{"<roleId>":"1 frase concisa adaptada a l'audiència seleccionada · max 20 paraules"}}`;
-
-            const rolesShort = (this._roles || []).map(r => ({
-                id: r.id,
-                label: r.label || r.name || r.id,
-                desc:  r.description || '',
-            }));
-
-            const userPrompt = `PROJECTE:
-- Nom: ${this._project.nombre || this._project.name || this._project.id}
-- Sector: ${this._project.sectorId || 'sense sector'}
-- Subtipus: ${subtype ? subtype.label + ' · ' + subtype.hint : 'genèric'}
-- Tipus Matriu: ${ptype ? ptype.label + ' · ' + ptype.hint : 'sense tipus Matriu'}
-- Audiència destinatària: ${audienceMeta?.label || audience} · ${audienceMeta?.desc || ''}
-
-ROLS DEL PROJECTE (necessites generar 1 frase per cada un):
-${rolesShort.map(r => `- ${r.id}: ${r.label}${r.desc ? ' (actual: ' + r.desc.slice(0, 80) + ')' : ''}`).join('\n')}
-
-INSTRUCCIONS:
-1. heroTag = etiqueta curta tipus "Cooperativa de cures" / "DAO regenerativa" / "Plataforma cooperativa".
-2. heroTitle = el nom del projecte (no l'inventis).
-3. heroMantra = 1 frase potent que captura el propòsit per a l'audiència ${audienceMeta?.label}.
-4. roleDescriptions = mapping {roleId: "1 frase"} explicant què fa el rol des del punt de vista de l'audiència ${audienceMeta?.label}.
-
-Respon NOMÉS el JSON.`;
-
             try {
-                const response = await Orchestrator.callLLM({
-                    preferredEngine: 'anthropic',
-                    systemPrompt,
-                    userPrompt,
-                    responseFormat:  'json_object',
+                const { aiFillDim, markAuditAccepted } = await import('../core/aiFillService.js');
+                const { commitApply } = await import('../core/aiApplyService.js');
+                const result = await aiFillDim({
+                    projectId:       this._project.id,
+                    dimId:           'landing',
+                    audienceId:      audience,
+                    maxOutputTokens: 1400,
                     temperature:     0.4,
-                    maxTokens:       2048,
                 });
-                // Extract JSON
-                const { extractJsonFromLlmOutput } = await import('../core/Orchestrator.js');
-                let parsed;
-                try {
-                    parsed = extractJsonFromLlmOutput(response.text || response.content || response);
-                } catch (_) {
-                    parsed = JSON.parse(response.text || response.content || response);
+                if (!result.draft || !result.parsedDraft) {
+                    throw new Error('La IA no ha retornat JSON parseable · ' + (result.escalatedExhausted ? 'chain exhaurida' : 'desconegut'));
                 }
-                if (!parsed || typeof parsed !== 'object') throw new Error('JSON invàlid retornat per la IA');
-                const narrative = {
-                    heroTag:          String(parsed.heroTag || '').slice(0, 80),
-                    heroTitle:        String(parsed.heroTitle || this._project.nombre || '').slice(0, 120),
-                    heroMantra:       String(parsed.heroMantra || '').slice(0, 240),
-                    roleDescriptions: parsed.roleDescriptions && typeof parsed.roleDescriptions === 'object'
-                        ? Object.fromEntries(Object.entries(parsed.roleDescriptions).slice(0, 50).map(([k, v]) => [k, String(v).slice(0, 240)]))
-                        : {},
-                    audienceId:       audience,
-                    generatedAt:      Date.now(),
-                };
-                // Persistir al projecte · UPDATE_PROJECT preserva la resta de camps
-                await store.dispatch({
-                    type: 'UPDATE_PROJECT_INFO',
-                    payload: {
-                        projectId: this._project.id,
-                        updates:   { presentation_narrative_v1: narrative, updatedAt: Date.now() },
-                    }
+                const apply = await commitApply({
+                    projectId:   this._project.id,
+                    dimId:       'landing',
+                    parsedDraft: result.parsedDraft,
+                    store, kb: KB,
                 });
+                await markAuditAccepted(result.auditId).catch(() => {});
                 if (status) {
                     status.style.color = 'var(--accent-green)';
-                    status.textContent = '✓ Narrativa generada · re-renderitzant…';
+                    status.innerHTML = `✓ ${apply.applied ? apply.summary : 'aplicat'} · model <code>${esc(result.modelKey || '?')}</code> · ` +
+                        `${(result.totalWithMarginEur || result.totalCostEur).toFixed(4)}€ · re-renderitzant…`;
                 }
-                // Re-render in-place sense navegar (evita races · idèntic patró sprint A2)
                 setTimeout(async () => {
                     const app = document.getElementById('app');
                     if (app) {
                         app.innerHTML = await this.getHtml();
                         await this.afterRender();
                     }
-                }, 250);
+                }, 350);
             } catch (err) {
-                console.error('[UX-AUDIT-001 sprint F] generar narrativa:', err);
+                console.error('[LANDING-UNIFY-001] generar narrativa:', err);
                 if (status) {
                     status.style.color = 'var(--accent-red)';
-                    status.textContent = '✗ ' + ((err?.message || 'error desconegut').slice(0, 140));
+                    if (err?.code === 'no-api-key') {
+                        const provs = (err.providers && err.providers.length) ? err.providers.join(', ') : 'els providers';
+                        status.innerHTML = '✗ Falta API key (' + esc(provs) + ') · <a href="/settings" data-link style="color:var(--accent-indigo);text-decoration:underline;">obrir Settings</a>';
+                    } else {
+                        status.textContent = '✗ ' + ((err?.message || 'error desconegut').slice(0, 200));
+                    }
                 }
                 btn.disabled = false;
                 btn.textContent = orig;

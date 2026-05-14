@@ -169,5 +169,87 @@ eq(r.AI_MODELS['gemini/2.5-flash-lite'].quality, 2,                   'F · flas
 // 22 · Context window màxim · Gemini 2.5 Pro · 2M tokens
 t(r.AI_MODELS['gemini/2.5-pro'].contextK >= 1000,                     'F · gemini-pro context ≥1M');
 
+// 23 · runEscalation surface `no-api-key` quan TOTS els providers fallen amb code
+//     Aquest cas és el bug "Ompli amb IA · error desconegut" · el caller pot
+//     ara distingir-ho amb e.code === 'no-api-key' i mostrar CTA a /settings
+const noKeyGen = async (modelKey) => {
+    const provider = r.AI_MODELS[modelKey].provider;
+    const e = new Error('no-api-key · ' + provider);
+    e.code = 'no-api-key'; e.provider = provider;
+    throw e;
+};
+let nkErr = null;
+try {
+    await r.runEscalation({ taskKind: 'sop-structured', generate: noKeyGen, evaluate: async () => ({ ok: true }) });
+} catch (e) { nkErr = e; }
+t(nkErr !== null,                                                     'G · no-api-key chain · throw');
+eq(nkErr?.code,        'no-api-key',                                  'G · throw amb code no-api-key');
+t(Array.isArray(nkErr?.providers) && nkErr.providers.length >= 1,     'G · providers array poblat');
+t(Array.isArray(nkErr?.attempts) && nkErr.attempts.length === 3,      'G · 3 attempts loggats');
+t(nkErr.attempts.every(a => a.errorCode === 'no-api-key'),            'G · cada attempt té errorCode');
+
+// 23b · IA-PROVIDER-PREF-001 · pickBestModelForProvider
+const pBest1 = r.pickBestModelForProvider({ providerId: 'minimax', taskKind: 'sop-structured' });
+t(pBest1 && pBest1.startsWith('minimax/'),                            'G-pref · minimax + sop · retorna model minimax');
+const pBest2 = r.pickBestModelForProvider({ providerId: 'anthropic', taskKind: 'creative-narrative' });
+t(pBest2 === 'anthropic/opus-4.7' || pBest2 === 'anthropic/sonnet-4.6', 'G-pref · anthropic + creative · sonnet o opus');
+const pBest3 = r.pickBestModelForProvider({ providerId: 'unknown-xyz', taskKind: 'sop-structured' });
+eq(pBest3, null,                                                      'G-pref · provider desconegut · null');
+const pBest4 = r.pickBestModelForProvider({ providerId: 'gemini', taskKind: 'multimodal-image' });
+t(pBest4 && pBest4.startsWith('gemini/'),                             'G-pref · gemini multimodal · retorna gemini model');
+
+// 23c · runEscalation amb preferredProvider · prova primer model d'aquell provider
+let providerOrder = [];
+const trackingGen = async (modelKey) => {
+    providerOrder.push(modelKey);
+    return { text: '{"newSops":[{"roleId":"r1","title":"x","steps":["a","b"]}]}', usage:{inputTokens:1,outputTokens:1}, modelKey, finishReason:'end_turn' };
+};
+const okEval = async () => ({ ok: true, score: 1 });
+providerOrder = [];
+await r.runEscalation({
+    taskKind: 'sop-structured',
+    generate: trackingGen,
+    evaluate: okEval,
+    preferredProvider: 'minimax',
+});
+t(providerOrder.length >= 1 && providerOrder[0].startsWith('minimax/'), 'G-pref · runEscalation amb preferredProvider · minimax provat primer');
+
+// Sense preferredProvider · agafa el primary del chain (deepseek/v3 per sop-structured)
+providerOrder = [];
+await r.runEscalation({
+    taskKind: 'sop-structured',
+    generate: trackingGen,
+    evaluate: okEval,
+});
+eq(providerOrder[0],   'deepseek/v3',                                 'G-pref · sense preferredProvider · primary default');
+
+// preferredProvider igual al primary del chain · no es duplica
+providerOrder = [];
+await r.runEscalation({
+    taskKind: 'creative-narrative',
+    generate: trackingGen,
+    evaluate: okEval,
+    preferredProvider: 'anthropic',
+});
+const anthroFirst = providerOrder.filter(m => m.startsWith('anthropic/')).length;
+t(anthroFirst <= 2,                                                   'G-pref · preferred = primary provider · sense duplicar');
+
+// 24 · Mix · alguns no-api-key + altres errors generals → NO surfaces no-api-key
+let mixCount = 0;
+const mixGen = async (modelKey) => {
+    mixCount++;
+    if (mixCount === 1) {
+        const e = new Error('no-api-key'); e.code = 'no-api-key'; e.provider = 'foo';
+        throw e;
+    }
+    throw new Error('http 500');
+};
+let mixErr = null;
+try {
+    await r.runEscalation({ taskKind: 'sop-structured', generate: mixGen, evaluate: async () => ({ ok: true }) });
+} catch (e) { mixErr = e; }
+t(mixErr !== null,                                                    'G · mix errors · throw');
+t(mixErr?.code !== 'no-api-key',                                      'G · mix · NO surface com a no-api-key (no és única causa)');
+
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

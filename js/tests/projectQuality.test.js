@@ -212,10 +212,14 @@ const next25 = suggestNextDim(projectOnlyLanding);
 t(next25.dim.id === 'valueMap',                                      'G · only-landing · next = valueMap (pes max)');
 t(next25.gain === 30,                                                'G · only-landing · gain = 30 (weight×100%)');
 
-// 26. PROJECT_SUBNAV_ITEMS conté hub + 10 tabs (sprint E afegeix Qualitat)
+// 26. PROJECT_SUBNAV_ITEMS · 11 tabs · PROJ-CONFIG-001 reordena · 'hub'
+// renombrat a 'Configuració' i mogut al final (és admin tècnic).
 t(Array.isArray(PROJECT_SUBNAV_ITEMS) && PROJECT_SUBNAV_ITEMS.length === 11, 'G · 11 tabs al subnav');
-t(PROJECT_SUBNAV_ITEMS[0].id === 'hub',                              'G · primera tab és hub');
-t(PROJECT_SUBNAV_ITEMS[1].id === 'quality',                          'G · segona tab és quality');
+t(PROJECT_SUBNAV_ITEMS[0].id === 'presentation',                     'G · primera tab és presentació');
+t(PROJECT_SUBNAV_ITEMS[PROJECT_SUBNAV_ITEMS.length - 1].id === 'hub','G · última tab és hub (Configuració)');
+const hubTab = PROJECT_SUBNAV_ITEMS.find(t => t.id === 'hub');
+t(hubTab && hubTab.label === 'Configuració',                         'G · hub label = "Configuració"');
+t(hubTab && hubTab.icon === '⚙',                                     'G · hub icon = ⚙');
 t(typeof PROJECT_SUBNAV_ITEMS[0].buildHref === 'function',           'G · cada tab té buildHref()');
 
 // 27. renderProjectSubnavHtml genera HTML amb el projecte
@@ -292,6 +296,36 @@ const rBadExcl = q.computeQualityScore(
     { workshops: partialW, marketItems: partialM },
 );
 t(rBadExcl.excludedDims.length === 1,                                'H · excludedDims filtra entries no-existents');
+
+// ─── I · scoreSops accepta múltiples variants de role-id ────────────────
+// BUG · SopsView/ValueMapView/matriuTemplate fan servir `role_ref` mentre
+// que founderTemplate i applySops fan `roleId`. scoreSops els ha
+// d'acceptar tots dos · sinó SOPs reals queden invisibles al /quality.
+const sopsRoleRef = [
+    { id: 's-rr-1', type: 'sop', projectId: 'p-full', content: { role_ref: 'r1', steps: [{ label: 'step1' }, { label: 'step2' }] } },
+    { id: 's-rr-2', type: 'sop', projectId: 'p-full', content: { role_ref: 'r2', steps: [{ label: 'a' }, { label: 'b' }] } },
+    { id: 's-rr-3', type: 'sop', projectId: 'p-full', content: { role_ref: 'r3', steps: [{ label: 'x' }, { label: 'y' }] } },
+];
+const rRoleRef = q.computeQualityScore(fullProject, { sops: sopsRoleRef, workshops: fullWorkshops, marketItems: fullMarket });
+t(rRoleRef.byDim.sops.score === 100,                                 'I · SOPs amb role_ref · score 100 (no roleId required)');
+
+// Mix de variants · alguns role_ref + alguns roleId
+const sopsMix = [
+    { id: 's-mix-1', type: 'sop', projectId: 'p-full', content: { role_ref: 'r1', body: 'x'.repeat(50) } },
+    { id: 's-mix-2', type: 'sop', projectId: 'p-full', content: { roleId:   'r2', body: 'y'.repeat(50) } },
+    { id: 's-mix-3', type: 'sop', projectId: 'p-full', content: { roleRef:  'r3', body: 'z'.repeat(50) } },
+];
+const rMix = q.computeQualityScore(fullProject, { sops: sopsMix, workshops: fullWorkshops, marketItems: fullMarket });
+t(rMix.byDim.sops.score === 100,                                     'I · mix role_ref + roleId + roleRef · score 100');
+
+// Variant top-level (no dins content)
+const sopsTop = [
+    { id: 's-top-1', type: 'sop', projectId: 'p-full', role_ref: 'r1', content: { body: 'x'.repeat(50) } },
+    { id: 's-top-2', type: 'sop', projectId: 'p-full', role_ref: 'r2', content: { body: 'y'.repeat(50) } },
+    { id: 's-top-3', type: 'sop', projectId: 'p-full', role_ref: 'r3', content: { body: 'z'.repeat(50) } },
+];
+const rTop = q.computeQualityScore(fullProject, { sops: sopsTop, workshops: fullWorkshops, marketItems: fullMarket });
+t(rTop.byDim.sops.score === 100,                                     'I · role_ref top-level (fora content) · score 100');
 
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

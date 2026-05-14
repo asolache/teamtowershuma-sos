@@ -39,6 +39,8 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'opportunities', icon: '🚀', label: 'Oportunitats', href: '/opportunities', global: true, category: 'market', hint: 'Projectes públics permaweb · descobreix · sol·licita unir-te com a stakeholder · FUND-FLOW-001 sprint F' },
     { id: 'market',    icon: '🛒', label: 'Mercado',   href: '/market',     global: true,  category: 'market',     hint: 'Catálogo de productos y servicios' },
     { id: 'efficiency',icon: '⚡', label: 'Eficiencia', href: '/efficiency', global: true,  category: 'market',     hint: 'KM-001 · tokens/coste/pruning · ROI IA' },
+    { id: 'path',      icon: '🧠', label: 'Path nodal', href: '/path',       global: true,  category: 'knowledge',  hint: 'Historial nodal cronològic · curador de context bundles per a IA · NEURAL-PATH-001' },
+    { id: 'sprint',    icon: '🐝', label: 'Swarm OP',   href: '/sprint',     global: true,  category: 'knowledge',  hint: 'Sprint orchestrator · backlog estructurat + IA runs autonomous · SWARM-OP-001' },
     { id: 'savings',   icon: '📊', label: 'Ahorro',    href: '/savings',    global: true,  category: 'market',     hint: 'Cuadro comparativo de ahorro vs convencional · global o por proyecto' },
     { id: 'value',     icon: '🥧', label: 'Tarta',     href: '/value-accounting', global: false, category: 'market', hint: 'Contabilidad de valor · Slicing Pie + FairShares · tarta del proyecto' },
     { id: 'pact',      icon: '📜', label: 'Pacte',     href: '/pact',       global: false, category: 'operations', hint: 'Pacte de socis dinàmic · primer contrato del Mètode SOS' },
@@ -757,10 +759,11 @@ import { computeQualityScore, QUALITY_DIMS, QUALITY_THRESHOLDS, statusColor, sta
 
 // Tabs del subnav · cadascuna referencia les dimensions a les que contribueix.
 // `dims:[]` significa "no influeix al score" (operativa pura · kanban, wallet…).
+// PROJ-CONFIG-001 · 'Hub' renombrat a 'Configuració' i mogut al final · és la
+// pestanya d'admin tècnic (swarm matchmaker, federation publish, archive…).
 export const PROJECT_SUBNAV_ITEMS = Object.freeze([
-    { id: 'hub',          icon: '🚀', label: 'Hub',          dims: [],                          buildHref: (pid) => '/project/' + encodeURIComponent(pid) },
-    { id: 'quality',      icon: '🌟', label: 'Qualitat',     dims: [],                          buildHref: (pid) => '/quality?project=' + encodeURIComponent(pid) },
     { id: 'presentation', icon: '🎤', label: 'Presentació',  dims: ['landing'],                 buildHref: (pid) => '/presentation?project=' + encodeURIComponent(pid) },
+    { id: 'quality',      icon: '🌟', label: 'Qualitat',     dims: [],                          buildHref: (pid) => '/quality?project=' + encodeURIComponent(pid) },
     { id: 'map',          icon: '🗺',  label: 'Mapa',         dims: ['valueMap', 'deliverables'],buildHref: (pid) => '/map?project=' + encodeURIComponent(pid) },
     { id: 'sops',         icon: '📜', label: 'SOPs',         dims: ['sops'],                    buildHref: (pid) => '/sops?project=' + encodeURIComponent(pid) },
     { id: 'workshops',    icon: '🎓', label: 'Workshops',    dims: ['workshops'],               buildHref: (pid) => '/workshops?project=' + encodeURIComponent(pid) },
@@ -769,6 +772,7 @@ export const PROJECT_SUBNAV_ITEMS = Object.freeze([
     { id: 'value',        icon: '🥧', label: 'Tarta',        dims: [],                          buildHref: (pid) => '/value-accounting?project=' + encodeURIComponent(pid) },
     { id: 'wallet',       icon: '💶', label: 'Wallet',       dims: [],                          buildHref: (pid) => '/wallet?project=' + encodeURIComponent(pid) },
     { id: 'pact',         icon: '📜', label: 'Pacte',        dims: [],                          buildHref: (pid) => '/pact?project=' + encodeURIComponent(pid) },
+    { id: 'hub',          icon: '⚙',  label: 'Configuració', dims: [],                          buildHref: (pid) => '/project/' + encodeURIComponent(pid) },
 ]);
 
 // Detecta si el pathname actual coincideix amb una de les tabs del subnav.

@@ -850,6 +850,8 @@ export default class ValueMapView {
                     <button class="vmap-btn" id="vmapBtnAnim" title="H_ANIM_001 · animar flujo de valor por sequence_order de las transactions">▶ Animar flujo</button>
                     <button class="vmap-btn" id="vmapBtnInferOrder" title="H_ANIM_001 sprint C · IA infiere sequence_order y phase de todas las transactions">🤖 Inferir orden IA</button>
                     <button class="vmap-btn" id="vmapBtnFlowLine" title="H_ANIM_001 sprint B · ver el flujo como timeline lineal">📜 Vista lineal</button>
+                    <button class="vmap-btn" id="vmapBtnCastell" title="VMAP-CASTELL-001 · vista castell · 3 nivells (pinya / tronc / pom de dalt) amb roles ordenats per lògica de procés · modal fullscreen">🏛 Castell</button>
+                    <button class="vmap-btn" id="vmapBtnCastellInline" title="VMAP-CASTELL-INLINE-001 · vista castell sobreposada al canvas · click per togglar amb graph">🏛✦ Inline</button>
                     <button class="vmap-btn" id="vmapBtnFit">⊡ ${t('vmap.fit')}</button>
                     <button class="vmap-btn" id="vmapBtnReset">↺ ${t('vmap.reset')}</button>
                     <button class="vmap-btn vmap-btn-save" id="vmapBtnSave">💾 ${t('vmap.save')}</button>
@@ -1243,6 +1245,8 @@ export default class ValueMapView {
         document.getElementById('vmapBtnAnim')?.addEventListener('click',   () => this._toggleFlowAnim());
         document.getElementById('vmapBtnInferOrder')?.addEventListener('click', () => this._inferFlowOrderIA());
         document.getElementById('vmapBtnFlowLine')?.addEventListener('click',   () => this._openFlowLineModal());
+        document.getElementById('vmapBtnCastell')?.addEventListener('click',    () => this._openCastellModal());
+        document.getElementById('vmapBtnCastellInline')?.addEventListener('click', () => this._toggleCastellInline());
         document.getElementById('vmapAddRole')?.addEventListener('click',   () => this._openRoleModal());
         document.getElementById('vmapAddTx')?.addEventListener('click',     () => this._openTxModal());
         document.getElementById('vmapZoomIn')?.addEventListener('click',    () => this._zoom(1.25));
@@ -2536,11 +2540,37 @@ export default class ValueMapView {
         status.textContent   = t('ai.enriching');
 
         try {
-            // Context-First: enriquecer con sector + roles existentes
+            // Context-First: enriquecer con sector + subtype + projectType + roles existentes
+            // VALUEMAP-AI-CTX-001 · injectem projectType + subtypeId del store
+            // perquè la IA tingui més precisió (alineat amb VALUEMAP-GEN-001 a aiFillService)
             const detectedSector = this._state.currentSector || null;
+            let projectMeta = '';
+            try {
+                if (this._state.projectId) {
+                    const { store } = await import('../core/store.js');
+                    const project = (store.getState().projects || []).find(p => p?.id === this._state.projectId);
+                    if (project) {
+                        const parts = [];
+                        if (project.projectType) parts.push('projectType: ' + project.projectType);
+                        if (project.subtypeId)   parts.push('subtype: ' + project.subtypeId);
+                        if (project.description) parts.push('description: ' + project.description.slice(0, 240));
+                        if (project.purpose)     parts.push('purpose: ' + project.purpose.slice(0, 240));
+                        // Subtype hint via sectorSubtypes
+                        if (project.sectorId && project.subtypeId) {
+                            try {
+                                const { getSubtypeById } = await import('../core/sectorSubtypes.js');
+                                const sub = getSubtypeById(project.sectorId, project.subtypeId);
+                                if (sub?.iaContextHint) parts.push('operativa típica del subtipus: ' + sub.iaContextHint);
+                            } catch (_) {}
+                        }
+                        if (parts.length) projectMeta = '\nProject context:\n' + parts.join('\n');
+                    }
+                }
+            } catch (_) { /* degrade silenciós */ }
+            const enrichedFreeText = freeText + projectMeta;
             const ctxResult = await KnowledgeLoader.buildContext({
                 sector:      detectedSector,
-                freeText:    freeText,
+                freeText:    enrichedFreeText,
                 existingMap: hasRoles ? { roles: this._state.roles, transactions: this._state.transactions } : null,
                 includeVna:  true,
                 taskContext: hasRoles
@@ -2879,21 +2909,33 @@ ${ctxResult.systemPrompt}`;
             return;
         }
         if (!this._state.transactions || !this._state.transactions.length) {
-            alert('No hay transacciones para animar.');
+            this._toast('No hi ha transactions per animar. Afegeix-ne al mapa primer.', false);
             return;
         }
-        // Si ninguna transaction tiene sequence_order, ofrece auto-rellenar
+        // VMAP-ANIM-FIX · auto-fill silenciós (sense confirm OS) · UX cleaner.
+        // Si no hi ha cap sequence_order, l'omple amb l'ordre actual (1,2,3,…).
         const anyOrdered = this._state.transactions.some(t => typeof t?.sequence_order === 'number');
         if (!anyOrdered) {
-            const ok = confirm('Ninguna transacción tiene `sequence_order` definido. ¿Quieres que SOS asigne orden automático (1, 2, 3…) según el orden actual? Puedes ajustarlo después en el inspector de cada transacción.');
-            if (!ok) return;
             this._state.transactions = autoFillSequenceOrder(this._state.transactions);
+            this._toast('Ordre auto-assignat per a animar · usa 🤖 Inferir orden IA per a refinar-ho.');
         }
         this._startFlowAnim();
     }
 
     _startFlowAnim() {
-        if (!window.d3) return;
+        // VMAP-ANIM-FIX · si D3 encara no està carregat, espera (retry max 5 cops)
+        if (!window.d3) {
+            this._state._animD3Retries = (this._state._animD3Retries || 0) + 1;
+            if (this._state._animD3Retries > 5) {
+                this._toast('D3 no s\'ha pogut carregar · animació indisponible. Refresca la pàgina.', false);
+                this._state._animD3Retries = 0;
+                return;
+            }
+            this._toast('Carregant D3 · esperant…');
+            setTimeout(() => this._startFlowAnim(), 400);
+            return;
+        }
+        this._state._animD3Retries = 0;
         this._state.flowAnim = true;
         const btn = document.getElementById('vmapBtnAnim');
         if (btn) { btn.textContent = '⏸ Pausar'; btn.style.background = 'rgba(99,102,241,0.15)'; }
@@ -3086,6 +3128,274 @@ ${ctxResult.systemPrompt}`;
             </div>`;
         document.getElementById('vmapFlowLineClose')?.addEventListener('click', close);
         document.getElementById('vmapFlowLineBg')?.addEventListener('click', e => { if (e.target.id === 'vmapFlowLineBg') close(); });
+    }
+
+    // VMAP-CASTELL-001 · vista castell · 3 nivells horitzontals (pinya/tronc/
+    // pom de dalt) + roles ordenats per lògica de procés dins de cada nivell.
+    // Les transactions es rendiritzen com arcs entre les cards de rol.
+    _openCastellModal() {
+        if (!this._state.roles || !this._state.roles.length) {
+            this._toast('Encara no hi ha rols al mapa · afegeix-ne abans de veure la vista castell.');
+            return;
+        }
+        let root = document.getElementById('vmapCastellRoot');
+        if (!root) {
+            root = document.createElement('div');
+            root.id = 'vmapCastellRoot';
+            document.body.appendChild(root);
+        }
+        const close = () => { root.innerHTML = ''; };
+
+        // Agrupa rols per castell_level · default tronc
+        const LEVEL_DEFS = [
+            { id: 'pom_de_dalt', label: 'Pom de dalt · cúspide estratègica', color: '#e040fb', shortLabel: '↑ Pom de dalt' },
+            { id: 'tronc',       label: 'Tronc · nucli de valor',           color: '#6366f1', shortLabel: '◯ Tronc' },
+            { id: 'pinya',       label: 'Pinya · base operativa',           color: '#00b0ff', shortLabel: '_ Pinya' },
+        ];
+        // Sorted by sequence_order si hi és (transactions originades del role)
+        const txs = this._state.transactions || [];
+        const seqByRole = new Map();
+        for (const r of this._state.roles) {
+            const outgoing = txs.filter(t => t.from === r.id && typeof t.sequence_order === 'number');
+            const minSeq = outgoing.length ? Math.min(...outgoing.map(t => t.sequence_order)) : 999;
+            seqByRole.set(r.id, minSeq);
+        }
+        const rolesByLevel = {};
+        for (const def of LEVEL_DEFS) {
+            const list = this._state.roles
+                .filter(r => (r.castell_level || 'tronc') === def.id)
+                .sort((a, b) => (seqByRole.get(a.id) || 999) - (seqByRole.get(b.id) || 999));
+            rolesByLevel[def.id] = list;
+        }
+        const orphanLevel = this._state.roles.filter(r => !LEVEL_DEFS.some(d => d.id === (r.castell_level || 'tronc')));
+        if (orphanLevel.length) rolesByLevel.pinya = (rolesByLevel.pinya || []).concat(orphanLevel);
+
+        // Render · per cada nivell · row horitzontal amb les cards
+        const rolesMap = new Map(this._state.roles.map(r => [r.id, r]));
+        const renderRoleCard = (r, levelColor) => {
+            const outCount = txs.filter(t => t.from === r.id).length;
+            const inCount  = txs.filter(t => t.to   === r.id).length;
+            return `<div style="background:#0e0e14;border:1px solid #1a1a22;border-left:3px solid ${levelColor};border-radius:8px;padding:0.7rem 0.9rem;min-width:180px;flex:0 0 auto;cursor:grab;transition:transform 0.15s ease;" data-castell-role="${this._escHtml(r.id)}" draggable="true" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='';">
+                <div style="color:#fff;font-size:0.92rem;font-weight:700;margin-bottom:2px;">${this._escHtml(r.name || r.id)}</div>
+                <div style="color:#aaa;font-size:0.72rem;font-family:monospace;">${this._escHtml(r.typical_actor || r.id)}</div>
+                <div style="display:flex;gap:6px;margin-top:6px;font-size:0.7rem;font-family:monospace;">
+                    <span style="color:#facc15;" title="Transactions out (origen)">↗ ${outCount}</span>
+                    <span style="color:#22c55e;" title="Transactions in (destí)">↙ ${inCount}</span>
+                    <span style="color:#666;flex:1;text-align:right;font-size:0.65rem;" title="Arrossega per canviar de nivell castell">⠿</span>
+                </div>
+            </div>`;
+        };
+
+        const levelRows = LEVEL_DEFS.map(def => {
+            const list = rolesByLevel[def.id] || [];
+            return `<div style="margin-bottom:1.4rem;" data-castell-drop-level="${def.id}">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${def.color};"></span>
+                    <h4 style="margin:0;color:${def.color};font-size:0.92rem;font-weight:800;letter-spacing:0.02em;">${this._escHtml(def.label)}</h4>
+                    <span style="color:#666;font-size:0.72rem;font-family:monospace;">${list.length} rol${list.length === 1 ? '' : 's'}</span>
+                </div>
+                ${list.length === 0
+                    ? `<div style="color:#666;font-style:italic;font-size:0.78rem;padding:0.5rem 0.9rem;border:1px dashed #2a2a35;border-radius:6px;min-height:54px;display:flex;align-items:center;" data-castell-drop-zone="${def.id}">— arrossega un rol aquí o crea'n des del mapa —</div>`
+                    : `<div style="display:flex;gap:0.7rem;overflow-x:auto;padding:6px 4px 8px;border:1px dashed transparent;border-radius:8px;transition:border-color 0.15s, background 0.15s;" data-castell-drop-zone="${def.id}">${list.map(r => renderRoleCard(r, def.color)).join('')}</div>`}
+            </div>`;
+        }).join('');
+
+        // Transactions ordenades (top inter-level connections)
+        const interLevelTxs = txs.filter(t => {
+            const fromR = rolesMap.get(t.from);
+            const toR   = rolesMap.get(t.to);
+            return fromR && toR && (fromR.castell_level || 'tronc') !== (toR.castell_level || 'tronc');
+        });
+
+        root.innerHTML = `
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,0.88);display:flex;align-items:flex-start;justify-content:center;z-index:1000;padding:2rem 1rem;overflow-y:auto;" id="vmapCastellBg">
+                <div style="background:#050507;border:1px solid #2a2a35;border-radius:12px;padding:1.6rem;width:100%;max-width:1240px;color:#e6e6e6;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;flex-wrap:wrap;gap:0.5rem;">
+                        <h3 style="margin:0;color:#fff;">🏛 Vista castell · ${this._state.roles.length} rols · ${LEVEL_DEFS.filter(d => (rolesByLevel[d.id] || []).length > 0).length} nivells actius</h3>
+                        <button class="vmap-btn" id="vmapCastellClose">✕ Tancar</button>
+                    </div>
+                    <div style="color:#aaa;font-size:0.82rem;margin-bottom:1.2rem;line-height:1.55;">
+                        Visual thinking · roles organitzats per nivell de castell (analogia: castells humans catalans).
+                        Pinya = base operativa · Tronc = nucli de valor · Pom de dalt = cúspide estratègica.
+                        Dins de cada nivell els rols estan ordenats segons el <code>sequence_order</code> de les seves
+                        transactions sortints (si en tenen). Clica un rol per a obrir l'inspector lateral.
+                    </div>
+                    ${levelRows}
+                    <div style="margin-top:1.4rem;padding-top:1rem;border-top:1px solid #1a1a22;color:#aaa;font-size:0.78rem;">
+                        <strong style="color:#fff;">${interLevelTxs.length}</strong> transactions inter-nivell ·
+                        <strong style="color:#fff;">${txs.length - interLevelTxs.length}</strong> intra-nivell ·
+                        usa <strong>📜 Vista lineal</strong> per veure el flux complet seqüencial.
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById('vmapCastellClose')?.addEventListener('click', close);
+        document.getElementById('vmapCastellBg')?.addEventListener('click', e => { if (e.target.id === 'vmapCastellBg') close(); });
+        document.querySelectorAll('[data-castell-role]').forEach(el => {
+            el.addEventListener('click', () => {
+                const rid = el.getAttribute('data-castell-role');
+                close();
+                this._selectItem(rid, 'role');
+            });
+        });
+        // VMAP-CASTELL-DND-001 · drag-and-drop entre nivells
+        this._wireCastellDnd(() => this._openCastellModal());
+    }
+
+    // VMAP-CASTELL-DND-001 · DnD compartit entre modal castell i inline overlay
+    // refreshFn · callback per re-renderitzar la vista després del drop
+    _wireCastellDnd(refreshFn) {
+        let draggedId = null;
+        document.querySelectorAll('[data-castell-role]').forEach(el => {
+            el.addEventListener('dragstart', (ev) => {
+                draggedId = el.getAttribute('data-castell-role');
+                el.style.opacity = '0.4';
+                if (ev.dataTransfer) {
+                    ev.dataTransfer.effectAllowed = 'move';
+                    try { ev.dataTransfer.setData('text/plain', draggedId); } catch (_) {}
+                }
+            });
+            el.addEventListener('dragend', () => { el.style.opacity = ''; draggedId = null; });
+        });
+        document.querySelectorAll('[data-castell-drop-zone]').forEach(zone => {
+            zone.addEventListener('dragover', (ev) => {
+                ev.preventDefault();
+                if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+                zone.style.borderColor = 'rgba(168,85,247,0.6)';
+                zone.style.background = 'rgba(168,85,247,0.08)';
+            });
+            zone.addEventListener('dragleave', () => {
+                zone.style.borderColor = '';
+                zone.style.background = '';
+            });
+            zone.addEventListener('drop', async (ev) => {
+                ev.preventDefault();
+                zone.style.borderColor = '';
+                zone.style.background = '';
+                const rid = draggedId || ev.dataTransfer?.getData('text/plain');
+                const newLevel = zone.getAttribute('data-castell-drop-zone');
+                if (!rid || !newLevel) return;
+                const role = (this._state.roles || []).find(r => r.id === rid);
+                if (!role) return;
+                if ((role.castell_level || 'tronc') === newLevel) return;
+                role.castell_level = newLevel;
+                // Re-render del graph + persisteix al store si hi ha projectId
+                try {
+                    if (this._zoomGroup) this._rebuildGraph(this._zoomGroup);
+                    if (this._state.projectId) {
+                        const { store } = await import('../core/store.js');
+                        await store.dispatch({
+                            type:    'UPDATE_PROJECT_INFO',
+                            payload: { projectId: this._state.projectId, updates: { vna_roles: this._state.roles, updatedAt: Date.now() } },
+                        });
+                    }
+                } catch (e) { console.warn('[castell-dnd] persist failed', e?.message); }
+                this._toast('✓ Rol "' + (role.name || rid) + '" mogut a ' + newLevel);
+                if (typeof refreshFn === 'function') {
+                    // Tanca i re-obre per refrescar el render
+                    const existing = document.getElementById('vmapCastellRoot') || document.getElementById('vmapCastellInlineOverlay');
+                    if (existing) existing.remove();
+                    refreshFn();
+                }
+            });
+        });
+    }
+
+    // VMAP-CASTELL-INLINE-001 · toggle vista castell sobreposada al canvas.
+    // No substitueix el graph · l'overlay té background semi-translúcid que
+    // bloca interaccions amb el SVG · click "✕" tanca o re-clic al botó.
+    _toggleCastellInline() {
+        const canvas = document.getElementById('vmapCanvas');
+        if (!canvas) return;
+        const existing = document.getElementById('vmapCastellInlineOverlay');
+        if (existing) { existing.remove(); return; }
+        if (!this._state.roles || !this._state.roles.length) {
+            this._toast('Encara no hi ha rols al mapa · afegeix-ne abans.', false);
+            return;
+        }
+        const LEVEL_DEFS = [
+            { id: 'pom_de_dalt', label: 'Pom de dalt', color: '#e040fb' },
+            { id: 'tronc',       label: 'Tronc',       color: '#6366f1' },
+            { id: 'pinya',       label: 'Pinya',       color: '#00b0ff' },
+        ];
+        const txs = this._state.transactions || [];
+        const seqByRole = new Map();
+        for (const r of this._state.roles) {
+            const outgoing = txs.filter(t => t.from === r.id && typeof t.sequence_order === 'number');
+            const minSeq = outgoing.length ? Math.min(...outgoing.map(t => t.sequence_order)) : 999;
+            seqByRole.set(r.id, minSeq);
+        }
+        const rolesByLevel = {};
+        for (const def of LEVEL_DEFS) {
+            rolesByLevel[def.id] = this._state.roles
+                .filter(r => (r.castell_level || 'tronc') === def.id)
+                .sort((a, b) => (seqByRole.get(a.id) || 999) - (seqByRole.get(b.id) || 999));
+        }
+        const orphan = this._state.roles.filter(r => !LEVEL_DEFS.some(d => d.id === (r.castell_level || 'tronc')));
+        if (orphan.length) rolesByLevel.pinya = (rolesByLevel.pinya || []).concat(orphan);
+
+        const renderCard = (r, color) => {
+            const outCount = txs.filter(t => t.from === r.id).length;
+            const inCount  = txs.filter(t => t.to   === r.id).length;
+            return `<div style="background:rgba(5,5,7,0.9);border:1px solid #1a1a22;border-left:3px solid ${color};border-radius:6px;padding:6px 9px;flex:0 0 auto;min-width:140px;cursor:grab;backdrop-filter:blur(4px);" data-castell-role="${this._escHtml(r.id)}" data-castell-inline-role="${this._escHtml(r.id)}" draggable="true">
+                <div style="color:#fff;font-size:0.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${this._escHtml(r.name || r.id)}</div>
+                <div style="color:#aaa;font-size:0.66rem;font-family:monospace;margin-top:2px;">${outCount}↗ · ${inCount}↙ <span style="color:#555;float:right;" title="Arrossega per canviar de nivell">⠿</span></div>
+            </div>`;
+        };
+
+        const rows = LEVEL_DEFS.map(def => {
+            const list = rolesByLevel[def.id] || [];
+            return `<div style="margin-bottom:0.7rem;" data-castell-drop-level="${def.id}">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${def.color};"></span>
+                    <span style="color:${def.color};font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">${def.label}</span>
+                    <span style="color:#666;font-size:0.66rem;font-family:monospace;">${list.length}</span>
+                </div>
+                ${list.length === 0
+                    ? `<div style="color:#444;font-size:0.7rem;font-style:italic;padding:0.4rem 0.6rem;margin-left:18px;border:1px dashed #2a2a35;border-radius:6px;min-height:32px;display:flex;align-items:center;" data-castell-drop-zone="${def.id}">— arrossega un rol aquí —</div>`
+                    : `<div style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 4px 18px;border:1px dashed transparent;border-radius:6px;transition:border-color 0.15s, background 0.15s;" data-castell-drop-zone="${def.id}">${list.map(r => renderCard(r, def.color)).join('')}</div>`}
+            </div>`;
+        }).join('');
+
+        const overlay = document.createElement('div');
+        overlay.id = 'vmapCastellInlineOverlay';
+        overlay.style.cssText = 'position:absolute;inset:0;background:rgba(5,5,7,0.55);backdrop-filter:blur(2px);overflow-y:auto;padding:14px;z-index:5;';
+        overlay.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <h3 style="margin:0;color:#fff;font-size:0.95rem;">🏛✦ Castell inline · ${this._state.roles.length} rols</h3>
+                <button id="vmapCastellInlineClose" class="vmap-btn" style="padding:3px 10px;font-size:0.72rem;">✕ Tancar inline</button>
+            </div>
+            ${rows}
+        `;
+        // Ensure canvas has relative positioning to anchor overlay
+        if (window.getComputedStyle(canvas).position === 'static') {
+            canvas.style.position = 'relative';
+        }
+        canvas.appendChild(overlay);
+        document.getElementById('vmapCastellInlineClose')?.addEventListener('click', () => overlay.remove());
+        overlay.querySelectorAll('[data-castell-inline-role]').forEach(el => {
+            // Click obre inspector · NO interfereix amb drag (drag té diferent timing)
+            el.addEventListener('click', (ev) => {
+                if (ev.target === el && !el.hasAttribute('data-dragged-recent')) {
+                    const rid = el.getAttribute('data-castell-inline-role');
+                    this._selectItem(rid, 'role');
+                }
+            });
+        });
+        // VMAP-CASTELL-DND-001 · DnD també a inline · re-render via _toggleCastellInline
+        this._wireCastellDnd(() => {
+            const ex = document.getElementById('vmapCastellInlineOverlay');
+            if (ex) ex.remove();
+            this._toggleCastellInline();
+        });
+    }
+
+    // Helper · toast inline · evita native alert/confirm
+    _toast(msg, ok = true) {
+        const t = document.createElement('div');
+        t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:' + (ok ? 'rgba(34,197,94,0.92)' : 'rgba(239,68,68,0.92)') + ';color:#fff;padding:10px 16px;border-radius:8px;font-size:0.85rem;z-index:9999;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3500);
     }
 
     _runFlowPulses() {

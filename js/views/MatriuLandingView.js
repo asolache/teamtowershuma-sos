@@ -102,32 +102,34 @@ export default class MatriuLandingView {
 
         return `
         <style>
-            /* ── Matriu skin ───────────────────────────────────────────── */
+            /* ── Matriu Catalunya skin · SOS theme aliased ──────────────── */
+            /* MATRIU-SOS-REBRAND-001 · alias matriu vars → SOS theme vars per
+               heretar light/dark automàticament + typography unificada.        */
             .mt-shell {
-                --mt-cream:  #f1ebde;
-                --mt-dark:   #2a3a2a;
-                --mt-tcotta: #c25a3a;
-                --mt-olive:  #5a6e4f;
-                --mt-blue:   #2c4a7a;
-                --mt-ink:    #1a1f1a;
-                --mt-rule:   rgba(42,58,42,0.18);
-                --mt-line:   rgba(42,58,42,0.10);
-                background: var(--mt-cream);
-                color: var(--mt-dark);
-                font-family: 'Inter', 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
+                --mt-cream:  var(--bg-dark);        /* page background */
+                --mt-dark:   var(--text-main);      /* primary text */
+                --mt-tcotta: var(--accent-purple);  /* primary accent · soci */
+                --mt-olive:  var(--accent-indigo);  /* secondary accent */
+                --mt-blue:   var(--accent-indigo);  /* links */
+                --mt-ink:    var(--bg-panel);       /* CTA bg · panels */
+                --mt-rule:   var(--border-default);
+                --mt-line:   var(--border-subtle);
+                background: var(--bg-dark);
+                color: var(--text-main);
+                font-family: var(--font-base);
                 line-height: 1.5;
                 width: 100vw;
                 min-height: 100%;
                 overflow-x: hidden;
             }
-            .mt-italic { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; }
-            .mt-mono   { font-family: ui-monospace, SFMono-Regular, monospace; }
+            .mt-italic { font-family: var(--font-base); font-style: italic; font-weight: 400; }
+            .mt-mono   { font-family: var(--font-mono); }
             .mt-shell a { color: inherit; }
             .mt-container { max-width: 1240px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px); }
 
             /* ── Topbar mini ──────────────────────────────────────────── */
-            .mt-topbar { display: flex; align-items: center; justify-content: space-between; padding: 22px clamp(20px, 4vw, 48px); border-bottom: 1px solid var(--mt-line); position: sticky; top: 0; background: rgba(241,235,222,0.92); backdrop-filter: blur(8px); z-index: 10; }
-            .mt-brand { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 26px; color: var(--mt-dark); display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+            .mt-topbar { display: flex; align-items: center; justify-content: space-between; padding: 22px clamp(20px, 4vw, 48px); border-bottom: 1px solid var(--mt-line); position: sticky; top: 0; background: var(--bg-dark); opacity: 0.96; backdrop-filter: blur(8px); z-index: 10; }
+            .mt-brand { font-family: var(--font-base); font-weight: 700; letter-spacing: -0.01em; font-size: 22px; color: var(--mt-dark); display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
             .mt-brand-mark { width: 24px; height: 24px; display: inline-block; }
             .mt-nav { display: flex; gap: clamp(12px, 2vw, 28px); font-size: 13px; color: var(--mt-dark); opacity: 0.78; }
             .mt-nav a { text-decoration: none; transition: opacity 0.2s; }
@@ -143,8 +145,8 @@ export default class MatriuLandingView {
             /* ── Hero ─────────────────────────────────────────────────── */
             .mt-hero { padding: clamp(48px, 8vw, 96px) 0 clamp(40px, 6vw, 64px); }
             .mt-hero-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: clamp(24px, 4vw, 64px); align-items: end; }
-            .mt-hero h1 { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; font-size: clamp(48px, 9vw, 120px); line-height: 0.95; letter-spacing: -0.02em; color: var(--mt-dark); margin-top: 22px; }
-            .mt-hero h1 .blk { font-style: normal; font-family: 'Inter', 'Inter Tight', sans-serif; font-weight: 700; }
+            .mt-hero h1 { font-family: var(--font-base); font-weight: 900; font-size: clamp(48px, 9vw, 110px); line-height: 0.98; letter-spacing: -0.025em; color: var(--mt-dark); margin-top: 22px; }
+            .mt-hero h1 .blk { font-weight: 900; background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
             .mt-hero-counter { font-family: ui-monospace, monospace; font-size: 11px; color: var(--mt-dark); opacity: 0.55; margin-bottom: 8px; letter-spacing: 0.08em; }
             .mt-hero-block { display: flex; flex-direction: column; gap: 24px; }
             .mt-hero-num { font-family: ui-monospace, monospace; font-size: 11px; color: var(--mt-dark); opacity: 0.55; letter-spacing: 0.08em; }
@@ -250,20 +252,20 @@ export default class MatriuLandingView {
             .mt-modal { position: fixed; inset: 0; background: rgba(26,31,26,0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(6px); }
             .mt-modal.is-open { display: flex; animation: mtFade 0.2s ease-out; }
             @keyframes mtFade { from { opacity: 0; } to { opacity: 1; } }
-            .mt-modal-card { background: #f1ebde; border-radius: 16px; padding: clamp(28px, 4vw, 44px); max-width: 520px; width: calc(100% - 32px); max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.45); }
-            .mt-modal-card h3 { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 32px; color: #2a3a2a; margin-bottom: 12px; line-height: 1.1; }
-            .mt-modal-card p  { font-size: 14px; line-height: 1.6; color: #3a4a3a; margin-bottom: 22px; }
-            .mt-modal-card p strong { color: #c25a3a; font-weight: 600; }
+            .mt-modal-card { background: var(--bg-panel); border: 1px solid var(--border-default); border-radius: 16px; padding: clamp(28px, 4vw, 44px); max-width: 520px; width: calc(100% - 32px); max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.65); }
+            .mt-modal-card h3 { font-family: var(--font-base); font-weight: 800; font-size: 26px; color: var(--text-main); margin-bottom: 12px; line-height: 1.15; letter-spacing: -0.02em; }
+            .mt-modal-card p  { font-size: 14px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 22px; }
+            .mt-modal-card p strong { color: var(--accent-purple); font-weight: 600; }
             .mt-input-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-            .mt-input-row label { font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5a6e4f; font-weight: 600; }
-            .mt-input { width: 100%; padding: 12px 14px; border: 1px solid rgba(42,58,42,0.25); border-radius: 8px; background: #ffffff; font-size: 14px; font-family: 'Inter Tight', 'Inter', sans-serif; color: #1a1f1a; outline: none; transition: border-color 0.15s, box-shadow 0.15s; box-sizing: border-box; }
-            .mt-input::placeholder { color: rgba(42,58,42,0.4); }
-            .mt-input:focus { border-color: #c25a3a; box-shadow: 0 0 0 3px rgba(194,90,58,0.12); }
+            .mt-input-row label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; }
+            .mt-input { width: 100%; padding: 12px 14px; border: 1px solid var(--border-default); border-radius: 8px; background: var(--bg-elevated); font-size: 14px; font-family: var(--font-base); color: var(--text-main); outline: none; transition: border-color 0.15s, box-shadow 0.15s; box-sizing: border-box; }
+            .mt-input::placeholder { color: var(--text-muted); }
+            .mt-input:focus { border-color: var(--accent-purple); box-shadow: 0 0 0 3px rgba(168,85,247,0.12); }
             .mt-modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; }
-            .mt-modal-cancel { background: transparent; border: 1px solid rgba(42,58,42,0.2); color: #2a3a2a; cursor: pointer; font-size: 14px; padding: 12px 22px; border-radius: 999px; font-weight: 600; transition: background 0.15s; font-family: 'Inter Tight', 'Inter', sans-serif; }
-            .mt-modal-cancel:hover { background: rgba(42,58,42,0.06); }
-            .mt-modal-confirm { background: #1a1f1a; color: #f1ebde; border: 0; padding: 14px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; font-family: 'Inter Tight', 'Inter', sans-serif; box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
-            .mt-modal-confirm:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(26,31,26,0.35); }
+            .mt-modal-cancel { background: transparent; border: 1px solid var(--border-default); color: var(--text-secondary); cursor: pointer; font-size: 14px; padding: 12px 22px; border-radius: 999px; font-weight: 600; transition: background 0.15s; font-family: var(--font-base); }
+            .mt-modal-cancel:hover { background: var(--bg-elevated); }
+            .mt-modal-confirm { background: var(--accent-purple); color: #fff; border: 0; padding: 14px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; font-family: var(--font-base); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
+            .mt-modal-confirm:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(168,85,247,0.35); }
             .mt-modal-confirm:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
             /* ── Responsive ───────────────────────────────────────────── */
@@ -296,10 +298,10 @@ export default class MatriuLandingView {
             <header class="mt-topbar">
                 <a href="/matriu" class="mt-brand" data-link>
                     <svg class="mt-brand-mark" viewBox="0 0 24 24" aria-hidden="true">
-                        <polygon points="12,2 22,20 2,20" fill="none" stroke="#2a3a2a" stroke-width="1.5"></polygon>
-                        <polygon points="12,8 18,18 6,18" fill="#c25a3a"></polygon>
+                        <polygon points="12,2 22,20 2,20" fill="none" stroke="currentColor" stroke-width="1.5"></polygon>
+                        <polygon points="12,8 18,18 6,18" fill="var(--accent-purple)"></polygon>
                     </svg>
-                    Matriu
+                    Matriu Catalunya
                 </a>
                 <nav class="mt-nav">
                     <a href="#tokenomic">Tokenomic</a>
@@ -321,19 +323,21 @@ export default class MatriuLandingView {
                     <div class="mt-hero-grid" style="margin-top: 28px;">
                         <div>
                             <h1>
-                                <span class="mt-italic">Sigues</span><br>
-                                <span class="mt-italic">dels primers</span><br>
-                                <span class="mt-italic">en el nucli</span>
+                                Una Catalunya<br>
+                                <span class="blk">descentralitzada</span><br>
+                                <span class="mt-italic">i autosuficient</span>
                             </h1>
                         </div>
                         <div class="mt-hero-block">
                             <div class="mt-hero-num">01</div>
                             <p class="mt-hero-body">
-                                <strong>Matriu</strong> és una incubadora cooperativa que reparteix valor
-                                en temps real. Equity, collita, accés, drets d'ús — tot el que aportes
-                                es converteix en participacions automàtiques i auditables.
+                                <strong>Matriu Catalunya</strong> és la xarxa cooperativa SOS · projectes,
+                                ofertes i oportunitats verificables al permaweb · IA · triple-entry
+                                accounting · contractes intel·ligents per a automatització legal +
+                                comptable + tresoreria. Tot allò que aportes es converteix en
+                                participacions automàtiques i auditables.
                             </p>
-                            <a href="#cohort" class="mt-hero-cta" id="mtCtaHero">Reserva el teu seient →</a>
+                            <a href="#mtSosMember" class="mt-hero-cta" id="mtCtaHero">Crea perfil · 1 € →</a>
                             <div class="mt-hero-meta">
                                 <span class="mt-hero-meta-key">Com funciona</span>
                                 <a href="#engine" style="text-decoration: underline; opacity: 0.85;">Veure value mapping engine ↓</a>
@@ -537,6 +541,47 @@ export default class MatriuLandingView {
                 </div>
             </section>
 
+            <!-- COMM-001 · Comunitat SOS · feed de projectes/ofertes/oportunitats publicats al permaweb + CTA membership 1€ -->
+            <section style="padding: clamp(48px, 8vw, 80px) 0; border-top: 1px solid var(--mt-rule);">
+                <div class="mt-container">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.4rem;">
+                        <h2 class="mt-italic" style="font-size:clamp(32px,5vw,56px);margin:0;color:var(--mt-dark);">Comunitat <strong style="font-style:normal;font-family:'Inter',sans-serif;">SOS</strong></h2>
+                        <a href="#mtSosMember" class="mt-cta-mini" style="background:var(--mt-tcotta);">✦ Soci · 1 € →</a>
+                    </div>
+                    <p class="mt-hero-body" style="max-width:680px;margin-bottom:2rem;">
+                        Descobreix què està fent la comunitat ara mateix · projectes publicats, ofertes obertes i oportunitats al permaweb. Es paguen els membre per a publicar (0,05€ per entrada · ×1.5 free) i discovery sempre lliure. <a href="/opportunities" data-link style="border-bottom:1px solid var(--mt-rule);">Explorar totes →</a>
+                    </p>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.4rem;">
+                        <div id="mtSosProjects" style="background:rgba(42,58,42,0.04);border:1px solid var(--mt-rule);border-radius:14px;padding:1.2rem 1.3rem;">
+                            <h3 style="font-family:'Instrument Serif',Georgia,serif;font-size:22px;margin:0 0 8px 0;color:var(--mt-tcotta);">🏛 Projectes</h3>
+                            <div data-stream="projects" class="mt-stream-list" style="font-size:13px;line-height:1.6;color:var(--mt-dark);min-height:80px;">— carregant —</div>
+                            <a href="/opportunities?tab=projects" data-link style="font-size:11px;color:var(--mt-blue);text-decoration:underline;font-family:ui-monospace,monospace;display:inline-block;margin-top:10px;">→ veure tots</a>
+                        </div>
+                        <div id="mtSosOfertes" style="background:rgba(42,58,42,0.04);border:1px solid var(--mt-rule);border-radius:14px;padding:1.2rem 1.3rem;">
+                            <h3 style="font-family:'Instrument Serif',Georgia,serif;font-size:22px;margin:0 0 8px 0;color:var(--mt-tcotta);">🛍 Ofertes</h3>
+                            <div data-stream="market" class="mt-stream-list" style="font-size:13px;line-height:1.6;color:var(--mt-dark);min-height:80px;">— carregant —</div>
+                            <a href="/opportunities?tab=market" data-link style="font-size:11px;color:var(--mt-blue);text-decoration:underline;font-family:ui-monospace,monospace;display:inline-block;margin-top:10px;">→ veure totes</a>
+                        </div>
+                        <div id="mtSosWOs" style="background:rgba(42,58,42,0.04);border:1px solid var(--mt-rule);border-radius:14px;padding:1.2rem 1.3rem;">
+                            <h3 style="font-family:'Instrument Serif',Georgia,serif;font-size:22px;margin:0 0 8px 0;color:var(--mt-tcotta);">📋 Oportunitats (WOs)</h3>
+                            <div data-stream="workorders" class="mt-stream-list" style="font-size:13px;line-height:1.6;color:var(--mt-dark);min-height:80px;">— carregant —</div>
+                            <a href="/opportunities?tab=workorders" data-link style="font-size:11px;color:var(--mt-blue);text-decoration:underline;font-family:ui-monospace,monospace;display:inline-block;margin-top:10px;">→ veure totes</a>
+                        </div>
+                    </div>
+
+                    <!-- CTA membership · 1 € · publicar perfil + projecte + ofertes + oportunitats -->
+                    <div id="mtSosMember" style="margin-top:3rem;padding:2rem 1.6rem;background:linear-gradient(135deg,rgba(194,90,58,0.08),rgba(42,58,42,0.04));border:1px solid var(--mt-tcotta);border-radius:18px;display:flex;gap:1.6rem;align-items:center;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:280px;">
+                            <h3 style="font-family:'Instrument Serif',Georgia,serif;font-size:28px;margin:0 0 0.5rem;color:var(--mt-dark);font-style:italic;">Crea el teu perfil · <strong style="font-style:normal;font-family:'Inter',sans-serif;">1 €</strong> de fee únic</h3>
+                            <p style="font-size:14px;line-height:1.6;color:var(--mt-dark);margin:0;max-width:540px;">
+                                Activa la teva identitat DID + ECDSA · publica el teu perfil al permaweb · puja projectes, ofertes i oportunitats que tota la comunitat SOS pugui descobrir · queda part del directori que enllaçarem a <strong>teamtowershuma.com</strong>.
+                            </p>
+                        </div>
+                        <a href="/identity" data-link class="mt-hero-cta" style="background:var(--mt-tcotta);align-self:center;">✦ Crear perfil · 1 € →</a>
+                    </div>
+                </div>
+            </section>
+
             <!-- FOOTER CTA -->
             <section class="mt-footer-cta">
                 <div class="mt-container">
@@ -716,6 +761,9 @@ export default class MatriuLandingView {
     async afterRender() {
         ensureExplainerStyle();
         bindExplainerBadges(document);
+
+        // COMM-001 · render dels 3 streams de la comunitat (fire-and-forget)
+        this._renderCommunityStreams().catch(e => console.warn('[matriu] streams', e?.message));
 
         // Smooth scroll para anchor links internos (no SPA)
         document.querySelectorAll('.mt-shell a[href^="#"]').forEach(a => {
@@ -983,6 +1031,38 @@ export default class MatriuLandingView {
                 if (btn) { btn.disabled = false; btn.textContent = 'Crear projecte →'; }
             }
         });
+    }
+
+    // COMM-001 · render dels 3 streams · top-N de cada type
+    async _renderCommunityStreams() {
+        try {
+            const { KB } = await import('../core/kb.js');
+            const { PUBLIC_PROJECT_TYPE }    = await import('../core/publicProjectService.js');
+            const { PUBLIC_WORK_ORDER_TYPE, PUBLIC_MARKET_ITEM_TYPE } = await import('../core/publicEntityService.js');
+            const [projects, market, wos] = await Promise.all([
+                KB.query({ type: PUBLIC_PROJECT_TYPE }).catch(() => []),
+                KB.query({ type: PUBLIC_MARKET_ITEM_TYPE }).catch(() => []),
+                KB.query({ type: PUBLIC_WORK_ORDER_TYPE }).catch(() => []),
+            ]);
+            const _esc = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+            const renderList = (entries, format) => {
+                if (!entries || entries.length === 0) {
+                    return '<div style="color:rgba(42,58,42,0.55);font-style:italic;">Encara ningú · sigues el primer.</div>';
+                }
+                return entries.slice(0, 5).map(e => {
+                    const c = e?.content || {};
+                    return '<div style="padding:6px 0;border-bottom:1px dashed rgba(42,58,42,0.10);">' + format(c, _esc) + '</div>';
+                }).join('');
+            };
+            const proj  = document.querySelector('[data-stream="projects"]');
+            const mkt   = document.querySelector('[data-stream="market"]');
+            const wosEl = document.querySelector('[data-stream="workorders"]');
+            if (proj)  proj.innerHTML  = renderList(projects, (c, esc) => `<strong>${esc(c.name || '?')}</strong>${c.sectorId ? ' · <code style="font-size:11px;opacity:0.7;">' + esc(c.sectorId) + '</code>' : ''}`);
+            if (mkt)   mkt.innerHTML   = renderList(market,   (c, esc) => `<strong>${esc(c.title || '?')}</strong>${typeof c.priceEur === 'number' ? ' · <em style="color:#5a6e4f;">' + c.priceEur + '€</em>' : ''}${c.kind ? ' · ' + esc(c.kind) : ''}`);
+            if (wosEl) wosEl.innerHTML = renderList(wos,      (c, esc) => `<strong>${esc(c.title || '?')}</strong>${c.status ? ' · <code style="font-size:11px;opacity:0.7;">' + esc(c.status) + '</code>' : ''}${typeof c.estimatedHours === 'number' ? ' · ~' + c.estimatedHours + 'h' : ''}`);
+        } catch (e) {
+            console.warn('[matriu] community streams failed', e?.message);
+        }
     }
 
     destroy() { /* nothing to clean */ }
