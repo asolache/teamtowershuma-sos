@@ -30,6 +30,7 @@ const TAB_DEFS = Object.freeze([
     { id: 'market',    type: PUBLIC_MARKET_ITEM_TYPE, icon: '🛍', label: 'Productes' },
     { id: 'workshops', type: PUBLIC_WORKSHOP_TYPE,    icon: '🎓', label: 'Workshops' },
     { id: 'cvnodals',  type: NEURAL_PATH_BUNDLE_TYPE, icon: '🧠', label: 'CV nodals' },
+    { id: 'users',     type: 'matriu_member',         icon: '👥', label: 'Usuaris' },
 ]);
 
 function escapeHtml(s) {
@@ -293,16 +294,16 @@ export default class OpportunitiesView {
         // PR-K · carrega cache dels 5 tabs en paral·lel · CV nodals filtrats
         // a sols els publicats (arweaveTxId · ja són públics a la xarxa).
         try {
-            const [projects, workorders, market, workshops, cvnodalsRaw] = await Promise.all(
+            const [projects, workorders, market, workshops, cvnodalsRaw, users] = await Promise.all(
                 TAB_DEFS.map(t => KB.query({ type: t.type }).catch(() => []))
             );
             // CV nodals · sols els publicats al permaweb (filtra els privats del propi usuari)
             const cvnodals = (cvnodalsRaw || []).filter(n => !!n?.content?.arweaveTxId);
             this._entriesByTab = {
-                projects, workorders, market, workshops, cvnodals,
+                projects, workorders, market, workshops, cvnodals, users,
             };
         } catch (e) {
-            this._entriesByTab = { projects: [], workorders: [], market: [], workshops: [], cvnodals: [] };
+            this._entriesByTab = { projects: [], workorders: [], market: [], workshops: [], cvnodals: [], users: [] };
             console.warn('[opportunities] KB.query failed', e);
         }
         // TRUST-001 · pre-compute trust scores per a tots els ids visibles
@@ -476,6 +477,23 @@ export default class OpportunitiesView {
                 <div class="op-stat"><div class="op-stat-label">Owners únics</div><div class="op-stat-value">${owners.size}</div></div>
                 <div class="op-stat"><div class="op-stat-label">🔐 firmats</div><div class="op-stat-value" style="color:#22c55e;">${signedCount}</div></div>
             `;
+        } else if (this._activeTab === 'users') {
+            // Stats users · skills declarades · sectors · cohorts · ikigai presents
+            const skillsSet = new Set(); const sectorsSet = new Set(); const cohorts = new Set(); let ikigaiCount = 0;
+            for (const e of filtered) {
+                const c = e?.content || {};
+                (c.skillsDeclared || []).forEach(s => skillsSet.add(s));
+                (c.sectorsExperience || []).forEach(s => sectorsSet.add(s));
+                if (typeof c.cohortNumber === 'number') cohorts.add(c.cohortNumber);
+                if (c.ikigai) ikigaiCount++;
+            }
+            statsHtml = `
+                <div class="op-stat"><div class="op-stat-label">Usuaris</div><div class="op-stat-value">${this._entries.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Filtrats</div><div class="op-stat-value">${filtered.length}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Skills cobertes</div><div class="op-stat-value">${skillsSet.size}</div></div>
+                <div class="op-stat"><div class="op-stat-label">Cohorts</div><div class="op-stat-value">${cohorts.size}</div></div>
+                <div class="op-stat"><div class="op-stat-label">🌸 Ikigai</div><div class="op-stat-value" style="color:#ec4899;">${ikigaiCount}</div></div>
+            `;
         }
         stats.innerHTML = statsHtml;
 
@@ -500,6 +518,10 @@ export default class OpportunitiesView {
             const hay = [
                 c.name, c.title, c.description, c.sectorId, c.sectorTT, c.projectType,
                 c.subtype, c.ownerDid, c.kind, c.status, c.accessTier, c.cnae, c.type,
+                // OPP-USERS · matriu_member fields
+                c.displayName, c.handle, c.bio,
+                ...(c.skillsDeclared || []),
+                ...(c.sectorsExperience || []),
                 ...(c.lookingForSkills || []),
                 ...(c.lookingForSectors || []),
                 ...(c.tags || []),
@@ -515,7 +537,38 @@ export default class OpportunitiesView {
         if (this._activeTab === 'market')     return this._cardHtmlMarket(e);
         if (this._activeTab === 'workshops')  return this._cardHtmlWorkshop(e);
         if (this._activeTab === 'cvnodals')   return this._cardHtmlCvNodal(e);
+        if (this._activeTab === 'users')      return this._cardHtmlUser(e);
         return this._cardHtmlProject(e);
+    }
+
+    // OPP-USERS · render usuari (matriu_member) com a card amb avatar + skills + cohort
+    _cardHtmlUser(e) {
+        if (!e || !e.content) return '';
+        const c = e.content;
+        const handle = c.handle ? String(c.handle).replace(/^@/, '') : null;
+        const displayName = c.displayName || handle || e.id;
+        const initial = (displayName || '?').slice(0, 1).toUpperCase();
+        const avatar = c.avatar
+            ? `<img src="${escapeHtml(c.avatar)}" alt="${escapeHtml(displayName)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+            : `<div style="width:48px;height:48px;border-radius:50%;background:${_gradientForId(e.id)};display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:700;color:#fff;flex-shrink:0;">${escapeHtml(initial)}</div>`;
+        const skills = Array.isArray(c.skillsDeclared) ? c.skillsDeclared.slice(0, 4) : [];
+        const ikiBadge = c.ikigai ? '<span style="background:rgba(236,72,153,0.15);color:#ec4899;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">🌸 ikigai</span>' : '';
+        const cohortBadge = (typeof c.cohortNumber === 'number') ? `<span style="background:rgba(250,204,21,0.12);color:#facc15;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">cohort ${c.cohortNumber}</span>` : '';
+        const availColor = c.availability === 'limited' ? '#facc15' : c.availability === 'off' ? '#94a3b8' : '#22c55e';
+        const linkHref = handle ? '/u/' + encodeURIComponent(handle) : '/n/' + encodeURIComponent(e.id);
+        return `<a href="${linkHref}" data-link class="op-card" style="display:flex;gap:12px;text-decoration:none;color:inherit;border-left-color:${availColor};">
+            ${avatar}
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;">
+                    <strong style="font-size:0.95rem;">${escapeHtml(displayName)}</strong>
+                    ${handle ? `<code style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">@${escapeHtml(handle)}</code>` : ''}
+                    ${ikiBadge}
+                    ${cohortBadge}
+                </div>
+                ${c.bio ? `<div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;line-height:1.45;">${escapeHtml(String(c.bio).slice(0, 140))}${c.bio.length > 140 ? '…' : ''}</div>` : ''}
+                ${skills.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;">${skills.map(s => `<span style="background:#6366f118;color:#a5b4fc;padding:1px 7px;border-radius:999px;font-size:10px;font-family:var(--font-mono);">${escapeHtml(s)}</span>`).join('')}</div>` : ''}
+            </div>
+        </a>`;
     }
 
     _cardHtmlProject(e) {

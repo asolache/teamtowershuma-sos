@@ -5,10 +5,14 @@
 import {
     CATALOG_SOURCE_TYPES, SELLABLE_SOP_KEYWORD,
     fromMarketItem, fromWorkshop, fromSop,
+    fromPublicMarketItem, fromPublicWorkshop,
     buildCatalog, filterCatalog, computeCatalogStats, findCatalogEntry,
     shareUrlFor,
     markSopAsSellable, unmarkSopAsSellable,
 } from '../core/marketCatalogService.js';
+import {
+    PUBLIC_MARKET_ITEM_TYPE, PUBLIC_WORKSHOP_TYPE,
+} from '../core/publicEntityService.js';
 
 let pass = 0, fail = 0;
 const t = (cond, msg) => { if (cond) { pass++; console.log('✓ ' + msg); } else { fail++; console.error('✘ ' + msg); } };
@@ -33,10 +37,12 @@ const mkSop = (id, sellable = false, props = {}) => ({
 });
 
 // ─── A · constants + source converters ────────────────────────────────────
-eq(CATALOG_SOURCE_TYPES.length, 3,                                'A · 3 source types');
+eq(CATALOG_SOURCE_TYPES.length, 5,                                'A · 5 source types (3 local + 2 permaweb)');
 t(CATALOG_SOURCE_TYPES.includes('market_item'),                   'A · market_item');
 t(CATALOG_SOURCE_TYPES.includes('workshop'),                      'A · workshop');
 t(CATALOG_SOURCE_TYPES.includes('sop'),                           'A · sop');
+t(CATALOG_SOURCE_TYPES.includes('public_market_item_entry'),      'A · public_market_item (permaweb)');
+t(CATALOG_SOURCE_TYPES.includes('public_workshop_entry'),         'A · public_workshop (permaweb)');
 eq(SELLABLE_SOP_KEYWORD, 'market-sellable',                       'A · sellable keyword');
 
 // fromMarketItem
@@ -222,6 +228,73 @@ t(threw,                                                          'H · null sop
 threw = false;
 try { markSopAsSellable({ type: 'other' }); } catch (_) { threw = true; }
 t(threw,                                                          'H · non-sop throws');
+
+// ─── I · PERMAWEB · fromPublicMarketItem + fromPublicWorkshop ────────────
+const mkPubItem = (id, props = {}) => ({
+    id: 'pubentry-' + id, type: PUBLIC_MARKET_ITEM_TYPE,
+    content: { itemId: id, projectId: 'p1', title: 'Pub ' + id, kind: 'service', priceEur: 300, ownerDid: 'did:sos:x', ownerHandle: '@x', txId: 'tx-' + id, ...props },
+    updatedAt: 500, createdAt: 400,
+});
+const mkPubWs = (id, props = {}) => ({
+    id: 'pubentry-' + id, type: PUBLIC_WORKSHOP_TYPE,
+    content: { workshopId: id, projectId: 'p1', title: 'PubWs ' + id, outline: 'desc', priceEur: 480, ownerDid: 'did:sos:y', ownerHandle: '@y', txId: 'tx-' + id, ...props },
+    updatedAt: 600, createdAt: 500,
+});
+
+const ppItem = fromPublicMarketItem(mkPubItem('pmi1'));
+t(ppItem !== null,                                                'I · pub market item → entry');
+eq(ppItem.sourceType, 'public_market_item_entry',                 'I · sourceType public');
+eq(ppItem.isPermaweb, true,                                       'I · isPermaweb true');
+eq(ppItem.id, 'pmi1',                                             'I · id from itemId');
+eq(ppItem.providerHandle, '@x',                                   'I · ownerHandle → providerHandle');
+eq(ppItem.ownerDid, 'did:sos:x',                                  'I · ownerDid preserved');
+eq(ppItem.txId, 'tx-pmi1',                                        'I · txId preserved');
+eq(ppItem.visibility, 'public',                                   'I · sempre public');
+
+// fromPublicMarketItem · wrong type → null
+eq(fromPublicMarketItem({ type: 'other' }), null,                 'I · wrong type → null');
+eq(fromPublicMarketItem(null), null,                              'I · null → null');
+
+const ppWs = fromPublicWorkshop(mkPubWs('pws1'));
+eq(ppWs.sourceType, 'public_workshop_entry',                      'I · sourceType public ws');
+eq(ppWs.kind, 'workshop',                                         'I · kind workshop');
+eq(ppWs.isPermaweb, true,                                         'I · ws isPermaweb');
+eq(ppWs.providerHandle, '@y',                                     'I · ws ownerHandle');
+
+// ─── J · buildCatalog · aggregation amb permaweb ─────────────────────────
+const catFed = buildCatalog({
+    marketItems:        [mkItem('m1')],
+    workshops:          [mkWorkshop('w1')],
+    publicMarketItems:  [mkPubItem('pmi1'), mkPubItem('pmi2')],
+    publicWorkshops:    [mkPubWs('pws1')],
+});
+eq(catFed.length, 5,                                              'J · 5 entries (1 mi + 1 ws + 2 pubmi + 1 pubws)');
+const sources = catFed.map(e => e.sourceType);
+t(sources.includes('public_market_item_entry'),                   'J · public_market_item present');
+t(sources.includes('public_workshop_entry'),                      'J · public_workshop present');
+// Order DESC · permaweb té updatedAt 500/600 · primer
+eq(catFed[0].id, 'pws1',                                          'J · pub workshop primer (updatedAt 600)');
+
+// Dedupe · permaweb prefer si mateix id
+const localM = mkItem('shared-id');
+localM.content.title = 'Local version';
+const pubM = mkPubItem('shared-id');
+pubM.content.title = 'Permaweb version';
+const catDedup = buildCatalog({
+    marketItems:       [localM],
+    publicMarketItems: [pubM],
+});
+eq(catDedup.length, 1,                                            'J · dedupe · 1 entry');
+eq(catDedup[0].isPermaweb, true,                                  'J · permaweb wins dedupe');
+
+// visibleProjectIds · permaweb sempre visible (ignora filter)
+const catVisFed = buildCatalog({
+    marketItems:       [mkItem('mlocal', { providerProjectId: 'pX' })],
+    publicMarketItems: [mkPubItem('ppub', { projectId: 'pY' })],
+    visibleProjectIds: new Set(['p-other']),
+});
+t(catVisFed.some(e => e.isPermaweb),                              'J · permaweb sempre visible (sense filter)');
+t(!catVisFed.some(e => e.id === 'mlocal'),                        'J · local fora del visible filter · exclòs');
 
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

@@ -416,6 +416,21 @@ export const INITIAL_BACKLOG = Object.freeze([
     }),
 
     Object.freeze({
+        id: 'market-permaweb-federation',
+        title: 'Market permaweb federation + Users tab a /opportunities',
+        description: '/market ara agrega també public_market_item_entry + public_workshop_entry del permaweb cross-device (5 sources totals). Stats strip mostra count permaweb separat. Cards amb badge 🌐 verd quan són permaweb · dedupe local+permaweb · permaweb sempre visible (ignora visibleProjectIds). Nou tab Usuaris a /opportunities · llista matriu_member federats amb avatar + skills + cohort + 🌸 ikigai badge. Filter de search inclou displayName/handle/bio/skills/sectors. Cards usuaris linkables a /u/{handle}.',
+        principles: ['principle-1-nodes', 'principle-3-stripe-stakeholders'],
+        status: 'completed',
+        priority: 'high',
+        complexity: 'M',
+        dependencies: ['market-catalog-multi-source', 'profile-public-view'],
+        testRequirements: ['marketCatalog.test.js · 99 tests (24 nous) · 5 source types · fromPublicMarketItem/Workshop · isPermaweb flag · dedupe local+permaweb (permaweb wins) · visibleProjectIds ignora permaweb'],
+        suggestedFiles: ['js/core/marketCatalogService.js', 'js/views/MarketView.js', 'js/views/OpportunitiesView.js'],
+        completedAt: '2026-05-14',
+        completedPr: 'pending',
+    }),
+
+    Object.freeze({
         id: 'profile-public-view',
         title: 'Profile públic /u/{handle} · skills + roles + projects + trust + offerings + badges',
         description: 'Vista pública shareable a /u/{handle} agregant matriu_member (identitat base + skillsDeclared + sectorsExperience + cohort) + projects (creatorHandle match · case-insensitive) + roles (createdBy match · primarySkillId derivat) + attestations (rebudes + emeses · trust score recursive) + market entries (providerHandle match · 3 sources) + auto-badges (cohort-0/master/founder/multi-project/trusted/provider/attester). OG meta tags + share button + share URL /u/{handle}.',
