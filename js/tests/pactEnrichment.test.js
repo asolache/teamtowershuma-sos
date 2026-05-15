@@ -7,6 +7,8 @@ import {
     extractVestingFromTokenomics, extractSunsetMetricsFromInvoices,
     buildEnrichedPactDraft,
     buildAiPromptForPactClauses, applyAIDraftToPact,
+    extractValueContributionsPerParty, suggestSlicingPieShares,
+    extractDocsForPermaweb,
 } from '../core/pactEnrichmentService.js';
 import { quickEntry } from '../core/ledgerService.js';
 import { buildEmptyTokenDesign, setVestingParams, setDistributionPct } from '../core/tokenomicsService.js';
@@ -205,6 +207,142 @@ t(appBad.error.includes('parse'),                                 'G · error pa
 threw = false;
 try { applyAIDraftToPact(null, '{}'); } catch (_) { threw = true; }
 t(threw,                                                          'G · null draft throws');
+
+// ─── H · extractValueContributionsPerParty ──────────────────────────────
+const partiesH = [
+    { identityId: 'did:sos:alvaro', handle: 'alvaro', attestationCount: 2 },
+    { identityId: 'did:sos:bob',    handle: 'bob',    attestationCount: 1 },
+];
+const membersH = [
+    { content: { handle: '@alvaro', displayName: 'Alvaro', skillsDeclared: ['vision-strategic', 'slicing-pie'] } },
+    { content: { handle: 'bob',     displayName: 'Bob',    skillsDeclared: ['triple-entry-accounting'] } },
+];
+const wos = [
+    { content: { assignedTo: 'alvaro', status: 'completed', estimatedHours: 10, deliveredValueEur: 1200 } },
+    { content: { assignedTo: '@alvaro', status: 'done',     estimatedHours: 5,  deliveredValueEur: 500 } },
+    { content: { assignedTo: 'bob',    status: 'completed', estimatedHours: 8 } },
+    { content: { assignedTo: 'alvaro', status: 'in_progress', estimatedHours: 99 } },     // no compta
+];
+const sopsH = [
+    { content: { createdBy: '@alvaro', marketSellable: true } },
+    { content: { createdBy: 'alvaro', marketSellable: false } },
+    { content: { createdBy: 'bob' } },
+];
+const propsH = [
+    { content: { createdBy: 'alvaro', status: 'accepted', pricing: { total: 3000 } } },
+    { content: { createdBy: 'alvaro', status: 'sent', pricing: { total: 1500 } } },
+    { content: { createdBy: 'bob',    status: 'rejected' } },
+];
+const invoicesH = [
+    { content: { createdBy: 'alvaro', status: 'paid',  items: [{ total: 500 }], taxRate: 0.21 } },
+    { content: { createdBy: 'alvaro', status: 'sent',  items: [{ total: 200 }], taxRate: 0.21 } },
+];
+const marketH = [
+    { content: { providerHandle: 'alvaro', kind: 'product' } },
+    { content: { providerHandle: 'alvaro', kind: 'workshop' } },
+    { content: { providerHandle: 'bob',    kind: 'service' } },
+];
+const attestationsH = [
+    { content: { attestedDid: 'did:sos:alvaro', attestationKind: 'endorses-founder' } },
+    { content: { attestedHandle: 'alvaro', attestationKind: 'cohort-member' } },
+    { content: { attestedHandle: 'bob',    attestationKind: 'cohort-member' } },
+];
+
+const contributions = extractValueContributionsPerParty({
+    parties: partiesH, members: membersH, workOrders: wos,
+    sops: sopsH, proposals: propsH, invoices: invoicesH,
+    marketItems: marketH, attestations: attestationsH,
+});
+
+t(contributions['did:sos:alvaro'],                                'H · alvaro contributions present');
+eq(contributions['did:sos:alvaro'].skillsDeclared.length, 2,      'H · alvaro · 2 skills declarats');
+eq(contributions['did:sos:alvaro'].workOrdersCompleted.count, 2,  'H · 2 WOs completed (case-insensitive)');
+eq(contributions['did:sos:alvaro'].workOrdersCompleted.hoursEstimated, 15, 'H · 15h estimated');
+eq(contributions['did:sos:alvaro'].workOrdersCompleted.valueEur, 1700, 'H · 1700€ delivered value');
+eq(contributions['did:sos:alvaro'].sopsAuthored.count, 2,         'H · 2 sops authored');
+eq(contributions['did:sos:alvaro'].sopsAuthored.sellableCount, 1, 'H · 1 sellable');
+eq(contributions['did:sos:alvaro'].marketOfferings.count, 2,      'H · 2 market offerings');
+eq(contributions['did:sos:alvaro'].marketOfferings.byKind.product, 1, 'H · 1 product');
+eq(contributions['did:sos:alvaro'].proposalsContributed.count, 2, 'H · 2 proposals');
+eq(contributions['did:sos:alvaro'].proposalsContributed.acceptedEur, 3000, 'H · 3000€ accepted');
+eq(contributions['did:sos:alvaro'].invoicesIssued.count, 2,       'H · 2 invoices');
+near(contributions['did:sos:alvaro'].invoicesIssued.paidEur, 500 * 1.21, 0.01, 'H · paid amount IVA');
+eq(contributions['did:sos:alvaro'].attestationsReceived.count, 2, 'H · 2 attestations');
+t(contributions['did:sos:alvaro'].valuePointsRaw > 0,             'H · valuePoints > 0');
+t(contributions['did:sos:alvaro'].valuePointsRaw > contributions['did:sos:bob'].valuePointsRaw,
+                                                                  'H · alvaro > bob (té més WO+sop+market+prop)');
+
+// Empty safe
+eq(Object.keys(extractValueContributionsPerParty({ parties: [] })).length, 0, 'H · empty parties · {}');
+
+// ─── I · suggestSlicingPieShares ────────────────────────────────────────
+const shares = suggestSlicingPieShares(contributions);
+eq(Object.keys(shares).length, 2,                                 'I · 2 parties');
+const sumShares = (shares['did:sos:alvaro'].share || 0) + (shares['did:sos:bob'].share || 0);
+near(sumShares, 1, 0.001,                                         'I · shares sum to ~1');
+t(shares['did:sos:alvaro'].share > shares['did:sos:bob'].share,   'I · alvaro > bob share');
+
+// Total 0 · equal split
+const zeroContribs = {
+    'a': { valuePointsRaw: 0 }, 'b': { valuePointsRaw: 0 },
+};
+const zeroShares = suggestSlicingPieShares(zeroContribs);
+near(zeroShares.a.share, 0.5, 0.001,                              'I · zero total · 50/50');
+
+// Empty
+eq(Object.keys(suggestSlicingPieShares({})).length, 0,            'I · empty · {}');
+
+// ─── J · extractDocsForPermaweb ─────────────────────────────────────────
+const docs = extractDocsForPermaweb({
+    project: { id: 'p1' },
+    canvas:  { steps: { vision: { value: 'v' }, mission: { value: 'm' }, values: { value: 'val' } } },
+    pitches: [{ id: 'pitch1', content: { publishedAt: 'x' } }],
+    tokenomicsDesigns: [{ id: 'td1', content: {} }],
+    attestations: [{ content: { signature: 'sig' } }, { content: {} }],
+    invoices: [{ content: { paymentProof: 'p' } }, { content: {} }],
+    proposals: [{ content: { signedAt: 'z' } }],
+    workshops: [{ id: 'w1' }],
+    sops: [{ id: 's1', content: { marketSellable: true, signature: 'sig' } }, { id: 's2', content: {} }],
+    marketItems: [{ id: 'm1' }, { id: 'm2' }],
+    pacts: [{ id: 'pa1', content: { signatures: [{}] } }],
+    ledgerEntries: [{ id: 'le1' }, { id: 'le2' }],
+});
+
+t(Array.isArray(docs.catalog),                                    'J · catalog array');
+t(docs.catalog.length >= 14,                                      'J · ≥14 kinds catalogats');
+const kinds = docs.catalog.map(c => c.kind);
+t(kinds.includes('project'),                                      'J · project kind');
+t(kinds.includes('canvas_snapshot'),                              'J · canvas_snapshot');
+t(kinds.includes('project_pitch'),                                'J · pitch');
+t(kinds.includes('token_design'),                                 'J · token_design');
+t(kinds.includes('pact'),                                         'J · pact');
+t(kinds.includes('attestation'),                                  'J · attestation');
+t(kinds.includes('invoice'),                                      'J · invoice');
+t(kinds.includes('workshop'),                                     'J · workshop');
+t(kinds.includes('sop'),                                          'J · sop');
+t(kinds.includes('market_item'),                                  'J · market_item');
+t(kinds.includes('ikigai_snapshot'),                              'J · ikigai_snapshot');
+t(kinds.includes('improvement_cycle'),                            'J · improvement_cycle');
+t(kinds.includes('swarm_flow_run'),                               'J · swarm_flow_run');
+t(kinds.includes('neural_path_bundle'),                           'J · neural_path_bundle');
+
+// Counts
+const findKind = (k) => docs.catalog.find(c => c.kind === k);
+eq(findKind('project').count, 1,                                  'J · project · 1');
+eq(findKind('project_pitch').count, 1,                            'J · pitch · 1');
+eq(findKind('attestation').count, 2,                              'J · attestations · 2');
+eq(findKind('attestation').signed, 1,                             'J · 1 attestation signed');
+eq(findKind('sop').count, 1,                                      'J · sop (sols sellable) · 1');
+eq(findKind('pact').signed, 1,                                    'J · pact signed · 1');
+
+// Totals
+t(docs.totals.totalItems >= 10,                                   'J · totalItems ≥10');
+t(docs.totals.totalSigned >= 2,                                   'J · totalSigned ≥2');
+
+// Empty
+const emptyDocs = extractDocsForPermaweb({});
+t(emptyDocs.catalog.length >= 14,                                 'J · empty · 14 kinds tots presents');
+eq(emptyDocs.totals.totalItems, 0,                                'J · empty totals 0');
 
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);
