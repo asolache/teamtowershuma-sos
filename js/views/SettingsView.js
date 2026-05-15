@@ -125,7 +125,7 @@ export default class SettingsView {
                 <span style="color:var(--text-muted);">·</span>
                 
             </div>
-            <h1 class="mat-hero-h1">Settings <strong>·</strong> Vault</h1>
+            <h1 class="mat-hero-h1">Settings <strong>·</strong> Vault <a href="/settings-v2" data-link style="margin-left:12px;padding:3px 10px;border-radius:999px;background:rgba(99,102,241,0.18);color:#a8b2ff;text-decoration:none;font-size:11px;font-weight:700;border:1px solid rgba(99,102,241,0.4);vertical-align:middle;" title="Settings simplificades · 5 tabs · KISS">🆕 V2 (5 tabs) →</a></h1>
             <p style="color:var(--text-muted);margin-bottom:var(--space-8);">API Keys · AI Engine · IndexedDB (zero localStorage)</p>
 
             <div class="sv-card" style="border-top:3px solid ${pColor};">

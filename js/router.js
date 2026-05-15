@@ -24,7 +24,8 @@ const ROUTES = [
     { path: '/kanban',    view: () => import('./views/KanbanView.js')   },
     { path: '/sops',      view: () => import('./views/SopsView.js')     },
     { path: '/focus',     view: () => import('./views/HomeView.js')     },
-    { path: '/settings',  view: () => import('./views/SettingsView.js') },
+    { path: '/settings',     view: () => import('./views/SettingsView.js') },
+    { path: '/settings-v2',  view: () => import('./views/SettingsV2View.js') },
     // UX-001 · folksonomía universal
     { path: '/tags',      view: () => import('./views/TagsView.js')     },
     // MKT-001 · Mercado SOS
