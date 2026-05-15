@@ -314,19 +314,85 @@
       ]
     },
     {
+      "id": "wo-interface-nodes-001",
+      "project_id": "sos-dev-internal",
+      "title": "INTERFACE-NODES-001 · Interfície entre processos",
+      "description": "interfaceService.js · contract payload entre processos · 9 field kinds\n· 4 trigger kinds · validatePayload runtime · SLA · stats.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "done",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747350500000,
+      "completed_at": 1747350800000,
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/interfaceAndResource.test.js",
+        "expect": "51 pass · 0 fail"
+      },
+      "estimated_cost_eur": 0.08,
+      "cost_actual_eur": 0.065,
+      "deliverable_uri": "git:HEAD..interfaceService+test",
+      "tags": [
+        "batch-3",
+        "jerarquia"
+      ]
+    },
+    {
+      "id": "wo-resources-entity-001",
+      "project_id": "sos-dev-internal",
+      "title": "RESOURCES-ENTITY-001 · Resources com a entitat",
+      "description": "resourceService.js · 7 kinds (tool/space/time/asset/subscription/\nequipment/consumable) · 8 capacity units · utilizationRatio + status\n· cost aggregation totalMonthlyCost + costByKind.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "done",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747350500000,
+      "completed_at": 1747350800000,
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/interfaceAndResource.test.js",
+        "expect": "51 pass · 0 fail"
+      },
+      "estimated_cost_eur": 0.08,
+      "cost_actual_eur": 0.065,
+      "deliverable_uri": "git:HEAD..resourceService+test",
+      "tags": [
+        "batch-3",
+        "jerarquia"
+      ]
+    },
+    {
       "id": "wo-dehardcode-claude-001",
       "project_id": "sos-dev-internal",
       "title": "DEHARDCODE-CLAUDE-001 · Treure Claude del codi",
-      "description": "Rename --accent-claude → --accent-orchestrator a 12+ views.\nseeds genèrics. MobileMockupView text neutre.",
+      "description": "Rename --accent-claude → --accent-orchestrator a 6 files (tokens.css +\n5 views). skill-seeds.js · CLAUDE_NODE rebatejat ORCHESTRATOR_NODE +\nDEFAULT_AGENT_NAME variable + comment apuntant al bridge. CLAUDE_NODE\nmantingut com a alias backwards-compat. MobileMockupView text neutre.",
       "priority": "high",
       "complexity": "S",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747351000000,
+      "completed_at": 1747351600000,
       "required_capabilities": [
         "code-write",
         "file-edit"
       ],
+      "deliverable_test": {
+        "kind": "manual-check"
+      },
       "estimated_cost_eur": 0.03,
+      "cost_actual_eur": 0.015,
+      "deliverable_uri": "git:HEAD..accent-orchestrator-rename",
       "tags": [
         "batch-3",
         "neteja"
@@ -358,16 +424,26 @@
       "id": "wo-castellers-001",
       "project_id": "sos-dev-internal",
       "title": "CASTELLERS-001 · Pre-load Castellers + Alvaro",
-      "description": "castellersSeed.js · projecte + 12 rols + 18 txs + 5 SOPs + 3 workshops.\nalvaroSeed.js · profile Ikigai + matriu_member primary.",
+      "description": "castellersSeed.js · org + projecte + 12 rols (pinya/tronc/pom) ·\n18 transactions (10 tangibles + 8 intangibles Verna Allee) ·\n4 processos actius amb KPIs · 5 SOCs amb checklist · 3 resources\n(espai + equipment + consumable). Pure idempotent.",
       "priority": "high",
       "complexity": "S",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747352000000,
+      "completed_at": 1747353600000,
       "required_capabilities": [
         "code-write",
         "test-run"
       ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/castellersSeed.test.js",
+        "expect": "35 pass · 0 fail"
+      },
       "estimated_cost_eur": 0.05,
+      "cost_actual_eur": 0.083,
+      "deliverable_uri": "git:HEAD..castellersSeed+test",
       "tags": [
         "batch-3",
         "seed"

@@ -11,19 +11,24 @@ import { KB } from './kb.js';
 const SEEDS_VERSION = 'v11.1';
 const SEEDS_KEY     = 'sos_seeds_version';
 
-// ─── REGISTRO CLAUDE (nodo 13) ───────────────────────────────────
-const CLAUDE_NODE = {
-    id:          'node-claude-sonnet-v11',
+// ─── DEFAULT ORCHESTRATOR AGENT NODE ─────────────────────────────
+// Aquest és UN agent IA al sistema. Per al catàleg complet d'agents
+// disponibles (claude · gpt · gemini · human-any · custom) veure
+// docs/backlog.yaml + js/core/agentBridgeSchema.js · qualsevol agent
+// pot connectar-se al bridge amb el seu propi node 'agent'.
+const DEFAULT_AGENT_NAME = 'AI Orchestrator';
+const ORCHESTRATOR_NODE = {
+    id:          'node-orchestrator-default-v11',
     type:        'agent',
-    name:        'Claude Sonnet (Anthropic)',
+    name:        DEFAULT_AGENT_NAME,
     globalRole:  'ai-agent',
     fmv:         0.015,
     multiplier:  2.0,
     profile: {
         isAi:            true,
         guardian:        'sage',
-        preferredEngine: 'anthropic',
-        model:           'claude-sonnet-4-20250514',
+        preferredEngine: 'anthropic',           // default · l'usuari pot
+        model:           'claude-sonnet-4-6',   // configurar el seu via /settings
         active_skills:   [
             'skill_vna_architect',
             'skill_prompt_synthesizer',
@@ -32,6 +37,8 @@ const CLAUDE_NODE = {
         ]
     }
 };
+// Backwards-compat · vells callers
+const CLAUDE_NODE = ORCHESTRATOR_NODE;
 
 // ─── SEMILLAS DE SKILLS ───────────────────────────────────────────
 // Cada skill es un nodo KB con type:'skill'.
@@ -645,4 +652,4 @@ export async function injectSeeds(force = false) {
 }
 
 // ── Exportar listas para inspección externa ───────────────────────
-export { SKILL_SEEDS, PROMPT_SEEDS, CLAUDE_NODE, SEEDS_VERSION };
+export { SKILL_SEEDS, PROMPT_SEEDS, CLAUDE_NODE, ORCHESTRATOR_NODE, DEFAULT_AGENT_NAME, SEEDS_VERSION };
