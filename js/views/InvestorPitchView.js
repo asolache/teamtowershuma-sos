@@ -20,26 +20,21 @@ import { formatCostEur } from '../core/aiCostTracker.js';
 export default class InvestorPitchView {
 
     constructor() {
-        document.title = 'Investor Pitch · SOS';
-        const path = window.location.pathname;
+        if (typeof document !== 'undefined') document.title = 'Investor Pitch · SOS';
+        const path = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '';
         this.projectId = path.replace(/^\/pitch-doc\//, '').replace(/\/$/, '').split('/')[0] || null;
         this._isSynthesizing = false;
+        this._project = null;
     }
 
-    async render() {
-        const app = document.getElementById('app');
-        if (!app) return;
-
+    // Router pattern · getHtml + afterRender
+    async getHtml() {
         const project = this.projectId ? await findProjectByIdAny(this.projectId) : null;
-        if (!project) {
-            app.innerHTML = this._renderNotFound();
-            return;
-        }
+        this._project = project;
+        if (!project) return this._renderNotFound();
 
-        // Try load existing synthesized pitch (cached at project.content.investorPitch)
         const cached = project.content?.investorPitch || null;
 
-        // Build context for preview (heuristic) before user clicks "Generate"
         const [canvas, ledger, invoices, proposals, tokenomics, org] = await Promise.all([
             this._loadCanvas(project),
             this._loadByType('ledger_entry', project.id),
@@ -54,9 +49,18 @@ export default class InvestorPitchView {
         });
 
         const initialPitch = cached || buildHeuristicPitch(this._context);
+        return this._renderShell({ project, pitch: initialPitch, isCached: !!cached });
+    }
 
-        app.innerHTML = this._renderShell({ project, pitch: initialPitch, isCached: !!cached });
-        this._bind({ project });
+    async afterRender() {
+        if (this._project) this._bind({ project: this._project });
+    }
+
+    async render() {
+        const app = (typeof document !== 'undefined') ? document.getElementById('app') : null;
+        if (!app) return;
+        app.innerHTML = await this.getHtml();
+        await this.afterRender();
     }
 
     _renderShell({ project, pitch, isCached }) {

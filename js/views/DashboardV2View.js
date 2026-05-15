@@ -28,12 +28,12 @@ export default class DashboardV2View {
         if (typeof document !== 'undefined') {
             document.title = 'SOS · Home';
         }
+        // State carregat a getHtml() · usat a afterRender()
+        this._state = null;
     }
 
-    async render() {
-        const app = document.getElementById('app');
-        if (!app) return;
-
+    // Router pattern · getHtml retorna string · afterRender fa binding
+    async getHtml() {
         await store.init();
         const state = store.getState();
         const projects = (state.projects || []).filter(p => p && !p.isArchived);
@@ -56,10 +56,23 @@ export default class DashboardV2View {
             sortBy: 'relevance',
         });
 
+        this._state = { projects, feed, meHandle };
+        return this._renderShell({ projects, feed, meHandle });
+    }
+
+    async afterRender() {
         ensureNavGroupStyle();
-        app.innerHTML = this._renderShell({ projects, feed, meHandle });
         this._bind();
         bindNavGroupDropdowns();
+    }
+
+    // BACK-COMPAT · alguns callers (tests / hot-reload) usen render(). Manté
+    // la API antiga · simplement encadena els 2 passos del router.
+    async render() {
+        const app = (typeof document !== 'undefined') ? document.getElementById('app') : null;
+        if (!app) return;
+        app.innerHTML = await this.getHtml();
+        await this.afterRender();
     }
 
     _renderShell({ projects, feed, meHandle }) {
