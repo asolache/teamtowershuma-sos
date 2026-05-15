@@ -59,6 +59,79 @@ export function buildLedgerEntryAttestation({
     };
 }
 
+// buildCoSignRequest · pure · genera attestation 'pending' per a un counter-party
+// Es signa quan el coSigner ho accepta (en una altra sessió · amb la seva key).
+// Fins llavors · existeix com a attestation node amb content.status='pending'.
+//
+// args ·
+//   entry          · ledger_entry a co-firmar
+//   requesterDid   · DID del que sol·licita la contra-signatura
+//   requesterHandle · @handle
+//   coSignerHandle · @handle del co-signer (sense @ acceptat també)
+//   coSignerDid    · opcional · si conegut
+//   statement      · text custom · default genèric
+//   ts (opt)
+//
+// Retorna · attestation node sense signature · status='pending'
+export function buildCoSignRequest({
+    entry            = null,
+    requesterDid     = null,
+    requesterHandle  = null,
+    coSignerHandle   = null,
+    coSignerDid      = null,
+    statement        = null,
+    ts               = null,
+} = {}) {
+    if (!entry || !entry.id) throw new Error('entry required');
+    if (!requesterDid) throw new Error('requesterDid required');
+    if (!coSignerHandle && !coSignerDid) throw new Error('coSignerHandle o coSignerDid required');
+    const now = (typeof ts === 'number') ? ts : Date.now();
+    const cleanHandle = coSignerHandle ? String(coSignerHandle).replace(/^@/, '') : null;
+    return {
+        id: 'att-cosign-' + entry.id.replace(/^le-/, '') + '-' + (cleanHandle || 'did') + '-' + now.toString(36).slice(-5),
+        type: 'attestation',
+        projectId: entry.projectId,
+        content: {
+            // The co-signer és l'attester · però encara no ha signat
+            attesterDid:    coSignerDid || null,
+            attesterHandle: cleanHandle ? '@' + cleanHandle : null,
+            attestedId:     entry.id,
+            attestedType:   'ledger_entry',
+            attestationKind: 'co-signs-ledger-entry',
+            statement:       statement || ('Sol·licitat per ' + (requesterHandle || requesterDid) + ' · cal contra-firma per al cert audit'),
+            status:          'pending',     // canviarà a 'signed' quan el cosigner signa amb la seva key
+            requestedBy:     requesterDid,
+            requestedByHandle: requesterHandle,
+            issuedAt:        new Date(now).toISOString(),
+        },
+        createdAt: now,
+        updatedAt: now,
+    };
+}
+
+// listPendingCoSignRequests · pure · llistar attestations on l'usuari (per
+// handle o DID) està sol·licitat com a coSigner i encara és pending.
+//
+// args ·
+//   attestations · array de attestation nodes
+//   handle       · '@alvaro' o 'alvaro'
+//   did          · opcional · 'did:sos:...'
+//
+// Retorna · array de attestation nodes filtered
+export function listPendingCoSignRequests({ attestations = [], handle = null, did = null } = {}) {
+    const h = handle ? String(handle).replace(/^@/, '').toLowerCase() : null;
+    return (attestations || []).filter(a => {
+        if (a?.type !== 'attestation') return false;
+        const c = a.content || {};
+        if (c.attestationKind !== 'co-signs-ledger-entry') return false;
+        if (c.status !== 'pending') return false;
+        const aHandle = c.attesterHandle ? String(c.attesterHandle).replace(/^@/, '').toLowerCase() : null;
+        if (h && aHandle === h) return true;
+        if (did && c.attesterDid === did) return true;
+        return false;
+    });
+}
+
 // computeReportPeriod · pure · retorna { from, to, days, count } per al
 // rang d'entries · útil per als titles del certificat.
 export function computeReportPeriod(entries) {
