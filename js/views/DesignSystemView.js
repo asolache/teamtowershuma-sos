@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T06:00 · v63 · creation+catalog integration · UX_AUDIT updated';
+const BUILD_STAMP = '2026-05-16T07:00 · v64 · SprintView usa backlog.yaml + mobile-first responsive';
 
 export default class DesignSystemView {
 
