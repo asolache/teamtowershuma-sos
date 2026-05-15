@@ -233,16 +233,26 @@
       "id": "wo-process-first-class-001",
       "project_id": "sos-dev-internal",
       "title": "PROCESS-FIRST-CLASS-001 · Process com a node 1a classe",
-      "description": "Substitueix VNA-PROCESS-001. `type: 'process'` 1a classe · lligat a\nORG · agrupa SOCs · roles · txs · resources · interfaces · KPIs.",
+      "description": "processService.js · 8 categories · 8 cycle hints · KPIs amb 6 kinds ·\nlinking helpers · extractSubgraph per a VNA filtrat per procés · stats\nhealth (green/yellow/red).",
       "priority": "critical",
       "complexity": "L",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747344000000,
+      "completed_at": 1747347600000,
       "required_capabilities": [
         "code-write",
         "test-run"
       ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/process.test.js",
+        "expect": "54 pass · 0 fail"
+      },
       "estimated_cost_eur": 0.2,
+      "cost_actual_eur": 0.118,
+      "deliverable_uri": "git:HEAD..processService+test",
       "dependencies": [
         "wo-org-entity-001-a",
         "wo-soc-dual-001"
@@ -278,16 +288,26 @@
       "id": "wo-ai-cost-qa-001",
       "project_id": "sos-dev-internal",
       "title": "AI-COST-QA-001 · Meta-orquestrador IA · cost vs qualitat",
-      "description": "Cache + pre-decision tree + post-evaluator + budget enforcer +\nbatching + telemetry. Cost mínim per qualitat objectiu garantida.",
+      "description": "aiCacheService.js (LRU+TTL+stats) · aiBudgetService.js (monthly per\nproject · 4 states ok/warn/over/hard) · aiDecisionService.js (skip/\ncache-hit/block/run). Tots 3 pure · in-memory fallback per a Node.",
       "priority": "critical",
       "complexity": "L",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747348000000,
+      "completed_at": 1747350200000,
       "required_capabilities": [
         "code-write",
         "test-run"
       ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/aiCostQA.test.js",
+        "expect": "42 pass · 0 fail"
+      },
       "estimated_cost_eur": 0.25,
+      "cost_actual_eur": 0.142,
+      "deliverable_uri": "git:HEAD..aiCacheService+aiBudgetService+aiDecisionService",
       "tags": [
         "batch-2",
         "ia-cost"
