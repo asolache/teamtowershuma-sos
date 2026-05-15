@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-15T21:00 · v53 · DashboardV2 · /home · KISS 4-zones · primary nav simple';
+const BUILD_STAMP = '2026-05-15T21:30 · v54 · FIX router · getHtml+afterRender pattern als 3 nous views';
 
 export default class DesignSystemView {
 

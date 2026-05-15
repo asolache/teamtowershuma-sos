@@ -35,24 +35,26 @@ const TPL_VERSION = 'hub-v2-v1.0';
 export default class ProjectHubV2View {
 
     constructor() {
-        document.title = 'SOS · Project Hub';
+        if (typeof document !== 'undefined') document.title = 'SOS · Project Hub';
         // Extract project id from path · /hub/{id}
-        this.projectId = window.location.pathname
-            .replace(/^\/hub\//, '')
-            .replace(/\/$/, '')
-            .split('/')[0] || null;
+        this.projectId = (typeof window !== 'undefined' && window.location)
+            ? window.location.pathname
+                .replace(/^\/hub\//, '')
+                .replace(/\/$/, '')
+                .split('/')[0] || null
+            : null;
+        this._project = null;
+        this._notFoundHtml = null;
     }
 
-    async render() {
-        const app = document.getElementById('app');
-        if (!app) return;
-
+    // Router pattern · getHtml + afterRender
+    async getHtml() {
         // Load project + related data
         const project = this.projectId ? await findProjectByIdAny(this.projectId) : null;
+        this._project = project;
 
         if (!project) {
-            app.innerHTML = this._renderNotFound();
-            return;
+            return this._renderNotFound();
         }
 
         // Parallel loads
@@ -116,13 +118,22 @@ export default class ProjectHubV2View {
             .sort((a, b) => this._prioRank(b.priority) - this._prioRank(a.priority))
             .slice(0, 3);
 
-        app.innerHTML = this._renderShell({
+        return this._renderShell({
             project, org, orgAudit, processes,
             todayWos, cashBalance, bs, sessionEur,
             suggestions, feed,
         });
+    }
 
-        this._bind();
+    async afterRender() {
+        if (this._project) this._bind();
+    }
+
+    async render() {
+        const app = (typeof document !== 'undefined') ? document.getElementById('app') : null;
+        if (!app) return;
+        app.innerHTML = await this.getHtml();
+        await this.afterRender();
     }
 
     // ── Renderers ──────────────────────────────────────────────────────────
