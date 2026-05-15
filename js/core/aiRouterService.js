@@ -79,6 +79,70 @@ export const TASK_ROUTING = Object.freeze({
 
 export const TASK_KINDS = Object.freeze(Object.keys(TASK_ROUTING));
 
+// ── Task tier · explicit user-visible quality knob ────────────────────────
+// `draft`    · cheap micro/small models · for first drafts · disposable
+// `quality`  · mid-tier balanced models  · default for production drafts
+// `critical` · frontier models           · final reviews · high-stakes only
+//
+// Per a cada (taskKind, taskTier) escollim el modelKey més coherent dins
+// del catàleg AI_MODELS. El selector és pur · permet a la UI ensenyar
+// model+cost ABANS de fer la crida.
+export const TASK_TIERS = Object.freeze(['draft', 'quality', 'critical']);
+
+export const TIER_QUALITY_RANGE = Object.freeze({
+    draft:    { min: 2, max: 3 },
+    quality:  { min: 3, max: 4 },
+    critical: { min: 4, max: 5 },
+});
+
+// pickModelForTier · donat taskKind + tier · retorna modelKey adequat.
+// Estratègia ·
+//   1. agafem la chain del taskKind · primary/fallback/premium
+//   2. filtrem models del catàleg amb quality dins el rang del tier
+//   3. preferim models de la chain · si cap encaixa · fallback a tot el catàleg
+//   4. desempat · més barat (input + output) primer
+export function pickModelForTier({ taskKind, taskTier = 'quality', preferredProvider = null } = {}) {
+    if (!TIER_QUALITY_RANGE[taskTier]) taskTier = 'quality';
+    const { min, max } = TIER_QUALITY_RANGE[taskTier];
+    const chain = getModelChain(taskKind);
+    const inRange = (key) => {
+        const m = AI_MODELS[key];
+        return m && m.quality >= min && m.quality <= max;
+    };
+    const cheaper = (a, b) => (AI_MODELS[a].pricing.input + AI_MODELS[a].pricing.output)
+                            - (AI_MODELS[b].pricing.input + AI_MODELS[b].pricing.output);
+    // 1) provider preferit dins el rang
+    if (preferredProvider) {
+        const cand = MODEL_IDS.filter(k => AI_MODELS[k].provider === preferredProvider && inRange(k));
+        if (cand.length) return cand.sort(cheaper)[0];
+    }
+    // 2) chain del taskKind dins el rang
+    const chainInRange = chain.filter(inRange);
+    if (chainInRange.length) return chainInRange.sort(cheaper)[0];
+    // 3) qualsevol model del catàleg dins el rang
+    const anyInRange = MODEL_IDS.filter(inRange);
+    if (anyInRange.length) return anyInRange.sort(cheaper)[0];
+    // 4) degradació · el primer de la chain
+    return chain[0] || null;
+}
+
+// estimateTokensFromText · aproximació molt simple per a la UI · 1 token ≈
+// 4 caràcters en català/castellà. Suficient per a previews de cost · NO
+// per a facturació real.
+export function estimateTokensFromText(text = '') {
+    if (typeof text !== 'string' || !text) return 0;
+    return Math.ceil(text.length / 4);
+}
+
+// estimatePromptCostEur · helper compose · combina estimateTokens + estimateCost
+// per a previsualitzar a la UI · `expectedOutputTokens` és una estimació
+// (default 800 ≈ resposta canvas-step mitjana).
+export function estimatePromptCostEur({ modelKey, prompt = '', expectedOutputTokens = 800, rate } = {}) {
+    if (!modelKey || !AI_MODELS[modelKey]) return null;
+    const inputTokens = estimateTokensFromText(prompt);
+    return estimateCostEur(modelKey, { inputTokens, outputTokens: expectedOutputTokens }, rate ? { rate } : {});
+}
+
 // ── Pure helpers ────────────────────────────────────────────────────────
 
 // estimateCostUsd · cost en USD per a una crida concreta · tokens
@@ -281,26 +345,65 @@ export async function runEscalation({
 export async function runPrompt({
     prompt           = '',
     taskKind         = 'creative-narrative',
+    taskTier         = null,  // 'draft' | 'quality' | 'critical' · null = legacy chain
     systemPrompt     = 'Ets ajudant cooperatiu SOS · respon concis i clar en català/castellà/anglès segons el prompt.',
     maxOutputTokens  = 1500,
     temperature      = 0.6,
     preferredProvider = null,
-    maxAttempts      = 3,    // kept for API compat · runEscalation gestiona attempts internament
+    onActivity       = null,  // optional callback for ai-tier-indicator-style feedback
+    sessionId        = null,  // optional · per al cost tracker
+    projectId        = null,
+    maxAttempts      = 3,
 } = {}) {
     if (!prompt || typeof prompt !== 'string') throw new Error('runPrompt · prompt string required');
     const { generateWithProvider } = await import('./aiProviderService.js');
-    const generate = (modelKey, ctx) => generateWithProvider(modelKey, {
-        systemPrompt: systemPrompt,
-        userPrompt:   prompt,
-        maxOutputTokens,
-        temperature,
-    });
+
+    // Si l'usuari ha demanat un tier explícit · resolem el modelKey i forcem
+    // que sigui el primer del chain (preferredProvider fa el mateix paper).
+    let tierModelKey = null;
+    if (taskTier) {
+        tierModelKey = pickModelForTier({ taskKind, taskTier, preferredProvider });
+    }
+
+    const generate = async (modelKey, ctx) => {
+        const startedAt = Date.now();
+        if (typeof onActivity === 'function') {
+            try { onActivity({ kind: 'model-attempt', modelKey, taskTier, taskKind }); } catch (_) {}
+        }
+        const res = await generateWithProvider(modelKey, {
+            systemPrompt: systemPrompt,
+            userPrompt:   prompt,
+            maxOutputTokens,
+            temperature,
+        });
+        const elapsedMs = Date.now() - startedAt;
+        // Cost tracker · best-effort · sense bloquejar si falla
+        if (res?.usage) {
+            try {
+                const { recordUsage } = await import('./aiCostTracker.js');
+                recordUsage({
+                    modelKey,
+                    usage: res.usage,
+                    taskKind,
+                    taskTier,
+                    sessionId,
+                    projectId,
+                    elapsedMs,
+                });
+            } catch (_) {}
+        }
+        if (typeof onActivity === 'function') {
+            try { onActivity({ kind: 'model-result', modelKey, usage: res?.usage, elapsedMs }); } catch (_) {}
+        }
+        return res;
+    };
+
     const result = await runEscalation({
         taskKind,
         generate,
-        preferredProvider,
+        preferredProvider: tierModelKey ? AI_MODELS[tierModelKey].provider : preferredProvider,
     });
-    // Retornar diverses claus per compat · output principal
+
     return {
         output:    result.output,
         text:      result.output,
@@ -308,6 +411,7 @@ export async function runPrompt({
         modelKey:  result.modelKey,
         usage:     result.usage || null,
         attempts:  result.attempts,
+        taskTier:  taskTier || null,
         escalatedExhausted: result.escalatedExhausted,
     };
 }
