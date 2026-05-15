@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T03:00 · v60 · Follow button + nav entries (/timeline · /create)';
+const BUILD_STAMP = '2026-05-16T04:00 · v61 · KanbanView swarm-mode toggle · SWARM-RELOC complete';
 
 export default class DesignSystemView {
 
