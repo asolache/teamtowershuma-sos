@@ -18,6 +18,20 @@ const eq = (a, b, msg) => t(a === b, msg + ' (expected ' + JSON.stringify(b) + '
 
 console.log('\n=== UX-CENTRAL-HUB-001 · activity + suggestions ===\n');
 
+// REGRESSION FIX 2026-05-16 · ts pot venir com a string ISO de KB nodes ·
+// _firstValidTs ha de coercir · NO throw "ts required (number)" del builder
+const invoicesWithStringTs = [
+    { id: 'inv-iso', content: { status: 'paid', client: 'X', totals: { gross: 100 } }, updatedAt: '2024-03-15T10:30:00.000Z' },
+    { id: 'inv-num', content: { status: 'paid', paidAt: 1700000000000, client: 'Y', totals: { gross: 50 } } },
+    { id: 'inv-empty', content: { status: 'paid' } },        // cap ts · usa default
+];
+let __didThrow = false;
+let __evts = [];
+try { __evts = deriveFromInvoices(invoicesWithStringTs); } catch (e) { __didThrow = true; }
+t(!__didThrow,                                            'PRE · no throws amb ts string ISO + missing');
+t(__evts.length === 3,                                    'PRE · 3 events generats malgrat ts mixed');
+t(__evts.every(e => typeof e.ts === 'number' && isFinite(e.ts)), 'PRE · tots ts són numbers vàlids');
+
 // ── ACTIVITY FEED ────────────────────────────────────────────────────────
 
 eq(ACTIVITY_KINDS.length, 16,                            'A · 16 activity kinds');
