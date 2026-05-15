@@ -1,6 +1,7 @@
 # UX Audit · TeamTowers SOS V11
 
-*Audit @alvaro 2026-05-15 · post sprint analysis & design v4 · 11 PRs merged*
+*Audit @alvaro 2026-05-15 · post sprint analysis & design v4 · **19 PRs merged** ·  
+actualitzat 2026-05-16 amb cicle final UX-D · UX-C · social · catalog · creation*
 
 ## Visió · "API + APP"
 
@@ -69,22 +70,39 @@ L'usuari ha de poder fer servir SOS de 2 formes alhora ·
 
 ## Pla d'evolució UX (proper sprint o nice-to-have)
 
-### Sprint UX-A · Consolidació entry points
-- ✅ DashboardV2 al `/` `/home` (fet)
-- ✅ ProjectHubV2 a `/project/` (aquest PR)
-- ⏳ Eliminar HomeView legacy · redirigir `/team /paper /lms` → `/learn`
+### Sprint UX-A · Consolidació entry points ✅ COMPLETAT
+- ✅ DashboardV2 al `/` `/home` (PR #99)
+- ✅ ProjectHubV2 a `/project/` (PR #101)
+- ⏳ Eliminar HomeView legacy · redirigir `/team /paper /lms` → `/learn` (low-prio)
 
-### Sprint UX-B · Progressive disclosure a vistes pesades
+### Sprint UX-B · Progressive disclosure a vistes pesades ⏳ PENDENT
 - Tokenomics · split en 2 modes (vista quick · vista expert detallada)
 - Accounting · top 5 entries + "veure totes"
 - ValueMap · cluster filter per defecte (mostra subgraf actiu · "veure tot el VNA")
 
-### Sprint UX-C · Settings unificades
-- 1 sol `/settings` amb tabs · API keys · IA tier defaults · Tema · Backup · Permaweb wallet · Stripe
+### Sprint UX-C · Settings unificades ✅ COMPLETAT (PR #103)
+- ✅ `/settings-v2` amb 5 tabs · 🔑 API keys · 🎨 Tema · 🤖 IA defaults · 🌐 Permaweb · 💾 Backup
 
-### Sprint UX-D · Mobile-first pass
-- Tots els views amb 768px breakpoint testat
-- Bottom-nav móvil amb 4 entries primaris
+### Sprint UX-D · Mobile-first pass ✅ COMPLETAT (PR #102)
+- ✅ Mobile bottom-nav global · 5 destinacions · injectat router · safe-area
+- ✅ uxComponents reusables · toast · emptyStateHtml · confirm modal
+
+### Sprint Social · SOCIAL-LAYER-001 ✅ COMPLETAT (PR #105 + #106)
+- ✅ socialGraphService · follow/follower derived from attestations
+- ✅ TimelineView · /timeline · feed cronològic agregat
+- ✅ Follow button al ProfileView · interactiu · KB upsert/delete
+
+### Sprint Creation · B-UNIFIED-FORM-001 ✅ COMPLETAT (PR #104)
+- ✅ ProjectCreationV2View · /create · 1 sol form · Plan→Fan-out→Reduce visible
+- ✅ Cost preview live · progress steps · classify → canvas → vna → sops
+- ✅ Accept ?template= query param via ProcessCatalog (aquest PR)
+
+### Sprint Catalog · PROCESS-CATALOG-001 ✅ COMPLETAT (PR #108)
+- ✅ ProcessCatalogView · /process-catalog · 15 plantilles type×stage
+- ✅ Filtres type + stage · detall inline · link a /create amb pre-selection
+
+### Sprint Swarm · SWARM-RELOC-001 ✅ COMPLETAT (PR #107)
+- ✅ KanbanView · 🐝 Swarm mode toggle · botó Auto-run per WO · /sprint?wo={id}
 
 ## Decisions arquitectòniques d'aquest PR
 
