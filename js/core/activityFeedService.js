@@ -35,6 +35,32 @@ const DEFAULT_WINDOW_MS = 7 * 24 * 3600 * 1000;
 
 // ── Builders ───────────────────────────────────────────────────────────────
 
+// _toNumber · pure · accepta number · ISO string · null · undefined ·
+// retorna number vàlid o null. Defensiu contra dades amb tsps en formats
+// barrejats (ex · ledger té createdAt:1700... · invoices ISO · etc).
+function _toNumber(v) {
+    if (typeof v === 'number' && isFinite(v)) return v;
+    if (typeof v === 'string') {
+        // Try ISO date parse
+        const parsed = Date.parse(v);
+        if (!isNaN(parsed)) return parsed;
+        // Try numeric string
+        const n = Number(v);
+        if (isFinite(n)) return n;
+    }
+    return null;
+}
+
+// _firstValidTs · pure · pren els candidats i retorna el primer ts vàlid ·
+// fallback a fallbackTs (ex · Date.now()) si cap és vàlid.
+function _firstValidTs(candidates, fallbackTs) {
+    for (const c of candidates) {
+        const n = _toNumber(c);
+        if (n !== null) return n;
+    }
+    return _toNumber(fallbackTs) || Date.now();
+}
+
 // buildActivityEvent · pure · forma estàndard d'un event
 export function buildActivityEvent({
     kind,
@@ -119,7 +145,7 @@ export function deriveFromAttestations(attestations = [], { userHandle = null, t
         const isRecipient = att.content?.targetHandle === userHandle;
         return buildActivityEvent({
             kind: isRecipient ? 'attestation-received' : 'attestation-issued',
-            ts: att.createdAt || ts,
+            ts: _firstValidTs([att.createdAt], ts),
             actorHandle: att.content?.attesterHandle || null,
             targetId: att.id,
             targetType: 'attestation',
@@ -133,7 +159,7 @@ export function deriveFromAttestations(attestations = [], { userHandle = null, t
 export function deriveFromPacts(pacts = [], { ts = Date.now() } = {}) {
     return pacts.map(p => buildActivityEvent({
         kind: p.content?.status === 'signed' ? 'pact-signed' : 'pact-created',
-        ts: p.updatedAt || p.createdAt || ts,
+        ts: _firstValidTs([p.updatedAt, p.createdAt], ts),
         targetId: p.id,
         targetType: 'pact',
         summary: p.content?.title || p.content?.summary?.slice(0, 120),
@@ -148,22 +174,22 @@ export function deriveFromWos(wos = [], { ts = Date.now() } = {}) {
         if (wo.status === 'done' || wo.completed_at) {
             out.push(buildActivityEvent({
                 kind: 'wo-completed',
-                ts: wo.completed_at || wo.updatedAt || ts,
+                ts: _firstValidTs([wo.completed_at, wo.updatedAt], ts),
                 actorHandle: wo.claimed_by || null,
                 targetId: wo.id,
                 targetType: 'work_order',
-                title: '✅ ' + wo.title,
+                title: '✅ ' + (wo.title || wo.id),
                 summary: wo.description?.slice(0, 120) || null,
                 relevanceScore: 0.8,
             }));
         } else if (wo.status === 'claimed') {
             out.push(buildActivityEvent({
                 kind: 'wo-claimed',
-                ts: wo.claimed_at || wo.updatedAt || ts,
+                ts: _firstValidTs([wo.claimed_at, wo.updatedAt], ts),
                 actorHandle: wo.claimed_by || null,
                 targetId: wo.id,
                 targetType: 'work_order',
-                title: '🐝 ' + wo.title,
+                title: '🐝 ' + (wo.title || wo.id),
                 relevanceScore: 0.5,
             }));
         }
@@ -177,7 +203,7 @@ export function deriveFromLedger(entries = [], { ts = Date.now() } = {}) {
         .filter(e => e.content?.amount > 0)
         .map(e => buildActivityEvent({
             kind: 'ledger-entry-added',
-            ts: e.createdAt || ts,
+            ts: _firstValidTs([e.createdAt], ts),
             targetId: e.id,
             targetType: 'ledger_entry',
             summary: e.content?.description?.slice(0, 120) || null,
@@ -192,11 +218,11 @@ export function deriveFromInvoices(invoices = [], { ts = Date.now() } = {}) {
         .filter(i => i.content?.status === 'paid')
         .map(i => buildActivityEvent({
             kind: 'invoice-paid',
-            ts: i.content?.paidAt || i.updatedAt || ts,
+            ts: _firstValidTs([i.content?.paidAt, i.updatedAt, i.createdAt], ts),
             targetId: i.id,
             targetType: 'invoice',
             title: '💰 ' + (i.content?.number || 'Factura'),
-            summary: i.content?.client + ' · ' + (i.content?.totals?.gross || 0) + '€',
+            summary: (i.content?.client || '') + ' · ' + (i.content?.totals?.gross || 0) + '€',
             relevanceScore: 0.85,
         }));
 }
@@ -207,7 +233,7 @@ export function deriveFromProposals(proposals = [], { ts = Date.now() } = {}) {
         .filter(p => p.content?.status === 'accepted')
         .map(p => buildActivityEvent({
             kind: 'proposal-accepted',
-            ts: p.content?.acceptedAt || p.updatedAt || ts,
+            ts: _firstValidTs([p.content?.acceptedAt, p.updatedAt, p.createdAt], ts),
             targetId: p.id,
             targetType: 'proposal',
             title: '✓ ' + (p.content?.client || 'Proposta acceptada'),
