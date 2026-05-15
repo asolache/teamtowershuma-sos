@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T08:00 · v65 · mobile-nav daily-flow (Avui·Xarxa·Crea·Descobreix·Jo) + W3C a11y';
+const BUILD_STAMP = '2026-05-16T09:00 · v66 · QuickCapture FAB · cervell SOS · noia/WO/idea/skill';
 
 export default class DesignSystemView {
 

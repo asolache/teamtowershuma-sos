@@ -162,6 +162,12 @@ async function router() {
             const { injectGlobalA11y } = await import('./core/a11yService.js');
             injectGlobalA11y();
         } catch (_) { /* non-blocking */ }
+        // Quick Capture FAB · cervell SOS · "+" floating · noies/WO/idees/skills
+        // Activable amb la tecla "c" o click al botó · al fons-dreta.
+        try {
+            const { injectGlobalFab } = await import('./core/quickCaptureFab.js');
+            injectGlobalFab();
+        } catch (_) { /* non-blocking */ }
         // NEURAL-PATH-001 · log de visita · fire-and-forget · zero bloqueig
         (async () => {
             try {
