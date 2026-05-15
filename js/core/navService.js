@@ -91,13 +91,30 @@ export const NAV_DESTINATIONS = Object.freeze([
 // - active: marca el destino activo (vista actual)
 // - projectId: si hay, se concatena ?project={id} a los hrefs que apliquen
 //   (map, kanban, sops, market) para preservar contexto al navegar.
+// BUG-FIX 2026-05-15 · ?project= s'afegia a una llista hardcoded de 9 ids ·
+// faltaven canvas · pitch · tokenomics · accounting · proposals · invoices ·
+// lifecycle · swarm · improve · sops · presentation · etc. Resultat ·
+// clicar Swarm dins un projecte portava a /swarm sense ?project= → error
+// "Cal indicar projecte". Solució regla simple · si la vista NO és global
+// (és a dir · necessita projecte) i tenim projectId · concatena ?project=.
+// La regla del global garanteix que /sprint · /matriu · /registry · etc
+// (que són globals) NO reben projectId (preserva semàntica).
+//
+// Excepció · /kanban i /map són global=true (apareixen sempre al menú) ·
+// però accepten i milloren amb ?project=. Per a aquestes mantenim
+// l'override · si projectId · concatena.
+const ALWAYS_APPEND_PROJECT_IF_GLOBAL = new Set(['kanban', 'map', 'market', 'wallet', 'savings']);
+
 export function buildNavLinks({ active = '', projectId = null } = {}) {
     return NAV_DESTINATIONS
         .filter(d => d.global || !!projectId)
         .map(d => {
             let href = d.href;
-            if (projectId && ['map', 'sops', 'kanban', 'market', 'wallet', 'savings', 'presentation', 'pact', 'value'].includes(d.id)) {
-                href += '?project=' + encodeURIComponent(projectId);
+            // Regla principal · vistes project-scoped (no global) sempre reben ?project=
+            // si en tenim. Globals SOLS si està a la llista d'excepcions.
+            const shouldAppend = projectId && (!d.global || ALWAYS_APPEND_PROJECT_IF_GLOBAL.has(d.id));
+            if (shouldAppend) {
+                href += (href.includes('?') ? '&' : '?') + 'project=' + encodeURIComponent(projectId);
             }
             return {
                 ...d,
