@@ -72,6 +72,32 @@ function _ensureCss() {
         .sos-mtb-menu-btn:hover, .sos-mtb-menu-btn:focus-visible { background: var(--glass-hover, rgba(255,255,255,0.06)); }
         .sos-mtb-menu-btn:focus-visible { outline: 2px solid var(--accent-indigo, #6366f1); outline-offset: 1px; }
 
+        /* Notification badge · pendents · DMs + invites · click /inbox */
+        .sos-mtb-notif-btn {
+            background: transparent; border: 0;
+            color: var(--text-main, #e2e8f0);
+            font-size: 1.3rem; line-height: 1;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 6px;
+            min-width: 36px; min-height: 36px;
+            position: relative;
+            text-decoration: none;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .sos-mtb-notif-btn:hover { background: var(--glass-hover, rgba(255,255,255,0.06)); }
+        .sos-mtb-notif-badge {
+            position: absolute; top: 2px; right: 2px;
+            background: #ef4444; color: #fff;
+            font-size: 0.6rem; font-weight: 700;
+            min-width: 16px; height: 16px;
+            border-radius: 999px;
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 0 4px;
+            border: 1.5px solid var(--bg-panel, #0f172a);
+        }
+        .sos-mtb-notif-badge.hidden { display: none; }
+
         /* Drawer · off-canvas · slides from right */
         .sos-mtb-backdrop {
             position: fixed; inset: 0;
@@ -256,14 +282,66 @@ export function renderDrawerHtml({ currentPath = '/' } = {}) {
     </div>`;
 }
 
-// renderTopbarHtml · pure
-export function renderTopbarHtml({ title = '', currentPath = '/' } = {}) {
+// renderTopbarHtml · pure · `notifCount` opcional · 0 → badge hidden
+export function renderTopbarHtml({ title = '', currentPath = '/', notifCount = 0 } = {}) {
+    const n = Number(notifCount) || 0;
+    const badgeHidden = n <= 0 ? ' hidden' : '';
+    const badgeText = n > 99 ? '99+' : String(n);
+    const ariaLabel = n > 0 ? `Inbox · ${n} pendents` : 'Inbox';
     return `
     <header class="sos-mtb" id="${TOPBAR_ID}" role="banner">
         <a href="/home" data-link class="sos-mtb-logo" aria-label="TeamTowers · Avui">🗼 TT<span>·</span></a>
         <span class="sos-mtb-title">${_esc(title || '')}</span>
+        <a href="/inbox" data-link class="sos-mtb-notif-btn" aria-label="${_esc(ariaLabel)}">
+            📨<span class="sos-mtb-notif-badge${badgeHidden}" aria-hidden="${n <= 0}">${_esc(badgeText)}</span>
+        </a>
         <button class="sos-mtb-menu-btn" aria-label="Obrir menú principal" aria-expanded="false" aria-controls="${DRAWER_ID}" type="button">⋯</button>
     </header>`;
+}
+
+// _loadNotifCount · async · suma DMs no llegits + invites pendents per a l'usuari
+// activa. Retorna 0 en errors (zero-deps · safe en Node · safe en browser).
+async function _loadNotifCount() {
+    if (typeof indexedDB === 'undefined') return 0;
+    try {
+        const [{ KB }, { getCurrentIdentity }, { countUnread }, { countPendingForUser }] = await Promise.all([
+            import('./kb.js'),
+            import('./identityService.js'),
+            import('./messagingService.js'),
+            import('./projectInviteService.js'),
+        ]);
+        await KB.init();
+        const me = await getCurrentIdentity();
+        const handle = me?.content?.handle;
+        if (!handle) return 0;
+        const all = await KB.getAllNodes();
+        const dms = all.filter(n => n && n.type === 'direct_message');
+        const invites = all.filter(n => n && n.type === 'project_invite');
+        return (countUnread(dms, handle) || 0) + (countPendingForUser(invites, handle) || 0);
+    } catch (_) {
+        return 0;
+    }
+}
+
+// _updateBadge · DOM · actualitza el badge del topbar (idempotent)
+function _updateBadge(n) {
+    if (typeof document === 'undefined') return;
+    const btn = document.querySelector(`#${TOPBAR_ID} .sos-mtb-notif-btn`);
+    if (!btn) return;
+    const badge = btn.querySelector('.sos-mtb-notif-badge');
+    if (!badge) return;
+    const count = Number(n) || 0;
+    const text = count > 99 ? '99+' : String(count);
+    badge.textContent = text;
+    if (count <= 0) {
+        badge.classList.add('hidden');
+        badge.setAttribute('aria-hidden', 'true');
+        btn.setAttribute('aria-label', 'Inbox');
+    } else {
+        badge.classList.remove('hidden');
+        badge.setAttribute('aria-hidden', 'false');
+        btn.setAttribute('aria-label', `Inbox · ${count} pendents`);
+    }
 }
 
 // _setupScrollHide · hide topbar on scroll down · show on scroll up
@@ -370,7 +448,7 @@ export function injectOrUpdate({ pathname = null, title = null } = {}) {
     let bar = document.getElementById(TOPBAR_ID);
     if (!bar) {
         const wrap = document.createElement('div');
-        wrap.innerHTML = renderTopbarHtml({ title: pageTitle, currentPath });
+        wrap.innerHTML = renderTopbarHtml({ title: pageTitle, currentPath, notifCount: 0 });
         bar = wrap.firstElementChild;
         document.body.insertBefore(bar, document.body.firstChild);
         bar.querySelector('.sos-mtb-menu-btn').addEventListener('click', () => _openDrawer());
@@ -380,6 +458,9 @@ export function injectOrUpdate({ pathname = null, title = null } = {}) {
         const t = bar.querySelector('.sos-mtb-title');
         if (t) t.textContent = pageTitle;
     }
+
+    // Notif badge · async · update sense bloquejar el render
+    _loadNotifCount().then(_updateBadge).catch(() => {});
 
     // Drawer · re-render per actualitzar active states
     const oldDrawer = document.getElementById(DRAWER_ID);

@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T21:00 · v78 · DashboardV2 · botó "🎭 Carregar demo Castellers" · empty state actiu';
+const BUILD_STAMP = '2026-05-15T22:30 · v79 · MobileTopbar · badge notif (DMs+invites) · click /inbox';
 
 export default class DesignSystemView {
 
