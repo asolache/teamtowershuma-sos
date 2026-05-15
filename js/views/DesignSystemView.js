@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-15T07:00 · v38 · D4 · tier IA visible + cost tracker';
+const BUILD_STAMP = '2026-05-15T07:30 · v39 · D4 · tier integrat a Canvas';
 
 export default class DesignSystemView {
 
