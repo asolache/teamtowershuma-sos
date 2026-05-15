@@ -658,9 +658,9 @@ export default class PactBuilderView {
                 marketItems:       ctx.marketItems,
             });
             fb.setThinking({ kind: 'runner-start', sopTitle: 'Pacte · ' + (this.project.nombre || this.project.id), iteration: 1 });
-            const { runEscalation } = await import('../core/aiRouterService.js');
+            const { runPrompt } = await import('../core/aiRouterService.js');
             const prompt = buildAiPromptForPactClauses(draft);
-            const result = await runEscalation({ prompt, taskKind: 'creative-narrative', maxAttempts: 3 });
+            const result = await runPrompt({ prompt, taskKind: 'creative-narrative', maxAttempts: 3 });
             const raw = (result && (result.output || result.text || result.result)) || '';
             const applied = applyAIDraftToPact(draft, raw);
             if (!applied.applied) {
