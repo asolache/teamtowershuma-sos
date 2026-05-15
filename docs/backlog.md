@@ -3688,64 +3688,340 @@ l'usuari identifica 6 moviments tectònics que canvien el rumb del producte ·
 6. **Swarm relocalitzat** · `/sprint` desapareix com a vista separada ·
    esdevé `/kanban` genèric amb mode swarm activable per projecte.
 
-### Re-ordenació de prioritats (sprint analysis & design v2)
+### Update 2026-05-15 (2) · 3 meta-principis afegits per @alvaro
+
+Després del primer rethink l'usuari afegeix 3 principis estructurals que
+NO són sprints individuals · són **transversals a tota l'arquitectura** ·
+
+7. **Estandardització · qualsevol IA agent · no només Claude.** El nexe
+   Claude↔SOS no pot ser hardcoded a "Claude". Ha de ser bridge genèric
+   AI-agent ↔ SOS · jo sóc UN agent · GPT pot ser un altre · l'Anna pot
+   tenir un agent custom local · tots parlen el mateix protocol. Conseqüència ·
+   NEXE-001 es REEMPLAÇA per AGENT-BRIDGE-001 · el catàleg d'agents és
+   plug-and-play. Implica de-hardcoding de "claude" a CSS/seeds/mocks.
+8. **TDD a tots els nivells.** Avui TDD només a codi i WOs. Cal estendre a ·
+   cada decisió IA (evaluator post-crida) · cada decisió humana (validators
+   per acció crítica) · cada procés de negoci (KPI test auto-run) · cada
+   organització (health metrics mensuals). Si pot fallar i no es testeja ·
+   no existeix. Verna Allee · "if you can't measure the exchange, it's not
+   part of the network".
+9. **Meta-orquestrador IA · cost vs qualitat dinàmic.** `aiRouterService`
+   ja escull model però estàticament. Cal sistema runtime · "necessito IA
+   aquí? · cache hit? · evaluator suficient amb model cheap? · batch?
+   budget OK?". Cost mínim per qualitat objectiu garantida.
+
+### Re-ordenació de prioritats v3 (post 9 principis)
 
 El batch anterior (D4 → A → C1 → B → C2) es manté amb 3 dels 4 fets ·
-**B i C2 queden diferits** per anar abans amb els 6 nous eixos · que tenen
-més impacte estratègic immediat ·
+**B i C2 queden diferits.** AGENT-BRIDGE-001 substitueix NEXE-001 i puja a
+prioritat màxima · els altres es re-ordenen segons dependències ·
 
-| ID | Prioritat | Compl. | Què entrega |
-|----|-----------|--------|-------------|
-| NEXE-001       | critical | M  | Backlog YAML + lectura SOS · cercle Claude↔usuari |
-| CASTELLERS-001 | high     | S  | Projecte Castellers + projecte Alvaro pre-loaded |
-| PITCH-REFRAME-001 | high  | M  | Canvas vs Pitch separation · pitch IA-generated |
-| VNA-PROCESS-001  | high   | L  | Mapa de valor filtrable per procés (Verna Allee) |
-| WO-AUTO-001     | critical | XL | Cron + event + condition triggers per WO auto-gen |
-| SWARM-RELOC-001  | medium  | M | /sprint → /kanban genèric swarm-aware |
-| B-UNIFIED-FORM-001 | medium | L | Form unificat IA-driven (diferit del batch ant.) |
-| C2-TEMPLATES-001 | medium  | L | 15 plantilles type×stage (diferit del batch ant.) |
+| ID | Prioritat | Compl. | Què entrega | Depèn |
+|----|-----------|--------|-------------|-------|
+| **AGENT-BRIDGE-001** | critical | M  | Bridge AI-agent↔SOS GENÈRIC · YAML backlog · qualsevol agent plug-in | — |
+| **DEHARDCODE-CLAUDE-001** | high | S | Rename `--accent-claude`→`--accent-ai` · seeds genèrics · mocks neutres | — |
+| **AI-COST-QA-001** | critical | L | Meta-orquestrador · cache · pre-decision · post-evaluator · budget | aiRouterService |
+| **TDD-ALL-LEVELS-001** | high | L | TDD framework universal · IA · usuari · procés · org | AGENT-BRIDGE-001 |
+| **CASTELLERS-001** | high | S  | Castellers + Alvaro pre-loaded · prova real | — |
+| **PITCH-REFRAME-001** | high | M  | Pitch IA-generated investor doc | — |
+| **VNA-PROCESS-001** | high | L  | Mapa filtrable per procés Verna Allee | — |
+| **WO-AUTO-001** | critical | XL | Cron + event + condition triggers | VNA-PROCESS-001 |
+| **SWARM-RELOC-001** | medium | M | /sprint → /kanban genèric swarm-aware | AGENT-BRIDGE-001 |
+| **B-UNIFIED-FORM-001** | medium | L | Form unificat IA-driven (diferit) | C1 ✓ |
+| **C2-TEMPLATES-001** | medium | L | 15 plantilles type×stage (diferit) | C1 ✓ |
+
+**Primer batch suggerit · AGENT-BRIDGE-001 + DEHARDCODE-CLAUDE-001 +
+CASTELLERS-001** (M+S+S = ~10h · estableixen el model genèric · prova real ·
+i ja no estic hardcoded). AI-COST-QA-001 + TDD-ALL-LEVELS-001 al segon
+batch (motor de qualitat + cost · base per a tot operatiu).
 
 ---
 
-## NEXE-001 · Backlog YAML + SOS llegeix-lo des /kanban?project=sos-dev (input @alvaro 2026-05-15)
+## AGENT-BRIDGE-001 · Bridge AI-agent ↔ SOS GENÈRIC (input @alvaro 2026-05-15 · v2)
+
+> Nota · aquest item REEMPLAÇA NEXE-001 (que era Claude-specific). Mateixa
+> idea bàsica · però el protocol és agnostic d'agent · qualsevol IA pot
+> connectar-se via el mateix bridge.
 
 ### Tesi
-Convertir el `docs/backlog.md` + `backlogManifest.js` en **una sola font
-estructurada** (YAML) que serveix de nexe entre Claude Code (jo · escric) i
-SOS (browser · llegeix · usuari interacciona). El backlog deixa de ser
-"document doc" i passa a ser **dades operables** que el Kanban renderitza.
+SOS exposa un **protocol estàndard d'integració d'agents IA** · qualsevol
+agent (Claude · GPT · Gemini · custom local · humà via UI) pot ·
+1. **Llegir** WOs assignades · format YAML/JSON estàndard
+2. **Reclamar** una WO (lock + assign)
+3. **Executar** (codi · text · decisió · etc)
+4. **Reportar** resultat (deliverable · tests passats · cost) amb signatura
+5. **Tancar** la WO o fer escalation si cal
 
-### Diagnosi
-Avui ·
-- `docs/backlog.md` · narrativa · jo l'escric · usuari el llegeix a GitHub
-- `backlogManifest.js` · llista d'objectes JS · UI a `/sprint` la consumeix
-- **Cap connexió real** · l'usuari no pot afegir items al manifest ·
-  només pot accionar via swarm autonòmic
+L'usuari de SOS pot connectar el SEU agent IA preferit · no només Claude
+Code. Això és el que fa SOS un Swarm Operative System de veritat ·
+agents intercanviables · interoperables · governats pel mateix protocol.
 
-Demà ·
-- `docs/backlog.yaml` · estructurat · jo l'escric via commit
-- SOS carrega l'arxiu via fetch on init (com fa `knowledgeLoader`)
-- `/kanban?project=sos-dev-internal` · Kanban view sobre aquestes WOs
-- Usuari arrossega WOs entre estats · queda a localStorage com a "pending"
-- Botó "Export to PR" · genera JSON · usuari l'envia · jo l'integro
+### Arquitectura
+
+```
+┌──────────────────────────────────────────────────────┐
+│  AGENT REGISTRY (KB · public)                        │
+│  - id, name, capabilities[], cost_profile, owner     │
+│  - public_key (for signed deliverables)              │
+└────────────────────┬─────────────────────────────────┘
+                     │
+        ┌────────────┴────────────┐
+        │                         │
+┌───────▼──────┐         ┌────────▼────────┐
+│ AGENT IMPL   │         │  SOS BACKEND     │
+│ (extern)     │ ←──────→│  (browser local) │
+│ Claude/GPT/  │  protocol│  - WO queue     │
+│ custom       │  REST/   │  - matching     │
+└──────────────┘  YAML    │  - audit log    │
+                          └─────────────────┘
+```
+
+### Protocol bridge (v1 simple · file-based)
+
+**1. Backlog YAML estàndard** ·
+```yaml
+work_orders:
+  - id: "wo-001"
+    project_id: "sos-dev-internal"
+    title: "Implement AGENT-BRIDGE-001 schema"
+    priority: critical
+    status: pending  # pending | claimed | in-progress | done | blocked
+    assignee_kind: ai-any  # human | ai-claude | ai-gpt | ai-any | ai-with-cap
+    required_capabilities: [code-write, test-run]
+    deliverable_test:           # TDD-ALL-LEVELS-001 hooks here
+      kind: test-suite
+      command: "node js/tests/agentBridge.test.js"
+      expect: "all-pass"
+    estimated_cost_eur: 0.05
+    claimed_by: null            # filled when an agent claims it
+    claimed_at: null
+    completed_at: null
+    deliverable_uri: null
+    cost_actual_eur: null
+    signature: null
+```
+
+**2. Operacions de l'agent** (estàndard ·  bypassen UI) ·
+- `agent.list_wos({ projectId, capabilities })` → WOs candidates
+- `agent.claim_wo({ woId, agentId, signature })` → lock
+- `agent.report_progress({ woId, status, output })` → live status
+- `agent.complete_wo({ woId, deliverable, costActualEur, signature })` → close
+- `agent.escalate_wo({ woId, reason, suggestedReassign })` → human review
+
+**3. Matching engine** (al cor del SOS) ·
+- Pull WOs pending · match capabilities + cost_profile + budget · assign
+- Si múltiples agents disponibles · subhasta inversa (cost ascendent)
 
 ### Sprint plan A → C (~6h)
-- **A · Schema + migration (~2h)** · `docs/backlog.yaml` amb 60+ entries
-  derivades de `backlogManifest.js` + items nous del rethink. Validador
-  pure de schema (yamlBacklogService.js · zod-style).
-- **B · Loader + view (~2h)** · SOS llegeix YAML on init via fetch · cache
-  localStorage · Kanban view a `/kanban?project=sos-dev-internal`
-  reutilitza KanbanView existent.
-- **C · User edits + export (~2h)** · localStorage layer per als edits
-  pendents · botó "Export edits as PR description text" amb format
-  copy-paste · alvaro l'enganxa al xat amb jo · jo l'integro.
+
+- **A · Schema YAML + validador (~2h)** · `docs/backlog.yaml` derivat de
+  `backlogManifest.js` actual + 9 nous items del rethink. `agentBridgeSchema.js`
+  pure · valida shape · retorna errors detallats. `yamlBacklogService.js`
+  pure · parse + serialize.
+- **B · Agent registry + matching (~2h)** · `agentRegistryService.js` ·
+  CRUD agents · `matchingService.js` pure · capabilities ∩ WO requirements.
+  Seed inicial · 3 agents (claude-code · gpt-coder · human-anyone).
+- **C · UI + endpoints (~2h)** · `/kanban?project=sos-dev-internal` ·
+  visualitza WOs · botó "Claim with my agent" obre modal selector d'agent ·
+  usuari pot afegir el seu propi agent (form · API key · capabilities).
+  Per a Claude Code (jo) · "claim & execute" via Bash backend (no SOS UI).
 
 ### Decisions pendents @alvaro
-- Format de l'export · markdown · JSON · YAML-diff? · proposta · markdown
-  human-readable amb seccions "ADD WO" · "UPDATE WO id=X" · "MOVE TO done"
-- Nivell 3 bidireccional via GitHub Issues · ara o més endavant?
+- File-based YAML sembla simple però no és real-time · vols Nivell 3
+  directament (GitHub Issues bidireccional) o Nivell 1 primer? *Proposta ·
+  YAML primer · GitHub Issues v2 quan tinguem auth flow*
+- "ai-any" significa que CLAUDE pot agafar WOs marcades per GPT · OK?
+  *Proposta · sí · però amb prioritat al kind exacte si està disponible*
+- Permisos · qualsevol agent pot claim qualsevol WO? *Proposta · v1 sí ·
+  v2 ACL per project*
 
 ---
+
+## DEHARDCODE-CLAUDE-001 · Treure Claude dels llocs hardcoded (input @alvaro 2026-05-15)
+
+### Tesi
+SOS no pot tenir "Claude" hardcoded enlloc. L'auditoria mostra 3 llocs ·
+
+### Inventari (confirmat · 2026-05-15)
+1. **CSS · `--accent-claude`** · usat a 12+ views (DashboardView · KanbanView ·
+   SectorsView · ValueAccountingView · ValueMapView · MobileMockupView · etc).
+   Color or `#d4a853` (gold de la marca Anthropic). Cal · rename a
+   `--accent-ai` o `--accent-gold-orchestrator` (el segon més neutre).
+2. **`js/core/skill-seeds.js`** · "Claude Sonnet (Anthropic)" hardcoded com
+   a agent fundacional · "Claude: 2.0" multiplier hardcoded · línia 359
+   "AI Agent (Claude) | 0.015€" · línia 624 "Registrar Nodo Claude (agente 13)".
+   Cal · variable `DEFAULT_AGENT_NAME` configurable · seeds genèrics que
+   parlen de "AI agent" sense identificar provider.
+3. **`MobileMockupView.js:287`** · text mostrat "IA Claude" · cal text
+   genèric "IA orquestrador".
+
+### Sprint plan A → B (~2h)
+- **A · CSS rename (~30min)** · sed-style replace `--accent-claude` →
+  `--accent-orchestrator` a tots els fitxers. Bump BUILD_STAMP.
+- **B · seeds + mocks (~1h)** · skill-seeds.js · usar `DEFAULT_AGENT_NAME`
+  variable · canvi text. MobileMockupView · text genèric.
+- **C · Verificar (~30min)** · grep final · 0 ocurrències de "Claude" /
+  "claude" fora de model IDs (`claude-opus-4-7` etc · que SÓN noms reals
+  d'API · OK mantenir).
+
+### Decisions pendents @alvaro
+- Nom del color · `--accent-orchestrator` · `--accent-gold` · `--accent-ai`?
+  *Proposta · `--accent-orchestrator` (semantic · no provider-specific)*
+- Mantenim el color `#d4a853` (mateix que abans) · o canviem · o
+  parametritzem per agent? *Proposta · mateix color · semàntic genèric*
+
+---
+
+## AI-COST-QA-001 · Meta-orquestrador IA · cost vs qualitat dinàmic (input @alvaro 2026-05-15)
+
+### Tesi
+Estendre `aiRouterService` (estàtic per task kind + tier) cap a un sistema
+**runtime** que pren decisions intel·ligents abans i després de cada crida ·
+1. Cal IA realment? (potser regex/lookup gratis serveix)
+2. Quin model? (cache hit · capacitat · cost)
+3. Quin evaluator post-crida? (cheap evaluator OK pot validar resposta cara
+   barata · si OK · tanquem · si KO · escalem)
+4. Estem dins budget mensual del projecte? (alerta · soft block · hard block)
+5. Es pot fer batch amb altres crides en cua?
+
+Cost mínim per qualitat objectiu garantida.
+
+### Components
+
+**1. Cache layer** (LRU · sessionStorage) ·
+- Hash del prompt + systemPrompt + temperature → resposta
+- TTL configurable (default 1h · sense expira per a prompts deterministes)
+- Hit rate visible al `aiTierIndicator` ("0.025€ saved this session")
+
+**2. Pre-call decision tree** ·
+```
+new request →
+  is_deterministic? → lookup table (no IA)
+  is_cached? → return cached (no cost)
+  is_simple_classification? → cheapest model + evaluator
+  is_creative_narrative? → quality tier
+  is_critical_audit? → critical tier + double-check evaluator
+```
+
+**3. Post-call quality gate** ·
+- Tots els outputs IA passen per evaluator (cheap model · ~0.0005€)
+- Si evaluator FAIL · escalem a tier superior · re-genera
+- Si evaluator OK · accepta · si NOT-SURE · usuari valida (UI flag)
+
+**4. Budget enforcer** ·
+- `project.aiBudget.monthlyEur` · default 5€ alfa · configurable
+- 80% consumit · alerta groc al UI
+- 100% consumit · soft-block (modal "Augmentar budget?")
+- 120% · hard-block · cap nova crida fins a topup
+
+**5. Batching** ·
+- Crides petites (token < 200) van a cua · si cap altra arriba en 500ms ·
+  juntem N crides en 1 batch (system prompt compartit)
+- Reducció estimada · 30-50% del cost en escenari pitch generation
+  (10 small calls → 1 batch call)
+
+**6. Telemetry feedback loop** ·
+- Cada crida registra · model · cost · latència · evaluator score · usuari
+  rating (thumbs up/down al output IA)
+- Setmanal · job analitza · si model X falla regularment a task Y · ajusta
+  routing matrix automàticament
+
+### Sprint plan A → E (~14h)
+
+- **A · Cache layer (~2h)** · `aiCacheService.js` · LRU + TTL · helpers
+  hash + lookup. Integració a `runPrompt`. Tests cache hit/miss/expire.
+- **B · Pre-call decision (~3h)** · `aiDecisionService.js` · funció pure
+  `decideStrategy({ prompt, taskKind, projectBudget })` retorna
+  `{ skip:bool, modelKey, useCache:bool, useBatch:bool }`. Tests amb 10
+  scenarios.
+- **C · Post-call quality gate (~3h)** · estendre `runPrompt` amb
+  `requireEvaluator:true` · evaluator config per task kind · auto-escalation
+  si fail. Tests.
+- **D · Budget enforcer (~3h)** · `aiBudgetService.js` · per-project budget
+  · alerta · soft-block · hard-block. UI a `aiTierIndicator` (badge).
+- **E · Batching + telemetry (~3h)** · `aiBatchService.js` · cua + flush
+  amb timeout. `aiTelemetryService.js` · feedback loop · UI a /settings/ai.
+
+### Decisions pendents @alvaro
+- Default monthly budget per projecte alfa? *Proposta · 5€ · usuari pot
+  augmentar a /settings*
+- Hard-block o soft-block al 100%? *Proposta · soft (modal augmentar)*
+- Telemetry feedback loop · auto-tune routing · o sols suggerit per a
+  l'admin? *Proposta · suggerit · admin valida · evita drift no-supervisat*
+
+---
+
+## TDD-ALL-LEVELS-001 · TDD framework universal (input @alvaro 2026-05-15)
+
+### Tesi
+SOS aplica TDD a codi i a WOs (DTD). Cal estendre el principi a · IA ·
+usuari · procés · organització. **Cada decisió mesurable · sense excepció.**
+Si pot fallar i no es testeja · no existeix.
+
+### Capes TDD proposades
+
+**1. Codi TDD** (existent ✓) · 297 asserts en suites · cada feature té test.
+
+**2. WO TDD = DTD** (existent ✓ · principi SOC) · cada WO té
+`deliverable_test` · IA o humà tanca quan passa el test.
+
+**3. IA Response TDD** (parcial · runEscalation amb evaluator) · cal
+estendre · TOT output IA passa per evaluator abans de servir-se a l'usuari.
+AI-COST-QA-001 ja ho cobreix parcialment · TDD-ALL-LEVELS-001 ho
+formalitza com a contracte · `runPrompt({ requireEvaluator: true })` per
+defecte a tots els callers.
+
+**4. User Decision TDD** (nou) · validators per acció crítica ·
+- Onboarding step completion · validator (no es pot saltar al següent
+  sense que el current passi)
+- Critical action confirmation · "esborrar projecte" · validator amb
+  re-prompt + checklist
+- VNA design · validator que detecta · rols sense transaccions · transaccions
+  sense rols · loops de valor desconnectats
+
+**5. Process TDD** (nou) · per cada `vna_process` · KPI test auto-run ·
+- Setmana · job evalua KPI · si sota threshold · alerta + suggested action
+- Ex · "procés vendes · KPI conversió mensual ≥ 5%" · si 3% · alert
+- Connecta amb VNA-PROCESS-001 (cycleHint definit allà)
+
+**6. Org TDD** (nou) · health metrics mensuals · per projecte i per usuari ·
+- VNA balance · cap rol amb 0 transaccions · cap transacció orfaina
+- Wallet health · cash flow positiu sostingut ≥ 3 mesos
+- Comm health · reunions amb actes signades · % resolt
+- Auditor · si fail · genera WOs de correcció auto-assignades a rols
+  responsables
+
+### Sprint plan A → D (~12h)
+
+- **A · IA evaluator universal (~3h)** · default evaluator per task kind ·
+  `runPrompt({ requireEvaluator: true })` activat per defecte · escape per
+  task kinds que no en necessiten (tag-generation).
+- **B · User validators (~3h)** · `userActionValidatorService.js` · catàleg
+  de validators per acció crítica · UI hooks (modal · banner) · 6 actions
+  cobertes (delete project · publish permaweb · accept proposal · etc).
+- **C · Process KPI tests (~3h)** · estén `vna_process` schema amb
+  `kpi_test` · runner setmanal · UI a `/processes/{id}/health`.
+- **D · Org health auditor (~3h)** · `orgAuditorService.js` · pure +
+  scheduled · genera WOs de correcció · UI a `/health`.
+
+### Decisions pendents @alvaro
+- IA evaluator default ON · trenca casos d'ús ràpid (drafts on no calia
+  evaluator)? *Proposta · default ON · escape lists per tag-generation
+  + summary-short*
+- User validators · poden ser bypassed per power-users? *Proposta · NO ·
+  el value-add és justament la garantia · power-users tenen menus avançats
+  separats*
+- Org auditor · genera WOs auto-assignades · això pot fer spam si projecte
+  té molts forats. *Proposta · max 5 WOs/dia per projecte · resta a
+  backlog "audit findings"*
+
+---
+
+## NEXE-001 · ~~Backlog YAML + SOS llegeix-lo des /kanban?project=sos-dev~~ (REEMPLAÇAT 2026-05-15)
+
+> **Aquest item ha quedat OBSOLET.** Substituït per AGENT-BRIDGE-001
+> (versió generalitzada · qualsevol agent IA · no només Claude). Veure
+> AGENT-BRIDGE-001 més amunt al document.
 
 ## CASTELLERS-001 · Pre-load projecte Castellers + projecte Alvaro (input @alvaro 2026-05-15)
 
