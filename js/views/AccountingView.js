@@ -20,6 +20,9 @@ import {
     addProofToEntry, PROOF_KINDS, signLedgerEntry,
     quickEntry,
 } from '../core/ledgerService.js';
+import {
+    buildLedgerEntryAttestation, buildCertificateHtml,
+} from '../core/certificateReportService.js';
 
 export default class AccountingView {
 
@@ -56,10 +59,30 @@ export default class AccountingView {
         this._bindAuditActions();
     }
 
-    // CERT-001 pas 2 · sign entries + add proofs
+    // CERT-001 pas 2+3+4 · sign entries + add proofs + export certificate
     _bindAuditActions() {
         document.querySelectorAll('[data-sign]').forEach(btn => btn.addEventListener('click', () => this._handleSign(btn.dataset.sign)));
         document.querySelectorAll('[data-add-proof]').forEach(btn => btn.addEventListener('click', () => this._handleAddProof(btn.dataset.addProof)));
+        document.getElementById('acExportCert')?.addEventListener('click', () => this._handleExportCert());
+    }
+
+    _handleExportCert() {
+        if (!this.project) return;
+        try {
+            const html = buildCertificateHtml({
+                project: this.project, entries: this.entries,
+                certifierName: this.project.creatorHandle || null,
+                certifierDid:  'did:sos:' + this.project.id,
+            });
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const w = window.open(url, '_blank');
+            if (!w) {
+                alert('Cal permetre popups · obre l\'URL manualment:\n' + url);
+            }
+        } catch (e) {
+            alert('Error generant certificat · ' + (e?.message || 'desconegut'));
+        }
     }
 
     async _handleSign(entryId) {
@@ -73,7 +96,20 @@ export default class AccountingView {
                 return;
             }
             const signerDid = 'did:sos:' + (this.projectId);
-            const signed = await signLedgerEntry({ entry, privateJwk: key.privateJwk, signerDid });
+            let signed = await signLedgerEntry({ entry, privateJwk: key.privateJwk, signerDid });
+            // CERT-001 pas 3 · auto-generar attestation + linkar com a proof
+            const attestation = buildLedgerEntryAttestation({
+                entry: signed,
+                attesterDid:    signerDid,
+                attesterHandle: this.project.creatorHandle || null,
+            });
+            await KB.upsert(attestation);
+            // Add proof a l'entry · attestation-id
+            signed = addProofToEntry(signed, {
+                kind:     'attestation-id',
+                value:    attestation.id,
+                signedBy: signerDid,
+            });
             await KB.upsert(signed);
             window.location.reload();
         } catch (e) {
@@ -249,6 +285,7 @@ export default class AccountingView {
                         <div style="text-align:right;font-family:var(--font-mono);">
                             <div style="font-size:2.4rem;font-weight:700;color:${auditMeta.color};">${audit.score}</div>
                             <div style="font-size:10px;color:var(--text-muted);">SCORE · /100</div>
+                            <button class="ac-btn" id="acExportCert" style="margin-top:8px;font-size:11px;background:${auditMeta.color};border-color:${auditMeta.color};color:#000;">📄 Exportar certificat</button>
                         </div>
                     </div>
                     <details style="margin-top:8px;">
