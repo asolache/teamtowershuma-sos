@@ -18,12 +18,18 @@ t(typeof NAV_ID === 'string' && NAV_ID.length > 0,       'A · NAV_ID exported')
 // 2 · inferActiveId · happy paths
 eq(inferActiveId('/'),         'home',                   'B · / → home');
 eq(inferActiveId('/home'),     'home',                   'B · /home → home');
-eq(inferActiveId('/dashboard'),'projects',               'B · /dashboard → projects');
-eq(inferActiveId('/sprint'),   'sprint',                 'B · /sprint → sprint');
+eq(inferActiveId('/timeline'), 'timeline',               'B · /timeline → timeline');
+eq(inferActiveId('/registry'), 'timeline',               'B · /registry → timeline (same group)');
+eq(inferActiveId('/create'),   'create',                 'B · /create → create');
+eq(inferActiveId('/dashboard'),'create',                 'B · /dashboard → create (project creation flow)');
 eq(inferActiveId('/market'),   'market',                 'B · /market → market');
+eq(inferActiveId('/opportunities'), 'market',            'B · /opportunities → market (same group)');
+eq(inferActiveId('/process-catalog'), 'market',          'B · /process-catalog → market (discover)');
 eq(inferActiveId('/identity'), 'me',                     'B · /identity → me');
 eq(inferActiveId('/wallet'),   'me',                     'B · /wallet → me');
 eq(inferActiveId('/u/alvaro'), 'me',                     'B · /u/{handle} → me');
+eq(inferActiveId('/settings'), 'me',                     'B · /settings → me');
+eq(inferActiveId('/settings-v2'), 'me',                  'B · /settings-v2 → me');
 
 // 3 · paths no-match · null
 eq(inferActiveId('/canvas'),   null,                     'B · /canvas → null');
@@ -31,8 +37,10 @@ eq(inferActiveId('/inventat'), null,                     'B · /inventat → nul
 
 // 4 · HREF_BY_ID
 t(HREF_BY_ID.home === '/home',                           'C · home href /home');
-t(HREF_BY_ID.projects === '/dashboard',                  'C · projects href /dashboard');
-t(HREF_BY_ID.sprint === '/sprint',                       'C · sprint /sprint');
+t(HREF_BY_ID.timeline === '/timeline',                   'C · timeline href');
+t(HREF_BY_ID.create === '/create',                       'C · create href');
+t(HREF_BY_ID.market === '/market',                       'C · market href');
+t(HREF_BY_ID.me === '/identity',                         'C · me href');
 
 // 5 · renderHtml · pure · conté els 5 items
 const html = renderHtml({ activeId: 'home' });
@@ -43,7 +51,7 @@ for (const item of PRIMARY) {
     t(html.includes(item.icon),                          'D · ' + item.label + ' icon');
 }
 // active className on home item only
-t(html.match(/active.*Home/) || html.match(/Home.*active/), 'D · home té active class');
+t(html.match(/active.*Avui/) || html.match(/Avui.*active/), 'D · home té active class · label "Avui"');
 
 // 6 · renderHtml sense active · cap item active
 const htmlNoActive = renderHtml({ activeId: null });
