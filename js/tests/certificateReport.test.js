@@ -7,6 +7,7 @@ import {
     buildLedgerEntryAttestation,
     computeReportPeriod,
     buildCertificateMarkdown, buildCertificateHtml,
+    buildCoSignRequest, listPendingCoSignRequests,
 } from '../core/certificateReportService.js';
 import { quickEntry } from '../core/ledgerService.js';
 
@@ -120,6 +121,71 @@ const evilProject = { id: 'p1', nombre: '<script>alert(1)</script>' };
 const htmlEvil = buildCertificateHtml({ project: evilProject, entries });
 t(!htmlEvil.includes('<script>alert(1)</script>'),                'F · script tag escaped');
 t(htmlEvil.includes('&lt;script&gt;'),                            'F · entities');
+
+// ─── G · buildCoSignRequest (pas 5 · counter-party) ──────────────────────
+const coReq = buildCoSignRequest({
+    entry, requesterDid: 'did:sos:alvaro', requesterHandle: '@alvaro',
+    coSignerHandle: '@bob',
+});
+eq(coReq.type, 'attestation',                                     'G · type attestation');
+eq(coReq.content.attestationKind, 'co-signs-ledger-entry',        'G · kind co-signs-ledger-entry');
+eq(coReq.content.attestedId, entry.id,                            'G · attestedId match');
+eq(coReq.content.attesterHandle, '@bob',                          'G · attesterHandle prefixed @');
+eq(coReq.content.status, 'pending',                               'G · status pending');
+eq(coReq.content.requestedBy, 'did:sos:alvaro',                   'G · requestedBy DID');
+eq(coReq.content.requestedByHandle, '@alvaro',                    'G · requestedByHandle');
+t(coReq.content.statement.includes('alvaro') || coReq.content.statement.includes('contra-firma'),
+                                                                  'G · statement informatiu');
+
+// Acceptem handle sense @ inicial
+const coReq2 = buildCoSignRequest({
+    entry, requesterDid: 'did:sos:x', coSignerHandle: 'bob',
+});
+eq(coReq2.content.attesterHandle, '@bob',                         'G · handle sense @ → afegit');
+
+// coSignerDid sense handle
+const coReq3 = buildCoSignRequest({
+    entry, requesterDid: 'did:sos:x', coSignerDid: 'did:sos:bob',
+});
+eq(coReq3.content.attesterDid, 'did:sos:bob',                     'G · coSignerDid preserved');
+eq(coReq3.content.attesterHandle, null,                           'G · sense handle si sols DID');
+
+// Throws
+threw = false;
+try { buildCoSignRequest({}); } catch (_) { threw = true; }
+t(threw,                                                          'G · sense entry throws');
+threw = false;
+try { buildCoSignRequest({ entry }); } catch (_) { threw = true; }
+t(threw,                                                          'G · sense requesterDid throws');
+threw = false;
+try { buildCoSignRequest({ entry, requesterDid: 'x' }); } catch (_) { threw = true; }
+t(threw,                                                          'G · sense coSigner throws');
+
+// ─── H · listPendingCoSignRequests ────────────────────────────────────────
+const allAtts = [
+    coReq,    // pending bob
+    coReq2,   // pending bob (segon)
+    coReq3,   // pending did:sos:bob
+    buildLedgerEntryAttestation({ entry, attesterDid: 'did:sos:alvaro' }),   // not co-sign kind
+    { type: 'attestation', content: { attestationKind: 'co-signs-ledger-entry', status: 'signed', attesterHandle: '@bob' } },   // already signed
+    { type: 'other', content: {} },     // wrong type
+];
+
+const pendBob = listPendingCoSignRequests({ attestations: allAtts, handle: '@bob' });
+eq(pendBob.length, 2,                                             'H · bob · 2 pending');
+
+const pendBobNoAt = listPendingCoSignRequests({ attestations: allAtts, handle: 'bob' });
+eq(pendBobNoAt.length, 2,                                         'H · bob sense @ · same result');
+
+const pendByDid = listPendingCoSignRequests({ attestations: allAtts, did: 'did:sos:bob' });
+eq(pendByDid.length, 1,                                           'H · per DID · 1 pending');
+
+const pendOther = listPendingCoSignRequests({ attestations: allAtts, handle: 'nobody' });
+eq(pendOther.length, 0,                                           'H · unknown · 0');
+
+// Empty safe
+eq(listPendingCoSignRequests({}).length, 0,                       'H · empty · 0');
+eq(listPendingCoSignRequests({ attestations: [] }).length, 0,     'H · empty array · 0');
 
 console.log('\n---\n' + pass + ' pass · ' + fail + ' fail\n');
 if (fail > 0) process.exit(1);

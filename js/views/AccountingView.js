@@ -22,6 +22,7 @@ import {
 } from '../core/ledgerService.js';
 import {
     buildLedgerEntryAttestation, buildCertificateHtml,
+    buildCoSignRequest,
 } from '../core/certificateReportService.js';
 
 export default class AccountingView {
@@ -63,7 +64,36 @@ export default class AccountingView {
     _bindAuditActions() {
         document.querySelectorAll('[data-sign]').forEach(btn => btn.addEventListener('click', () => this._handleSign(btn.dataset.sign)));
         document.querySelectorAll('[data-add-proof]').forEach(btn => btn.addEventListener('click', () => this._handleAddProof(btn.dataset.addProof)));
+        document.querySelectorAll('[data-cosign]').forEach(btn => btn.addEventListener('click', () => this._handleCoSign(btn.dataset.cosign)));
         document.getElementById('acExportCert')?.addEventListener('click', () => this._handleExportCert());
+    }
+
+    // CERT-001 pas 5 · counter-party request
+    async _handleCoSign(entryId) {
+        const entry = this.entries.find(e => e.id === entryId);
+        if (!entry) return;
+        const handle = window.prompt('Handle del soci a qui demanes la co-firma (p.ex. @bob):', '@');
+        if (!handle || handle === '@' || !handle.trim()) return;
+        try {
+            const requesterDid    = 'did:sos:' + this.projectId;
+            const requesterHandle = this.project.creatorHandle || null;
+            const coReq = buildCoSignRequest({
+                entry, requesterDid, requesterHandle,
+                coSignerHandle: handle.trim(),
+            });
+            await KB.upsert(coReq);
+            // Add proof attestation-id (encara pending) per visibilitat
+            const updated = addProofToEntry(entry, {
+                kind:     'attestation-id',
+                value:    coReq.id,
+                signedBy: requesterDid,
+            });
+            await KB.upsert(updated);
+            alert('🤝 Co-firma sol·licitada a ' + handle + '. Quan signi des de la seva sessió · l\'attestation passarà a status "signed".');
+            window.location.reload();
+        } catch (e) {
+            alert('Error sol·licitant co-firma · ' + (e?.message || 'desconegut'));
+        }
     }
 
     _handleExportCert() {
@@ -180,7 +210,8 @@ export default class AccountingView {
                 const lvlIcon  = lvl === 'audited' ? '🛡' : (lvl === 'signed' ? '🔐' : '·');
                 const lvlBadge = `<span title="${this._esc(lvl)} · ${auditState.proofsCount} proofs${auditState.needsProofs ? ' (necessita ≥2)' : ''}" style="display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:999px;background:${lvlColor}25;color:${lvlColor};font-size:10px;font-weight:700;font-family:var(--font-mono);">${lvlIcon} ${this._esc(lvl)}</span>`;
                 const actionBtns = auditState.signed
-                    ? `<button class="ac-btn-mini" data-add-proof="${this._esc(e.id)}" title="Afegir proof">📎</button>`
+                    ? `<button class="ac-btn-mini" data-add-proof="${this._esc(e.id)}" title="Afegir proof">📎</button>
+                       <button class="ac-btn-mini" data-cosign="${this._esc(e.id)}" title="Sol·licitar co-signatura d'un altre soci">🤝</button>`
                     : `<button class="ac-btn-mini ac-btn-mini-primary" data-sign="${this._esc(e.id)}" title="Signar entry amb la teva ECDSA key">🔐 Signar</button>`;
                 return `
                     <tr>
