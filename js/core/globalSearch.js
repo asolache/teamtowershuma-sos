@@ -161,6 +161,16 @@ function _ensureCss() {
             text-transform: uppercase;
             letter-spacing: 0.04em;
         }
+        .sos-search-item .sos-search-visits {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #facc15;
+            background: rgba(250,204,21,0.12);
+            padding: 1px 7px;
+            border-radius: 999px;
+            min-width: 28px;
+            text-align: center;
+        }
         .sos-search-empty {
             padding: 28px 18px;
             color: var(--text-secondary, #94a3b8);
@@ -280,6 +290,7 @@ let _isOpen = false;
 let _allNodes = [];
 let _activeIdx = 0;
 let _currentResults = [];
+let _visitCounts = {};         // map route → visit count (last 90d via neural_path_step)
 
 async function _loadAllNodes() {
     try {
@@ -289,45 +300,99 @@ async function _loadAllNodes() {
             'matriu_member', 'attestation', 'pact', 'invoice', 'proposal',
             'sop', 'soc', 'workshop', 'market_item', 'organization',
             'public_registry_entry', 'role', 'process', 'learn_role',
+            // Step nodes per al ranking d'habituals
+            'neural_path_step',
         ];
         const results = await Promise.all(TYPES_TO_SEARCH.map(t => KB.query({ type: t }).catch(() => [])));
-        _allNodes = results.flat();
+        const flat = results.flat();
+        // Split · neural_path_step → visitCounts · resta → search nodes
+        _visitCounts = {};
+        _allNodes = [];
+        for (const n of flat) {
+            if (n.type === 'neural_path_step' && n.content?.kind === 'visit') {
+                // Normalitza route · treu query strings · pathname pur
+                const route = String(n.content.route || '').split('?')[0] || '/';
+                _visitCounts[route] = (_visitCounts[route] || 0) + 1;
+            } else {
+                _allNodes.push(n);
+            }
+        }
     } catch (e) {
         _allNodes = [];
+        _visitCounts = {};
     }
 }
 
+// _sortLinksByHabits · pure · ordena per visit count desc · pinned items
+// (sense visites) van al final · ordre original com a fallback
+function _sortLinksByHabits(links, counts = _visitCounts) {
+    const enriched = links.map((l, originalIdx) => ({
+        ...l,
+        visits: counts[l.href] || 0,
+        originalIdx,
+    }));
+    enriched.sort((a, b) => {
+        if (b.visits !== a.visits) return b.visits - a.visits;
+        return a.originalIdx - b.originalIdx;  // estable tie-break
+    });
+    return enriched;
+}
+
+// Exposed per a tests
+export function sortLinksByHabits(links, counts) {
+    return _sortLinksByHabits(links, counts);
+}
+
 function _renderPanel({ query = '' } = {}) {
-    const showQuick = !query || query.trim().length === 0;
+    const showQuick = !query || query.trim().length === 0 || query.trim() === '/';
     const results = showQuick ? [] : searchNodes(_allNodes, query, { limit: 30 });
-    _currentResults = showQuick
-        ? QUICK_LINKS.map(q => ({ ...q, _isQuick: true }))
-        : results.map(r => ({
+    if (showQuick) {
+        // Ordena per habituals (visit count) · primer els més visitats
+        const sortedLinks = _sortLinksByHabits(QUICK_LINKS);
+        _currentResults = sortedLinks.map(q => ({
+            icon: q.icon,
+            title: q.title,
+            type: q.type,
+            href: q.href,
+            visits: q.visits,
+            _isQuick: true,
+        }));
+    } else {
+        _currentResults = results.map(r => ({
             icon: _iconForType(r.node.type),
             title: r.title || r.node.id,
             type: r.node.type,
             href: _hrefForNode(r.node),
             _node: r.node,
         }));
+    }
     _activeIdx = 0;
+
+    // Pista per a empty state · explica el "/" hint
+    const _renderQuickItem = (r, i) => {
+        const badge = r.visits > 0
+            ? `<span class="sos-search-visits" title="Vistes a la teva sessió · ${r.visits} cops">${r.visits}×</span>`
+            : '';
+        return `
+            <a href="${_esc(r.href)}" data-link data-idx="${i}" class="sos-search-item ${i === 0 ? 'active' : ''}" role="option" aria-selected="${i === 0 ? 'true' : 'false'}">
+                <span class="ic" aria-hidden="true">${r.icon}</span>
+                <span class="ttl">${_esc(r.title)}</span>
+                ${badge}
+                <span class="type">${_esc(r.type)}</span>
+            </a>`;
+    };
+    const _renderNodeItem = (r, i) => `
+            <a href="${_esc(r.href)}" data-link data-idx="${i}" class="sos-search-item ${i === 0 ? 'active' : ''}" role="option" aria-selected="${i === 0 ? 'true' : 'false'}">
+                <span class="ic" aria-hidden="true">${r.icon}</span>
+                <span class="ttl">${_esc(r.title)}</span>
+                <span class="type">${_esc(r.type)}</span>
+            </a>`;
 
     const itemsHtml = _currentResults.length === 0 && !showQuick
         ? `<div class="sos-search-empty">Cap resultat per a "${_esc(query)}" · prova un altre terme · escriu menys lletres</div>`
         : (showQuick
-            ? `<div class="sos-search-section">Accés ràpid</div>` + _currentResults.map((r, i) => `
-                <a href="${_esc(r.href)}" data-link data-idx="${i}" class="sos-search-item ${i === 0 ? 'active' : ''}" role="option" aria-selected="${i === 0 ? 'true' : 'false'}">
-                    <span class="ic" aria-hidden="true">${r.icon}</span>
-                    <span class="ttl">${_esc(r.title)}</span>
-                    <span class="type">${_esc(r.type)}</span>
-                </a>
-            `).join('')
-            : `<div class="sos-search-section">${_currentResults.length} resultats</div>` + _currentResults.map((r, i) => `
-                <a href="${_esc(r.href)}" data-link data-idx="${i}" class="sos-search-item ${i === 0 ? 'active' : ''}" role="option" aria-selected="${i === 0 ? 'true' : 'false'}">
-                    <span class="ic" aria-hidden="true">${r.icon}</span>
-                    <span class="ttl">${_esc(r.title)}</span>
-                    <span class="type">${_esc(r.type)}</span>
-                </a>
-            `).join(''));
+            ? `<div class="sos-search-section">Vistes habituals · ordenades pel teu ús · escriu per cercar nodes</div>` + _currentResults.map(_renderQuickItem).join('')
+            : `<div class="sos-search-section">${_currentResults.length} resultats</div>` + _currentResults.map(_renderNodeItem).join(''));
 
     return `
     <div class="sos-search-bg active" id="${SEARCH_ID}" role="dialog" aria-modal="true" aria-labelledby="sosSearchLabel">
@@ -391,31 +456,41 @@ async function _open() {
 function _rerenderResults(query) {
     const container = document.querySelector('.sos-search-results');
     if (!container) return;
-    const showQuick = !query || query.trim().length === 0;
-    const results = showQuick ? [] : searchNodes(_allNodes, query, { limit: 30 });
-    _currentResults = showQuick
-        ? QUICK_LINKS.map(q => ({ ...q, _isQuick: true }))
-        : results.map(r => ({
+    const showQuick = !query || query.trim().length === 0 || query.trim() === '/';
+    if (showQuick) {
+        const sortedLinks = _sortLinksByHabits(QUICK_LINKS);
+        _currentResults = sortedLinks.map(q => ({
+            icon: q.icon, title: q.title, type: q.type, href: q.href, visits: q.visits, _isQuick: true,
+        }));
+    } else {
+        const results = searchNodes(_allNodes, query, { limit: 30 });
+        _currentResults = results.map(r => ({
             icon: _iconForType(r.node.type),
             title: r.title || r.node.id,
             type: r.node.type,
             href: _hrefForNode(r.node),
         }));
+    }
     _activeIdx = 0;
     if (_currentResults.length === 0 && !showQuick) {
         container.innerHTML = `<div class="sos-search-empty">Cap resultat per a "${_esc(query)}" · prova un altre terme</div>`;
         return;
     }
+    const renderItem = (r, i) => {
+        const visitBadge = (r._isQuick && r.visits > 0)
+            ? `<span class="sos-search-visits" title="Vistes ${r.visits} cops">${r.visits}×</span>` : '';
+        return `
+            <a href="${_esc(r.href)}" data-link data-idx="${i}" class="sos-search-item ${i === 0 ? 'active' : ''}" role="option" aria-selected="${i === 0 ? 'true' : 'false'}">
+                <span class="ic" aria-hidden="true">${r.icon}</span>
+                <span class="ttl">${_esc(r.title)}</span>
+                ${visitBadge}
+                <span class="type">${_esc(r.type)}</span>
+            </a>`;
+    };
     container.innerHTML = (showQuick
-        ? '<div class="sos-search-section">Accés ràpid</div>'
+        ? '<div class="sos-search-section">Vistes habituals · ordenades pel teu ús</div>'
         : '<div class="sos-search-section">' + _currentResults.length + ' resultats</div>'
-    ) + _currentResults.map((r, i) => `
-        <a href="${_esc(r.href)}" data-link data-idx="${i}" class="sos-search-item ${i === 0 ? 'active' : ''}" role="option" aria-selected="${i === 0 ? 'true' : 'false'}">
-            <span class="ic" aria-hidden="true">${r.icon}</span>
-            <span class="ttl">${_esc(r.title)}</span>
-            <span class="type">${_esc(r.type)}</span>
-        </a>
-    `).join('');
+    ) + _currentResults.map(renderItem).join('');
     _bindResultClicks();
 }
 

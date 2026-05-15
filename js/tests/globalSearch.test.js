@@ -78,6 +78,40 @@ t(typeof gs.close === 'function',                        'D · close exported');
 t(typeof gs.injectGlobal === 'function',                 'D · injectGlobal exported');
 t(typeof gs.destroy === 'function',                      'D · destroy exported');
 t(typeof gs.searchNodes === 'function',                  'D · searchNodes exported (pure)');
+t(typeof gs.sortLinksByHabits === 'function',            'D · sortLinksByHabits exported');
+
+// sortLinksByHabits · order by visit counts
+const links = [
+    { icon: '🏠', title: 'Home',     href: '/home',     type: 'page' },
+    { icon: '🐝', title: 'Sprint',   href: '/sprint',   type: 'page' },
+    { icon: '🛒', title: 'Market',   href: '/market',   type: 'page' },
+    { icon: '💬', title: 'Timeline', href: '/timeline', type: 'page' },
+];
+const counts1 = { '/timeline': 12, '/sprint': 3, '/home': 8 };
+const sorted1 = gs.sortLinksByHabits(links, counts1);
+eq(sorted1.length, 4,                                    'E · sortLinksByHabits · keeps length');
+eq(sorted1[0].href, '/timeline',                         'E · top visited (12) first');
+eq(sorted1[1].href, '/home',                             'E · second visited (8) next');
+eq(sorted1[2].href, '/sprint',                           'E · third visited (3) next');
+eq(sorted1[3].href, '/market',                           'E · 0-visits (Market) last');
+
+// Tie-break · estable amb original order si mateixes visites
+const counts2 = { '/home': 5, '/sprint': 5 };
+const sorted2 = gs.sortLinksByHabits(links, counts2);
+eq(sorted2[0].href, '/home',                             'E · tie · original order preserved');
+eq(sorted2[1].href, '/sprint',                           'E · tie 2');
+
+// Empty counts · returns original order
+const sorted3 = gs.sortLinksByHabits(links, {});
+eq(sorted3[0].href, '/home',                             'E · no counts · original order');
+eq(sorted3[3].href, '/timeline',                         'E · last preserved');
+
+// Visit count badge on result
+for (const item of sorted1) {
+    t(typeof item.visits === 'number',                   'E · visits field added');
+}
+eq(sorted1[0].visits, 12,                                'E · visits value correct');
+eq(sorted1[3].visits, 0,                                 'E · 0 visits explicit');
 
 console.log(`\n${pass} pass · ${fail} fail\n`);
 if (fail > 0) process.exit(1);
