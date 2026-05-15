@@ -109,6 +109,53 @@ export function buildCoSignRequest({
     };
 }
 
+// acceptCoSignRequest · ASYNC · accept i sign the pending attestation amb la
+// signing key del coSigner. Marca status='signed' + ancla signedAt + signs.
+//
+// args ·
+//   pendingAttestation · attestation node amb status='pending'
+//   accepterDid        · DID real del que accepta (s'ancla a attesterDid)
+//   accepterHandle     · handle (s'ancla a attesterHandle)
+//   privateJwk         · ECDSA P-256 private key del accepter
+//
+// Retorna · attestation node signed (status='signed' + content.signature)
+export async function acceptCoSignRequest({
+    pendingAttestation = null,
+    accepterDid        = null,
+    accepterHandle     = null,
+    privateJwk         = null,
+} = {}) {
+    if (!pendingAttestation || !pendingAttestation.content) throw new Error('pendingAttestation required');
+    if (pendingAttestation.content.attestationKind !== 'co-signs-ledger-entry') {
+        throw new Error('not-a-cosign-request');
+    }
+    if (pendingAttestation.content.status === 'signed') {
+        throw new Error('already-signed');
+    }
+    if (!accepterDid) throw new Error('accepterDid required');
+    if (!privateJwk)  throw new Error('privateJwk required');
+
+    const { signNode } = await import('./nodeSigningService.js');
+    const cleanHandle = accepterHandle ? '@' + String(accepterHandle).replace(/^@/, '') : null;
+
+    // Pre-update content abans de signar · canonical inclou tot
+    const prep = {
+        ...pendingAttestation,
+        content: {
+            ...pendingAttestation.content,
+            attesterDid,
+            attesterHandle: cleanHandle,
+            status:         'signed',
+            signedAt:       new Date().toISOString(),
+        },
+        updatedAt: Date.now(),
+    };
+    // Fix · usem accepterDid (no attesterDid no definit aquí)
+    prep.content.attesterDid = accepterDid;
+
+    return signNode({ node: prep, privateJwk });
+}
+
 // listPendingCoSignRequests · pure · llistar attestations on l'usuari (per
 // handle o DID) està sol·licitat com a coSigner i encara és pending.
 //
