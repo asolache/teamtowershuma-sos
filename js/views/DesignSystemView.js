@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-15T01:30 · v29 · cert pas 3+4 · auto-attestation + PDF export';
+const BUILD_STAMP = '2026-05-15T02:00 · v30 · cert pas 7 · lifecycle audit-aware';
 
 export default class DesignSystemView {
 
