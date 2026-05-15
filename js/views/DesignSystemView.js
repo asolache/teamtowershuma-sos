@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T01:00 · v58 · ProjectCreationV2 · /create · plan→fan-out→reduce visible';
+const BUILD_STAMP = '2026-05-16T02:00 · v59 · SOCIAL-LAYER · socialGraphService + Timeline /timeline';
 
 export default class DesignSystemView {
 
