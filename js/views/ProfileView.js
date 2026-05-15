@@ -17,6 +17,9 @@ import {
     computeIkigaiCompleteness, computeIntersections,
     applyIkigaiToMember, ikigaiBadge,
 } from '../core/ikigaiService.js';
+import {
+    listPendingCoSignRequests, acceptCoSignRequest,
+} from '../core/certificateReportService.js';
 
 const AVAIL_META = {
     'normal':       { color: '#22c55e', icon: '✓',  label: 'Disponible' },
@@ -70,6 +73,12 @@ export default class ProfileView {
         });
         // Keep raw member node for Ikigai edit/persist
         this.memberNode = (members || []).find(m => m && m.id === this.profile.memberNodeId) || null;
+        // CERT-001 pas 6 · pending co-sign requests adresses to this user
+        this.pendingCoSigns = listPendingCoSignRequests({
+            attestations: attestations || [],
+            handle:       this.handle,
+            did:          this.memberNode?.content?.primaryDid,
+        });
         // Read current Ikigai from member node (content.ikigai)
         this.ikigai = (this.memberNode?.content?.ikigai) || buildEmptyIkigai();
         return this._htmlMain();
@@ -80,6 +89,47 @@ export default class ProfileView {
         this._injectOG();
         this._bindShare();
         this._bindIkigai();
+        this._bindCoSignAccept();
+    }
+
+    // CERT-001 pas 6 · acceptar co-sign requests pendents
+    _bindCoSignAccept() {
+        document.querySelectorAll('[data-accept-cosign]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reqId = btn.dataset.acceptCosign;
+                const req = (this.pendingCoSigns || []).find(r => r.id === reqId);
+                if (!req) return;
+                if (!confirm('Acceptaràs i signaràs aquest aval de l\'apunt comptable. La signatura usa la teva ECDSA key local-first. Continuar?')) return;
+                try {
+                    // Cal la signing key del coSigner · per ara · default = signing key del primer project del user
+                    // Heurística simple · busquem el primer project on el handle apareix com a creator
+                    const { getOrCreateSigningKey } = await import('../core/projectIO.js');
+                    const projects = (this.profile.projects || []);
+                    if (projects.length === 0) {
+                        alert('No tens cap projecte amb signing key local · no es pot signar.');
+                        return;
+                    }
+                    const projectId = projects[0].id;
+                    const key = await getOrCreateSigningKey(projectId);
+                    if (!key || !key.privateJwk) {
+                        alert('No s\'ha pogut obtenir la signing key.');
+                        return;
+                    }
+                    const accepterDid = this.memberNode?.content?.primaryDid || ('did:sos:' + projectId);
+                    const accepterHandle = this.handle;
+                    const signed = await acceptCoSignRequest({
+                        pendingAttestation: req,
+                        accepterDid, accepterHandle,
+                        privateJwk: key.privateJwk,
+                    });
+                    await KB.upsert(signed);
+                    alert('✓ Co-signatura emesa correctament · l\'entry té un proof attestation-id real ara.');
+                    setTimeout(() => window.location.reload(), 600);
+                } catch (e) {
+                    alert('Error signant la co-firma · ' + (e?.message || 'desconegut'));
+                }
+            });
+        });
     }
 
     _bindIkigai() {
@@ -413,6 +463,24 @@ export default class ProfileView {
                     <h3>🤝 Trust · ${p.attestationsReceived.length} attestations rebudes · ${p.attestationsSent.length} emeses</h3>
                     ${attRcvHtml}
                 </div>
+                ${(this.pendingCoSigns && this.pendingCoSigns.length > 0) ? `
+                <div class="prof-card-section" style="grid-column:1/-1;border:1px solid #facc1560;background:linear-gradient(135deg,#facc1515,transparent);">
+                    <h3 style="color:#facc15;">🤝 Co-firmes pendents · ${this.pendingCoSigns.length}</h3>
+                    <p style="font-size:0.78rem;color:var(--text-secondary);margin:0 0 0.6rem 0;">Aquestes són sol·licituds que altres socis t'han enviat per a avalar els seus apunts comptables. Si tens la signing key del projecte · pots acceptar i signar.</p>
+                    ${this.pendingCoSigns.map(req => {
+                        const c = req.content || {};
+                        const requester = c.requestedByHandle || c.requestedBy || '?';
+                        return `<div class="prof-card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-left:3px solid #facc15;">
+                            <div style="flex:1;min-width:200px;">
+                                <div style="font-weight:700;font-size:0.85rem;">📋 Avalar entry · <code style="font-size:11px;">${this._esc((c.attestedId || '').slice(0, 24))}…</code></div>
+                                <div class="prof-card-meta">Sol·licitat per ${this._esc(requester)}${c.issuedAt ? ' · ' + this._esc(c.issuedAt.slice(0, 10)) : ''}</div>
+                                ${c.statement ? `<div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;font-style:italic;">"${this._esc(String(c.statement).slice(0, 140))}"</div>` : ''}
+                            </div>
+                            <button class="prof-btn" data-accept-cosign="${this._esc(req.id)}" style="background:#22c55e;border-color:#22c55e;color:#fff;font-size:0.78rem;">✓ Acceptar i signar</button>
+                        </div>`;
+                    }).join('')}
+                </div>
+                ` : ''}
                 <div class="prof-card-section" style="grid-column:1/-1;border:1px solid ${ikiBadge.color}40;background:linear-gradient(135deg,${ikiBadge.color}08,transparent);">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:0.6rem;">
                         <h3 style="margin:0;">🌸 Ikigai · raó de ser</h3>
