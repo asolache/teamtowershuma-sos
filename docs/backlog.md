@@ -4259,4 +4259,349 @@ correr sobre QUALSEVOL projecte · no només el backlog intern de SOS.
 
 ---
 
-*Documento vivo · actualizat el 2026-05-15 amb el sprint analysis & design v2.*
+## STRATEGIC-RETHINK-2026-05-15 (3) · review del model SOS · jerarquia Systems/Processes/SOCs/SOPs
+
+Input @alvaro 2026-05-15 (tercer rethink · post article "Difference between
+Systems, Processes, SOPs and SOCs"). Revisió del MODEL CORE del SOS amb
+marc clàssic de business systems · Verna Allee + indústria.
+
+### Diagnosi (gap analysis post-article)
+
+| Capa article | SOS avui | Gap |
+|--------------|----------|-----|
+| Organització (meta · stakeholders + tokenomics) | ❌ "project" és el top | **MAJOR** |
+| Sistema (col·lecció processos + recursos + gent + interfícies) | ❌ NO modelat | **Gap** |
+| Procés (sèrie repetible passos) | ❌ NO 1a classe (VNA-PROCESS anava a afegir) | **En backlog** |
+| **SOC** (Standard Operating CHECKLIST) | SOC = "Standard Operating CONCEPT" | **CONFLICTE SEMÀNTIC** |
+| SOP (procediment detallat) | SOP detallat ✓ | OK |
+| Interfície (link entre processos) | ❌ transactions són entre rols, no processos | **Gap** |
+| Recursos (eines · espais · materials) | ⚠️ items dispersos | **Gap** |
+
+### Insight clau (idea de @alvaro)
+
+**SOC = Concept + Checklist alhora.** El "què/per què" més la llista
+d'items verificables. Els SOPs detallats pengen com a fills de cada item ·
+versionat al nivell SOC com a snapshot. Conseqüència IA · genera SOC primer
+(barat · 500 tokens) · expandeix SOP només per ítems demanats (300-800
+tokens cada · sota demanda) · **estalvi 40-60% del cost** vs generar tot el
+procés en 1 crida monolítica.
+
+### Nous items afegits a aquesta revisió
+
+10. **ORG-ENTITY-001** · Organització com a entitat meta · stakeholders + tokenomics org-level
+11. **PROCESS-FIRST-CLASS-001** · Process com a node 1a classe (substitueix part de VNA-PROCESS-001)
+12. **SOC-DUAL-PURPOSE-001** · SOC = Concept + Checklist · SOPs pengen per item · versionat snapshot
+13. **INTERFACE-NODES-001** · Interfície explícita entre processos · contracte de dades
+14. **RESOURCES-ENTITY-001** · Resources com a entitat (tools · spaces · time · digital assets)
+
+### Items "bonus" detectats durant la review
+
+15. **PROCESS-CATALOG-001** · Marketplace de processos reusables · clonable entre orgs (com workshops federats)
+16. **MULTI-TENANT-ORG-001** · Una persona stakeholder de N organitzacions · coop d'unió de coops
+17. **SOC-CHECKLIST-UI-001** · Vista checkbox-style per executar SOC aprovat · marca completats · genera WO si en falten
+18. **IA-HIERARCHICAL-PROMPT-001** · IA gen segueix la jerarquia · SOC primer · SOP sota demanda (lliga amb AI-COST-QA-001)
+
+### Re-ordenació de prioritats v4 (post review jerarquia)
+
+ORG-ENTITY-001 és ARA la base · tot la resta penja d'aquesta entitat ·
+sense ella no es modelen correctament processes/SOCs/SOPs/interfaces.
+
+| ID | Prioritat | Compl. | Què entrega | Depèn |
+|----|-----------|--------|-------------|-------|
+| **ORG-ENTITY-001** | critical | L | Organització meta · base de tota la jerarquia | — |
+| **SOC-DUAL-PURPOSE-001** | critical | M | SOC = Concept + Checklist · SOPs fills · versionat | ORG |
+| **PROCESS-FIRST-CLASS-001** | critical | L | Process node · substitueix VNA-PROCESS-001 | ORG · SOC |
+| **AGENT-BRIDGE-001** | critical | M  | Bridge AI-agent genèric (sense canvi) | — |
+| **DEHARDCODE-CLAUDE-001** | high | S  | (sense canvi) | — |
+| **IA-HIERARCHICAL-PROMPT-001** | critical | M | SOC-first IA gen · estalvi 40-60% cost | SOC · AI-COST-QA-001 |
+| **AI-COST-QA-001** | critical | L  | Meta-orchestrator (sense canvi · ara absorbeix IA-HIERARCHICAL) | — |
+| **TDD-ALL-LEVELS-001** | high | L  | (sense canvi) | AGENT-BRIDGE-001 |
+| **INTERFACE-NODES-001** | high | M  | Interfícies entre processos | PROCESS |
+| **RESOURCES-ENTITY-001** | high | M  | Recursos com a entitat | ORG · PROCESS |
+| **SOC-CHECKLIST-UI-001** | medium | M | UI checkbox · executa SOC · genera WOs | SOC |
+| **WO-AUTO-001** | critical | XL | Triggers · ara depèn de SOC | SOC · PROCESS |
+| **CASTELLERS-001** | high | S  | Pre-load real test case (sense canvi) | ORG (recommended) |
+| **PITCH-REFRAME-001** | high | M  | (sense canvi · ara amb context org-level) | ORG |
+| **SWARM-RELOC-001** | medium | M  | (sense canvi) | AGENT-BRIDGE |
+| **PROCESS-CATALOG-001** | medium | L  | Marketplace processos reusables | PROCESS |
+| **MULTI-TENANT-ORG-001** | low | XL | 1 persona en N orgs · coop d'unió | ORG |
+| **B-UNIFIED-FORM-001** | medium | L | Form unificat (diferit) | ORG (recommended) |
+| **C2-TEMPLATES-001** | medium | L | 15 plantilles (diferit) | PROCESS |
+
+**Primer batch suggerit (post-review)** · ORG-ENTITY-001 + SOC-DUAL-PURPOSE-001
+(~16h) · estableixen les 2 entitats fundacionals · sense les quals tota la
+resta es construeix amb fonaments incorrectes. PROCESS-FIRST-CLASS-001 al
+segon batch un cop ORG i SOC són estables.
+
+---
+
+## ORG-ENTITY-001 · Organització com a entitat meta (input @alvaro 2026-05-15 · review)
+
+### Tesi
+Avui "project" és el top. Cal una capa per sobre · `type: 'organization'` ·
+que aglutina ·
+- **Stakeholders** · totes les persones/coops que tenen interès en l'org
+- **Tokenomics global** · distribució de valor a nivell org (no per projecte)
+- **Sistemes** · 1+ sistemes operatius (sales · ops · learn · ...)
+- **Recursos compartits** · tools · espais · capacitat humana
+- **Projectes** · com a "iniciatives temporals" dins l'org
+
+Una persona individual pot ser org de 1 sola (la seva pròpia · freelance) ·
+una coop és org amb 5-100 stakeholders · una xarxa coop és org amb N coops
+dins.
+
+### Schema proposta
+```yaml
+organization:
+  id: "org-castellers-gracia"
+  type: "organization"
+  legal_kind: "cooperative" | "association" | "company" | "individual" | "informal"
+  stakeholders:
+    - role: "soci-treballador" · personId · sharePct
+    - role: "consumidor" · personId · ...
+  tokenomics_global:                # NOU
+    totalSupply, distribution, vesting (com el TokenDesign actual)
+  systems: [systemId]               # NOU
+  projects: [projectId]             # ja existent · ara amb FK explícit a org
+  shared_resources: [resourceId]    # NOU
+```
+
+### Sprint plan A → D (~16h)
+- **A · Schema + service (~4h)** · `organizationService.js` · CRUD pure ·
+  validador · helpers · idempotent migration des de projects existents.
+- **B · Org dashboard (~4h)** · `/org/{orgId}` · vista holística ·
+  stakeholders + tokenomics + systems + projects + resources cards.
+- **C · Migration soft (~4h)** · projects existents · "promote to org"
+  wizard · o "join existing org". Default · auto-crea org "personal" per
+  user existent · projectes hi pengen.
+- **D · Tests (~4h)** · 20+ asserts shape + migration + KPIs derivats.
+
+### Decisions pendents @alvaro
+- ¿Org és obligatori per a projects nous · o opcional? *Proposta · opcional
+  alfa · obligatori v2 amb migració soft*
+- ¿Coop d'unió de coops · org de orgs? *Proposta · sí · MULTI-TENANT-ORG-001
+  cobreix · diferit v3*
+
+---
+
+## SOC-DUAL-PURPOSE-001 · SOC = Concept + Checklist · SOPs fills versionats (input @alvaro 2026-05-15)
+
+### Tesi
+Resoldre el conflicte semàntic · SOC avui = "Concept" · article diu
+"Checklist". **La solució és que SOC sigui les 2 coses alhora** ·
+1. **Concept side** (Standard Operating Concept) · què/per què · invariant
+2. **Checklist side** (Standard Operating Checklist) · llista verificable
+   d'items · cada item té el seu SOP detallat
+
+Versionat · al nivell SOC · canvis als SOPs no toquen SOC fins que canvia
+el propòsit o un item de checklist · SOC_v3 = snapshot dels SOPs d'aquell
+moment.
+
+### Schema actualitzat
+```yaml
+soc:
+  id: "soc-onboarding-cohort"
+  type: "soc"
+  version: "v3"
+  parent_version: "v2"          # cadena d'evolució
+  purpose: "..."
+  concept_body: "markdown..."
+  checklist:                     # NOU · array d'items verificables
+    - id: "ci-01"
+      label: "Setmana 1 · DID + perfil signat"
+      sop_ref: "sop-onboard-week-1"
+      required: true
+      verification_kind: "manual" | "auto-test" | "evidence-upload"
+    - id: "ci-02"
+      label: "Setmana 2 · pact de socis"
+      sop_ref: "sop-onboard-week-2"
+      required: true
+      verification_kind: "manual"
+    ...
+  versioned_sops: [sopId-v3...]  # snapshot SOPs at this SOC version
+  related_socs: [...]
+  status: "draft" | "review" | "approved" | "deprecated"
+```
+
+### Sprint plan A → C (~8h)
+- **A · Schema + validador (~2h)** · `socService.js` · extend schema ·
+  validador · helpers checklist items.
+- **B · Migration knowledge/socs/ (~3h)** · els 9 SOCs existents (la-colla
+  · castellers-demo · etc) · afegir `checklist` derivat dels SOPs existents.
+- **C · UI checklist + versions (~3h)** · `/soc/{socId}` · 2 modes ·
+  "Concept" (existeix) i "Checklist" (nou · vista exec) · history versions.
+
+### Decisions pendents @alvaro
+- Compatibilitat backwards · els SOCs antics sense checklist? *Proposta ·
+  checklist:[] vàlid · vista checklist es mostra buida amb CTA "Generar
+  amb IA"*
+- Versionat de SOPs · automàtic quan SOC pugi versió · o manual? *Proposta ·
+  manual · l'usuari decideix quins SOPs versiona*
+
+---
+
+## PROCESS-FIRST-CLASS-001 · Process com a node 1a classe (input @alvaro 2026-05-15)
+
+> Aquest item REEMPLAÇA i estén VNA-PROCESS-001 amb el marc complet de
+> l'article. VNA-PROCESS-001 era "afegir camp vna_processes a project" ·
+> ara és "process és entitat amb nodes pròpia".
+
+### Tesi
+Avui · processos són implicits (subgraf de VNA). Cal `type: 'process'` ·
+node 1a classe del KB · que aglutina ·
+- Lligams a SOCs (què cal verificar a aquest procés)
+- Lligams a Roles (qui hi participa)
+- Lligams a Transactions (quins exchanges)
+- Lligams a Resources (què cal)
+- Lligams a Interfaces (com es connecta amb altres processos)
+- Cicle (cron · event · manual)
+- KPIs · health metrics
+
+### Schema
+```yaml
+process:
+  id: "proc-sales-lead-to-cash"
+  type: "process"
+  orgId: "..."                     # depèn de ORG-ENTITY-001
+  systemId: "sys-sales"            # opcional · agrupació
+  label: "Lead-to-cash"
+  category: "sales" | "ops" | "finance" | "innovation" | "learn" | "governance" | "people"
+  cycle_hint: "weekly" | "daily" | "on-event" | "monthly"
+  role_ids: [comercial, customer-success]
+  tx_ids: [tx-lead-qualif, tx-close-deal]
+  soc_ids: [soc-sales-onboarding, soc-handover-ops]
+  resource_ids: [res-calendly, res-stripe]
+  interface_in:  [iface-marketing-to-sales]
+  interface_out: [iface-sales-to-ops]
+  kpis:
+    - id: "kpi-conv-rate"
+      label: "Conversion rate mensual"
+      target: 0.05
+      kind: "ratio"
+  status: "active" | "experimental" | "deprecated"
+```
+
+### Sprint plan A → D (~14h)
+- **A · Schema + CRUD (~3h)** · `processService.js` · idempotent ·
+  validador · helpers.
+- **B · UI process editor (~5h)** · `/process/{processId}` · 5 tabs
+  (overview · SOCs · roles+tx · resources · interfaces+KPIs).
+- **C · VNA map filter via process (~3h)** · `VNAMapView` · selector de
+  process · filtra subgraf (reemplaça part de VNA-PROCESS-001).
+- **D · Migration + tests (~3h)** · projectes existents · auto-detecta
+  processos heurísticament o assigna a 1 "default-process" · tests.
+
+### Decisions pendents @alvaro
+- Categories tancades (7) o obertes? *Proposta · 7 tancades + "other"
+  override personalitzable*
+- Process pot pertànyer a múltiples Systems? *Proposta · 1 sistema ·
+  pot referenciar-se inter-system via interface*
+
+---
+
+## INTERFACE-NODES-001 · Interfície entre processos (input @alvaro 2026-05-15)
+
+### Tesi
+Avui · transactions són entre rols. Cal modelar **interfícies entre
+processos** · contractes de dades · "el que surt de procés A entra a B".
+Exemple article · "make pizza" → "deliver pizza" · l'interface defineix
+què passa (pizza ready + receipt + customer info).
+
+### Schema
+```yaml
+interface:
+  id: "iface-sales-to-ops"
+  type: "interface"
+  from_process: "proc-sales-lead-to-cash"
+  to_process: "proc-ops-fulfillment"
+  payload_schema:                   # contract
+    fields:
+      - { name: "deal_id", kind: "string", required: true }
+      - { name: "customer", kind: "object", required: true }
+      - { name: "signed_quote_uri", kind: "uri", required: true }
+  sla:
+    max_delay_hours: 4
+  trigger:
+    kind: "event"
+    event: "deal-closed"
+```
+
+### Sprint plan (~6h)
+- **A · Schema + service (~2h)** · `interfaceService.js`
+- **B · UI editor + visual graph (~4h)** · /interfaces · vista força-graph
+  amb processos com a nodes + interfaces com a arestes
+
+### Decisions pendents @alvaro
+- Validació de payload · runtime check? *Proposta · sí · log warnings ·
+  no block · v2 strict mode*
+
+---
+
+## RESOURCES-ENTITY-001 · Recursos com a entitat (input @alvaro 2026-05-15)
+
+### Tesi
+Eines · espais · temps · assets digitals. Avui repartits com a items.
+Cal `type: 'resource'` per modelar disponibilitat · capacitat · cost.
+
+### Schema
+```yaml
+resource:
+  id: "res-calendly-team"
+  type: "resource"
+  orgId: "..."
+  kind: "tool" | "space" | "time" | "asset" | "subscription"
+  label: "Calendly Team plan"
+  cost_monthly_eur: 12
+  capacity: { max_users: 5, max_bookings_per_month: null }
+  used_by_processes: [procId, ...]
+```
+
+### Sprint plan (~6h)
+- A · Schema + service · CRUD · capacity check
+- B · UI catalog · /resources
+- C · Process editor integration
+
+---
+
+## SOC-CHECKLIST-UI-001 · UI checkbox per executar SOC (input @alvaro 2026-05-15)
+
+### Tesi
+Un cop SOC té checklist · l'usuari ha de poder executar-lo · marcar items
+completats · si en falten genera WOs auto-assignades. Tanca el cercle ·
+SOC concept → checklist → execució real → WO compensatori si fail.
+
+### Sprint plan (~6h)
+- A · UI checklist mode amb checkbox + evidència opcional
+- B · WO generation si items required no marcats al cap d'un periode (lliga
+  amb WO-AUTO-001)
+- C · History · qui ha marcat què · auditable
+
+---
+
+## IA-HIERARCHICAL-PROMPT-001 · IA generation hierarchical · SOC-first (input @alvaro 2026-05-15)
+
+### Tesi
+**Estalvi clau · 40-60% del cost IA** generant per la jerarquia ·
+1. "Genera SOC outline per a {procés}" · 500 tokens · barat
+2. Usuari revisa · OK · selecciona items que vol detallats
+3. Per cada item · "Genera SOP per a aquest item" · 300-800 tokens · sota
+   demanda · pots parar quan vols
+
+vs. avui · "genera tot el procés" · 5000 tokens · monolític · usuari ha
+de fer scroll · no pot fer iterativament.
+
+### Sprint plan (~6h)
+- A · `socOutlinePromptService.js` · pure · genera prompt nivell SOC
+- B · `sopExpandPromptService.js` · pure · expandeix un item del SOC en
+  un SOP detallat · 1 crida per item
+- C · UI · genera SOC primer · checklist amb botons "Expandir amb IA"
+  per cada item · indica cost previst (via aiTierIndicator)
+
+### Decisions pendents @alvaro
+- Batch d'expansions · si l'usuari marca 5 items per expandir · 1 batch
+  call o 5 calls separades? *Proposta · 1 batch (estalvi ~30%) ·
+  AI-COST-QA-001 ja preveu batching*
+
+---
+
+*Documento vivo · actualizat el 2026-05-15 amb el sprint analysis & design v2/v3.*
