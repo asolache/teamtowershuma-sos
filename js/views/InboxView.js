@@ -11,6 +11,10 @@ import {
     listConversations, listThread, buildMessage, markAsRead, countUnread,
 } from '../core/messagingService.js';
 import { getPresenceFor, renderPresencePill } from '../core/presenceService.js';
+import {
+    listInvitesForUser, acceptInvite, declineInvite, resolveStatus,
+    INVITE_ROLES,
+} from '../core/projectInviteService.js';
 import { emptyStateHtml, toast } from '../core/uxComponents.js';
 
 export default class InboxView {
@@ -29,28 +33,66 @@ export default class InboxView {
             this._activeThreadId = url.searchParams.get('thread') || null;
         } catch (_) {}
 
-        // Load my handle + all DMs
+        // Load my handle + all DMs + invites
         const members = await KB.query({ type: 'matriu_member' }).catch(() => []);
         this._meHandle = (members.find(m => m && (m.content?.isPrimary || m.isPrimary))?.content?.handle) || null;
         this._messages = await KB.query({ type: 'direct_message' }).catch(() => []);
+        this._invites = await KB.query({ type: 'project_invite' }).catch(() => []);
 
         if (!this._meHandle) {
             return this._renderNoIdentity();
         }
 
         const conversations = listConversations(this._messages, this._meHandle);
+        const pendingInvites = listInvitesForUser(this._invites, this._meHandle, { onlyPending: true });
         const activeMessages = this._activeThreadId
             ? listThread(this._messages, this._activeThreadId)
             : [];
 
-        return this._renderShell({ conversations, activeMessages });
+        return this._renderShell({ conversations, activeMessages, pendingInvites });
     }
 
     async afterRender() {
         if (!this._meHandle) return;
         this._bindConversations();
         this._bindSend();
+        this._bindInviteActions();
         await this._markActiveAsRead();
+    }
+
+    _bindInviteActions() {
+        document.querySelectorAll('[data-action="invite-accept"]').forEach(btn => {
+            btn.addEventListener('click', () => this._acceptInvite(btn.getAttribute('data-id')));
+        });
+        document.querySelectorAll('[data-action="invite-decline"]').forEach(btn => {
+            btn.addEventListener('click', () => this._declineInvite(btn.getAttribute('data-id')));
+        });
+    }
+
+    async _acceptInvite(inviteId) {
+        try {
+            const inv = (this._invites || []).find(i => i.id === inviteId);
+            if (!inv) throw new Error('Invite not found');
+            const updated = acceptInvite(inv, { acceptedByHandle: this._meHandle });
+            await KB.upsert(updated);
+            toast({ kind: 'success', text: '✓ Has acceptat · ja tens accés al projecte' });
+            this.render();
+        } catch (e) {
+            toast({ kind: 'error', text: 'Error: ' + (e?.message || e) });
+        }
+    }
+
+    async _declineInvite(inviteId) {
+        try {
+            const inv = (this._invites || []).find(i => i.id === inviteId);
+            if (!inv) throw new Error('Invite not found');
+            const updated = declineInvite(inv, { declinedByHandle: this._meHandle });
+            await KB.upsert(updated);
+            toast({ kind: 'info', text: 'Invitació declinada' });
+            this.render();
+        } catch (e) {
+            toast({ kind: 'error', text: 'Error: ' + (e?.message || e) });
+        }
     }
 
     async render() {
@@ -60,8 +102,9 @@ export default class InboxView {
         await this.afterRender();
     }
 
-    _renderShell({ conversations, activeMessages }) {
+    _renderShell({ conversations, activeMessages, pendingInvites = [] }) {
         const unreadTotal = countUnread(this._messages, this._meHandle);
+        const inviteCount = pendingInvites.length;
         return `
         <style>
             .ibx-shell { min-height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); padding-bottom:2rem; }
@@ -121,6 +164,16 @@ export default class InboxView {
             </div>
 
             <div class="ibx-main">
+                <div>
+                    ${inviteCount > 0 ? `
+                    <div class="ibx-section" style="margin-bottom:0.8rem;border-color:rgba(168,85,247,0.4);">
+                        <div class="ibx-section-head" style="background:rgba(168,85,247,0.10);">
+                            <h2>🤝 Invitacions pendents · ${inviteCount}</h2>
+                        </div>
+                        <div style="padding:0.5rem 0.6rem;">
+                            ${pendingInvites.map(inv => this._renderInviteCard(inv)).join('')}
+                        </div>
+                    </div>` : ''}
                 <div class="ibx-section">
                     <div class="ibx-section-head">
                         <h2>💬 Converses · ${conversations.length}</h2>
@@ -138,6 +191,7 @@ export default class InboxView {
                             : conversations.map(c => this._renderConvItem(c)).join('')}
                     </div>
                 </div>
+                </div>
 
                 <div class="ibx-section">
                     ${this._activeThreadId && activeMessages.length > 0
@@ -148,6 +202,27 @@ export default class InboxView {
                                 : '👈 Selecciona una conversa de la columna esquerra'}
                           </div>`}
                 </div>
+            </div>
+        </div>`;
+    }
+
+    _renderInviteCard(inv) {
+        const c = inv.content;
+        const role = INVITE_ROLES[c.role] || INVITE_ROLES.collab;
+        const projectId = c.projectId;
+        return `
+        <div style="padding:0.7rem 0.85rem;margin-bottom:6px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:6px;" data-invite-id="${this._esc(inv.id)}">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <strong style="font-size:0.85rem;">${this._esc(c.fromHandle)}</strong>
+                <span style="font-size:0.7rem;color:var(--text-secondary);">· t'ha convidat a</span>
+                <a href="/project/${encodeURIComponent(projectId)}" data-link style="font-size:0.75rem;color:var(--accent-indigo);text-decoration:none;font-family:var(--font-mono);">${this._esc(projectId.slice(0, 24))}</a>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:4px;">${this._esc(role.label)} · ${this._esc(role.description)}</div>
+            ${c.message ? `<div style="padding:6px 8px;background:var(--bg-dark);border-radius:4px;font-size:0.78rem;font-style:italic;margin-bottom:6px;">"${this._esc(c.message)}"</div>` : ''}
+            <div style="display:flex;gap:6px;margin-top:6px;">
+                <button data-action="invite-accept" data-id="${this._esc(inv.id)}" style="padding:5px 12px;border-radius:4px;border:0;background:#22c55e;color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;">✓ Accepta</button>
+                <button data-action="invite-decline" data-id="${this._esc(inv.id)}" style="padding:5px 12px;border-radius:4px;border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);font-size:0.78rem;font-weight:600;cursor:pointer;">✕ Decline</button>
+                <span style="margin-left:auto;font-size:0.68rem;color:var(--text-muted);align-self:center;">${this._formatTime(inv.createdAt)}</span>
             </div>
         </div>`;
     }
