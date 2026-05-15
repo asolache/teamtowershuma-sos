@@ -13,7 +13,8 @@ import {
 import { bootTheme } from './core/themeService.js';
 
 const ROUTES = [
-    { path: '/',          view: () => import('./views/DashboardView.js') },
+    { path: '/',          view: () => import('./views/DashboardV2View.js') },
+    { path: '/home',      view: () => import('./views/DashboardV2View.js') },
     { path: '/dashboard', view: () => import('./views/DashboardView.js') },
     { path: '/team',      view: () => import('./views/HomeView.js')     },
     { path: '/paper',     view: () => import('./views/HomeView.js')     },

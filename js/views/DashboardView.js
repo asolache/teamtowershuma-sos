@@ -868,6 +868,7 @@ export default class DashboardView {
                  viu a la helper card per evitar duplicació visual. -->
             <div class="dash-topbar">
                 <span class="dash-topbar-version">SOS V11 · Value Network Dashboard</span>
+                <a href="/home" data-link style="font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(99,102,241,0.18);color:#a8b2ff;text-decoration:none;font-weight:700;border:1px solid rgba(99,102,241,0.4);" title="Nou dashboard més net · KISS · 5-click rule">🆕 Home v2</a>
                 <a href="https://teamtowershuma.com" target="_blank" class="dash-topbar-web">teamtowershuma.com ↗</a>
                 <div class="dash-topbar-right">
                     <button class="dash-btn" id="dashBtnExport" title="Descargar snapshot firmado (ECDSA P-256)">💾 Export</button>
