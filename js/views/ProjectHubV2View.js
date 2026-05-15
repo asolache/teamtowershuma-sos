@@ -346,7 +346,7 @@ export default class ProjectHubV2View {
     _zone7_Knowledge({ project }) {
         const items = [
             { ic: '🎨', nm: 'Canvas',     ds: '5 pilars',        href: '/canvas?project=' + project.id },
-            { ic: '📣', nm: 'Pitch',      ds: 'Doc per inversors', href: '/pitch?project=' + project.id },
+            { ic: '📣', nm: 'Pitch doc',  ds: 'Investor doc IA-sint.', href: '/pitch-doc/' + project.id },
             { ic: '🗺️', nm: 'VNA',        ds: 'Mapa de valor',   href: '/map?project=' + project.id },
             { ic: '📋', nm: 'SOCs',       ds: 'Standard Op Concepts', href: '/sops?project=' + project.id },
             { ic: '🪙', nm: 'Tokenomics', ds: 'Equity + token',  href: '/tokenomics?project=' + project.id },

@@ -102,6 +102,9 @@ const PROJECT_PATH_PREFIX = '/project/';
 // UX-CENTRAL-HUB-001 · /hub/{projectId} · nou layout 7-zones consumint
 // activityFeedService + iaSuggestionsService. L'antic /project/{id} es manté.
 const HUB_V2_PATH_PREFIX = '/hub/';
+// PITCH-REFRAME-001 · /pitch-doc/{projectId} · document visual investor
+// auto-generat des de canvas + VNA + tokenomics + ledger + proposals.
+const PITCH_DOC_PATH_PREFIX = '/pitch-doc/';
 
 async function router() {
     const path  = window.location.pathname.replace(/\/$/, '') || '/';
@@ -112,6 +115,8 @@ async function router() {
         match = { path, view: () => import('./views/MarketDetailView.js') };
     } else if (path.startsWith(PROFILE_PATH_PREFIX)) {
         match = { path, view: () => import('./views/ProfileView.js') };
+    } else if (path.startsWith(PITCH_DOC_PATH_PREFIX)) {
+        match = { path, view: () => import('./views/InvestorPitchView.js') };
     } else if (path.startsWith(HUB_V2_PATH_PREFIX)) {
         match = { path, view: () => import('./views/ProjectHubV2View.js') };
     } else if (path.startsWith(PROJECT_PATH_PREFIX)) {

@@ -431,6 +431,61 @@
       ]
     },
     {
+      "id": "wo-pitch-reframe-001",
+      "project_id": "sos-dev-internal",
+      "title": "PITCH-REFRAME-001 · Investor doc IA-sintetitzat des de tot el context",
+      "description": "pitchSynthesisService.js · agrega canvas + VNA + tokenomics + ledger\n+ proposals · classification stage-aware tone (idea→humil · growth→\ntracció · maturity→rendibilitat). synthesizePitch async amb cache +\nbudget tracking · runPrompt taskTier:'quality'. buildHeuristicPitch\nfallback sense IA. InvestorPitchView a /pitch-doc/{id} · 8 seccions\nvisuals · edit inline · export PDF (window.print).",
+      "priority": "high",
+      "complexity": "M",
+      "status": "done",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747365000000,
+      "completed_at": 1747367800000,
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/pitchSynthesis.test.js",
+        "expect": "36 pass · 0 fail"
+      },
+      "estimated_cost_eur": 0.15,
+      "cost_actual_eur": 0.092,
+      "deliverable_uri": "git:HEAD..pitchSynthesisService+InvestorPitchView",
+      "tags": [
+        "batch-6",
+        "ux"
+      ]
+    },
+    {
+      "id": "wo-swarm-reloc-001",
+      "project_id": "sos-dev-internal",
+      "title": "SWARM-RELOC-001 · banner deprecation a /sprint apunta a backlog YAML",
+      "description": "Banner informatiu a SprintView.js · explicita que el backlog canonical\nara és docs/backlog.yaml (16 WOs · 4 agents) i és consumible per\nagents IA via agentBridgeSchema. /sprint queda backwards-compat per al\nswarm autonòmic intern. Migració completa quan KanbanView guanyi mode\nswarm (futur · L).",
+      "priority": "medium",
+      "complexity": "S",
+      "status": "done",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747368000000,
+      "completed_at": 1747368300000,
+      "required_capabilities": [
+        "code-write"
+      ],
+      "deliverable_test": {
+        "kind": "manual-check"
+      },
+      "estimated_cost_eur": 0.05,
+      "cost_actual_eur": 0.012,
+      "deliverable_uri": "git:HEAD..SprintView-banner",
+      "tags": [
+        "batch-6",
+        "cleanup"
+      ]
+    },
+    {
       "id": "wo-castellers-001",
       "project_id": "sos-dev-internal",
       "title": "CASTELLERS-001 · Pre-load Castellers + Alvaro",
