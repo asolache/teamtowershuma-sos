@@ -28,6 +28,16 @@ export default class ProjectCreationV2View {
     constructor() {
         if (typeof document !== 'undefined') document.title = 'Crear projecte · SOS';
         this._isCreating = false;
+        // Llegeix ?template={key} del query string · si arrives des del
+        // ProcessCatalog amb una plantilla pre-seleccionada · classificació
+        // pre-determinada (skip classify step IA · estalvi ~0.002€)
+        this._presetTemplateKey = null;
+        try {
+            if (typeof window !== 'undefined' && window.location) {
+                const params = new URLSearchParams(window.location.search);
+                this._presetTemplateKey = params.get('template') || null;
+            }
+        } catch (_) {}
     }
 
     async getHtml() {
@@ -112,7 +122,11 @@ export default class ProjectCreationV2View {
             <div class="pcv-main">
                 <div class="pcv-hero">
                     <h1>🚀 Crea un projecte amb IA</h1>
-                    <p>1 sol form. L'IA llegirà el teu input · classificarà el projecte · generarà drafts adaptats al tipus + fase (canvas · VNA · SOPs · etc). Tu valides el text final.</p>
+                    ${this._presetTemplateKey ? `
+                        <p>Plantilla pre-seleccionada · <code style="font-family:var(--font-mono);background:rgba(168,85,247,0.2);padding:1px 6px;border-radius:3px;font-size:0.82rem;">${this._esc(this._presetTemplateKey)}</code> · classificació automàtica skippada · 1 crida IA menys (estalvi ~0.002€). <a href="/process-catalog" data-link style="color:var(--accent-indigo);">↩ Canviar plantilla</a></p>
+                    ` : `
+                        <p>1 sol form. L'IA llegirà el teu input · classificarà el projecte · generarà drafts adaptats al tipus + fase (canvas · VNA · SOPs · etc). Tu valides el text final. <a href="/process-catalog" data-link style="color:var(--accent-indigo);">📐 Començar des d'una plantilla?</a></p>
+                    `}
                 </div>
 
                 <div class="pcv-form">
@@ -240,8 +254,27 @@ export default class ProjectCreationV2View {
         if (progressEl) progressEl.classList.add('active');
         if (stepsEl) stepsEl.innerHTML = '';
 
-        // Build plan
-        const plan = buildCreationPlan({ name, description, sector, ambition });
+        // Build plan · si tenim presetTemplateKey · derivem classification per skip IA
+        let presetClassification = null;
+        if (this._presetTemplateKey) {
+            const [type, stage] = this._presetTemplateKey.split(':');
+            const { SIMPLIFIED_TYPES, STAGE_GROUPS } = await import('../core/projectTemplateService.js');
+            const sourceType = SIMPLIFIED_TYPES[type]?.sourceTypes?.[0] || 'startup-coop-tradicional';
+            const sourceStage = STAGE_GROUPS[stage]?.sourceStages?.[0] || 'idea';
+            presetClassification = {
+                project_type: sourceType,
+                lifecycle_stage: sourceStage,
+                scale: 'local',
+                dependency_type: 'standalone',
+                confidence: 1.0,
+                source: 'preset-template',
+                rationale: 'pre-seleccionada · ' + this._presetTemplateKey,
+            };
+        }
+        const plan = buildCreationPlan({
+            name, description, sector, ambition,
+            classification: presetClassification,
+        });
         const projectId = 'proj-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30) + '-' + Date.now().toString(36);
 
         // Pre-add classify step

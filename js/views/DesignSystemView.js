@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T05:00 · v62 · ProcessCatalog · 15 plantilles UI · marketplace processos';
+const BUILD_STAMP = '2026-05-16T06:00 · v63 · creation+catalog integration · UX_AUDIT updated';
 
 export default class DesignSystemView {
 
