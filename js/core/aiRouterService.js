@@ -377,8 +377,10 @@ export async function runPrompt({
             temperature,
         });
         const elapsedMs = Date.now() - startedAt;
-        // Cost tracker · best-effort · sense bloquejar si falla
+        // Cost tracker (sessió in-memory · UI) + wallet consume (font de
+        // veritat persistent) · best-effort · sense bloquejar si falla.
         if (res?.usage) {
+            // 1) Session-level tracker · per a UI live (aiTierIndicator)
             try {
                 const { recordUsage } = await import('./aiCostTracker.js');
                 recordUsage({
@@ -391,6 +393,30 @@ export async function runPrompt({
                     elapsedMs,
                 });
             } catch (_) {}
+            // 2) DRY · wallet consume (mateix pattern que aiFillService.js)
+            //    Així costTrackingService aggrega automàticament al wallet ·
+            //    el wallet és font de veritat de "lifetime AI spend per project".
+            if (projectId) {
+                try {
+                    const { actualCostUsd } = await import('./aiProviderService.js');
+                    const costUsd = actualCostUsd(modelKey, res.usage) || 0;
+                    if (costUsd > 0) {
+                        const costEur = Number((costUsd * 0.92).toFixed(6));
+                        const { applyMarginWithOverride } = await import('./billingService.js');
+                        const margin = applyMarginWithOverride({ baseCostEur: costEur, kind: 'ai' });
+                        const totalEur = margin.totalEur || costEur;
+                        const { consumeAndPersist } = await import('./walletService.js');
+                        await consumeAndPersist({
+                            projectId,
+                            amountEur: totalEur,
+                            ref:       'llm-' + (taskKind || 'unknown') + '-' + Date.now().toString(36),
+                            source:    'orchestrator',
+                            note:      'IA ' + (taskKind || '') + ' · tier ' + (taskTier || 'auto') + ' · ' + modelKey,
+                            allowNegative: true,  // no bloqueja UX · usuari pot recarregar després
+                        });
+                    }
+                } catch (_) { /* wallet absent o fail · seguim · ja tenim session tracker */ }
+            }
         }
         if (typeof onActivity === 'function') {
             try { onActivity({ kind: 'model-result', modelKey, usage: res?.usage, elapsedMs }); } catch (_) {}

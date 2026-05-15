@@ -22,7 +22,7 @@ import { PROJECT_TYPES } from './critical108Roles.js';
 export const CLASSIFIER_VERSION = 'v1.0';
 
 // ── Taxonomies tancades ───────────────────────────────────────────────────
-export const LIFECYCLE_STAGES = Object.freeze([
+export const BUSINESS_MATURITY_STAGES = Object.freeze([
     Object.freeze({ id: 'idea',      label: 'Idea · pre-validació',        hint: 'No té producte/servei encara · hipotètic' }),
     Object.freeze({ id: 'mvp',       label: 'MVP · primera versió',         hint: 'Té quelcom funcional però sense usuaris validats' }),
     Object.freeze({ id: 'pilot',     label: 'Pilot · primers usuaris',      hint: 'Un grup petit l\'usa · iterant amb feedback' }),
@@ -46,7 +46,7 @@ export const DEPENDENCY_TYPES = Object.freeze([
 ]);
 
 const PROJECT_TYPE_IDS = PROJECT_TYPES.map(p => p.id);
-const LIFECYCLE_IDS    = LIFECYCLE_STAGES.map(s => s.id);
+const MATURITY_IDS    = BUSINESS_MATURITY_STAGES.map(s => s.id);
 const SCALE_IDS        = PROJECT_SCALES.map(s => s.id);
 const DEPENDENCY_IDS   = DEPENDENCY_TYPES.map(d => d.id);
 
@@ -174,7 +174,7 @@ export function validateClassification(c) {
         return { ok: false, errors: ['classification null o no objecte'] };
     }
     if (!PROJECT_TYPE_IDS.includes(c.project_type)) errors.push('project_type invàlid · ' + c.project_type);
-    if (!LIFECYCLE_IDS.includes(c.lifecycle_stage)) errors.push('lifecycle_stage invàlid · ' + c.lifecycle_stage);
+    if (!MATURITY_IDS.includes(c.lifecycle_stage)) errors.push('lifecycle_stage invàlid · ' + c.lifecycle_stage);
     if (!SCALE_IDS.includes(c.scale))               errors.push('scale invàlid · ' + c.scale);
     if (!DEPENDENCY_IDS.includes(c.dependency_type)) errors.push('dependency_type invàlid · ' + c.dependency_type);
     if (typeof c.confidence !== 'number' || c.confidence < 0 || c.confidence > 1) errors.push('confidence fora de rang');
@@ -193,7 +193,7 @@ export function needsConfirmation(c) {
 
 function _buildClassifierPrompt({ name, description, sector, parentProjectName }) {
     const typeList  = PROJECT_TYPES.map(p => `- ${p.id} · ${p.label} (${p.hint})`).join('\n');
-    const stageList = LIFECYCLE_STAGES.map(s => `- ${s.id} · ${s.label} (${s.hint})`).join('\n');
+    const stageList = BUSINESS_MATURITY_STAGES.map(s => `- ${s.id} · ${s.label} (${s.hint})`).join('\n');
     const scaleList = PROJECT_SCALES.map(s => `- ${s.id} · ${s.label}`).join('\n');
     const depList   = DEPENDENCY_TYPES.map(d => `- ${d.id} · ${d.label} (${d.hint})`).join('\n');
 

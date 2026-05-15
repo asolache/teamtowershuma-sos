@@ -2,13 +2,23 @@
 // TEAMTOWERS SOS V11 — AI COST TRACKER (D4 · tier visible · sprint analysis)
 // Ruta · /js/core/aiCostTracker.js
 //
-// Acumulador de cost IA per a la sessió actual i totals per projecte. Permet
-// que la UI mostri en temps real · model usat · tier · cost acumulat · ahorr
-// si es queda al tier draft.
+// CAPA · UI live feedback · cost de la sessió actual + històric local
+// per projecte. Permet que aiTierIndicator mostri en temps real model +
+// tier + cost acumulat sense fer query del wallet a cada repintat.
+//
+// RELACIÓ amb el wallet ·
+//   Aquest tracker NO és font de veritat de "lifetime AI spend per project".
+//   Font de veritat · wallet del projecte (walletService.consumeFromWallet
+//   amb source:'orchestrator') · agregat per costTrackingService.
+//   `runPrompt` (aiRouterService.js) crida AMBDÓS · 1) recordUsage aquí ·
+//   2) consumeAndPersist al wallet. Així NO duplica · cada capa té el seu
+//   propòsit ·
+//     - aiCostTracker   · feedback ràpid de sessió per la UI (no toca KB)
+//     - wallet movements + costTrackingService · auditoria + facturació
 //
 // Persistència ·
 //   - sessió actual · in-memory (window-scoped)
-//   - històric per projecte · localStorage (clau · sos_ai_cost_v1)
+//   - històric per projecte · localStorage (caché ràpid · el wallet és gold)
 //
 // Emit · event 'ai:cost-updated' al window perquè les UI puguin escoltar.
 // =============================================================================

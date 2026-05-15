@@ -7,7 +7,7 @@
 import {
     classifyByHeuristic, validateClassification, needsConfirmation,
     applyConfirmedClassification, classifyProject,
-    LIFECYCLE_STAGES, PROJECT_SCALES, DEPENDENCY_TYPES, CLASSIFIER_VERSION,
+    BUSINESS_MATURITY_STAGES, PROJECT_SCALES, DEPENDENCY_TYPES, CLASSIFIER_VERSION,
 } from '../core/projectClassifierService.js';
 import { PROJECT_TYPES } from '../core/critical108Roles.js';
 
@@ -19,7 +19,7 @@ console.log('\n=== C1 · projectClassifierService ===\n');
 
 // 1 · Constants exportats
 t(typeof CLASSIFIER_VERSION === 'string',         'A · version exportada');
-t(Array.isArray(LIFECYCLE_STAGES) && LIFECYCLE_STAGES.length === 6, 'A · 6 lifecycle stages');
+t(Array.isArray(BUSINESS_MATURITY_STAGES) && BUSINESS_MATURITY_STAGES.length === 6, 'A · 6 lifecycle stages');
 t(Array.isArray(PROJECT_SCALES) && PROJECT_SCALES.length === 3,     'A · 3 scales');
 t(Array.isArray(DEPENDENCY_TYPES) && DEPENDENCY_TYPES.length === 5, 'A · 5 dependency types');
 
