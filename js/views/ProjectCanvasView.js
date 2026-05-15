@@ -227,7 +227,7 @@ export default class ProjectCanvasView {
                 const origText = aiBtn.textContent;
                 aiBtn.textContent = '⏳ ' + label('state.thinking');
                 try {
-                    const { runEscalation } = await import('../core/aiRouterService.js');
+                    const { runPrompt } = await import('../core/aiRouterService.js');
                     // Mostra "Pensant…" amb context del SOP/step
                     if (fb) fb.setThinking({ kind: 'runner-start', sopTitle: step.label, iteration: 1 });
                     const prompt = buildAiPromptForStep(sid, {
@@ -236,7 +236,7 @@ export default class ProjectCanvasView {
                         description:   this.project.description,
                         previousSteps: this.canvas.steps,
                     });
-                    const result = await runEscalation({
+                    const result = await runPrompt({
                         prompt,
                         taskKind:      'creative-narrative',
                         maxAttempts:   3,

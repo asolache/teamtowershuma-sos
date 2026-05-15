@@ -259,10 +259,10 @@ export default class ImprovementLoopView {
                 await KB.upsert(this.model);
             }
             // Build runner · runEscalation
-            const { runEscalation } = await import('../core/aiRouterService.js');
+            const { runPrompt } = await import('../core/aiRouterService.js');
             const aiRunner = async ({ prompt }) => {
                 try {
-                    const r = await runEscalation({ prompt, taskKind: 'creative-narrative', maxAttempts: 2 });
+                    const r = await runPrompt({ prompt, taskKind: 'creative-narrative', maxAttempts: 2 });
                     const output = r?.output || r?.text || r?.result || '';
                     const costEur = (r?.usage && typeof r.usage.estimatedCostEur === 'number') ? r.usage.estimatedCostEur : 0;
                     return { output, costEur, modelKey: r?.modelKey || null };

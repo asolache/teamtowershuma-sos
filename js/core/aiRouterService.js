@@ -260,3 +260,54 @@ export async function runEscalation({
     }
     return { output: null, modelKey: null, attempts, escalatedExhausted: true };
 }
+
+// =============================================================================
+// runPrompt · async · WRAPPER HIGH-LEVEL · accepta { prompt, taskKind } i
+// fa la convocatòria del provider real internament (DRY · per a tots els
+// callers de views que no volen pensar en generate()).
+//
+// args ·
+//   prompt           · text complet user prompt
+//   taskKind         · 'creative-narrative' | 'tag-generation' | etc
+//   systemPrompt?    · prompt sistema (default · SOS-friendly cooperative)
+//   maxOutputTokens? · default 1500
+//   temperature?     · default 0.6
+//   preferredProvider? · 'anthropic' · 'openai' · 'gemini' · etc
+//
+// Retorna · { output, text, result, modelKey, usage, attempts, escalatedExhausted }
+// Compatible amb les views existents que usen result.output / result.text /
+// result.result indistintament.
+// =============================================================================
+export async function runPrompt({
+    prompt           = '',
+    taskKind         = 'creative-narrative',
+    systemPrompt     = 'Ets ajudant cooperatiu SOS · respon concis i clar en català/castellà/anglès segons el prompt.',
+    maxOutputTokens  = 1500,
+    temperature      = 0.6,
+    preferredProvider = null,
+    maxAttempts      = 3,    // kept for API compat · runEscalation gestiona attempts internament
+} = {}) {
+    if (!prompt || typeof prompt !== 'string') throw new Error('runPrompt · prompt string required');
+    const { generateWithProvider } = await import('./aiProviderService.js');
+    const generate = (modelKey, ctx) => generateWithProvider(modelKey, {
+        systemPrompt: systemPrompt,
+        userPrompt:   prompt,
+        maxOutputTokens,
+        temperature,
+    });
+    const result = await runEscalation({
+        taskKind,
+        generate,
+        preferredProvider,
+    });
+    // Retornar diverses claus per compat · output principal
+    return {
+        output:    result.output,
+        text:      result.output,
+        result:    result.output,
+        modelKey:  result.modelKey,
+        usage:     result.usage || null,
+        attempts:  result.attempts,
+        escalatedExhausted: result.escalatedExhausted,
+    };
+}

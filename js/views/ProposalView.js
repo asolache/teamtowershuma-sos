@@ -235,14 +235,14 @@ export default class ProposalView {
             const origText = genBtn.textContent;
             genBtn.textContent = '⏳ ' + label('state.thinking');
             try {
-                const { runEscalation } = await import('../core/aiRouterService.js');
+                const { runPrompt } = await import('../core/aiRouterService.js');
                 const matches = matchSkillsToBrief(brief, { topN: 8 });
                 const projectName = this.project.nombre || this.project.name || this.project.id;
                 const projectCanvas = this.project.content?.canvas;
                 // Mostra thinking · client + brief com a context al usuari
                 fb.setThinking({ kind: 'runner-start', sopTitle: 'Proposta · ' + client, iteration: 1 });
                 const prompt = buildAiPromptForProposal({ brief, client, projectName, projectCanvas, matchedSkills: matches });
-                const result = await runEscalation({ prompt, taskKind: 'creative-narrative', maxAttempts: 3 });
+                const result = await runPrompt({ prompt, taskKind: 'creative-narrative', maxAttempts: 3 });
                 const raw = (result && (result.output || result.text || result.result)) || '';
                 if (!raw) { fb.setError(label('err.ai_failed')); return; }
                 let prop = buildEmptyProposal({ projectId: this.projectId, client, summary: brief, validUntil, currency });
