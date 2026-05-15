@@ -157,6 +157,12 @@ async function router() {
             const { injectOrUpdate } = await import('./core/mobileBottomNav.js');
             injectOrUpdate({ pathname: path });
         } catch (_) { /* non-blocking */ }
+        // Mobile topbar · drawer · hide-on-scroll · global · < 768px només.
+        // Aporta navegació completa via "⋯" sense ocupar pantalla.
+        try {
+            const { injectOrUpdate: injTopbar } = await import('./core/mobileTopbar.js');
+            injTopbar({ pathname: path });
+        } catch (_) { /* non-blocking */ }
         // A11Y · W3C/WCAG · global skip-link + live-region + focus-visible CSS
         try {
             const { injectGlobalA11y } = await import('./core/a11yService.js');
