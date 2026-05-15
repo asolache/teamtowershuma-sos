@@ -214,6 +214,24 @@ export default class ProjectHubV2View {
             .hub-know-card .ds { font-size:0.7rem; color:var(--text-secondary); margin-top:2px; line-height:1.4; }
 
             .hub-empty { color:var(--text-muted); font-size:0.78rem; font-style:italic; padding:0.4rem 0; }
+
+            /* Mobile-first · < 768px */
+            @media (max-width: 768px) {
+                .hub-topbar { padding:6px 10px; gap:6px; }
+                .hub-main { max-width:100%; padding:0.7rem 0.6rem; gap:0.6rem; }
+                .hub-zone { padding:0.7rem 0.85rem; }
+                .hub-zone-head h2 { font-size:0.85rem; }
+                .hub-zone-head a { font-size:0.7rem; padding:3px 8px; }
+                .hub-orgbar-row { gap:0.5rem; font-size:0.78rem; }
+                .hub-orgbar .label { font-size:0.65rem; }
+                .hub-today-grid { grid-template-columns:1fr; gap:0.4rem; }
+                .hub-proc-grid { grid-template-columns:1fr 1fr; gap:0.4rem; }
+                .hub-know-grid { grid-template-columns:repeat(2,1fr); gap:0.4rem; }
+                .hub-actions { gap:0.4rem; }
+                .hub-actions a { padding:7px 10px; font-size:0.78rem; }
+                .hub-suggest { padding:0.55rem 0.7rem; }
+                .hub-suggest .ttl { font-size:0.82rem; }
+            }
         </style>
 
         <div class="hub-shell">

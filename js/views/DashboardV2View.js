@@ -138,6 +138,24 @@ export default class DashboardV2View {
             .h2-quick-card .ds { font-size:0.7rem; color:var(--text-secondary); margin-top:2px; line-height:1.4; }
 
             .h2-empty-feed { color:var(--text-muted); font-size:0.78rem; font-style:italic; padding:0.5rem 0; }
+
+            /* Mobile-first · < 768px */
+            @media (max-width: 768px) {
+                .h2-topbar { padding:6px 10px; gap:6px; }
+                .h2-tag { display:none; }                              /* treure label uppercase per espai */
+                .h2-back-old { font-size:0.65rem; padding:2px 6px; }
+                .h2-primary-nav { gap:2px !important; flex-wrap:wrap !important; }
+                .h2-primary-nav a { padding:4px 7px !important; font-size:0.7rem !important; }
+                .h2-main { padding:0.7rem 0.6rem; gap:0.6rem; }
+                .h2-hero { padding:1rem 1.1rem; }
+                .h2-hero h1 { font-size:1.25rem; }
+                .h2-hero p { font-size:0.85rem; }
+                .h2-zone { padding:0.7rem 0.85rem; }
+                .h2-zone-head h2 { font-size:0.88rem; }
+                .h2-proj-grid { grid-template-columns:1fr; gap:0.5rem; }
+                .h2-quick-grid { grid-template-columns:repeat(2, 1fr); gap:0.4rem; }
+                .h2-btn { padding:7px 12px; font-size:0.82rem; }
+            }
         </style>
 
         <div class="h2-shell">

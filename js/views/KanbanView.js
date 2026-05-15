@@ -229,6 +229,19 @@ export default class KanbanView {
             @media (max-width: 1100px) { .kb-board { grid-template-columns:repeat(2, 1fr); } }
             @media (max-width: 700px)  { .kb-board { grid-template-columns:1fr; } }
 
+            /* mobile-first responsive · UX-MOBILE-D continuation */
+            @media (max-width: 768px) {
+                .kb-topbar { padding:0.6rem 0.8rem; gap:0.5rem; flex-wrap:wrap; }
+                .kb-title { display:none; }
+                .kb-spacer { display:none; }
+                .kb-btn { padding:0.45rem 0.7rem; font-size:0.78rem; }
+                .kb-main { padding:0.8rem; }
+                .kb-stats { gap:0.5rem; }
+                .kb-stat { min-width:0; flex:1 1 130px; padding:0.6rem 0.8rem; }
+                .kb-stat-num { font-size:1.15rem; }
+                #kbSwarmToggle { font-size:0.72rem !important; padding:5px 8px !important; }
+            }
+
             .kb-col        { background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:0.85rem; display:flex; flex-direction:column; gap:0.7rem; }
             .kb-col-h      { color:var(--text-secondary); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.1em; font-weight:700; display:flex; align-items:center; gap:0.5rem; padding-bottom:0.5rem; border-bottom:2px solid var(--accent,var(--accent-indigo)); }
             .kb-col-h .pill{ background:var(--bg-elevated); padding:1px 8px; border-radius:10px; font-size:0.7rem; color:var(--text-secondary); }
