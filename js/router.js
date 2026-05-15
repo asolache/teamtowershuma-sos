@@ -180,6 +180,14 @@ async function router() {
             const { injectGlobal: injSearch } = await import('./core/globalSearch.js');
             injSearch();
         } catch (_) { /* non-blocking */ }
+        // First-run onboarding · welcome modal · només si l'usuari mai l'ha vist
+        // Es mostra al primer entry page · explica "cervell SOS" en 4 slides
+        if (path === '/' || path === '/home') {
+            try {
+                const { maybeShow } = await import('./core/firstRunOnboarding.js');
+                maybeShow();
+            } catch (_) { /* non-blocking */ }
+        }
         // NEURAL-PATH-001 · log de visita · fire-and-forget · zero bloqueig
         (async () => {
             try {
