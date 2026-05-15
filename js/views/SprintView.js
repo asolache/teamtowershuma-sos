@@ -76,6 +76,14 @@ export default class SprintView {
         <div class="sp-shell"><div class="sp-main">
             <header class="sp-hero">
                 <h1>🐝 Swarm Operative · Sprint loop</h1>
+                <div style="padding:10px 14px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.35);border-radius:6px;margin-bottom:0.8rem;font-size:0.85rem;line-height:1.55;">
+                    ℹ️ <strong>SWARM-RELOC-001</strong> · El backlog canonical ara viu a
+                    <a href="https://github.com/asolache/teamtowershuma-sos/blob/main/docs/backlog.yaml" target="_blank" rel="noopener" style="color:var(--accent-indigo);font-weight:700;">docs/backlog.yaml</a>
+                    (16 WOs · 4 agents) i és consumible per qualsevol agent IA via el
+                    <code>agentBridgeSchema</code>. Aquesta vista (/sprint) es manté per
+                    al swarm autonòmic del backlog intern · però el flux nou canalitza WOs via
+                    <a href="/hub/sos-dev-internal" data-link style="color:var(--accent-indigo);font-weight:700;">/hub/sos-dev-internal</a>.
+                </div>
                 <p>Honor SOS · Swarm Operative System. Backlog estructurat alineat amb els <a href="#" data-link style="color:var(--accent-indigo);">4 principis canònics</a>. Tria un item · l'agent IA genera el pla d'implementació · històric persistit al KB com a <code>sprint_run</code> nodes (TEA-auditable).</p>
                 <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
                     <button class="sp-btn" id="spAgentLoop" title="Auto-loop · l'agent IA processa el backlog amb TDD fins a verd (cap a budget · cap a iteracions)" style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:0;">🤖 Run autonomous loop</button>
