@@ -184,7 +184,7 @@ export default class DashboardV2View {
                 <h1>Hola · benvingut a <span>SOS</span></h1>
                 <p>Operating System cooperatiu local-first · descentralitzat · TDD a tots els nivells. Comença creant el teu primer projecte · l'IA t'ajudarà a definir el mapa de valor · els processos i les WOs.</p>
                 <div class="h2-hero-actions">
-                    <a href="/dashboard" data-link class="h2-btn h2-btn-primary">+ Crear primer projecte</a>
+                    <a href="/create" data-link class="h2-btn h2-btn-primary">+ Crear primer projecte</a>
                     <a href="/learn" data-link class="h2-btn">📚 Què és SOS?</a>
                 </div>
             </div>`;
@@ -196,7 +196,7 @@ export default class DashboardV2View {
             <p>Tens ${projects.length} ${projects.length === 1 ? 'projecte actiu' : 'projectes actius'}. Continua amb el més recent · "${this._esc(recentProject.nombre || recentProject.name)}" · o explora els altres.</p>
             <div class="h2-hero-actions">
                 <a href="/hub/${encodeURIComponent(recentProject.id)}" data-link class="h2-btn h2-btn-primary">→ Continuar amb ${this._esc((recentProject.nombre || recentProject.name || '').slice(0, 24))}</a>
-                <a href="/dashboard" data-link class="h2-btn">+ Nou projecte</a>
+                <a href="/create" data-link class="h2-btn">+ Nou projecte</a>
                 <a href="/sprint" data-link class="h2-btn">🐝 Sprint Swarm</a>
             </div>
         </div>`;
@@ -211,7 +211,7 @@ export default class DashboardV2View {
                 </div>
                 <div class="h2-empty">
                     <p>Encara no tens cap projecte.</p>
-                    <a href="/dashboard" data-link class="h2-btn h2-btn-primary">+ Crear primer projecte</a>
+                    <a href="/create" data-link class="h2-btn h2-btn-primary">+ Crear primer projecte</a>
                 </div>
             </div>`;
         }
