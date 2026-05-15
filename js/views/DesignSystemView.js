@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-15T18:00 · v50 · PITCH-REFRAME · /pitch-doc/{id} + SWARM-RELOC banner';
+const BUILD_STAMP = '2026-05-15T19:00 · v51 · C2-TEMPLATES (15) + B-UNIFIED-FORM (plan→fan-out→reduce)';
 
 export default class DesignSystemView {
 
