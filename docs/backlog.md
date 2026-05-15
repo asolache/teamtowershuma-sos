@@ -3668,4 +3668,319 @@ Casos especials:
 
 ---
 
-*Documento vivo · actualizar al cierre de cada Ola.*
+## STRATEGIC-RETHINK-2026-05-15 · sprint analysis & design · re-priorització
+
+Input @alvaro 2026-05-15 · després del batch D4+A+C1+DRY (PR #91 merged) ·
+l'usuari identifica 6 moviments tectònics que canvien el rumb del producte ·
+
+1. **Dos fluxos de valor diferents** · "crear el flux" (onboarding 1 vegada)
+   vs "operar el flux" (cicles diaris · cron · esdeveniments). Avui SOS els
+   barreja · el motor de valor diari és el segon · i justifica IA+permaweb+
+   smart contracts econòmicament.
+2. **Pitch reframe** · pitch ≠ formulari de 6 caselles · pitch = document
+   final sintetitzat per a inversors · l'IA el construeix · usuari valida.
+3. **VNA amb vistes per procés** · Verna Allee aplicat correctament · cada
+   procés és un subgraf · filtre · mateixos rols apareixen a múltiples.
+4. **WO automation primitives** · cron + esdeveniments + condicions · cor
+   del Swarm Operative System operatiu.
+5. **Backlog SOS ↔ Claude Code com a projecte real dins SOS** · Kanban
+   visualitza el desenvolupament conjunt · jo escric · usuari edita.
+6. **Swarm relocalitzat** · `/sprint` desapareix com a vista separada ·
+   esdevé `/kanban` genèric amb mode swarm activable per projecte.
+
+### Re-ordenació de prioritats (sprint analysis & design v2)
+
+El batch anterior (D4 → A → C1 → B → C2) es manté amb 3 dels 4 fets ·
+**B i C2 queden diferits** per anar abans amb els 6 nous eixos · que tenen
+més impacte estratègic immediat ·
+
+| ID | Prioritat | Compl. | Què entrega |
+|----|-----------|--------|-------------|
+| NEXE-001       | critical | M  | Backlog YAML + lectura SOS · cercle Claude↔usuari |
+| CASTELLERS-001 | high     | S  | Projecte Castellers + projecte Alvaro pre-loaded |
+| PITCH-REFRAME-001 | high  | M  | Canvas vs Pitch separation · pitch IA-generated |
+| VNA-PROCESS-001  | high   | L  | Mapa de valor filtrable per procés (Verna Allee) |
+| WO-AUTO-001     | critical | XL | Cron + event + condition triggers per WO auto-gen |
+| SWARM-RELOC-001  | medium  | M | /sprint → /kanban genèric swarm-aware |
+| B-UNIFIED-FORM-001 | medium | L | Form unificat IA-driven (diferit del batch ant.) |
+| C2-TEMPLATES-001 | medium  | L | 15 plantilles type×stage (diferit del batch ant.) |
+
+---
+
+## NEXE-001 · Backlog YAML + SOS llegeix-lo des /kanban?project=sos-dev (input @alvaro 2026-05-15)
+
+### Tesi
+Convertir el `docs/backlog.md` + `backlogManifest.js` en **una sola font
+estructurada** (YAML) que serveix de nexe entre Claude Code (jo · escric) i
+SOS (browser · llegeix · usuari interacciona). El backlog deixa de ser
+"document doc" i passa a ser **dades operables** que el Kanban renderitza.
+
+### Diagnosi
+Avui ·
+- `docs/backlog.md` · narrativa · jo l'escric · usuari el llegeix a GitHub
+- `backlogManifest.js` · llista d'objectes JS · UI a `/sprint` la consumeix
+- **Cap connexió real** · l'usuari no pot afegir items al manifest ·
+  només pot accionar via swarm autonòmic
+
+Demà ·
+- `docs/backlog.yaml` · estructurat · jo l'escric via commit
+- SOS carrega l'arxiu via fetch on init (com fa `knowledgeLoader`)
+- `/kanban?project=sos-dev-internal` · Kanban view sobre aquestes WOs
+- Usuari arrossega WOs entre estats · queda a localStorage com a "pending"
+- Botó "Export to PR" · genera JSON · usuari l'envia · jo l'integro
+
+### Sprint plan A → C (~6h)
+- **A · Schema + migration (~2h)** · `docs/backlog.yaml` amb 60+ entries
+  derivades de `backlogManifest.js` + items nous del rethink. Validador
+  pure de schema (yamlBacklogService.js · zod-style).
+- **B · Loader + view (~2h)** · SOS llegeix YAML on init via fetch · cache
+  localStorage · Kanban view a `/kanban?project=sos-dev-internal`
+  reutilitza KanbanView existent.
+- **C · User edits + export (~2h)** · localStorage layer per als edits
+  pendents · botó "Export edits as PR description text" amb format
+  copy-paste · alvaro l'enganxa al xat amb jo · jo l'integro.
+
+### Decisions pendents @alvaro
+- Format de l'export · markdown · JSON · YAML-diff? · proposta · markdown
+  human-readable amb seccions "ADD WO" · "UPDATE WO id=X" · "MOVE TO done"
+- Nivell 3 bidireccional via GitHub Issues · ara o més endavant?
+
+---
+
+## CASTELLERS-001 · Pre-load projecte Castellers + projecte Alvaro (input @alvaro 2026-05-15)
+
+### Tesi
+Donar a SOS dos **casos reals pre-loaded** per testejar tot el flux sense
+haver de crear projectes nous a cada sessió · i per a demos amb futurs
+usuaris/inversors.
+
+### Què cal pre-loadar
+- **Projecte "Castellers de la Vila de Gràcia"** · cas pre-existent que ja
+  modela rols (pinya · tronc · cap de colla · etc) + transaccions
+  (assajos · actuacions · neteja material) + valors intangibles (compromís ·
+  identitat · cohesió) · perfecte per a testejar VNA amb procés
+- **Usuari "alvaro" · projecte personal** · profile Ikigai complet · skills
+  declarades · matriu_member primary · 1 rol founder anchor
+
+### Sprint plan A → B (~3h)
+- **A · Seed Castellers (~2h)** · `js/core/castellersSeed.js` · genera
+  el projecte + 12 rols + 18 transaccions + 5 SOPs + 3 workshops base ·
+  igual pattern que `founderTemplate.js` · pure · idempotent.
+- **B · Seed Alvaro (~1h)** · `js/core/alvaroSeed.js` · profile Ikigai
+  pre-omplert · matriu_member primary · firma una atestació seed.
+
+### Trigger
+- Botó "Pre-loaded examples" al dashboard buit (quan no hi ha cap projecte)
+- O auto-seed al primer load si user has zero projects + opt-in checkbox
+
+### Decisions pendents @alvaro
+- Castellers · vols dades reals teves (i guardades a permaweb) · o és
+  només mock per a la demo? Proposta · mock primer · permaweb seed v2.
+
+---
+
+## PITCH-REFRAME-001 · Pitch = document final per a inversors (input @alvaro 2026-05-15)
+
+### Tesi
+Treure la fricció UX del pitch actual (formulari 6 caselles que sembla un
+checklist) · convertir-lo en **document de presentació visual sintetitzat
+automàticament** des de la resta del projecte (canvas + VNA + tokenomics +
+ledger + proposals) · l'usuari valida el text final · no construeix les
+seccions.
+
+### Estat actual (diagnosi)
+- `/pitch?project=X` · form de 6 seccions (problem · solution · traction ·
+  team · ask · vision)
+- Cada secció té un botó IA · l'usuari l'omple step-by-step
+- Resultat · pitch genèric · usuari l'omple a contracor · no l'envia a
+  ningú perquè no se sent professional
+
+### Proposta
+- `/pitch?project=X` · 2 modes ·
+  - **Mode investor doc (default)** · pàgina llarga estil Mercury/Notion ·
+    auto-generada des dels altres mòduls · pinta com a presentació ·
+    swipeable mobile · exportable PDF/Keynote
+  - **Mode edit** (collapse · per a quan vol ajustar text) · les 6 seccions
+    es mostren com a "blocks" que l'usuari pot reordenar/editar
+- El IA-generator · prompt context-aware ·
+  - Canvas (visió/missió/valors) → narrativa
+  - VNA (rols + valors crítics) → equip + execució
+  - Tokenomics (totalSupply + distribution + vesting) → ask/economics
+  - Ledger (P&L + balance) → traction/numbers
+  - Proposals (accepted + sent) → traction comercial
+  - Lifecycle stage (de C1 classifier) → tone (idea vs growth)
+
+### Sprint plan A → C (~6h)
+- **A · Synthesis service (~2h)** · `pitchSynthesisService.js` · pure ·
+  rep tot el context · construeix prompt · runPrompt amb taskTier='quality'
+- **B · Investor doc view (~3h)** · `/pitch?view=investor` · template
+  visual · 6 blocks · cada un un draft IA-generated · valida/edita inline
+- **C · Export (~1h)** · "Download PDF" via window.print + CSS @media print
+
+### Decisions pendents @alvaro
+- Volem mantenir el mode "edit form" antic com a fallback · o el matem?
+  Proposta · mantenir però collapse · 90% dels usuaris no l'usaran
+- Plantilla visual · 1 sola amb temes (light/dark/coop) · o 3 templates
+  diferents? Proposta · 1 amb 3 temes
+
+---
+
+## VNA-PROCESS-001 · Mapa de valor filtrable per procés (Verna Allee) (input @alvaro 2026-05-15)
+
+### Tesi
+Implementar el **Value Network Analysis de Verna Allee correctament** ·
+no com a un graf gegant tot junt sinó com a un graf navegable per
+**processos** · on cada procés és un subgraf que comparteix rols amb altres.
+
+Això és la meta-metodologia · SOS modela QUALSEVOL organització fent ·
+1. Identifica processos (sales · ops · learn · governance · finance · etc)
+2. Per a cada procés · subset de rols + subset de transaccions
+3. Mateix rol pot ser a 5 processos amb 5 "barrets" diferents
+4. Vista filtrada · només dibuixa el subgraf del procés escollit
+
+### Estat actual
+- VNA implementat com a `vna_roles` + `vna_transactions` + `vna_flows`
+- Tot dins el mateix array · sense agrupació per procés
+- Vista del map pinta tot junt · esdevé soroll quan ≥15 rols
+
+### Proposta · schema extension
+```yaml
+project:
+  vna_processes:                        # NOU
+    - id: "sales-process"
+      label: "Procés de vendes"
+      roleIds:    [comercial, customer-success, ...]
+      txIds:      [tx-lead-qualif, tx-close-deal, ...]
+      kpi:        "conversió mensual"
+      cycleHint:  "weekly"              # per a WO-AUTO-001
+    - id: "ops-daily"
+      label: "Operacions diàries"
+      ...
+  vna_roles:        [...]               # ja existent · sense canvis
+  vna_transactions: [...]               # ja existent · sense canvis
+```
+
+- UI · selector de procés a sobre del mapa · "Tots · vendes · ops · ..."
+- Cada rol/tx renderitzat amb opacitat 1 si pertany al filtre · 0.2 si no
+- Highlight transaccions intangibles (línia discontinua) vs tangibles
+  (línia contínua) · Verna Allee
+
+### Verna Allee deep features
+- Tangible vs intangible · ja modelats a `FOUNDER_TRANSACTIONS.type` ✓
+- "Conversation as unit of value" · cal afegir camp `conversation_pattern`
+  a transaccions (recurring · one-shot · escalation)
+- Network health metrics · centrality · redundancy · flow balance · vista
+  /vna/health amb scores
+
+### Sprint plan A → C (~12h)
+- **A · Schema + service (~3h)** · `valueProcessService.js` · CRUD ·
+  validation · helpers per a vistes
+- **B · UI filter al mapa (~5h)** · `VNAMapView.js` · selector procés ·
+  filtres · opacitats · highlights
+- **C · Network health (~4h)** · pure metrics + UI `/vna/health`
+
+### Decisions pendents @alvaro
+- Quants processos per defecte hauria d'oferir SOS per al seed Castellers?
+  Proposta · 4 (assajos · actuacions · governance · learn-cohort)
+- Quan generem processos amb IA al bootstrap (B-UNIFIED-FORM-001) · usem
+  les 5 categories de Verna Allee (sales · ops · finance · innovation ·
+  learn) o més obert?
+
+---
+
+## WO-AUTO-001 · Auto-generation de WOs · cron + event + condition (input @alvaro 2026-05-15)
+
+### Tesi
+El **cor del SOS operatiu** · WOs es generen automàticament segons el
+cicle de cada organització · sense intervenció humana · permet que SOS
+"funcioni sol" un cop l'usuari ha definit els seus processos.
+
+Exemple usuari · "Botiga obre a les 9 · cada dia a les 8:30 genera WO
+'neteja' assignat al rol oper-tienda".
+
+### Tipus de triggers
+- **Cron** · time-based · "cada dia 8:30" · "primer dilluns del mes" ·
+  "trimestralment"
+- **Event** · "quan factura X cobrada" · "quan stock < N" · "quan
+  WO Y completed"
+- **Condition** · "si saldo wallet < 100€" · "si rating workshop < 3 estrelles"
+- **Compound** · WO genera WO genera WO · workflow graph
+
+### Schema proposta
+```yaml
+wo_template:                              # NOU type al KB
+  id: "wo-tpl-clean-shop"
+  projectId: ...
+  processId: "ops-daily"                  # link a VNA-PROCESS-001
+  trigger:
+    kind: "cron"
+    cron: "30 8 * * *"                    # standard crontab
+    timezone: "Europe/Madrid"
+  woFactory:                              # template per generar WO
+    title:    "Neteja botiga · {today}"
+    roleId:   "oper-tienda"
+    sopId:    "sop-cleaning"
+    deliverable: "checklist signed"
+    estimatedHours: 0.5
+  enabled: true
+```
+
+- Background scheduler · al app init · escaneja templates · genera WOs
+  que falten · al user navigation refresca
+
+### Sprint plan A → D (~16h)
+- **A · Schema + service (~3h)** · `woTemplateService.js` · CRUD ·
+  cron parser (croner library · 2kb · pure JS)
+- **B · Trigger evaluator (~4h)** · pure · rep estat del sistema · retorna
+  llista de WOs a generar · idempotent (no genera duplicats)
+- **C · Background runner (~3h)** · service worker o setTimeout · cada
+  X minuts revisa · genera WOs · upsert KB
+- **D · UI template editor (~6h)** · `/processes/{processId}/templates` ·
+  CRUD form · cron picker · role/sop picker
+
+### Decisions pendents @alvaro
+- ¿Workflow graph (WO genera WO) en aquest sprint o diferit? Proposta ·
+  diferit · primer cron/event simple · v2 compound
+- ¿Notificacions push quan es genera WO? Proposta · sense push ·
+  notification icon a la nav (top right · igual que Gmail)
+- Permisos · qui pot crear templates per a un projecte? Proposta · només
+  rols amb shareTier >= governance · alfa simple · sense permisos per ara
+
+---
+
+## SWARM-RELOC-001 · /sprint → /kanban genèric + swarm-runner integrat (input @alvaro 2026-05-15)
+
+### Tesi
+Eliminar la duplicació entre `/sprint` (swarm runner sobre backlog) i
+`/kanban` (WOs d'un projecte) · unificar en un sol Kanban que sap
+"correr en mode swarm" si l'usuari ho activa. Així el swarm IA pot
+correr sobre QUALSEVOL projecte · no només el backlog intern de SOS.
+
+### Estat actual
+- `/sprint` · llegeix `backlogManifest.js` · pinta llista d'items · botó
+  "Run autonomous agent" llança swarm sobre l'item
+- `/kanban?project=X` · llegeix WOs del projecte X · view Kanban (4 cols ·
+  todo/in-progress/done/archived) · no swarm
+
+### Proposta
+- `/kanban?project=X` · afegeix toggle "🐝 Swarm mode" · si actiu ·
+  - Cada WO té botó "Auto-run" · llança swarm autonomous loop sobre la WO
+  - Status del swarm visible al WO · iteracions · model · cost · resultat
+- `/sprint` · esdevé alias de `/kanban?project=sos-dev-internal&swarm=on`
+- `backlogManifest.js` · es manté com a font del projecte sos-dev-internal
+  fins que NEXE-001 el converteixi a YAML
+
+### Sprint plan A → B (~6h)
+- **A · Kanban swarm toggle (~3h)** · UI + state · toggle persistit a user
+  preferences · per-projecte
+- **B · /sprint redirect (~1h)** · redirigeix a `/kanban?project=sos-dev
+  -internal&swarm=on` · mantenir backwards compat
+- **C · Tests + docs (~2h)** · regression + readme updates
+
+### Decisions pendents @alvaro
+- ¿Mantenim `/sprint` com a URL · o el deprecate completament? Proposta ·
+  redirect 301 · l'usuari aprèn la nova URL
+
+---
+
+*Documento vivo · actualizat el 2026-05-15 amb el sprint analysis & design v2.*
