@@ -174,6 +174,12 @@ async function router() {
             const { injectGlobalFab } = await import('./core/quickCaptureFab.js');
             injectGlobalFab();
         } catch (_) { /* non-blocking */ }
+        // Global Search · cmd-K / Ctrl-K / "/" · accés instantani a tot el KB
+        // Pattern Linear/Notion · cercador modal · keyboard nav · mobile bottom-sheet
+        try {
+            const { injectGlobal: injSearch } = await import('./core/globalSearch.js');
+            injSearch();
+        } catch (_) { /* non-blocking */ }
         // NEURAL-PATH-001 · log de visita · fire-and-forget · zero bloqueig
         (async () => {
             try {
