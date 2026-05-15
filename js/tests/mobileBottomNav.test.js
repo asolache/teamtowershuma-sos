@@ -39,7 +39,7 @@ eq(inferActiveId('/inventat'), null,                     'B · /inventat → nul
 t(HREF_BY_ID.home === '/home',                           'C · home href /home');
 t(HREF_BY_ID.timeline === '/timeline',                   'C · timeline href');
 t(HREF_BY_ID.create === '/create',                       'C · create href');
-t(HREF_BY_ID.market === '/market',                       'C · market href');
+t(HREF_BY_ID.market === '/discover',                     'C · market href · /discover (hub permaweb)');
 t(HREF_BY_ID.me === '/identity',                         'C · me href');
 
 // 5 · renderHtml · pure · conté els 5 items

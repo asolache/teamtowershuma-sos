@@ -65,6 +65,20 @@ for (const g of DRAWER_GROUPS) {
     t(dr.includes(g.title),                              'C · group title rendered · ' + g.title);
 }
 
+// Notif badge · botó inbox + badge count
+const tbNotif0 = renderTopbarHtml({ title: 'X', notifCount: 0 });
+t(tbNotif0.includes('sos-mtb-notif-btn'),                'F · notif button rendered');
+t(tbNotif0.includes('href="/inbox"'),                    'F · notif → /inbox');
+t(tbNotif0.includes('sos-mtb-notif-badge hidden'),       'F · badge hidden quan count=0');
+
+const tbNotif5 = renderTopbarHtml({ title: 'X', notifCount: 5 });
+t(!tbNotif5.includes('sos-mtb-notif-badge hidden'),      'F · badge visible quan count>0');
+t(tbNotif5.includes('>5</span>'),                        'F · count rendered');
+t(tbNotif5.includes('aria-label="Inbox · 5 pendents"'),  'F · aria-label inclou count');
+
+const tbNotif999 = renderTopbarHtml({ title: 'X', notifCount: 999 });
+t(tbNotif999.includes('>99+</span>'),                    'F · cap a 99+ quan count>99');
+
 // Module shape
 import * as topbar from '../core/mobileTopbar.js';
 t(typeof topbar.injectOrUpdate === 'function',           'D · injectOrUpdate exported');

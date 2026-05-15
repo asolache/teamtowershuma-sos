@@ -1024,6 +1024,28 @@ export default class KanbanView {
             defaultEngine = await Orchestrator.getDefaultProvider() || DEFAULT_ENGINE;
         } catch (_) { /* fallback DEFAULT_ENGINE */ }
 
+        // KANBAN-ASSIGNEE-001 · carregar usuaris reals del KB (user_identity)
+        // + matriu seats si hi ha projecte actiu. Substitueix el placeholder
+        // hardcoded "@alvaro" per autocomplete real i dropdown amb tothom.
+        let knownAssignees = [];   // [{ handle, label, kind: 'identity'|'seat' }]
+        try {
+            const identities = await KB.query({ type: 'user_identity' });
+            for (const ide of (identities || [])) {
+                const h = ide?.content?.handle;
+                if (h) {
+                    const name = ide.content?.displayName || h;
+                    knownAssignees.push({ handle: '@' + String(h).replace(/^@/, ''), label: '👤 ' + name + ' (@' + h + ')', kind: 'identity' });
+                }
+            }
+            if (this.projectFilter && Array.isArray(this.seats)) {
+                for (const s of this.seats) {
+                    const name = s?.content?.name || s?.id;
+                    if (name) knownAssignees.push({ handle: s.id, label: '🪑 ' + name + ' · seat', kind: 'seat' });
+                }
+            }
+        } catch (_) { /* sense identities · fallback input lliure */ }
+        const _myHandle = (knownAssignees.find(a => a.kind === 'identity')?.handle) || '';
+
         // H1.10.6 · SOP de referencia → dropdown de SOPs del proyecto activo.
         // Si hay projectFilter → carga SOPs del proyecto y renderiza <select>.
         // Si no hay proyecto → conserva <input type="text"> libre.
@@ -1138,6 +1160,7 @@ export default class KanbanView {
         document.getElementById('kbCreateBg').addEventListener('click', e => { if (e.target.id === 'kbCreateBg') close(); });
 
         // H1.10.8 · alternar input/select del campo assignee según el tipo
+        // KANBAN-ASSIGNEE-001 · si tenim usuaris reals al KB · select; si no · input lliure
         const ENGINE_OPTIONS = ['anthropic', 'openai', 'deepseek', 'gemini', 'minimax', 'custom'];
         const renderAssigneeField = (kind) => {
             const wrap = document.getElementById('kbfAssIdWrap');
@@ -1147,8 +1170,23 @@ export default class KanbanView {
                     `<option value="${e}" ${e === defaultEngine ? 'selected' : ''}>${e}${e === defaultEngine ? ' (por defecto)' : ''}</option>`
                 ).join('');
                 wrap.innerHTML = `<select id="kbfAssId">${opts}</select>`;
+                return;
+            }
+            // Humano · si hi ha known assignees · select amb datalist; sinó · input lliure
+            if (knownAssignees.length > 0) {
+                const opts = knownAssignees.map(a => {
+                    const sel = a.handle === _myHandle ? ' selected' : '';
+                    return `<option value="${this._esc(a.handle)}"${sel}>${this._esc(a.label)}</option>`;
+                }).join('');
+                wrap.innerHTML = `
+                    <select id="kbfAssId" style="margin-bottom:4px;">
+                        ${opts}
+                        <option value="">— altre · escriu handle manualment —</option>
+                    </select>
+                `;
             } else {
-                wrap.innerHTML = `<input id="kbfAssId" type="text" placeholder="@alvaro · ej. asignar humano">`;
+                const ph = _myHandle || '@handle · ex. @alvaro';
+                wrap.innerHTML = `<input id="kbfAssId" type="text" placeholder="${this._esc(ph)}" value="${this._esc(_myHandle)}">`;
             }
         };
         document.getElementById('kbfAssKind').addEventListener('change', e => renderAssigneeField(e.target.value));

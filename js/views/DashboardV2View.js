@@ -184,7 +184,7 @@ export default class DashboardV2View {
             { href: '/home',      label: '🏠 Avui',       active: true,  aria: 'Inici · què tens d\'avui' },
             { href: '/timeline',  label: '💬 Xarxa',      active: false, aria: 'Activitat de la xarxa social' },
             { href: '/create',    label: '➕ Crea',        active: false, aria: 'Crear projecte · contribuir valor' },
-            { href: '/market',    label: '🛒 Descobreix', active: false, aria: 'Mercat · descobreix valor disponible' },
+            { href: '/discover',  label: '🛒 Descobreix', active: false, aria: 'Hub permaweb · perfils · projectes · WOs · workshops · usuaris federats' },
             { href: '/identity',  label: '👤 Jo',          active: false, aria: 'El meu perfil · identitat · wallet' },
         ];
         return `
@@ -201,9 +201,10 @@ export default class DashboardV2View {
             return `
             <div class="h2-hero">
                 <h1>Hola · benvingut a <span>SOS</span></h1>
-                <p>Operating System cooperatiu local-first · descentralitzat · TDD a tots els nivells. Comença creant el teu primer projecte · l'IA t'ajudarà a definir el mapa de valor · els processos i les WOs.</p>
+                <p>Cervell extés cooperatiu · local-first · descentralitzat · TDD a tots els nivells. Comença en 1 click ·</p>
                 <div class="h2-hero-actions">
-                    <a href="/create" data-link class="h2-btn h2-btn-primary">+ Crear primer projecte</a>
+                    <a href="/create" data-link class="h2-btn h2-btn-primary">+ Crea el teu projecte amb IA</a>
+                    <button id="h2DemoSeed" class="h2-btn" type="button" title="Carrega cas real Castellers · 12 rols · 18 transactions · 4 processos · 5 SOCs · explorable immediatament">🎭 Carregar demo Castellers</button>
                     <a href="/learn" data-link class="h2-btn">📚 Què és SOS?</a>
                 </div>
             </div>`;
@@ -219,6 +220,43 @@ export default class DashboardV2View {
                 <a href="/sprint" data-link class="h2-btn">🐝 Sprint Swarm</a>
             </div>
         </div>`;
+    }
+
+    async _seedCastellersDemo() {
+        try {
+            const { buildCastellersSeed } = await import('../core/castellersSeed.js');
+            const { KB } = await import('../core/kb.js');
+            const { toast } = await import('../core/uxComponents.js');
+            const { store } = await import('../core/store.js');
+
+            const meHandle = this._state?.meHandle || '@anonymous';
+            const seed = buildCastellersSeed({ creatorHandle: meHandle });
+
+            // Upsert all nodes
+            await KB.upsert(seed.org);
+            await KB.upsert(seed.project);
+            for (const r of seed.roles) await KB.upsert(r);
+            for (const p of seed.processes) await KB.upsert(p);
+            for (const s of seed.socs) await KB.upsert(s);
+            for (const r of seed.resources) await KB.upsert(r);
+
+            // Sync to store
+            await store.dispatch({ type: 'CREATE_PROJECT', payload: seed.project });
+
+            toast({
+                kind: 'success',
+                text: '🎭 Castellers carregat · ' + seed.stats.roleCount + ' rols · '
+                    + seed.stats.transactionCount + ' transactions · ' + seed.stats.processCount + ' processos',
+                ttl: 5000,
+            });
+            // Redirect to hub
+            setTimeout(() => {
+                window.location.href = '/hub/' + encodeURIComponent(seed.project.id);
+            }, 1500);
+        } catch (e) {
+            const { toast } = await import('../core/uxComponents.js');
+            toast({ kind: 'error', text: 'Error: ' + (e?.message || e) });
+        }
     }
 
     _zone2_Projects({ projects }) {
@@ -286,13 +324,14 @@ export default class DashboardV2View {
 
     _zone4_QuickLinks({ meHandle }) {
         const links = [
-            { ic: '🐝', nm: 'Sprint Swarm',  ds: 'Backlog SOS · agent IA',     href: '/sprint' },
-            { ic: '🌐', nm: 'Registry',      ds: 'Permaweb · operadors SOS',   href: '/registry' },
-            { ic: '🛒', nm: 'Mercat',        ds: 'Productes · workshops · sops', href: '/market' },
+            { ic: '🐝', nm: 'Sprint Swarm',  ds: 'Backlog SOS · agent IA · auto-loop', href: '/sprint' },
+            { ic: '🚀', nm: 'Descobreix',    ds: 'Permaweb · 7 tabs (perfils · projectes · WOs · ...)', href: '/discover' },
+            { ic: '📨', nm: 'Inbox',         ds: 'DMs · invitacions · accept/decline', href: '/inbox' },
+            { ic: '💬', nm: 'Timeline',      ds: 'Feed activitat network · sort relevància', href: '/timeline' },
+            { ic: '🗺',  nm: 'Catàleg processos', ds: '15 plantilles type×stage', href: '/process-catalog' },
             { ic: '🎓', nm: 'Aprèn',         ds: 'Catàleg learn · 108 rols',   href: '/learn' },
             { ic: '👤', nm: meHandle ? 'El meu perfil' : 'Crear identitat', ds: meHandle ? meHandle : 'DID + ECDSA local', href: meHandle ? '/u/' + meHandle.replace(/^@/, '') : '/identity' },
-            { ic: '⚙️', nm: 'Configuració',  ds: 'API keys · tema · preferències', href: '/settings' },
-            { ic: '🎨', nm: 'Disseny',       ds: 'Sistema visual · BUILD_STAMP',  href: '/design' },
+            { ic: '⚙️', nm: 'Configuració',  ds: 'API keys · tema · IA defaults', href: '/settings-v2' },
         ];
         return `
         <div class="h2-zone">
@@ -311,7 +350,8 @@ export default class DashboardV2View {
     }
 
     _bind() {
-        // No event listeners necessaris · tots els links són data-link · gestionats pel router.
+        // Demo seed button (només visible quan empty state)
+        document.getElementById('h2DemoSeed')?.addEventListener('click', () => this._seedCastellersDemo());
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

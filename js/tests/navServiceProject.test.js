@@ -41,7 +41,8 @@ for (const id of GLOBAL_BUT_CONTEXTUAL) {
 }
 
 // Globals purs · NO han de rebre projectId (preserva semàntica)
-const PURE_GLOBALS = ['dashboard', 'sprint', 'matriu', 'registry', 'opportunities', 'identity', 'skills', 'sectors'];
+// REGISTRY-MERGE 2026-05-16 · 'registry' eliminat del nav · consolidat a /opportunities
+const PURE_GLOBALS = ['dashboard', 'sprint', 'matriu', 'opportunities', 'identity', 'skills', 'sectors'];
 for (const id of PURE_GLOBALS) {
     const link = find(id);
     t(link,                                          'C · ' + id + ' present (global)');

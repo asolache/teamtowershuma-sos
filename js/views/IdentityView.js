@@ -147,6 +147,24 @@ export default class IdentityView {
                     </div>
                 </div>
 
+                <div class="id-card" id="idKeyfileCard" style="border-left-color:#14b8a6;">
+                    <h2>📂 Keyfile JSON · publish sense extensió</h2>
+                    <div class="id-meta">
+                        Si fas servir <strong>iPad / mobile</strong> o un navegador sense extensió Wander · carrega aquí la
+                        teva <strong>keyfile JSON Arweave</strong> exportada des de Wander/ArConnect. Igual de funcional ·
+                        cobrim Turbo balance + publish real al permaweb.
+                        <br><br>
+                        <strong style="color:var(--accent-orange);">⚠ Pre-alfa · keyfile sense xifrar a IndexedDB</strong> ·
+                        usa una keyfile dedicada amb saldo mínim (~5-10 USD Turbo). Abans d'alfa pública · xifrarem amb passphrase.
+                    </div>
+                    <div id="idKeyfileBody" style="margin-top:0.8rem;">
+                        <input type="file" id="idKeyfileInput" accept=".json,application/json" style="display:none;">
+                        <button class="id-btn id-btn-primary" id="idKeyfileLoad" style="background:#14b8a6;border-color:#14b8a6;">📂 Carregar keyfile JSON</button>
+                        <button class="id-btn" id="idKeyfileClear" style="display:none;border-color:var(--accent-red);color:var(--accent-red);">🗑 Esborrar wallet</button>
+                        <div id="idKeyfileStatus" class="id-status" style="margin-top:0.6rem;"></div>
+                    </div>
+                </div>
+
                 <div class="id-card" id="idPermawebCard" style="border-left-color:#06b6d4;">
                     <h2>🌐 Registre públic · Permaweb</h2>
                     <div class="id-meta">Publica el teu perfil al permaweb Arweave perquè altres operadors SOS puguin descobrir-te i verificar la teva identitat amb ECDSA P-256. <strong>Cost ${PRICING.publishEur.toFixed(2)}€</strong> una sola vegada · es descompta del wallet del projecte triat (no credit card). Verify és free per a tothom · publicat = visible al <a href="/registry" data-link style="color:var(--accent-indigo);">/registre</a> de qualsevol SOS local.</div>
@@ -177,6 +195,8 @@ export default class IdentityView {
         this._renderWanderCard().catch(e => console.warn('[identity] wander card', e));
         // PERM-USER-001 sprint E+ · render permaweb card (async · llegeix KB)
         this._renderPermawebCard().catch(e => console.warn('[identity] permaweb card', e));
+        // KEYFILE-INLINE-001 · iPad/mobile · keyfile JSON loader directe (sense /settings)
+        this._bindKeyfileLoader().catch(e => console.warn('[identity] keyfile loader', e));
 
         document.getElementById('idLinkWallet')?.addEventListener('click', async () => {
             const addrEl  = document.getElementById('idWalletAddr');
@@ -523,6 +543,82 @@ export default class IdentityView {
                 setStatus('✗ ' + (e?.message || 'error desconegut'), 'var(--accent-red)');
                 btn.disabled = false; btn.textContent = `🗑 Revocar (${PRICING.revokeEur.toFixed(2)}€)`;
             }
+        });
+    }
+
+    // KEYFILE-INLINE-001 · loader inline a /identity · sense haver d'anar a /settings ·
+    // crític per a iPad/mobile on Wander no està disponible com a extensió.
+    async _bindKeyfileLoader() {
+        const loadBtn   = document.getElementById('idKeyfileLoad');
+        const clearBtn  = document.getElementById('idKeyfileClear');
+        const fileInput = document.getElementById('idKeyfileInput');
+        const statusEl  = document.getElementById('idKeyfileStatus');
+        if (!loadBtn || !fileInput || !statusEl) return;
+
+        const {
+            validateArweaveKeyfile, saveArweaveKeyfile, getArweaveKeyfile,
+            clearArweaveKeyfile, getTurboBalance,
+        } = await import('../core/arweaveWalletService.js');
+
+        const setStatus = (html, color = 'var(--text-muted)') => {
+            statusEl.innerHTML = html;
+            statusEl.style.color = color;
+        };
+
+        const renderState = async () => {
+            const stored = await getArweaveKeyfile();
+            if (!stored) {
+                setStatus('— Cap keyfile carregada · prem el botó per importar-la.', 'var(--text-muted)');
+                clearBtn.style.display = 'none';
+                return;
+            }
+            clearBtn.style.display = '';
+            setStatus(
+                '✓ Wallet carregada · <code style="color:var(--accent-indigo);">' + stored.address.slice(0, 16) + '…</code>'
+                + ' · saldo Turbo · <span id="idTurboBal" style="color:var(--text-muted);">consultant…</span>',
+                'var(--accent-green)'
+            );
+            getTurboBalance(stored.jwk).then(bal => {
+                const balEl = document.getElementById('idTurboBal');
+                if (!balEl) return;
+                if (bal && bal.winc > 0) {
+                    balEl.textContent = bal.usdEquivalent.toFixed(2) + ' USD (winc ' + bal.winc + ')';
+                    balEl.style.color = 'var(--accent-green)';
+                } else if (bal && bal.error) {
+                    balEl.innerHTML = '⚠ SDK no carregable · consulta a <a href="https://turbo-topup.com" target="_blank" style="color:var(--accent-indigo);">turbo-topup.com</a>';
+                    balEl.style.color = 'var(--accent-orange)';
+                } else {
+                    balEl.innerHTML = 'saldo 0 · <a href="https://turbo-topup.com" target="_blank" style="color:var(--accent-indigo);">turbo-topup.com</a>';
+                    balEl.style.color = 'var(--accent-orange)';
+                }
+            }).catch(() => {});
+        };
+        await renderState();
+
+        loadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const jwk  = JSON.parse(text);
+                const v = validateArweaveKeyfile(jwk);
+                if (!v.valid) {
+                    setStatus('✗ Keyfile invàlida: ' + v.errors.join(' · '), 'var(--accent-red)');
+                    return;
+                }
+                const { address } = await saveArweaveKeyfile(jwk);
+                setStatus('✓ Keyfile guardada · <code>' + address.slice(0, 16) + '…</code>', 'var(--accent-green)');
+                await renderState();
+            } catch (err) {
+                setStatus('✗ Error parsejant JSON: ' + (err?.message || err), 'var(--accent-red)');
+            }
+            e.target.value = '';
+        });
+        clearBtn.addEventListener('click', async () => {
+            if (!confirm('Esborrar la keyfile Arweave del KB?\n\nEls fons Turbo segueixen a la wallet · només esborra la copia local.')) return;
+            await clearArweaveKeyfile();
+            await renderState();
         });
     }
 
