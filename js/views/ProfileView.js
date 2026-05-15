@@ -90,6 +90,84 @@ export default class ProfileView {
         this._bindShare();
         this._bindIkigai();
         this._bindCoSignAccept();
+        this._bindFollow();
+    }
+
+    async _bindFollow() {
+        const btn = document.getElementById('profFollow');
+        const stats = document.getElementById('profFollowStats');
+        if (!btn) return;
+        const targetHandle = btn.getAttribute('data-follow-handle');
+
+        // Load my handle + attestations
+        const { KB } = await import('../core/kb.js');
+        const {
+            isFollowing, followCounts, buildFollowAttestation,
+        } = await import('../core/socialGraphService.js');
+        const { toast } = await import('../core/uxComponents.js');
+
+        const [members, attestations] = await Promise.all([
+            KB.query({ type: 'matriu_member' }).catch(() => []),
+            KB.query({ type: 'attestation' }).catch(() => []),
+        ]);
+        const meHandle = (members.find(m => m && (m.content?.isPrimary || m.isPrimary))?.content?.handle) || null;
+
+        // Update stats
+        const counts = followCounts({ handle: '@' + targetHandle.replace(/^@/, ''), attestations });
+        if (stats) stats.textContent = counts.followers + ' followers · ' + counts.following + ' following';
+
+        if (!meHandle) {
+            btn.textContent = '👤 Crea identitat per a seguir';
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.addEventListener('click', () => {
+                window.location.href = '/identity';
+            });
+            return;
+        }
+
+        // Self?
+        if (meHandle.replace(/^@/, '') === targetHandle.replace(/^@/, '')) {
+            btn.textContent = '👤 El teu perfil';
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            return;
+        }
+
+        const alreadyFollowing = isFollowing(meHandle, targetHandle, attestations);
+        btn.textContent = alreadyFollowing ? '✓ Following · click per a unfollow' : '+ Follow';
+        btn.disabled = false;
+
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.textContent = '⏳ Processing...';
+            try {
+                if (alreadyFollowing) {
+                    // Find + delete the follow attestation
+                    const followAtt = attestations.find(a =>
+                        a.content?.kind === 'follow' &&
+                        (a.content?.attesterHandle === meHandle || a.content?.attesterHandle === '@' + meHandle.replace(/^@/, '')) &&
+                        (a.content?.targetHandle === '@' + targetHandle.replace(/^@/, '') || a.content?.targetHandle === targetHandle)
+                    );
+                    if (followAtt) {
+                        try { await KB.delete(followAtt.id); } catch (_) {}
+                    }
+                    toast({ kind: 'success', text: 'Unfollow ' + targetHandle });
+                } else {
+                    const att = buildFollowAttestation({
+                        attesterHandle: meHandle,
+                        targetHandle: targetHandle,
+                    });
+                    await KB.upsert(att);
+                    toast({ kind: 'success', text: '✓ Follow @' + targetHandle.replace(/^@/, '') });
+                }
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (e) {
+                toast({ kind: 'error', text: 'Error: ' + (e?.message || e) });
+                btn.disabled = false;
+                btn.textContent = alreadyFollowing ? '✓ Following · click per a unfollow' : '+ Follow';
+            }
+        });
     }
 
     // CERT-001 pas 6 · acceptar co-sign requests pendents
@@ -433,6 +511,8 @@ export default class ProfileView {
                         ${badgesHtml}
                         <div class="prof-actions">
                             <button class="prof-btn prof-btn-secondary" id="profShare">🔗 Compartir</button>
+                            <button class="prof-btn" id="profFollow" data-follow-handle="${this._esc(p.handle)}" style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:0;">⏳ Follow...</button>
+                            <span id="profFollowStats" style="font-size:0.75rem;color:var(--text-secondary);margin-left:4px;align-self:center;">·</span>
                             ${p.memberNodeId ? `<a href="/n/${encodeURIComponent(p.memberNodeId)}" data-link class="prof-btn prof-btn-secondary">🔬 Node KB</a>` : ''}
                         </div>
                     </div>
