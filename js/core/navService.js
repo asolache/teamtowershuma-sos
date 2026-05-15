@@ -71,6 +71,7 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'opportunities', icon: '🚀', label: 'Descobreix',  href: '/opportunities',    global: true,  category: 'discovery',  hint: 'Projectes · WOs · productes · workshops · CV nodals · usuaris federats al permaweb' },
     { id: 'registry',  icon: '🌐', label: 'Registre',        href: '/registry',         global: true,  category: 'discovery',  hint: 'Registre públic permaweb · operadors SOS descobribles · verify free' },
     { id: 'timeline',  icon: '💬', label: 'Timeline',        href: '/timeline',         global: true,  category: 'discovery',  hint: 'Feed cronològic d\'activitat al network · follows · pacts · WOs · proposals' },
+    { id: 'inbox',     icon: '📨', label: 'Inbox · DMs',     href: '/inbox',            global: true,  category: 'discovery',  hint: 'Missatges directes · converses local-first · futur federat permaweb' },
     { id: 'process-catalog', icon: '🗺', label: 'Catàleg processos', href: '/process-catalog', global: true, category: 'discovery', hint: '15 plantilles · 5 types × 3 stages · canvas/pitch/vna/sops/kpis adaptats per fase' },
     { id: 'matriu',    icon: '✦',  label: 'Matriu',          href: '/matriu',           global: true,  category: 'discovery',  hint: 'Landing pública Matriu Incoopadora · Cohort 0 oberta · 108 places' },
     { id: 'create',    icon: '➕', label: 'Crear projecte',  href: '/create',           global: true,  category: 'foundation', hint: 'Form unificat IA-driven · plan→fan-out→reduce · light/standard/max' },

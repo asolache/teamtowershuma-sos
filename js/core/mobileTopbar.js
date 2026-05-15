@@ -178,6 +178,7 @@ const DRAWER_GROUPS = Object.freeze([
             { id: 'home',     href: '/home',         icon: '🏠', label: 'Avui · Home' },
             { id: 'search',   href: '#search',       icon: '🔍', label: 'Cerca global · "/"', action: 'open-search' },
             { id: 'timeline', href: '/timeline',     icon: '💬', label: 'Timeline · Xarxa' },
+            { id: 'inbox',    href: '/inbox',        icon: '📨', label: 'Inbox · DMs' },
             { id: 'create',   href: '/create',       icon: '➕', label: 'Crear projecte' },
         ],
     },
