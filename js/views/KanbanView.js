@@ -272,6 +272,10 @@ export default class KanbanView {
                 </select>
                 <button class="kb-btn" id="kbBtnFromSop">📋 Desde SOP</button>
                 <button class="kb-btn kb-btn-primary" id="kbBtnNew">＋ Nueva WO</button>
+                <label id="kbSwarmToggle" style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:4px;background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.30);font-size:0.78rem;cursor:pointer;color:#a8b2ff;user-select:none;" title="Mode swarm · cada WO té botó auto-run amb agent IA · llegeix de docs/backlog.yaml">
+                    <input type="checkbox" id="kbSwarmCheckbox" style="width:14px;height:14px;cursor:pointer;accent-color:#a855f7;">
+                    🐝 Swarm mode
+                </label>
             </div>
 
             <div class="kb-main">
@@ -300,6 +304,44 @@ export default class KanbanView {
         this._render();
         document.getElementById('kbBtnNew').addEventListener('click',     () => this._openCreateModal());
         document.getElementById('kbBtnFromSop').addEventListener('click', () => this._openFromSopModal());
+
+        // SWARM-RELOC-001 · swarm mode toggle · persisteix a localStorage per
+        // projecte · si actiu · cada WO té botó "🐝 Auto-run" amb agent IA
+        try {
+            const swarmCheckbox = document.getElementById('kbSwarmCheckbox');
+            if (swarmCheckbox) {
+                const lsKey = 'sos_kanban_swarm_mode_' + (this.projectFilter || 'global');
+                const stored = localStorage.getItem(lsKey);
+                swarmCheckbox.checked = stored === 'true';
+                this._swarmMode = swarmCheckbox.checked;
+                if (this._swarmMode) {
+                    document.getElementById('kbSwarmToggle')?.classList.add('swarm-active');
+                }
+                swarmCheckbox.addEventListener('change', () => {
+                    this._swarmMode = swarmCheckbox.checked;
+                    try { localStorage.setItem(lsKey, String(this._swarmMode)); } catch (_) {}
+                    this._render();
+                    try {
+                        const { toast } = require('../core/uxComponents.js');
+                        toast({
+                            kind: this._swarmMode ? 'success' : 'info',
+                            text: this._swarmMode
+                                ? '🐝 Swarm mode actiu · WOs amb botó Auto-run'
+                                : 'Swarm mode desactivat',
+                            ttl: 3000,
+                        });
+                    } catch (_) {
+                        import('../core/uxComponents.js').then(m => m.toast({
+                            kind: this._swarmMode ? 'success' : 'info',
+                            text: this._swarmMode
+                                ? '🐝 Swarm mode actiu · WOs amb botó Auto-run'
+                                : 'Swarm mode desactivat',
+                            ttl: 3000,
+                        })).catch(() => {});
+                    }
+                });
+            }
+        } catch (_) {}
 
         // H7.5 · listener del selector de proyecto
         const sel = document.getElementById('kbProjectFilter');
@@ -608,6 +650,38 @@ export default class KanbanView {
     _render() {
         this._renderStats();
         this._renderBoard();
+        // SWARM-RELOC-001 · bind dels botons "🐝 Auto-run" si swarm mode actiu
+        if (this._swarmMode) this._bindSwarmButtons();
+    }
+
+    _bindSwarmButtons() {
+        document.querySelectorAll('[data-swarm-wo]').forEach(btn => {
+            // Stop propagation perquè el card click (open detail) no es dispari
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const woId = btn.getAttribute('data-swarm-wo');
+                if (!woId) return;
+                const wo = (this.workOrders || []).find(w => w.id === woId);
+                if (!wo) return;
+                btn.disabled = true;
+                btn.textContent = '⏳ Llançant swarm loop...';
+                try {
+                    const { toast } = await import('../core/uxComponents.js');
+                    toast({
+                        kind: 'info',
+                        text: '🐝 Swarm autonomous loop · veure /sprint per a status',
+                        ttl: 4000,
+                    });
+                    // Per a alfa · redirigim a /sprint amb el WO pre-seleccionat
+                    setTimeout(() => {
+                        window.location.href = '/sprint?wo=' + encodeURIComponent(woId);
+                    }, 1500);
+                } catch (e) {
+                    btn.disabled = false;
+                    btn.textContent = '🐝 Auto-run amb agent IA';
+                }
+            });
+        });
     }
 
     _renderStats() {
@@ -698,6 +772,9 @@ export default class KanbanView {
         const saveBadge = isLedgered && c.savingEur != null && c.savingEur > 0
             ? `<span class="kb-badge save">+${fmtEur(c.savingEur)}</span>`
             : '';
+        const swarmBtn = this._swarmMode
+            ? `<button class="kb-swarm-btn" data-swarm-wo="${this._esc(w.id)}" title="Llança autonomous loop agent IA sobre aquesta WO" style="margin-top:6px;padding:4px 10px;border-radius:4px;background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:0;font-size:0.7rem;font-weight:700;cursor:pointer;width:100%;">🐝 Auto-run amb agent IA</button>`
+            : '';
         return `
             <div class="kb-card" data-wo="${w.id}">
                 <h5>${this._esc(c.title || '(sin título)')}</h5>
@@ -713,6 +790,7 @@ export default class KanbanView {
                     ${costBadge}
                     ${saveBadge}
                 </div>
+                ${swarmBtn}
             </div>
         `;
     }
