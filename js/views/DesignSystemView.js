@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T10:00 · v67 · mobile topbar + drawer · hide-on-scroll · UX legendari';
+const BUILD_STAMP = '2026-05-16T11:00 · v68 · PWA install-to-home · manifest + SW + shortcuts';
 
 export default class DesignSystemView {
 
