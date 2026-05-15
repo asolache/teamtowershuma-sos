@@ -14,6 +14,7 @@
 // =============================================================================
 
 import { KB } from '../core/kb.js';
+import { findProjectByIdAny } from '../core/projectLookup.js';
 import {
     CANVAS_STEPS,
     buildEmptyCanvas,
@@ -43,7 +44,7 @@ export default class ProjectCanvasView {
             return this._htmlNoProject();
         }
         try {
-            this.project = await KB.getNode(this.projectId);
+            this.project = await findProjectByIdAny(this.projectId);
         } catch (_) { this.project = null; }
         if (!this.project) {
             return this._htmlNotFound();

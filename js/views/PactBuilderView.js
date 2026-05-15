@@ -54,8 +54,10 @@ export default class PactBuilderView {
         const params = new URLSearchParams(window.location.search);
         this.projectId = params.get('project');
         if (!this.projectId) return this._htmlNoProject();
-        const projects = (store.getState().projects || []);
-        this.project = projects.find(p => p.id === this.projectId);
+        // BUG-FIX · fallback KB+store via projectLookup (projectes creats per MAX bootstrap
+        // viuen al KB · projectes legacy només al store · cal cobrir ambdós)
+        const { findProjectByIdAny } = await import('../core/projectLookup.js');
+        this.project = await findProjectByIdAny(this.projectId);
         if (!this.project) return this._htmlError('Projecte no trobat: ' + this.projectId);
         // Cargar pact si existe
         const pactId = this.projectId + PACT_NODE_ID_SUFFIX;

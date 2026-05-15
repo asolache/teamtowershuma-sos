@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { KB } from '../core/kb.js';
+import { findProjectByIdAny } from '../core/projectLookup.js';
 import { getSkillById } from '../core/skillTaxonomy.js';
 import {
     PROPOSAL_TYPE, PROPOSAL_STATUS,
@@ -38,7 +39,7 @@ export default class ProposalView {
 
     async getHtml() {
         if (!this.projectId) return this._htmlNoProject();
-        try { this.project = await KB.getNode(this.projectId); } catch (_) { this.project = null; }
+        try { this.project = await findProjectByIdAny(this.projectId); } catch (_) { this.project = null; }
         if (!this.project) return this._htmlNotFound();
         try { this.proposals = await KB.query({ type: PROPOSAL_TYPE, projectId: this.projectId }) || []; } catch (_) { this.proposals = []; }
         return this._htmlMain();

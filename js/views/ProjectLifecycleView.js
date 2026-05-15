@@ -10,6 +10,7 @@
 // =============================================================================
 
 import { KB } from '../core/kb.js';
+import { findProjectByIdAny } from '../core/projectLookup.js';
 import { LEDGER_ENTRY_TYPE } from '../core/ledgerService.js';
 import {
     computeProjectLifecycle,
@@ -37,7 +38,7 @@ export default class ProjectLifecycleView {
 
     async getHtml() {
         if (!this.projectId) return this._htmlNoProject();
-        try { this.project = await KB.getNode(this.projectId); } catch (_) { this.project = null; }
+        try { this.project = await findProjectByIdAny(this.projectId); } catch (_) { this.project = null; }
         if (!this.project) return this._htmlNotFound();
 
         // Fetch totes les entitats relacionades · defensive

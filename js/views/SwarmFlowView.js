@@ -9,6 +9,7 @@
 // =============================================================================
 
 import { KB } from '../core/kb.js';
+import { findProjectByIdAny } from '../core/projectLookup.js';
 import {
     VALUE_FLOW_TYPE, buildEmptyValueFlow, addRole, addDeliverable, addTransaction,
     validateValueFlow, topologicalLevels, estimateFlowComplexity,
@@ -34,7 +35,7 @@ export default class SwarmFlowView {
 
     async getHtml() {
         if (!this.projectId) return this._htmlNoProject();
-        try { this.project = await KB.getNode(this.projectId); } catch (_) { this.project = null; }
+        try { this.project = await findProjectByIdAny(this.projectId); } catch (_) { this.project = null; }
         if (!this.project) return this._htmlNotFound();
         try { this.flows = await KB.query({ type: VALUE_FLOW_TYPE, projectId: this.projectId }) || []; } catch (_) { this.flows = []; }
         try { this.runs  = await KB.query({ type: SWARM_RUN_TYPE, projectId: this.projectId }) || []; } catch (_) { this.runs  = []; }
