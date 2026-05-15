@@ -2257,6 +2257,10 @@ export default class DashboardView {
                     result.project.nombre = name;
                     result.project.name = name;
                     await store.dispatch({ type: 'CREATE_PROJECT', payload: result.project });
+                    // MAX-BOOTSTRAP-FIX · KB.upsert(project) també · les views noves
+                    // (canvas · lifecycle · accounting · etc) usen KB.getNode(projectId)
+                    // i sense això retornen 'Projecte no trobat'.
+                    await KB.upsert(result.project);
                     // Persisteix tots els nodes auxiliars al KB
                     for (const r of result.roles)         await KB.upsert(r);
                     for (const s of result.sops)          await KB.upsert(s);
@@ -2303,6 +2307,8 @@ export default class DashboardView {
                     project.nombre = name;
                     project.name   = name;
                     await store.dispatch({ type: 'CREATE_PROJECT', payload: project });
+                    // MAX-BOOTSTRAP-FIX · KB.upsert(project) per coherència amb views noves
+                    await KB.upsert(project);
                     for (const s of sops)      await KB.upsert(s);
                     for (const w of workshops) await KB.upsert(w);
                     status.style.color = 'var(--accent-green)';
