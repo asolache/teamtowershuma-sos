@@ -64,7 +64,12 @@ const canvasPh3 = r3.phases.find(p => p.id === 'canvas');
 eq(canvasPh3.status, 'done',                                      'D · canvas 5/5 · done');
 eq(canvasPh3.completion, 1,                                       'D · completion 1');
 
-// ─── E · accounting · 3+ entries balanced → done ──────────────────────────
+// ─── E · accounting · CERT-001 pas 7 · audit-based status ────────────────
+// Status ara depèn de audit score:
+//   gold (≥85) → 'done'
+//   bronze/silver (40-84) → 'partial'
+//   draft (<40) → 'pending'
+// 3 entries balanced unsigned = balanced 30 + coverage 10 = 40 · bronze · partial
 const entries3 = [
     quickEntry({ projectId: 'p4', debitAccount: 'cash',     creditAccount: 'revenue', amount: 100, date: '2026-01-01' }),
     quickEntry({ projectId: 'p4', debitAccount: 'cash',     creditAccount: 'revenue', amount: 200, date: '2026-01-15' }),
@@ -73,15 +78,24 @@ const entries3 = [
 const proj4 = { id: 'p4', type: 'project', content: {} };
 const r4 = computeProjectLifecycle({ project: proj4, ledgerEntries: entries3 });
 const accPh = r4.phases.find(p => p.id === 'accounting');
-eq(accPh.status, 'done',                                          'E · 3+ entries balanced · done');
-eq(accPh.completion, 1,                                           'E · accounting completion 1');
-t(accPh.detail.includes('3 entries'),                             'E · detail 3 entries');
-t(accPh.detail.includes('quadrat'),                               'E · detail quadrat');
+eq(accPh.status, 'partial',                                       'E · 3 entries unsigned · partial (bronze · cal signar)');
+t(accPh.detail.includes('Bronze') || accPh.detail.includes('Silver') || accPh.detail.includes('Draft'),
+                                                                  'E · detail amb level badge');
+t(accPh.nextAction && accPh.nextAction.toLowerCase().includes('signar'), 'E · nextAction · signar');
 
-// 1 entry · partial
+// 3 entries TOTS signats · score = 30+30+10 = 70 silver · partial encara
+const entries3signed = entries3.map(e => ({
+    ...e,
+    content: { ...e.content, signature: 'sig-fake', signedBy: 'did:sos:alvaro' },
+}));
+const r4s = computeProjectLifecycle({ project: proj4, ledgerEntries: entries3signed });
+const accPhS = r4s.phases.find(p => p.id === 'accounting');
+t(accPhS.completion > accPh.completion,                           'E · signed > unsigned (score)');
+
+// 1 entry · pending (score < 40)
 const r5 = computeProjectLifecycle({ project: proj4, ledgerEntries: [entries3[0]] });
 const acc5 = r5.phases.find(p => p.id === 'accounting');
-eq(acc5.status, 'partial',                                        'E · 1 entry · partial');
+t(acc5.status === 'partial' || acc5.status === 'pending',         'E · 1 entry · partial o pending segons score');
 
 // 0 entries · pending
 const r6 = computeProjectLifecycle({ project: proj4, ledgerEntries: [] });

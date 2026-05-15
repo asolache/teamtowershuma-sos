@@ -14,7 +14,7 @@
 // =============================================================================
 
 import { computeCanvasCompletion } from './projectCanvasService.js';
-import { computeBalanceSheet, computePLForPeriod, LEDGER_ENTRY_TYPE } from './ledgerService.js';
+import { computeBalanceSheet, computePLForPeriod, computeLedgerAuditScore, AUDIT_LEVEL_META, LEDGER_ENTRY_TYPE } from './ledgerService.js';
 import { computeInvoicesStatusBreakdown } from './invoiceService.js';
 import { computeQualityScore as computeTokenomicsScore, TOKEN_DESIGN_TYPE } from './tokenomicsService.js';
 import { computePitchCompletion, PROJECT_PITCH_TYPE } from './projectPitchService.js';
@@ -289,13 +289,20 @@ function _phaseAccounting(p, ledgerEntries, pid) {
     }
     const bs = computeBalanceSheet(entries);
     const pl = computePLForPeriod(entries, {});
-    const status = bs.balanced && entries.length >= 3 ? 'done' : 'partial';
+    // CERT-001 pas 7 · usar audit score complet · no sols balanced
+    const audit = computeLedgerAuditScore(entries);
+    const auditMeta = AUDIT_LEVEL_META[audit.level] || AUDIT_LEVEL_META.draft;
+    // status · done si gold (≥85) · partial si silver/bronze · pending si draft
+    let status;
+    if (audit.level === 'gold')       status = 'done';
+    else if (audit.score >= 40)       status = 'partial';
+    else                              status = 'pending';
     return {
         ...p,
         status,
-        completion: status === 'done' ? 1 : Math.min(0.5 + entries.length * 0.1, 0.9),
-        detail:     entries.length + ' entries · profit ' + pl.profit.toFixed(2) + ' · ' + (bs.balanced ? '✓ quadrat' : '⚠ no quadrat'),
-        nextAction: status === 'done' ? null : 'Afegir més entries (mín 3 · balanced)',
+        completion: audit.score / 100,
+        detail:     auditMeta.icon + ' ' + auditMeta.label + ' · ' + audit.score + '/100 · ' + audit.counts.signed + '/' + audit.counts.total + ' signats · profit ' + pl.profit.toFixed(0) + '€',
+        nextAction: status === 'done' ? null : (audit.counts.signed < audit.counts.total ? 'Signar entries restants' : (audit.counts.needsProofs > audit.counts.audited ? 'Afegir proofs a entries grans' : 'Afegir més entries balanced')),
         href:       '/accounting?project=' + encodeURIComponent(pid),
     };
 }
