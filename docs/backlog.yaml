@@ -414,16 +414,26 @@ work_orders:
     project_id: "sos-dev-internal"
     title: "WO-AUTO-001 · cron + event + condition triggers"
     description: |
-      Templates de WO autogenerades · cron (8:30 daily) · event (factura
-      cobrada) · condition (stock < N). Cor del SOS operatiu.
+      woTemplateService.js · cron parser (5 fields + presets) · 4 trigger
+      kinds · generateWoFromTemplate compatible amb agentBridgeSchema ·
+      evaluateTemplates batch idempotent. Cor del SOS operatiu.
     priority: critical
     complexity: XL
-    status: pending
+    status: done
     assignee_kind: ai-claude
+    claimed_by: agent-claude-code
+    claimed_at: 1747354000000
+    completed_at: 1747357600000
     required_capabilities:
       - code-write
       - test-run
+    deliverable_test:
+      kind: test-suite
+      command: "node js/tests/woTemplate.test.js"
+      expect: "52 pass · 0 fail"
     estimated_cost_eur: 0.40
+    cost_actual_eur: 0.215
+    deliverable_uri: "git:HEAD..woTemplateService+test"
     dependencies: ["wo-process-first-class-001"]
     tags: ["batch-4", "operatiu"]
 
@@ -431,15 +441,53 @@ work_orders:
     project_id: "sos-dev-internal"
     title: "TDD-ALL-LEVELS-001 · TDD framework universal"
     description: |
-      IA evaluator default ON. User action validators. Process KPI tests.
-      Org health auditor amb WO compensatòries auto.
+      tddFrameworkService.js · 6 levels (code/wo/ai/user/process/org) ·
+      validateIaResponse · 6 USER_ACTION_VALIDATORS · auditOrg amb scoring
+      + WO compensatòries auto · computeTddCoverage agregator.
     priority: high
     complexity: L
-    status: pending
+    status: done
     assignee_kind: ai-claude
+    claimed_by: agent-claude-code
+    claimed_at: 1747358000000
+    completed_at: 1747360200000
     required_capabilities:
       - code-write
       - test-run
+    deliverable_test:
+      kind: test-suite
+      command: "node js/tests/tddFramework.test.js"
+      expect: "42 pass · 0 fail"
     estimated_cost_eur: 0.20
+    cost_actual_eur: 0.132
+    deliverable_uri: "git:HEAD..tddFrameworkService+test"
     dependencies: ["wo-agent-bridge-001-b"]
     tags: ["batch-4", "qualitat"]
+
+  - id: "wo-ia-hierarchical-001"
+    project_id: "sos-dev-internal"
+    title: "IA-HIERARCHICAL-PROMPT-001 · SOC-first generation"
+    description: |
+      iaHierarchicalService.js · generateSocOutline (cheap · 500 tokens) ·
+      generateSopForItem (per item · 300-800 tokens) · generateSopBatch
+      (estalvi extra 30%) · estimateHierarchicalSavings helper. Cache hit
+      via aiCacheService. Budget tracked via aiBudgetService.
+    priority: critical
+    complexity: M
+    status: done
+    assignee_kind: ai-claude
+    claimed_by: agent-claude-code
+    claimed_at: 1747360500000
+    completed_at: 1747361500000
+    required_capabilities:
+      - code-write
+      - test-run
+    deliverable_test:
+      kind: test-suite
+      command: "node js/tests/iaHierarchical.test.js"
+      expect: "11 pass · 0 fail"
+    estimated_cost_eur: 0.10
+    cost_actual_eur: 0.078
+    deliverable_uri: "git:HEAD..iaHierarchicalService+test"
+    dependencies: ["wo-soc-dual-001"]
+    tags: ["batch-4", "ia-cost"]
