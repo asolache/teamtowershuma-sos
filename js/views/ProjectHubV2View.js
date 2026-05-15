@@ -37,9 +37,10 @@ export default class ProjectHubV2View {
     constructor() {
         if (typeof document !== 'undefined') document.title = 'SOS · Project Hub';
         // Extract project id from path · /hub/{id}
+        // Accepta tant /hub/{id} com /project/{id} (que ara resol aquí · l'antic és /project-classic/{id})
         this.projectId = (typeof window !== 'undefined' && window.location)
             ? window.location.pathname
-                .replace(/^\/hub\//, '')
+                .replace(/^\/(hub|project)\//, '')
                 .replace(/\/$/, '')
                 .split('/')[0] || null
             : null;
@@ -231,8 +232,40 @@ export default class ProjectHubV2View {
                 ${this._zone5_Activity({ feed })}
                 ${this._zone6_Actions({ project, bs, sessionEur })}
                 ${this._zone7_Knowledge({ project })}
+                ${this._zone8_AdvancedTools({ project })}
             </div>
         </div>`;
+    }
+
+    _zone8_AdvancedTools({ project }) {
+        // Eines power-user · funcions del hub clàssic + advanced flows.
+        // Col·lapsable per defecte · no satura el hub principal.
+        const items = [
+            { ic: '🐝',  nm: 'Swarm matchmaker',    ds: 'Cohort 0 · proj ↔ enjambre',     href: '/project-classic/' + project.id + '#swarm' },
+            { ic: '👥',  nm: 'Membres',             ds: 'Nucli humà · cofounders',         href: '/project-classic/' + project.id + '#members' },
+            { ic: '🌐',  nm: 'Publica permaweb',    ds: 'Entry pública firmada',           href: '/project-classic/' + project.id + '#permaweb' },
+            { ic: '🎯',  nm: 'Quality score',       ds: 'Audit + millora contínua',        href: '/quality?project=' + project.id },
+            { ic: '🔁',  nm: 'Improvement loop',    ds: 'TDD WO + feedback agent',         href: '/improve?project=' + project.id },
+            { ic: '🌪',  nm: 'Swarm flow paral·lel',ds: 'DAG executor · Promise.all',      href: '/swarm?project=' + project.id },
+            { ic: '🧠',  nm: 'Mind graph',          ds: 'Visualització nodal del KB',      href: '/mind' },
+            { ic: '🎤',  nm: 'Presentació pública', ds: 'Landing read-only · share link',  href: '/presentation?project=' + project.id },
+            { ic: '⚙️',  nm: 'Hub clàssic',         ds: 'Versió power-user · totes les eines', href: '/project-classic/' + project.id },
+        ];
+        return `
+        <details class="hub-zone" style="padding:0.6rem 1rem;">
+            <summary style="cursor:pointer;font-weight:700;font-size:0.92rem;list-style:none;display:flex;align-items:center;justify-content:space-between;">
+                <span>🛠 Eines avançades · power-user</span>
+                <span style="font-size:0.7rem;color:var(--text-secondary);">${items.length} eines · click per obrir</span>
+            </summary>
+            <div class="hub-know-grid" style="margin-top:0.7rem;">
+                ${items.map(it => `
+                    <a href="${this._esc(it.href)}" data-link class="hub-know-card">
+                        <div class="ic">${it.ic}</div>
+                        <div class="nm">${this._esc(it.nm)}</div>
+                        <div class="ds">${this._esc(it.ds)}</div>
+                    </a>`).join('')}
+            </div>
+        </details>`;
     }
 
     _zone1_OrgBar({ project, org, orgAudit }) {

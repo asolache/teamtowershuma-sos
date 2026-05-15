@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-15T21:30 · v54 · FIX router · getHtml+afterRender pattern als 3 nous views';
+const BUILD_STAMP = '2026-05-15T22:00 · v55 · /project/{id} ARA és Hub V2 · zona 8 advanced tools · UX audit doc';
 
 export default class DesignSystemView {
 

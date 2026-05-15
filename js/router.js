@@ -98,8 +98,12 @@ const NODE_PATH_PREFIX    = '/n/';
 const MARKET_PATH_PREFIX  = '/market/';
 // PROFILE sprint A · /u/{handle} · perfil públic d'usuari amb skills + projects
 const PROFILE_PATH_PREFIX = '/u/';
-// UX-001 sprint C · prefijo dinámico /project/{projectId} resuelto por ProjectHubView
+// UX-001 sprint C · prefijo dinámico /project/{projectId} ·
+// 2026-05-15 · /project/{id} ara resol al ProjectHubV2View (clean 7-zones).
+// L'antic ProjectHubView accessible a /project-classic/{id} per a
+// power-users que necessitin swarm matchmaker · permaweb publish · etc.
 const PROJECT_PATH_PREFIX = '/project/';
+const PROJECT_CLASSIC_PATH_PREFIX = '/project-classic/';
 // UX-CENTRAL-HUB-001 · /hub/{projectId} · nou layout 7-zones consumint
 // activityFeedService + iaSuggestionsService. L'antic /project/{id} es manté.
 const HUB_V2_PATH_PREFIX = '/hub/';
@@ -120,8 +124,10 @@ async function router() {
         match = { path, view: () => import('./views/InvestorPitchView.js') };
     } else if (path.startsWith(HUB_V2_PATH_PREFIX)) {
         match = { path, view: () => import('./views/ProjectHubV2View.js') };
-    } else if (path.startsWith(PROJECT_PATH_PREFIX)) {
+    } else if (path.startsWith(PROJECT_CLASSIC_PATH_PREFIX)) {
         match = { path, view: () => import('./views/ProjectHubView.js') };
+    } else if (path.startsWith(PROJECT_PATH_PREFIX)) {
+        match = { path, view: () => import('./views/ProjectHubV2View.js') };
     } else {
         match = ROUTES.find(r => r.path === path) || ROUTES.find(r => r.path === null);
     }
