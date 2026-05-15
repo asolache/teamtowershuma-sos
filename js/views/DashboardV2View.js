@@ -201,9 +201,10 @@ export default class DashboardV2View {
             return `
             <div class="h2-hero">
                 <h1>Hola · benvingut a <span>SOS</span></h1>
-                <p>Operating System cooperatiu local-first · descentralitzat · TDD a tots els nivells. Comença creant el teu primer projecte · l'IA t'ajudarà a definir el mapa de valor · els processos i les WOs.</p>
+                <p>Cervell extés cooperatiu · local-first · descentralitzat · TDD a tots els nivells. Comença en 1 click ·</p>
                 <div class="h2-hero-actions">
-                    <a href="/create" data-link class="h2-btn h2-btn-primary">+ Crear primer projecte</a>
+                    <a href="/create" data-link class="h2-btn h2-btn-primary">+ Crea el teu projecte amb IA</a>
+                    <button id="h2DemoSeed" class="h2-btn" type="button" title="Carrega cas real Castellers · 12 rols · 18 transactions · 4 processos · 5 SOCs · explorable immediatament">🎭 Carregar demo Castellers</button>
                     <a href="/learn" data-link class="h2-btn">📚 Què és SOS?</a>
                 </div>
             </div>`;
@@ -219,6 +220,43 @@ export default class DashboardV2View {
                 <a href="/sprint" data-link class="h2-btn">🐝 Sprint Swarm</a>
             </div>
         </div>`;
+    }
+
+    async _seedCastellersDemo() {
+        try {
+            const { buildCastellersSeed } = await import('../core/castellersSeed.js');
+            const { KB } = await import('../core/kb.js');
+            const { toast } = await import('../core/uxComponents.js');
+            const { store } = await import('../core/store.js');
+
+            const meHandle = this._state?.meHandle || '@anonymous';
+            const seed = buildCastellersSeed({ creatorHandle: meHandle });
+
+            // Upsert all nodes
+            await KB.upsert(seed.org);
+            await KB.upsert(seed.project);
+            for (const r of seed.roles) await KB.upsert(r);
+            for (const p of seed.processes) await KB.upsert(p);
+            for (const s of seed.socs) await KB.upsert(s);
+            for (const r of seed.resources) await KB.upsert(r);
+
+            // Sync to store
+            await store.dispatch({ type: 'CREATE_PROJECT', payload: seed.project });
+
+            toast({
+                kind: 'success',
+                text: '🎭 Castellers carregat · ' + seed.stats.roleCount + ' rols · '
+                    + seed.stats.transactionCount + ' transactions · ' + seed.stats.processCount + ' processos',
+                ttl: 5000,
+            });
+            // Redirect to hub
+            setTimeout(() => {
+                window.location.href = '/hub/' + encodeURIComponent(seed.project.id);
+            }, 1500);
+        } catch (e) {
+            const { toast } = await import('../core/uxComponents.js');
+            toast({ kind: 'error', text: 'Error: ' + (e?.message || e) });
+        }
     }
 
     _zone2_Projects({ projects }) {
@@ -312,7 +350,8 @@ export default class DashboardV2View {
     }
 
     _bind() {
-        // No event listeners necessaris · tots els links són data-link · gestionats pel router.
+        // Demo seed button (només visible quan empty state)
+        document.getElementById('h2DemoSeed')?.addEventListener('click', () => this._seedCastellersDemo());
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────
