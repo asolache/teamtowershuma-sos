@@ -2263,6 +2263,17 @@ export default class DashboardView {
                     await KB.upsert(result.project);
                     // Persisteix tots els nodes auxiliars al KB
                     for (const r of result.roles)         await KB.upsert(r);
+                    // A · sprint analysis & design · seed Learn catalog (108 base)
+                    // idempotent · només upsertem els que no existeixen ja al KB
+                    if (Array.isArray(result.learnCatalog)) {
+                        for (const lr of result.learnCatalog) {
+                            try {
+                                const existing = await KB.getNode(lr.id);
+                                if (existing && existing.type === 'learn_role') continue;
+                            } catch (_) {}
+                            await KB.upsert(lr);
+                        }
+                    }
                     for (const s of result.sops)          await KB.upsert(s);
                     for (const w of result.workshops)     await KB.upsert(w);
                     for (const e of result.ledgerEntries) await KB.upsert(e);

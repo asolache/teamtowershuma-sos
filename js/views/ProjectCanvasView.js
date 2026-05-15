@@ -26,6 +26,7 @@ import {
 } from '../core/projectCanvasService.js';
 import { label } from '../core/sosCopy.js';
 import { attachAIFormFeedback } from '../core/aiFormFeedback.js';
+import { attachTierIndicator } from '../core/aiTierIndicator.js';
 
 export default class ProjectCanvasView {
 
@@ -180,6 +181,7 @@ export default class ProjectCanvasView {
                     </div>
                     <div class="cv-progress"><div class="cv-progress-fill" style="width:${completion.percent}%;"></div></div>
                     <div style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);line-height:1.5;">Defineix els 5 pilars del projecte abans d'engegar pitch · tokenomics · accounting. La IA pot generar drafts (failover chain) · tu valides.</div>
+                    <div data-cv-tier-indicator style="margin-top:10px;"></div>
                 </div>
 
                 ${stepCards}
@@ -194,6 +196,17 @@ export default class ProjectCanvasView {
     }
 
     _bindSteps() {
+        // D4 · 1 tier indicator global per al canvas · l'usuari elegeix tier
+        // un cop · totes les crides per step usen el mateix.
+        const tierEl = document.querySelector('[data-cv-tier-indicator]');
+        if (tierEl) {
+            this._tierIndicator = attachTierIndicator(tierEl, {
+                taskKind:  'creative-narrative',
+                taskTier:  'draft',
+                projectId: this.project?.id || null,
+                onChange:  () => { /* indicator re-pinta · res a fer */ },
+            });
+        }
         // DESIGN-SYSTEM sprint B · 1 controller aiFormFeedback per step (KISS · DRY)
         this._stepFeedback = {};
         for (const step of CANVAS_STEPS) {
@@ -236,9 +249,14 @@ export default class ProjectCanvasView {
                         description:   this.project.description,
                         previousSteps: this.canvas.steps,
                     });
+                    const taskTier = this._tierIndicator ? this._tierIndicator.getTier() : 'draft';
+                    // D4 · refresca preview del cost amb el prompt real abans de cridar
+                    if (this._tierIndicator) this._tierIndicator.setPromptPreview(prompt);
                     const result = await runPrompt({
                         prompt,
                         taskKind:      'creative-narrative',
+                        taskTier,
+                        projectId:     this.project?.id || null,
                         maxAttempts:   3,
                     });
                     const text = (result && (result.output || result.text || result.result)) || '';

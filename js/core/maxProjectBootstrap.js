@@ -15,8 +15,9 @@
 // ledgerService + invoiceService + proposalService.
 // =============================================================================
 
-import { FOUNDER_PROJECT_DEFAULTS, FOUNDER_TRANSACTIONS, FOUNDER_SOPS, FOUNDER_WORKSHOPS } from './founderTemplate.js';
+import { FOUNDER_PROJECT_DEFAULTS, FOUNDER_ROLES, FOUNDER_TRANSACTIONS, FOUNDER_SOPS, FOUNDER_WORKSHOPS } from './founderTemplate.js';
 import { SKILL_TAXONOMY } from './skillTaxonomy.js';
+import { buildBaseLearnCatalog, TARGET_BASE_ROLES } from './learnRoleCatalog.js';
 import { buildEmptyCanvas, applyCanvasStep } from './projectCanvasService.js';
 import { buildEmptyPitch, applyPitchSection, setPitchTagline, publishPitch } from './projectPitchService.js';
 import { buildEmptyTokenDesign } from './tokenomicsService.js';
@@ -116,36 +117,35 @@ export function buildMaxQualityProject({
         tags:          ['max-bootstrap', 'cohort-108', 'lifecycle-complete'].concat(FOUNDER_PROJECT_DEFAULTS.tags.slice()),
     };
 
-    // 3. 108 cohort managers · cada un amb una skill nuclear
-    //    Si 90 skills < 108 · padding generalistes de SKILL_TAXONOMY (cycle)
-    const roles = [];
-    const vnaRoles = [];
-    for (let i = 0; i < TARGET_COHORT_MANAGERS; i++) {
-        const skill = SKILL_TAXONOMY[i % SKILL_TAXONOMY.length];
-        const isPad = i >= SKILL_TAXONOMY.length;
-        const roleId = 'cohort-mgr-' + String(i + 1).padStart(3, '0');
-        const role = {
-            id:        roleId + '-' + id,
-            type:      'role',
-            content: {
-                projectId:        id,
-                kind:             'cohort_manager',
-                label:            'Cohort Manager #' + (i + 1) + (isPad ? ' (generalist)' : ' · ' + skill.label),
-                primarySkillId:   skill.id,
-                primarySkillName: skill.label,
-                skillDomain:      skill.domain,
-                skillTier:        skill.tier,
-                isPadding:        isPad,
-                createdBy:        creatorHandle,
-            },
-            keywords:  ['type:role', 'projectId:' + id, 'skill:' + skill.id, 'cohort-manager', 'max-bootstrap'],
-            createdAt: now,
-            updatedAt: now,
-        };
-        roles.push(role);
-        vnaRoles.push({ id: role.id, label: role.content.label, primarySkillId: skill.id });
-    }
-    project.vna_roles = vnaRoles;
+    // 3. Rols del projecte · A · sprint analysis & design ·
+    //    DECISIÓ · els 108 cohort managers ja NO viuen dins el projecte.
+    //    Ara són catàleg Learn (learn_role nodes · globals · idempotents) i
+    //    el VNA del projecte porta només els 9 rols founder operatius reals.
+    //    "una cosa es tenirlos definits i un altre afegirho al mapa de valor"
+    const roles = FOUNDER_ROLES.map((fr, i) => ({
+        id:        fr.id + '-' + id,
+        type:      'role',
+        content: {
+            projectId:        id,
+            kind:             'project_role',
+            label:            fr.name,
+            roleSlug:         fr.id,
+            description:      fr.description,
+            castell_level:    fr.castell_level,
+            typicalActor:     fr.typical_actor,
+            createdBy:        creatorHandle,
+        },
+        keywords:  ['type:role', 'projectId:' + id, 'role:' + fr.id, 'max-bootstrap'],
+        createdAt: now,
+        updatedAt: now,
+    }));
+    project.vna_roles = roles.map(r => ({
+        id:           r.id,
+        label:        r.content.label,
+        roleSlug:     r.content.roleSlug,
+    }));
+    // Catàleg Learn · 108 base · separat del projecte · upsertable un cop al KB
+    const learnCatalog = buildBaseLearnCatalog({ ts: now });
 
     // 4. Pitch · 6 seccions + publish
     let pitch = buildEmptyPitch({ projectId: id, tagline: 'OS cooperatiu local-first · 108 cohort managers · post-extractivisme operatiu', lang: 'ca', ts: now });
@@ -266,7 +266,8 @@ export function buildMaxQualityProject({
         canvas,
         pitch,
         tokenomics,
-        roles,
+        roles,            // 9 rols founder · NO inflats amb 108
+        learnCatalog,     // 108 learn_role · catàleg global · upsert idempotent
         sops,
         workshops,
         ledgerEntries,
@@ -274,7 +275,8 @@ export function buildMaxQualityProject({
         proposals,
         marketItems,
         stats: {
-            cohortManagers:  roles.length,
+            projectRoles:    roles.length,
+            cohortManagers:  learnCatalog.length,   // 108 · per a UI message
             skillsCovered:   SKILL_TAXONOMY.length,
             sopsCount:       sops.length,
             workshopsCount:  workshops.length,

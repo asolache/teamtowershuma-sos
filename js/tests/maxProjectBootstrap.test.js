@@ -31,20 +31,26 @@ eq(result.project.creatorHandle, '@test',                         'B · creatorH
 eq(result.project.content.bootstrapVersion, MAX_BOOTSTRAP_VERSION, 'B · bootstrapVersion anclat');
 t(result.project.tags.includes('max-bootstrap'),                  'B · tag max-bootstrap');
 
-// ─── C · 108 cohort managers ──────────────────────────────────────────────
-eq(result.roles.length, 108,                                      'C · 108 cohort managers');
-const allCohort = result.roles.every(r => r.content.kind === 'cohort_manager');
-t(allCohort,                                                      'C · tots cohort_manager');
-// Cada un té primarySkillId
-const allHaveSkill = result.roles.every(r => typeof r.content.primarySkillId === 'string' && r.content.primarySkillId.length > 0);
-t(allHaveSkill,                                                   'C · tots tenen primarySkillId');
-// First 90 cover unique skills, last 18 padding (generalists)
-const uniqueSkills = new Set(result.roles.map(r => r.content.primarySkillId));
-t(uniqueSkills.size >= 90,                                        'C · ≥90 skills úniques cobertes');
-const paddingCount = result.roles.filter(r => r.content.isPadding).length;
-eq(paddingCount, 18,                                              'C · 18 generalist padding (108 - 90)');
-// project.vna_roles reflecteix
-eq(result.project.vna_roles.length, 108,                          'C · project.vna_roles = 108');
+// ─── C · roles del projecte + catàleg Learn separats ─────────────────────
+// A · sprint analysis & design · DECISIÓ · 108 ja NO inflen vna_roles del
+// projecte · viuen al catàleg global learn_role.
+t(result.roles.length >= 5 && result.roles.length <= 12,          'C · roles del projecte · 5-12 (no inflat)');
+const allProjectRole = result.roles.every(r => r.content.kind === 'project_role');
+t(allProjectRole,                                                 'C · tots project_role (no cohort_manager)');
+// project.vna_roles reflecteix les roles del projecte · no 108
+eq(result.project.vna_roles.length, result.roles.length,          'C · project.vna_roles == roles.length');
+t(result.project.vna_roles.length < 20,                           'C · vna_roles < 20 (mapa de valor net)');
+// learnCatalog · 108 entrades globals
+t(Array.isArray(result.learnCatalog),                             'C · learnCatalog array retornat');
+eq(result.learnCatalog.length, 108,                               'C · learnCatalog = 108 entrades');
+const allLearnRole = result.learnCatalog.every(r => r.type === 'learn_role');
+t(allLearnRole,                                                   'C · tots type learn_role');
+// cobertura de skills · ≥90 úniques al catàleg
+const uniqueSkillsLearn = new Set(result.learnCatalog.map(r => r.content.primarySkillId));
+t(uniqueSkillsLearn.size >= 90,                                   'C · learn catalog · ≥90 skills úniques');
+// Cap learn_role té projectId (són globals)
+const noProjectIdLeak = result.learnCatalog.every(r => !r.content.projectId);
+t(noProjectIdLeak,                                                'C · learn catalog · cap node té projectId (globals)');
 
 // ─── D · Canvas 5/5 ───────────────────────────────────────────────────────
 const cc = computeCanvasCompletion(result.canvas);
