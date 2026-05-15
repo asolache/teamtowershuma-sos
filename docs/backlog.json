@@ -1,6 +1,6 @@
 {
   "version": "v1.0",
-  "last_update": "2026-05-15",
+  "last_update": "2026-05-15T22:30",
   "project_id": "sos-dev-internal",
   "agents": [
     {
@@ -579,9 +579,9 @@
       ]
     },
     {
-      "id": "wo-ia-hierarchical-001",
+      "id": "wo-ia-hierarchical-002",
       "project_id": "sos-dev-internal",
-      "title": "IA-HIERARCHICAL-PROMPT-001 · SOC-first generation",
+      "title": "IA-HIERARCHICAL-PROMPT-002 · SOC-first generation (impl + budget)",
       "description": "iaHierarchicalService.js · generateSocOutline (cheap · 500 tokens) ·\ngenerateSopForItem (per item · 300-800 tokens) · generateSopBatch\n(estalvi extra 30%) · estimateHierarchicalSavings helper. Cache hit\nvia aiCacheService. Budget tracked via aiBudgetService.",
       "priority": "critical",
       "complexity": "M",
@@ -609,6 +609,150 @@
         "batch-4",
         "ia-cost"
       ]
+    },
+    {
+      "id": "wo-v2-majestic-001",
+      "project_id": "sos-dev-internal",
+      "title": "V2-MAJESTIC-001 · DashboardV2/HubV2/SettingsV2 ser la vista oficial · UX legendària",
+      "description": "Acabar la migració de vistes V2 a primer pla · removeu/redireccioneu vistes legacy de l'arrel (/dashboard, /settings) al seu equivalent V2. UX polish · animacions · skeleton states · empty states accionables · skip-link · breadcrumbs coherents.",
+      "priority": "high",
+      "complexity": "L",
+      "status": "pending",
+      "required_capabilities": ["code-write", "code-review", "test-run"],
+      "deliverable_test": {
+        "kind": "manual-check",
+        "command": "node js/tests/dashboardV2.test.js && node js/tests/hubV2.test.js",
+        "expect": "V2 routes són la primera opció · legacy disponible amb deprecation banner"
+      },
+      "estimated_cost_eur": 6,
+      "tags": ["batch-5-majestic", "v2", "ux"]
+    },
+    {
+      "id": "wo-tdd-ia-project-flow-001",
+      "project_id": "sos-dev-internal",
+      "title": "TDD-IA-FLOW-001 · cobrir tot el flux de creació de projecte IA amb tests + bucle de millora",
+      "description": "Auditar `/create` end-to-end: prompts → SOPs → WOs → kanban → primer hit de valor. Escriure tests TDD per cada etapa (existeixen unitaris dispersos · falta integration). Detectar trencaments pre-alfa · loop de millora setmanal · cost per token mesurat per etapa.",
+      "priority": "critical",
+      "complexity": "L",
+      "status": "pending",
+      "required_capabilities": ["code-write", "test-run", "text-generate"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/iaProjectFlowIntegration.test.js",
+        "expect": "≥30 asserts · happy path + edge cases (timeout, JSON invalid)"
+      },
+      "estimated_cost_eur": 8,
+      "tags": ["batch-5-majestic", "ia", "tdd", "critical-path"]
+    },
+    {
+      "id": "wo-matriu-108-scale-001",
+      "project_id": "sos-dev-internal",
+      "title": "MATRIU-108 · escalat alpha · primera matriu de la història de SOS amb 108 operadors",
+      "description": "Preparar la infra (sync scheduler · permaweb federation · DM throughput · presence heartbeat) per 108 usuaris simultanis. Objectiu fundacional: constituir la primera matriu cooperativa. Definir mètrica de salut · alertes · runbook de incidents.",
+      "priority": "high",
+      "complexity": "XL",
+      "status": "pending",
+      "required_capabilities": ["code-write", "data-analysis", "bash-execute"],
+      "deliverable_test": {
+        "kind": "manual-check",
+        "command": "node scripts/simulate-108-users.js",
+        "expect": "108 users · sync OK · cap perdua · p95 < 500ms"
+      },
+      "estimated_cost_eur": 14,
+      "tags": ["batch-5-majestic", "alpha", "fundacional"]
+    },
+    {
+      "id": "wo-sprint-kanban-merge-001",
+      "project_id": "sos-dev-internal",
+      "title": "SPRINT+KANBAN MERGE · /sprint i /kanban fusionades · enjambre optimitzat amb tota la KB",
+      "description": "Fusionar /sprint i el kanban en una sola superfície d'enjambre. UX unificada · IA fa servir el nou context builder + tota la KB acumulada per assignar WOs òptimes (cost · qualitat · trust · history). Una sola vista per orquestrar tot l'enjambre.",
+      "priority": "high",
+      "complexity": "L",
+      "status": "pending",
+      "required_capabilities": ["code-write", "code-review", "test-run", "text-generate"],
+      "deliverable_test": {
+        "kind": "multi",
+        "command": "node js/tests/sprintKanbanMerged.test.js",
+        "expect": "ruta única `/sprint` cobreix kanban · WO claim flow · swarm matching"
+      },
+      "estimated_cost_eur": 9,
+      "dependencies": ["wo-kanban-ai-context-001"],
+      "tags": ["batch-5-majestic", "swarm", "ux"]
+    },
+    {
+      "id": "wo-kanban-ai-context-001",
+      "project_id": "sos-dev-internal",
+      "title": "KANBAN-AI-CONTEXT · IA del kanban usa el nou sistema de contextos · DRY + KISS",
+      "description": "Revisar el model del kanban perquè la IA aprofiti el context builder enriquit (KB · neural path · trust · backlog history). Audit DRY/KISS · eliminar duplicació entre KanbanView · woContextBuilder · sprintOrchestrator. Objectiu: cost/qualitat èpic amb mínim codi.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "pending",
+      "required_capabilities": ["code-write", "code-review", "test-run", "text-generate"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/kanbanAiContext.test.js",
+        "expect": "kanban-IA invoca woContextBuilder · cost mesurat · qualitat ≥ baseline"
+      },
+      "estimated_cost_eur": 4,
+      "tags": ["batch-5-majestic", "ia", "dry-kiss"]
+    },
+    {
+      "id": "wo-kanban-real-users-001",
+      "project_id": "sos-dev-internal",
+      "title": "KANBAN-ASSIGNEE-001 · usuaris reals al kanban · fora hardcoded",
+      "description": "Substituir el placeholder `@alvaro` per autocomplete real (KB user_identity + matriu seats). Implementat parcialment a v80 · falta cobrir l'edit modal i la columna ASSIGNEE.",
+      "priority": "medium",
+      "complexity": "S",
+      "status": "in-progress",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "required_capabilities": ["code-write"],
+      "deliverable_test": {
+        "kind": "manual-check",
+        "command": "node js/tests/kanbanAssignee.test.js",
+        "expect": "cap placeholder hardcoded · select pobla amb identities reals"
+      },
+      "estimated_cost_eur": 1.5,
+      "tags": ["batch-5-majestic", "ux", "quick-win"]
+    },
+    {
+      "id": "wo-node-share-json-001",
+      "project_id": "sos-dev-internal",
+      "title": "SHARE-JSON-001 · export/import JSON de nodes (project · WO · qualsevol) via DM",
+      "description": "Servei nodeShareService.js (v80) · UI: botó \"📤 Exportar JSON\" al hub i al kanban · auto-detecció en DMs (detectSharePackage) + CTA \"📥 Importar al meu SOS\". Permet compartir projectes i WOs entre operadors sense permaweb.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "in-progress",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "required_capabilities": ["code-write", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/nodeShareService.test.js",
+        "expect": "≥30 asserts · roundtrip · DM detect · rebase mode"
+      },
+      "estimated_cost_eur": 3,
+      "tags": ["batch-5-majestic", "interop", "dm"]
+    },
+    {
+      "id": "wo-identity-keyfile-inline-001",
+      "project_id": "sos-dev-internal",
+      "title": "KEYFILE-INLINE-001 · loader JSON Arweave directament a /identity (iPad-ready)",
+      "description": "El botó \"connectar permaweb\" portava a wander.app a iPad. Ara /identity inclou loader keyfile JSON inline · paral·lel a Wander · mateix flow que /settings però sense haver de canviar de pàgina.",
+      "priority": "high",
+      "complexity": "S",
+      "status": "done",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "completed_at": 1747432200000,
+      "required_capabilities": ["code-write"],
+      "deliverable_test": {
+        "kind": "manual-check",
+        "expect": "iPad · /identity · loader funcional · status visible · Turbo balance"
+      },
+      "estimated_cost_eur": 0.6,
+      "cost_actual_eur": 0.4,
+      "tags": ["batch-5-majestic", "ipad", "ux", "v80"]
     }
   ]
 }
