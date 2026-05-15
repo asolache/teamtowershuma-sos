@@ -249,3 +249,244 @@ export function quickEntry({
     entry.content.tags  = tags.slice();
     return entry;
 }
+
+// =============================================================================
+// AUDIT-READY · sprint A · proof-of-value-accounting · CERT-001
+//
+// Funcions per a fer la comptabilitat de valor "certificable" amb:
+//   - ECDSA signatures opcionals per entry (signedBy did + signature)
+//   - Llista de proofs[] (arweave-txid · polygon-txhash · attestation-id)
+//   - Audit score (0-100) amb breakdown de motivs · per QA dashboard
+//   - Triple-entry validation rule · si total > THRESHOLD_EUR ≥2 proofs
+//
+// Pure (excepte signLedgerEntry/verifyLedgerEntry que usen Web Crypto async)
+// =============================================================================
+
+export const LEDGER_AUDIT_VERSION = '1.0';
+
+// Threshold per a quan exigir proofs · entries amb total >= aquest valor
+// SHAN de tenir ≥2 proofs per ser considerades "auditades".
+export const AUDIT_THRESHOLD_EUR = 100;
+
+// PROOF_KINDS · tipus de proves vàlides triple-entry
+export const PROOF_KINDS = Object.freeze([
+    'arweave-txid',     // permaweb anchor
+    'polygon-txhash',   // ERC-1155 anchor (phase 2)
+    'attestation-id',   // signed attestation by counter-party
+    'invoice-id',       // local invoice link
+    'external-doc',     // external document URL
+]);
+
+// addProofToEntry · pure · afegeix proof a content.proofs[] (immutable)
+// args · { kind, value, signedBy, signedAt? }
+// Si proof amb mateix kind + value ja existeix · no duplica.
+export function addProofToEntry(entry, proof) {
+    if (!entry || !entry.content) throw new Error('entry required');
+    if (!proof || typeof proof !== 'object') throw new Error('proof object required');
+    if (!proof.kind || !PROOF_KINDS.includes(proof.kind)) {
+        throw new Error('proof.kind must be one of ' + PROOF_KINDS.join('|'));
+    }
+    if (!proof.value || typeof proof.value !== 'string') {
+        throw new Error('proof.value (string) required');
+    }
+    const existing = entry.content.proofs || [];
+    const dup = existing.find(p => p.kind === proof.kind && p.value === proof.value);
+    if (dup) return entry;     // dedupe · no mut
+    const newProof = {
+        kind:     proof.kind,
+        value:    proof.value,
+        signedBy: proof.signedBy || null,
+        signedAt: proof.signedAt || new Date().toISOString(),
+    };
+    return {
+        ...entry,
+        content: {
+            ...entry.content,
+            proofs: [...existing, newProof],
+        },
+        updatedAt: Date.now(),
+    };
+}
+
+// removeProofFromEntry · pure · per index
+export function removeProofFromEntry(entry, index) {
+    const proofs = entry?.content?.proofs || [];
+    if (index < 0 || index >= proofs.length) throw new Error('proof index out of range');
+    return {
+        ...entry,
+        content: {
+            ...entry.content,
+            proofs: proofs.filter((_, i) => i !== index),
+        },
+        updatedAt: Date.now(),
+    };
+}
+
+// signLedgerEntry · ASYNC · firma l'entry amb ECDSA P-256.
+// Reusa nodeSigningService internament (consistent amb resta del sistema).
+// Retorna · entry signat amb content.signature + content.signedBy.
+//
+// NOTE · imports lazy per evitar circular dep · perquè ledgerService és core.
+export async function signLedgerEntry({ entry, privateJwk, signerDid } = {}) {
+    if (!entry || !entry.content) throw new Error('entry required');
+    if (!privateJwk) throw new Error('privateJwk (ECDSA P-256) required');
+    if (!signerDid || typeof signerDid !== 'string') throw new Error('signerDid required (did:sos:...)');
+    const { signNode } = await import('./nodeSigningService.js');
+    // Anclamos signerDid abans de signar · canonical inclou tot el content
+    const prep = {
+        ...entry,
+        content: {
+            ...entry.content,
+            signedBy:  signerDid,
+            // signedAt s'afegeix per la signatura (nodeSigningService ho inclou)
+        },
+    };
+    const signed = await signNode({ node: prep, privateJwk });
+    return signed;
+}
+
+// verifyLedgerEntry · ASYNC · valida content.signature contra content
+// (signature canonical via nodeSigningService.verifyNode).
+// Retorna · { ok: bool, reason: string }
+export async function verifyLedgerEntry(entry) {
+    if (!entry || !entry.content) return { ok: false, reason: 'no-content' };
+    if (!entry.content.signature) return { ok: false, reason: 'unsigned' };
+    try {
+        const { verifyNode } = await import('./nodeSigningService.js');
+        const ok = await verifyNode(entry);
+        return { ok: !!ok, reason: ok ? 'valid' : 'invalid-signature' };
+    } catch (e) {
+        return { ok: false, reason: 'verify-throw · ' + (e?.message || 'unknown') };
+    }
+}
+
+// computeEntryAuditState · pure · retorna estat d'auditoria per a 1 entry
+// Retorna · {
+//   signed:        bool · té content.signature
+//   signedBy:      string|null · DID si signat
+//   proofsCount:   int · # proofs[]
+//   proofsByKind:  { kind: count }
+//   needsProofs:   bool · si total >= AUDIT_THRESHOLD_EUR
+//   meetsThreshold: bool · si needsProofs i ≥2 proofs (o no needs)
+//   level:         'audited' | 'signed' | 'unsigned'
+// }
+export function computeEntryAuditState(entry) {
+    if (!entry || !entry.content) return { signed: false, signedBy: null, proofsCount: 0, proofsByKind: {}, needsProofs: false, meetsThreshold: false, level: 'unsigned' };
+    const c = entry.content;
+    const signed = !!c.signature;
+    const proofs = c.proofs || [];
+    const proofsByKind = {};
+    for (const p of proofs) {
+        proofsByKind[p.kind] = (proofsByKind[p.kind] || 0) + 1;
+    }
+    // Total · sumatori legs side debit (sols un costat · l'altre sum=)
+    let totalEur = 0;
+    for (const leg of c.legs || []) {
+        if (leg.side === 'debit') totalEur += (leg.amount || 0);
+    }
+    const needsProofs = totalEur >= AUDIT_THRESHOLD_EUR;
+    const meetsThreshold = needsProofs ? proofs.length >= 2 : true;
+    let level = 'unsigned';
+    if (signed) level = meetsThreshold ? 'audited' : 'signed';
+    return {
+        signed,
+        signedBy:       c.signedBy || null,
+        proofsCount:    proofs.length,
+        proofsByKind,
+        totalEur,
+        needsProofs,
+        meetsThreshold,
+        level,
+    };
+}
+
+// computeLedgerAuditScore · pure · agrega audit state per a totes entries
+// d'un projecte i retorna un score 0-100 + reasons per a quality cert.
+//
+// args · entries · array de ledger_entry nodes
+// Retorna · {
+//   score:         0-100,
+//   level:         'gold' | 'silver' | 'bronze' | 'draft',
+//   counts:        { total, balanced, signed, audited, withProofs, needsProofs },
+//   ratios:        { balanced, signed, audited },
+//   reasons:       [{ kind: 'positive'|'warning'|'penalty', text }],
+//   thresholdEur:  AUDIT_THRESHOLD_EUR,
+// }
+export function computeLedgerAuditScore(entries) {
+    const out = {
+        score:        0,
+        level:        'draft',
+        counts:       { total: 0, balanced: 0, signed: 0, audited: 0, withProofs: 0, needsProofs: 0 },
+        ratios:       { balanced: 0, signed: 0, audited: 0 },
+        reasons:      [],
+        thresholdEur: AUDIT_THRESHOLD_EUR,
+    };
+    if (!Array.isArray(entries) || entries.length === 0) {
+        out.reasons.push({ kind: 'warning', text: 'Cap entry · auditoria buida' });
+        return out;
+    }
+
+    let valid = 0, signed = 0, audited = 0, withProofs = 0, needsProofs = 0;
+    for (const e of entries) {
+        out.counts.total++;
+        const vRes = validateLedgerEntry(e);
+        if (vRes.ok) {
+            valid++;
+            out.counts.balanced++;
+        }
+        const a = computeEntryAuditState(e);
+        if (a.signed)       { signed++; out.counts.signed++; }
+        if (a.proofsCount > 0) { withProofs++; out.counts.withProofs++; }
+        if (a.needsProofs)  out.counts.needsProofs++;
+        if (a.level === 'audited') { audited++; out.counts.audited++; }
+    }
+    const total = out.counts.total;
+    out.ratios.balanced = total > 0 ? valid / total : 0;
+    out.ratios.signed   = total > 0 ? signed / total : 0;
+    out.ratios.audited  = total > 0 ? audited / total : 0;
+
+    // Score · ponderació
+    //   balanced · 30 pts (essential)
+    //   signed   · 30 pts (cert basics)
+    //   audited  · 30 pts (triple-entry needs over threshold)
+    //   coverage · 10 pts (≥3 entries · sense gap)
+    let score = 0;
+    score += 30 * out.ratios.balanced;
+    score += 30 * out.ratios.signed;
+    score += 30 * out.ratios.audited;
+    if (total >= 3) score += 10;
+    else if (total >= 1) score += Math.round((total / 3) * 10);
+
+    score = Math.round(Math.max(0, Math.min(100, score)));
+    out.score = score;
+
+    // Level segons score
+    if (score >= 85)      out.level = 'gold';
+    else if (score >= 65) out.level = 'silver';
+    else if (score >= 40) out.level = 'bronze';
+    else                  out.level = 'draft';
+
+    // Reasons
+    if (out.ratios.balanced === 1) out.reasons.push({ kind: 'positive', text: 'Tots els entries quadren (Σdebit=Σcredit)' });
+    else                            out.reasons.push({ kind: 'penalty', text: (total - valid) + ' entries no quadrats · revisar' });
+    if (out.ratios.signed >= 0.9)   out.reasons.push({ kind: 'positive', text: 'Quasi tots els entries signats amb ECDSA' });
+    else if (out.ratios.signed >= 0.5) out.reasons.push({ kind: 'warning', text: 'Sols ' + Math.round(out.ratios.signed * 100) + '% entries signats' });
+    else                            out.reasons.push({ kind: 'penalty', text: 'Pocs entries signats · cal ECDSA signature per certificació' });
+    if (out.counts.needsProofs > 0) {
+        const auditableRatio = out.counts.needsProofs > 0 ? out.counts.audited / out.counts.needsProofs : 0;
+        if (auditableRatio === 1) out.reasons.push({ kind: 'positive', text: 'Tots els entries > €' + AUDIT_THRESHOLD_EUR + ' tenen ≥2 proofs' });
+        else                      out.reasons.push({ kind: 'warning', text: (out.counts.needsProofs - out.counts.audited) + ' entries > €' + AUDIT_THRESHOLD_EUR + ' sense proofs suficients (cal ≥2)' });
+    }
+    if (out.counts.withProofs > 0)  out.reasons.push({ kind: 'positive', text: out.counts.withProofs + ' entries amb proofs (triple-entry)' });
+    if (total < 3)                  out.reasons.push({ kind: 'warning', text: 'Cobertura mínima · cal ≥3 entries per cert sòlid' });
+
+    return out;
+}
+
+// AUDIT_LEVEL_META · pure · meta per a UI display
+export const AUDIT_LEVEL_META = Object.freeze({
+    gold:    { label: 'Gold', icon: '🥇', color: '#facc15', minScore: 85, description: 'Auditat · signat · ≥85/100 · ready per audit extern' },
+    silver:  { label: 'Silver', icon: '🥈', color: '#cbd5e1', minScore: 65, description: 'Bona qualitat · ≥65/100 · cal alguns proofs' },
+    bronze:  { label: 'Bronze', icon: '🥉', color: '#f59e0b', minScore: 40, description: 'En marxa · ≥40/100 · revisar signatures' },
+    draft:   { label: 'Draft', icon: '✏️', color: '#94a3b8', minScore: 0, description: 'Esborrany · cal balancejar · signar · provar' },
+});
