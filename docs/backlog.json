@@ -1,0 +1,383 @@
+{
+  "version": "v1.0",
+  "last_update": "2026-05-15",
+  "project_id": "sos-dev-internal",
+  "agents": [
+    {
+      "id": "agent-claude-code",
+      "name": "Claude Code",
+      "kind": "ai-claude",
+      "capabilities": [
+        "code-write",
+        "code-review",
+        "test-run",
+        "bash-execute",
+        "file-edit",
+        "text-generate",
+        "data-analysis",
+        "git-commit",
+        "github-pr"
+      ],
+      "cost_per_hour_eur": 8,
+      "cost_profile": "high-quality-mid-cost",
+      "owner_handle": "@anthropic",
+      "active": true,
+      "notes": "Agent principal del workflow Claude Code ↔ SOS"
+    },
+    {
+      "id": "agent-gpt-coder",
+      "name": "GPT (coding)",
+      "kind": "ai-gpt",
+      "capabilities": [
+        "code-write",
+        "text-generate",
+        "classify",
+        "translate"
+      ],
+      "cost_per_hour_eur": 5,
+      "cost_profile": "mid-quality-low-cost",
+      "owner_handle": "@openai",
+      "active": false,
+      "notes": "Per a tasques no-critical · drafts · classificació"
+    },
+    {
+      "id": "agent-gemini",
+      "name": "Gemini",
+      "kind": "ai-gemini",
+      "capabilities": [
+        "text-generate",
+        "classify",
+        "translate",
+        "image-generate",
+        "data-analysis"
+      ],
+      "cost_per_hour_eur": 4,
+      "cost_profile": "balanced",
+      "owner_handle": "@google",
+      "active": false,
+      "notes": "Disponible quan l'usuari connecti la seva Gemini API key"
+    },
+    {
+      "id": "agent-human-any",
+      "name": "Human (qualsevol)",
+      "kind": "human",
+      "capabilities": [
+        "code-write",
+        "code-review",
+        "test-run",
+        "bash-execute",
+        "file-edit",
+        "browser-debug",
+        "text-generate",
+        "classify",
+        "data-analysis",
+        "git-commit",
+        "github-pr"
+      ],
+      "cost_per_hour_eur": null,
+      "cost_profile": "human",
+      "active": true,
+      "notes": "Agent humà · pot fer claim a WOs marcades 'human'"
+    }
+  ],
+  "work_orders": [
+    {
+      "id": "wo-agent-bridge-001-a",
+      "project_id": "sos-dev-internal",
+      "title": "AGENT-BRIDGE-001 Sprint A · schema + service + tests",
+      "description": "Crear el schema canonical de WOs + agents + backlog YAML.\nValidators puro-funcionals. Lifecycle helpers (claim/start/complete/block).\nMatching engine + ranking. Tests stand-alone.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "in-progress",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747332600000,
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/agentBridge.test.js",
+        "expect": "50+ pass · 0 fail"
+      },
+      "estimated_cost_eur": 0.05,
+      "org_ref": "sos-internal",
+      "tags": [
+        "batch-1",
+        "fundacional"
+      ]
+    },
+    {
+      "id": "wo-agent-bridge-001-b",
+      "project_id": "sos-dev-internal",
+      "title": "AGENT-BRIDGE-001 Sprint B · agent registry + KB integration",
+      "description": "`agentRegistryService.js` · CRUD agents al KB · seed inicial 3 agents.\nLoader del backlog.yaml a SOS app init · cache localStorage.\nUI a /kanban?project=sos-dev-internal reusa KanbanView existent.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run",
+        "file-edit"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/agentRegistry.test.js",
+        "expect": "all-pass"
+      },
+      "estimated_cost_eur": 0.08,
+      "dependencies": [
+        "wo-agent-bridge-001-a"
+      ],
+      "tags": [
+        "batch-1",
+        "fundacional"
+      ]
+    },
+    {
+      "id": "wo-soc-dual-001",
+      "project_id": "sos-dev-internal",
+      "title": "SOC-DUAL-PURPOSE-001 · SOC = Concept + Checklist + SOPs fills",
+      "description": "Estendre schema SOC amb camp checklist[] (cada item té sop_ref).\nsocService.js amb validador + helpers. Migration soft dels 9 SOCs\nexistents · checklist:[] vàlid · botó \"Gen amb IA\" inline.\nVersionat snapshot quan SOC puja versió · SOPs versionats opcional.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/socDualPurpose.test.js",
+        "expect": "30+ pass · 0 fail"
+      },
+      "estimated_cost_eur": 0.1,
+      "soc_ref": "soc-onboarding-cohort",
+      "tags": [
+        "batch-1",
+        "jerarquia"
+      ]
+    },
+    {
+      "id": "wo-org-entity-001-a",
+      "project_id": "sos-dev-internal",
+      "title": "ORG-ENTITY-001 Sprint A · schema + service + tests",
+      "description": "`organizationService.js` · CRUD pure · validador · helpers.\nSchema · stakeholders · tokenomics_global · systems[] · projects[] ·\nshared_resources[]. Idempotent migration des de projects existents.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/organization.test.js",
+        "expect": "30+ pass · 0 fail"
+      },
+      "estimated_cost_eur": 0.08,
+      "tags": [
+        "batch-1",
+        "fundacional"
+      ]
+    },
+    {
+      "id": "wo-org-entity-001-b",
+      "project_id": "sos-dev-internal",
+      "title": "ORG-ENTITY-001 Sprint B · /org/{orgId} dashboard + migration",
+      "description": "Vista holística org. 5 cards (stakeholders · tokenomics · systems ·\nprojects · resources). Wizard \"promote project to org\" o auto-crear\norg \"personal\" per a user existent.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "file-edit",
+        "browser-debug"
+      ],
+      "deliverable_test": {
+        "kind": "manual-check"
+      },
+      "estimated_cost_eur": 0.1,
+      "dependencies": [
+        "wo-org-entity-001-a"
+      ],
+      "tags": [
+        "batch-1",
+        "ui"
+      ]
+    },
+    {
+      "id": "wo-process-first-class-001",
+      "project_id": "sos-dev-internal",
+      "title": "PROCESS-FIRST-CLASS-001 · Process com a node 1a classe",
+      "description": "Substitueix VNA-PROCESS-001. `type: 'process'` 1a classe · lligat a\nORG · agrupa SOCs · roles · txs · resources · interfaces · KPIs.",
+      "priority": "critical",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "estimated_cost_eur": 0.2,
+      "dependencies": [
+        "wo-org-entity-001-a",
+        "wo-soc-dual-001"
+      ],
+      "tags": [
+        "batch-2",
+        "jerarquia"
+      ]
+    },
+    {
+      "id": "wo-ia-hierarchical-001",
+      "project_id": "sos-dev-internal",
+      "title": "IA-HIERARCHICAL-PROMPT-001 · SOC-first generation",
+      "description": "Genera SOC outline primer (cheap · 500 tokens) · expandeix SOPs per\nitem sota demanda (300-800 tokens cada). Estalvi 40-60% del cost.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "estimated_cost_eur": 0.1,
+      "dependencies": [
+        "wo-soc-dual-001"
+      ],
+      "tags": [
+        "batch-2",
+        "ia-cost"
+      ]
+    },
+    {
+      "id": "wo-ai-cost-qa-001",
+      "project_id": "sos-dev-internal",
+      "title": "AI-COST-QA-001 · Meta-orquestrador IA · cost vs qualitat",
+      "description": "Cache + pre-decision tree + post-evaluator + budget enforcer +\nbatching + telemetry. Cost mínim per qualitat objectiu garantida.",
+      "priority": "critical",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "estimated_cost_eur": 0.25,
+      "tags": [
+        "batch-2",
+        "ia-cost"
+      ]
+    },
+    {
+      "id": "wo-dehardcode-claude-001",
+      "project_id": "sos-dev-internal",
+      "title": "DEHARDCODE-CLAUDE-001 · Treure Claude del codi",
+      "description": "Rename --accent-claude → --accent-orchestrator a 12+ views.\nseeds genèrics. MobileMockupView text neutre.",
+      "priority": "high",
+      "complexity": "S",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "file-edit"
+      ],
+      "estimated_cost_eur": 0.03,
+      "tags": [
+        "batch-3",
+        "neteja"
+      ]
+    },
+    {
+      "id": "wo-ux-central-hub-001",
+      "project_id": "sos-dev-internal",
+      "title": "UX-CENTRAL-HUB-001 · /project/{id} redissenyat · 5-click rule",
+      "description": "7-zone layout · org · avui · processos · IA · social · actions ·\nknowledge. Activity feed derivat. IA suggestions engine.",
+      "priority": "high",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "browser-debug"
+      ],
+      "estimated_cost_eur": 0.2,
+      "dependencies": [
+        "wo-org-entity-001-b"
+      ],
+      "tags": [
+        "batch-3",
+        "ux"
+      ]
+    },
+    {
+      "id": "wo-castellers-001",
+      "project_id": "sos-dev-internal",
+      "title": "CASTELLERS-001 · Pre-load Castellers + Alvaro",
+      "description": "castellersSeed.js · projecte + 12 rols + 18 txs + 5 SOPs + 3 workshops.\nalvaroSeed.js · profile Ikigai + matriu_member primary.",
+      "priority": "high",
+      "complexity": "S",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "estimated_cost_eur": 0.05,
+      "tags": [
+        "batch-3",
+        "seed"
+      ]
+    },
+    {
+      "id": "wo-wo-auto-001",
+      "project_id": "sos-dev-internal",
+      "title": "WO-AUTO-001 · cron + event + condition triggers",
+      "description": "Templates de WO autogenerades · cron (8:30 daily) · event (factura\ncobrada) · condition (stock < N). Cor del SOS operatiu.",
+      "priority": "critical",
+      "complexity": "XL",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "estimated_cost_eur": 0.4,
+      "dependencies": [
+        "wo-process-first-class-001"
+      ],
+      "tags": [
+        "batch-4",
+        "operatiu"
+      ]
+    },
+    {
+      "id": "wo-tdd-all-levels-001",
+      "project_id": "sos-dev-internal",
+      "title": "TDD-ALL-LEVELS-001 · TDD framework universal",
+      "description": "IA evaluator default ON. User action validators. Process KPI tests.\nOrg health auditor amb WO compensatòries auto.",
+      "priority": "high",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "estimated_cost_eur": 0.2,
+      "dependencies": [
+        "wo-agent-bridge-001-b"
+      ],
+      "tags": [
+        "batch-4",
+        "qualitat"
+      ]
+    }
+  ]
+}
