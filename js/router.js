@@ -99,6 +99,9 @@ const MARKET_PATH_PREFIX  = '/market/';
 const PROFILE_PATH_PREFIX = '/u/';
 // UX-001 sprint C · prefijo dinámico /project/{projectId} resuelto por ProjectHubView
 const PROJECT_PATH_PREFIX = '/project/';
+// UX-CENTRAL-HUB-001 · /hub/{projectId} · nou layout 7-zones consumint
+// activityFeedService + iaSuggestionsService. L'antic /project/{id} es manté.
+const HUB_V2_PATH_PREFIX = '/hub/';
 
 async function router() {
     const path  = window.location.pathname.replace(/\/$/, '') || '/';
@@ -109,6 +112,8 @@ async function router() {
         match = { path, view: () => import('./views/MarketDetailView.js') };
     } else if (path.startsWith(PROFILE_PATH_PREFIX)) {
         match = { path, view: () => import('./views/ProfileView.js') };
+    } else if (path.startsWith(HUB_V2_PATH_PREFIX)) {
+        match = { path, view: () => import('./views/ProjectHubV2View.js') };
     } else if (path.startsWith(PROJECT_PATH_PREFIX)) {
         match = { path, view: () => import('./views/ProjectHubView.js') };
     } else {

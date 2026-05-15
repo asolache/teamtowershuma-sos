@@ -148,7 +148,8 @@ export default class ProjectHubView {
                         ${sectorBadge}
                         ${p.readinessAtClone ? `<span class="ph-badge">${this._esc(p.readinessAtClone).toUpperCase()}</span>` : ''}
                         <span style="color:#888;font-family:monospace;font-size:0.72rem;">id: ${this._esc(p.id)}</span>
-                        <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link class="ph-link" style="margin-left:auto;font-weight:700;">👁 Veure presentació pública →</a>
+                        <a href="/hub/${encodeURIComponent(p.id)}" data-link class="ph-link" style="margin-left:auto;font-weight:700;color:var(--accent-indigo);" title="Project Hub v2 · layout 7-zones · 5-click rule">🆕 Hub v2 →</a>
+                        <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link class="ph-link" style="font-weight:700;">👁 Veure presentació pública →</a>
                     </div>
                 </div>
 
