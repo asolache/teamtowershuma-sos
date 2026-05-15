@@ -233,16 +233,26 @@
       "id": "wo-process-first-class-001",
       "project_id": "sos-dev-internal",
       "title": "PROCESS-FIRST-CLASS-001 · Process com a node 1a classe",
-      "description": "Substitueix VNA-PROCESS-001. `type: 'process'` 1a classe · lligat a\nORG · agrupa SOCs · roles · txs · resources · interfaces · KPIs.",
+      "description": "processService.js · 8 categories · 8 cycle hints · KPIs amb 6 kinds ·\nlinking helpers · extractSubgraph per a VNA filtrat per procés · stats\nhealth (green/yellow/red).",
       "priority": "critical",
       "complexity": "L",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747344000000,
+      "completed_at": 1747347600000,
       "required_capabilities": [
         "code-write",
         "test-run"
       ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/process.test.js",
+        "expect": "54 pass · 0 fail"
+      },
       "estimated_cost_eur": 0.2,
+      "cost_actual_eur": 0.118,
+      "deliverable_uri": "git:HEAD..processService+test",
       "dependencies": [
         "wo-org-entity-001-a",
         "wo-soc-dual-001"
@@ -278,35 +288,111 @@
       "id": "wo-ai-cost-qa-001",
       "project_id": "sos-dev-internal",
       "title": "AI-COST-QA-001 · Meta-orquestrador IA · cost vs qualitat",
-      "description": "Cache + pre-decision tree + post-evaluator + budget enforcer +\nbatching + telemetry. Cost mínim per qualitat objectiu garantida.",
+      "description": "aiCacheService.js (LRU+TTL+stats) · aiBudgetService.js (monthly per\nproject · 4 states ok/warn/over/hard) · aiDecisionService.js (skip/\ncache-hit/block/run). Tots 3 pure · in-memory fallback per a Node.",
       "priority": "critical",
       "complexity": "L",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747348000000,
+      "completed_at": 1747350200000,
       "required_capabilities": [
         "code-write",
         "test-run"
       ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/aiCostQA.test.js",
+        "expect": "42 pass · 0 fail"
+      },
       "estimated_cost_eur": 0.25,
+      "cost_actual_eur": 0.142,
+      "deliverable_uri": "git:HEAD..aiCacheService+aiBudgetService+aiDecisionService",
       "tags": [
         "batch-2",
         "ia-cost"
       ]
     },
     {
+      "id": "wo-interface-nodes-001",
+      "project_id": "sos-dev-internal",
+      "title": "INTERFACE-NODES-001 · Interfície entre processos",
+      "description": "interfaceService.js · contract payload entre processos · 9 field kinds\n· 4 trigger kinds · validatePayload runtime · SLA · stats.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "done",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747350500000,
+      "completed_at": 1747350800000,
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/interfaceAndResource.test.js",
+        "expect": "51 pass · 0 fail"
+      },
+      "estimated_cost_eur": 0.08,
+      "cost_actual_eur": 0.065,
+      "deliverable_uri": "git:HEAD..interfaceService+test",
+      "tags": [
+        "batch-3",
+        "jerarquia"
+      ]
+    },
+    {
+      "id": "wo-resources-entity-001",
+      "project_id": "sos-dev-internal",
+      "title": "RESOURCES-ENTITY-001 · Resources com a entitat",
+      "description": "resourceService.js · 7 kinds (tool/space/time/asset/subscription/\nequipment/consumable) · 8 capacity units · utilizationRatio + status\n· cost aggregation totalMonthlyCost + costByKind.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "done",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747350500000,
+      "completed_at": 1747350800000,
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/interfaceAndResource.test.js",
+        "expect": "51 pass · 0 fail"
+      },
+      "estimated_cost_eur": 0.08,
+      "cost_actual_eur": 0.065,
+      "deliverable_uri": "git:HEAD..resourceService+test",
+      "tags": [
+        "batch-3",
+        "jerarquia"
+      ]
+    },
+    {
       "id": "wo-dehardcode-claude-001",
       "project_id": "sos-dev-internal",
       "title": "DEHARDCODE-CLAUDE-001 · Treure Claude del codi",
-      "description": "Rename --accent-claude → --accent-orchestrator a 12+ views.\nseeds genèrics. MobileMockupView text neutre.",
+      "description": "Rename --accent-claude → --accent-orchestrator a 6 files (tokens.css +\n5 views). skill-seeds.js · CLAUDE_NODE rebatejat ORCHESTRATOR_NODE +\nDEFAULT_AGENT_NAME variable + comment apuntant al bridge. CLAUDE_NODE\nmantingut com a alias backwards-compat. MobileMockupView text neutre.",
       "priority": "high",
       "complexity": "S",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747351000000,
+      "completed_at": 1747351600000,
       "required_capabilities": [
         "code-write",
         "file-edit"
       ],
+      "deliverable_test": {
+        "kind": "manual-check"
+      },
       "estimated_cost_eur": 0.03,
+      "cost_actual_eur": 0.015,
+      "deliverable_uri": "git:HEAD..accent-orchestrator-rename",
       "tags": [
         "batch-3",
         "neteja"
@@ -338,16 +424,26 @@
       "id": "wo-castellers-001",
       "project_id": "sos-dev-internal",
       "title": "CASTELLERS-001 · Pre-load Castellers + Alvaro",
-      "description": "castellersSeed.js · projecte + 12 rols + 18 txs + 5 SOPs + 3 workshops.\nalvaroSeed.js · profile Ikigai + matriu_member primary.",
+      "description": "castellersSeed.js · org + projecte + 12 rols (pinya/tronc/pom) ·\n18 transactions (10 tangibles + 8 intangibles Verna Allee) ·\n4 processos actius amb KPIs · 5 SOCs amb checklist · 3 resources\n(espai + equipment + consumable). Pure idempotent.",
       "priority": "high",
       "complexity": "S",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747352000000,
+      "completed_at": 1747353600000,
       "required_capabilities": [
         "code-write",
         "test-run"
       ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/castellersSeed.test.js",
+        "expect": "35 pass · 0 fail"
+      },
       "estimated_cost_eur": 0.05,
+      "cost_actual_eur": 0.083,
+      "deliverable_uri": "git:HEAD..castellersSeed+test",
       "tags": [
         "batch-3",
         "seed"
@@ -357,16 +453,26 @@
       "id": "wo-wo-auto-001",
       "project_id": "sos-dev-internal",
       "title": "WO-AUTO-001 · cron + event + condition triggers",
-      "description": "Templates de WO autogenerades · cron (8:30 daily) · event (factura\ncobrada) · condition (stock < N). Cor del SOS operatiu.",
+      "description": "woTemplateService.js · cron parser (5 fields + presets) · 4 trigger\nkinds · generateWoFromTemplate compatible amb agentBridgeSchema ·\nevaluateTemplates batch idempotent. Cor del SOS operatiu.",
       "priority": "critical",
       "complexity": "XL",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747354000000,
+      "completed_at": 1747357600000,
       "required_capabilities": [
         "code-write",
         "test-run"
       ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/woTemplate.test.js",
+        "expect": "52 pass · 0 fail"
+      },
       "estimated_cost_eur": 0.4,
+      "cost_actual_eur": 0.215,
+      "deliverable_uri": "git:HEAD..woTemplateService+test",
       "dependencies": [
         "wo-process-first-class-001"
       ],
@@ -379,22 +485,64 @@
       "id": "wo-tdd-all-levels-001",
       "project_id": "sos-dev-internal",
       "title": "TDD-ALL-LEVELS-001 · TDD framework universal",
-      "description": "IA evaluator default ON. User action validators. Process KPI tests.\nOrg health auditor amb WO compensatòries auto.",
+      "description": "tddFrameworkService.js · 6 levels (code/wo/ai/user/process/org) ·\nvalidateIaResponse · 6 USER_ACTION_VALIDATORS · auditOrg amb scoring\n+ WO compensatòries auto · computeTddCoverage agregator.",
       "priority": "high",
       "complexity": "L",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747358000000,
+      "completed_at": 1747360200000,
       "required_capabilities": [
         "code-write",
         "test-run"
       ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/tddFramework.test.js",
+        "expect": "42 pass · 0 fail"
+      },
       "estimated_cost_eur": 0.2,
+      "cost_actual_eur": 0.132,
+      "deliverable_uri": "git:HEAD..tddFrameworkService+test",
       "dependencies": [
         "wo-agent-bridge-001-b"
       ],
       "tags": [
         "batch-4",
         "qualitat"
+      ]
+    },
+    {
+      "id": "wo-ia-hierarchical-001",
+      "project_id": "sos-dev-internal",
+      "title": "IA-HIERARCHICAL-PROMPT-001 · SOC-first generation",
+      "description": "iaHierarchicalService.js · generateSocOutline (cheap · 500 tokens) ·\ngenerateSopForItem (per item · 300-800 tokens) · generateSopBatch\n(estalvi extra 30%) · estimateHierarchicalSavings helper. Cache hit\nvia aiCacheService. Budget tracked via aiBudgetService.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "done",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747360500000,
+      "completed_at": 1747361500000,
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/iaHierarchical.test.js",
+        "expect": "11 pass · 0 fail"
+      },
+      "estimated_cost_eur": 0.1,
+      "cost_actual_eur": 0.078,
+      "deliverable_uri": "git:HEAD..iaHierarchicalService+test",
+      "dependencies": [
+        "wo-soc-dual-001"
+      ],
+      "tags": [
+        "batch-4",
+        "ia-cost"
       ]
     }
   ]

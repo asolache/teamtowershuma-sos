@@ -241,11 +241,11 @@ export default class KanbanView {
             .kb-badge      { font-size:0.68rem; padding:1px 6px; border-radius:8px; background:var(--bg-elevated); color:var(--text-secondary); }
             .kb-badge.ai   { background:rgba(99,102,241,0.18); color:var(--accent-indigo); }
             .kb-badge.human{ background:rgba(16,185,129,0.18); color:var(--accent-green); }
-            .kb-badge.tdd  { background:rgba(212,168,83,0.18); color:var(--accent-claude); }
+            .kb-badge.tdd  { background:rgba(212,168,83,0.18); color:var(--accent-orchestrator); }
             .kb-badge.high { background:rgba(239,68,68,0.18); color:var(--accent-red); }
             .kb-badge.med  { background:rgba(99,102,241,0.18); color:var(--accent-indigo); }
             .kb-badge.cost { background:rgba(16,185,129,0.18); color:var(--accent-green); font-family:var(--font-mono); }
-            .kb-badge.save { background:rgba(212,168,83,0.18); color:var(--accent-claude); font-family:var(--font-mono); }
+            .kb-badge.save { background:rgba(212,168,83,0.18); color:var(--accent-orchestrator); font-family:var(--font-mono); }
 
             .kb-empty      { text-align:center; color:var(--text-muted); font-size:0.85rem; padding:1rem; border:1px dashed var(--border-default); border-radius:var(--radius-sm); }
 
