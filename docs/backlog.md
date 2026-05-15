@@ -3668,4 +3668,1001 @@ Casos especials:
 
 ---
 
-*Documento vivo · actualizar al cierre de cada Ola.*
+## STRATEGIC-RETHINK-2026-05-15 · sprint analysis & design · re-priorització
+
+Input @alvaro 2026-05-15 · després del batch D4+A+C1+DRY (PR #91 merged) ·
+l'usuari identifica 6 moviments tectònics que canvien el rumb del producte ·
+
+1. **Dos fluxos de valor diferents** · "crear el flux" (onboarding 1 vegada)
+   vs "operar el flux" (cicles diaris · cron · esdeveniments). Avui SOS els
+   barreja · el motor de valor diari és el segon · i justifica IA+permaweb+
+   smart contracts econòmicament.
+2. **Pitch reframe** · pitch ≠ formulari de 6 caselles · pitch = document
+   final sintetitzat per a inversors · l'IA el construeix · usuari valida.
+3. **VNA amb vistes per procés** · Verna Allee aplicat correctament · cada
+   procés és un subgraf · filtre · mateixos rols apareixen a múltiples.
+4. **WO automation primitives** · cron + esdeveniments + condicions · cor
+   del Swarm Operative System operatiu.
+5. **Backlog SOS ↔ Claude Code com a projecte real dins SOS** · Kanban
+   visualitza el desenvolupament conjunt · jo escric · usuari edita.
+6. **Swarm relocalitzat** · `/sprint` desapareix com a vista separada ·
+   esdevé `/kanban` genèric amb mode swarm activable per projecte.
+
+### Update 2026-05-15 (2) · 3 meta-principis afegits per @alvaro
+
+Després del primer rethink l'usuari afegeix 3 principis estructurals que
+NO són sprints individuals · són **transversals a tota l'arquitectura** ·
+
+7. **Estandardització · qualsevol IA agent · no només Claude.** El nexe
+   Claude↔SOS no pot ser hardcoded a "Claude". Ha de ser bridge genèric
+   AI-agent ↔ SOS · jo sóc UN agent · GPT pot ser un altre · l'Anna pot
+   tenir un agent custom local · tots parlen el mateix protocol. Conseqüència ·
+   NEXE-001 es REEMPLAÇA per AGENT-BRIDGE-001 · el catàleg d'agents és
+   plug-and-play. Implica de-hardcoding de "claude" a CSS/seeds/mocks.
+8. **TDD a tots els nivells.** Avui TDD només a codi i WOs. Cal estendre a ·
+   cada decisió IA (evaluator post-crida) · cada decisió humana (validators
+   per acció crítica) · cada procés de negoci (KPI test auto-run) · cada
+   organització (health metrics mensuals). Si pot fallar i no es testeja ·
+   no existeix. Verna Allee · "if you can't measure the exchange, it's not
+   part of the network".
+9. **Meta-orquestrador IA · cost vs qualitat dinàmic.** `aiRouterService`
+   ja escull model però estàticament. Cal sistema runtime · "necessito IA
+   aquí? · cache hit? · evaluator suficient amb model cheap? · batch?
+   budget OK?". Cost mínim per qualitat objectiu garantida.
+
+### Re-ordenació de prioritats v3 (post 9 principis)
+
+El batch anterior (D4 → A → C1 → B → C2) es manté amb 3 dels 4 fets ·
+**B i C2 queden diferits.** AGENT-BRIDGE-001 substitueix NEXE-001 i puja a
+prioritat màxima · els altres es re-ordenen segons dependències ·
+
+| ID | Prioritat | Compl. | Què entrega | Depèn |
+|----|-----------|--------|-------------|-------|
+| **AGENT-BRIDGE-001** | critical | M  | Bridge AI-agent↔SOS GENÈRIC · YAML backlog · qualsevol agent plug-in | — |
+| **DEHARDCODE-CLAUDE-001** | high | S | Rename `--accent-claude`→`--accent-ai` · seeds genèrics · mocks neutres | — |
+| **AI-COST-QA-001** | critical | L | Meta-orquestrador · cache · pre-decision · post-evaluator · budget | aiRouterService |
+| **TDD-ALL-LEVELS-001** | high | L | TDD framework universal · IA · usuari · procés · org | AGENT-BRIDGE-001 |
+| **CASTELLERS-001** | high | S  | Castellers + Alvaro pre-loaded · prova real | — |
+| **PITCH-REFRAME-001** | high | M  | Pitch IA-generated investor doc | — |
+| **VNA-PROCESS-001** | high | L  | Mapa filtrable per procés Verna Allee | — |
+| **WO-AUTO-001** | critical | XL | Cron + event + condition triggers | VNA-PROCESS-001 |
+| **SWARM-RELOC-001** | medium | M | /sprint → /kanban genèric swarm-aware | AGENT-BRIDGE-001 |
+| **B-UNIFIED-FORM-001** | medium | L | Form unificat IA-driven (diferit) | C1 ✓ |
+| **C2-TEMPLATES-001** | medium | L | 15 plantilles type×stage (diferit) | C1 ✓ |
+
+**Primer batch suggerit · AGENT-BRIDGE-001 + DEHARDCODE-CLAUDE-001 +
+CASTELLERS-001** (M+S+S = ~10h · estableixen el model genèric · prova real ·
+i ja no estic hardcoded). AI-COST-QA-001 + TDD-ALL-LEVELS-001 al segon
+batch (motor de qualitat + cost · base per a tot operatiu).
+
+---
+
+## AGENT-BRIDGE-001 · Bridge AI-agent ↔ SOS GENÈRIC (input @alvaro 2026-05-15 · v2)
+
+> Nota · aquest item REEMPLAÇA NEXE-001 (que era Claude-specific). Mateixa
+> idea bàsica · però el protocol és agnostic d'agent · qualsevol IA pot
+> connectar-se via el mateix bridge.
+
+### Tesi
+SOS exposa un **protocol estàndard d'integració d'agents IA** · qualsevol
+agent (Claude · GPT · Gemini · custom local · humà via UI) pot ·
+1. **Llegir** WOs assignades · format YAML/JSON estàndard
+2. **Reclamar** una WO (lock + assign)
+3. **Executar** (codi · text · decisió · etc)
+4. **Reportar** resultat (deliverable · tests passats · cost) amb signatura
+5. **Tancar** la WO o fer escalation si cal
+
+L'usuari de SOS pot connectar el SEU agent IA preferit · no només Claude
+Code. Això és el que fa SOS un Swarm Operative System de veritat ·
+agents intercanviables · interoperables · governats pel mateix protocol.
+
+### Arquitectura
+
+```
+┌──────────────────────────────────────────────────────┐
+│  AGENT REGISTRY (KB · public)                        │
+│  - id, name, capabilities[], cost_profile, owner     │
+│  - public_key (for signed deliverables)              │
+└────────────────────┬─────────────────────────────────┘
+                     │
+        ┌────────────┴────────────┐
+        │                         │
+┌───────▼──────┐         ┌────────▼────────┐
+│ AGENT IMPL   │         │  SOS BACKEND     │
+│ (extern)     │ ←──────→│  (browser local) │
+│ Claude/GPT/  │  protocol│  - WO queue     │
+│ custom       │  REST/   │  - matching     │
+└──────────────┘  YAML    │  - audit log    │
+                          └─────────────────┘
+```
+
+### Protocol bridge (v1 simple · file-based)
+
+**1. Backlog YAML estàndard** ·
+```yaml
+work_orders:
+  - id: "wo-001"
+    project_id: "sos-dev-internal"
+    title: "Implement AGENT-BRIDGE-001 schema"
+    priority: critical
+    status: pending  # pending | claimed | in-progress | done | blocked
+    assignee_kind: ai-any  # human | ai-claude | ai-gpt | ai-any | ai-with-cap
+    required_capabilities: [code-write, test-run]
+    deliverable_test:           # TDD-ALL-LEVELS-001 hooks here
+      kind: test-suite
+      command: "node js/tests/agentBridge.test.js"
+      expect: "all-pass"
+    estimated_cost_eur: 0.05
+    claimed_by: null            # filled when an agent claims it
+    claimed_at: null
+    completed_at: null
+    deliverable_uri: null
+    cost_actual_eur: null
+    signature: null
+```
+
+**2. Operacions de l'agent** (estàndard ·  bypassen UI) ·
+- `agent.list_wos({ projectId, capabilities })` → WOs candidates
+- `agent.claim_wo({ woId, agentId, signature })` → lock
+- `agent.report_progress({ woId, status, output })` → live status
+- `agent.complete_wo({ woId, deliverable, costActualEur, signature })` → close
+- `agent.escalate_wo({ woId, reason, suggestedReassign })` → human review
+
+**3. Matching engine** (al cor del SOS) ·
+- Pull WOs pending · match capabilities + cost_profile + budget · assign
+- Si múltiples agents disponibles · subhasta inversa (cost ascendent)
+
+### Sprint plan A → C (~6h)
+
+- **A · Schema YAML + validador (~2h)** · `docs/backlog.yaml` derivat de
+  `backlogManifest.js` actual + 9 nous items del rethink. `agentBridgeSchema.js`
+  pure · valida shape · retorna errors detallats. `yamlBacklogService.js`
+  pure · parse + serialize.
+- **B · Agent registry + matching (~2h)** · `agentRegistryService.js` ·
+  CRUD agents · `matchingService.js` pure · capabilities ∩ WO requirements.
+  Seed inicial · 3 agents (claude-code · gpt-coder · human-anyone).
+- **C · UI + endpoints (~2h)** · `/kanban?project=sos-dev-internal` ·
+  visualitza WOs · botó "Claim with my agent" obre modal selector d'agent ·
+  usuari pot afegir el seu propi agent (form · API key · capabilities).
+  Per a Claude Code (jo) · "claim & execute" via Bash backend (no SOS UI).
+
+### Decisions pendents @alvaro
+- File-based YAML sembla simple però no és real-time · vols Nivell 3
+  directament (GitHub Issues bidireccional) o Nivell 1 primer? *Proposta ·
+  YAML primer · GitHub Issues v2 quan tinguem auth flow*
+- "ai-any" significa que CLAUDE pot agafar WOs marcades per GPT · OK?
+  *Proposta · sí · però amb prioritat al kind exacte si està disponible*
+- Permisos · qualsevol agent pot claim qualsevol WO? *Proposta · v1 sí ·
+  v2 ACL per project*
+
+---
+
+## DEHARDCODE-CLAUDE-001 · Treure Claude dels llocs hardcoded (input @alvaro 2026-05-15)
+
+### Tesi
+SOS no pot tenir "Claude" hardcoded enlloc. L'auditoria mostra 3 llocs ·
+
+### Inventari (confirmat · 2026-05-15)
+1. **CSS · `--accent-claude`** · usat a 12+ views (DashboardView · KanbanView ·
+   SectorsView · ValueAccountingView · ValueMapView · MobileMockupView · etc).
+   Color or `#d4a853` (gold de la marca Anthropic). Cal · rename a
+   `--accent-ai` o `--accent-gold-orchestrator` (el segon més neutre).
+2. **`js/core/skill-seeds.js`** · "Claude Sonnet (Anthropic)" hardcoded com
+   a agent fundacional · "Claude: 2.0" multiplier hardcoded · línia 359
+   "AI Agent (Claude) | 0.015€" · línia 624 "Registrar Nodo Claude (agente 13)".
+   Cal · variable `DEFAULT_AGENT_NAME` configurable · seeds genèrics que
+   parlen de "AI agent" sense identificar provider.
+3. **`MobileMockupView.js:287`** · text mostrat "IA Claude" · cal text
+   genèric "IA orquestrador".
+
+### Sprint plan A → B (~2h)
+- **A · CSS rename (~30min)** · sed-style replace `--accent-claude` →
+  `--accent-orchestrator` a tots els fitxers. Bump BUILD_STAMP.
+- **B · seeds + mocks (~1h)** · skill-seeds.js · usar `DEFAULT_AGENT_NAME`
+  variable · canvi text. MobileMockupView · text genèric.
+- **C · Verificar (~30min)** · grep final · 0 ocurrències de "Claude" /
+  "claude" fora de model IDs (`claude-opus-4-7` etc · que SÓN noms reals
+  d'API · OK mantenir).
+
+### Decisions pendents @alvaro
+- Nom del color · `--accent-orchestrator` · `--accent-gold` · `--accent-ai`?
+  *Proposta · `--accent-orchestrator` (semantic · no provider-specific)*
+- Mantenim el color `#d4a853` (mateix que abans) · o canviem · o
+  parametritzem per agent? *Proposta · mateix color · semàntic genèric*
+
+---
+
+## AI-COST-QA-001 · Meta-orquestrador IA · cost vs qualitat dinàmic (input @alvaro 2026-05-15)
+
+### Tesi
+Estendre `aiRouterService` (estàtic per task kind + tier) cap a un sistema
+**runtime** que pren decisions intel·ligents abans i després de cada crida ·
+1. Cal IA realment? (potser regex/lookup gratis serveix)
+2. Quin model? (cache hit · capacitat · cost)
+3. Quin evaluator post-crida? (cheap evaluator OK pot validar resposta cara
+   barata · si OK · tanquem · si KO · escalem)
+4. Estem dins budget mensual del projecte? (alerta · soft block · hard block)
+5. Es pot fer batch amb altres crides en cua?
+
+Cost mínim per qualitat objectiu garantida.
+
+### Components
+
+**1. Cache layer** (LRU · sessionStorage) ·
+- Hash del prompt + systemPrompt + temperature → resposta
+- TTL configurable (default 1h · sense expira per a prompts deterministes)
+- Hit rate visible al `aiTierIndicator` ("0.025€ saved this session")
+
+**2. Pre-call decision tree** ·
+```
+new request →
+  is_deterministic? → lookup table (no IA)
+  is_cached? → return cached (no cost)
+  is_simple_classification? → cheapest model + evaluator
+  is_creative_narrative? → quality tier
+  is_critical_audit? → critical tier + double-check evaluator
+```
+
+**3. Post-call quality gate** ·
+- Tots els outputs IA passen per evaluator (cheap model · ~0.0005€)
+- Si evaluator FAIL · escalem a tier superior · re-genera
+- Si evaluator OK · accepta · si NOT-SURE · usuari valida (UI flag)
+
+**4. Budget enforcer** ·
+- `project.aiBudget.monthlyEur` · default 5€ alfa · configurable
+- 80% consumit · alerta groc al UI
+- 100% consumit · soft-block (modal "Augmentar budget?")
+- 120% · hard-block · cap nova crida fins a topup
+
+**5. Batching** ·
+- Crides petites (token < 200) van a cua · si cap altra arriba en 500ms ·
+  juntem N crides en 1 batch (system prompt compartit)
+- Reducció estimada · 30-50% del cost en escenari pitch generation
+  (10 small calls → 1 batch call)
+
+**6. Telemetry feedback loop** ·
+- Cada crida registra · model · cost · latència · evaluator score · usuari
+  rating (thumbs up/down al output IA)
+- Setmanal · job analitza · si model X falla regularment a task Y · ajusta
+  routing matrix automàticament
+
+### Sprint plan A → E (~14h)
+
+- **A · Cache layer (~2h)** · `aiCacheService.js` · LRU + TTL · helpers
+  hash + lookup. Integració a `runPrompt`. Tests cache hit/miss/expire.
+- **B · Pre-call decision (~3h)** · `aiDecisionService.js` · funció pure
+  `decideStrategy({ prompt, taskKind, projectBudget })` retorna
+  `{ skip:bool, modelKey, useCache:bool, useBatch:bool }`. Tests amb 10
+  scenarios.
+- **C · Post-call quality gate (~3h)** · estendre `runPrompt` amb
+  `requireEvaluator:true` · evaluator config per task kind · auto-escalation
+  si fail. Tests.
+- **D · Budget enforcer (~3h)** · `aiBudgetService.js` · per-project budget
+  · alerta · soft-block · hard-block. UI a `aiTierIndicator` (badge).
+- **E · Batching + telemetry (~3h)** · `aiBatchService.js` · cua + flush
+  amb timeout. `aiTelemetryService.js` · feedback loop · UI a /settings/ai.
+
+### Decisions pendents @alvaro
+- Default monthly budget per projecte alfa? *Proposta · 5€ · usuari pot
+  augmentar a /settings*
+- Hard-block o soft-block al 100%? *Proposta · soft (modal augmentar)*
+- Telemetry feedback loop · auto-tune routing · o sols suggerit per a
+  l'admin? *Proposta · suggerit · admin valida · evita drift no-supervisat*
+
+---
+
+## TDD-ALL-LEVELS-001 · TDD framework universal (input @alvaro 2026-05-15)
+
+### Tesi
+SOS aplica TDD a codi i a WOs (DTD). Cal estendre el principi a · IA ·
+usuari · procés · organització. **Cada decisió mesurable · sense excepció.**
+Si pot fallar i no es testeja · no existeix.
+
+### Capes TDD proposades
+
+**1. Codi TDD** (existent ✓) · 297 asserts en suites · cada feature té test.
+
+**2. WO TDD = DTD** (existent ✓ · principi SOC) · cada WO té
+`deliverable_test` · IA o humà tanca quan passa el test.
+
+**3. IA Response TDD** (parcial · runEscalation amb evaluator) · cal
+estendre · TOT output IA passa per evaluator abans de servir-se a l'usuari.
+AI-COST-QA-001 ja ho cobreix parcialment · TDD-ALL-LEVELS-001 ho
+formalitza com a contracte · `runPrompt({ requireEvaluator: true })` per
+defecte a tots els callers.
+
+**4. User Decision TDD** (nou) · validators per acció crítica ·
+- Onboarding step completion · validator (no es pot saltar al següent
+  sense que el current passi)
+- Critical action confirmation · "esborrar projecte" · validator amb
+  re-prompt + checklist
+- VNA design · validator que detecta · rols sense transaccions · transaccions
+  sense rols · loops de valor desconnectats
+
+**5. Process TDD** (nou) · per cada `vna_process` · KPI test auto-run ·
+- Setmana · job evalua KPI · si sota threshold · alerta + suggested action
+- Ex · "procés vendes · KPI conversió mensual ≥ 5%" · si 3% · alert
+- Connecta amb VNA-PROCESS-001 (cycleHint definit allà)
+
+**6. Org TDD** (nou) · health metrics mensuals · per projecte i per usuari ·
+- VNA balance · cap rol amb 0 transaccions · cap transacció orfaina
+- Wallet health · cash flow positiu sostingut ≥ 3 mesos
+- Comm health · reunions amb actes signades · % resolt
+- Auditor · si fail · genera WOs de correcció auto-assignades a rols
+  responsables
+
+### Sprint plan A → D (~12h)
+
+- **A · IA evaluator universal (~3h)** · default evaluator per task kind ·
+  `runPrompt({ requireEvaluator: true })` activat per defecte · escape per
+  task kinds que no en necessiten (tag-generation).
+- **B · User validators (~3h)** · `userActionValidatorService.js` · catàleg
+  de validators per acció crítica · UI hooks (modal · banner) · 6 actions
+  cobertes (delete project · publish permaweb · accept proposal · etc).
+- **C · Process KPI tests (~3h)** · estén `vna_process` schema amb
+  `kpi_test` · runner setmanal · UI a `/processes/{id}/health`.
+- **D · Org health auditor (~3h)** · `orgAuditorService.js` · pure +
+  scheduled · genera WOs de correcció · UI a `/health`.
+
+### Decisions pendents @alvaro
+- IA evaluator default ON · trenca casos d'ús ràpid (drafts on no calia
+  evaluator)? *Proposta · default ON · escape lists per tag-generation
+  + summary-short*
+- User validators · poden ser bypassed per power-users? *Proposta · NO ·
+  el value-add és justament la garantia · power-users tenen menus avançats
+  separats*
+- Org auditor · genera WOs auto-assignades · això pot fer spam si projecte
+  té molts forats. *Proposta · max 5 WOs/dia per projecte · resta a
+  backlog "audit findings"*
+
+---
+
+## NEXE-001 · ~~Backlog YAML + SOS llegeix-lo des /kanban?project=sos-dev~~ (REEMPLAÇAT 2026-05-15)
+
+> **Aquest item ha quedat OBSOLET.** Substituït per AGENT-BRIDGE-001
+> (versió generalitzada · qualsevol agent IA · no només Claude). Veure
+> AGENT-BRIDGE-001 més amunt al document.
+
+## CASTELLERS-001 · Pre-load projecte Castellers + projecte Alvaro (input @alvaro 2026-05-15)
+
+### Tesi
+Donar a SOS dos **casos reals pre-loaded** per testejar tot el flux sense
+haver de crear projectes nous a cada sessió · i per a demos amb futurs
+usuaris/inversors.
+
+### Què cal pre-loadar
+- **Projecte "Castellers de la Vila de Gràcia"** · cas pre-existent que ja
+  modela rols (pinya · tronc · cap de colla · etc) + transaccions
+  (assajos · actuacions · neteja material) + valors intangibles (compromís ·
+  identitat · cohesió) · perfecte per a testejar VNA amb procés
+- **Usuari "alvaro" · projecte personal** · profile Ikigai complet · skills
+  declarades · matriu_member primary · 1 rol founder anchor
+
+### Sprint plan A → B (~3h)
+- **A · Seed Castellers (~2h)** · `js/core/castellersSeed.js` · genera
+  el projecte + 12 rols + 18 transaccions + 5 SOPs + 3 workshops base ·
+  igual pattern que `founderTemplate.js` · pure · idempotent.
+- **B · Seed Alvaro (~1h)** · `js/core/alvaroSeed.js` · profile Ikigai
+  pre-omplert · matriu_member primary · firma una atestació seed.
+
+### Trigger
+- Botó "Pre-loaded examples" al dashboard buit (quan no hi ha cap projecte)
+- O auto-seed al primer load si user has zero projects + opt-in checkbox
+
+### Decisions pendents @alvaro
+- Castellers · vols dades reals teves (i guardades a permaweb) · o és
+  només mock per a la demo? Proposta · mock primer · permaweb seed v2.
+
+---
+
+## PITCH-REFRAME-001 · Pitch = document final per a inversors (input @alvaro 2026-05-15)
+
+### Tesi
+Treure la fricció UX del pitch actual (formulari 6 caselles que sembla un
+checklist) · convertir-lo en **document de presentació visual sintetitzat
+automàticament** des de la resta del projecte (canvas + VNA + tokenomics +
+ledger + proposals) · l'usuari valida el text final · no construeix les
+seccions.
+
+### Estat actual (diagnosi)
+- `/pitch?project=X` · form de 6 seccions (problem · solution · traction ·
+  team · ask · vision)
+- Cada secció té un botó IA · l'usuari l'omple step-by-step
+- Resultat · pitch genèric · usuari l'omple a contracor · no l'envia a
+  ningú perquè no se sent professional
+
+### Proposta
+- `/pitch?project=X` · 2 modes ·
+  - **Mode investor doc (default)** · pàgina llarga estil Mercury/Notion ·
+    auto-generada des dels altres mòduls · pinta com a presentació ·
+    swipeable mobile · exportable PDF/Keynote
+  - **Mode edit** (collapse · per a quan vol ajustar text) · les 6 seccions
+    es mostren com a "blocks" que l'usuari pot reordenar/editar
+- El IA-generator · prompt context-aware ·
+  - Canvas (visió/missió/valors) → narrativa
+  - VNA (rols + valors crítics) → equip + execució
+  - Tokenomics (totalSupply + distribution + vesting) → ask/economics
+  - Ledger (P&L + balance) → traction/numbers
+  - Proposals (accepted + sent) → traction comercial
+  - Lifecycle stage (de C1 classifier) → tone (idea vs growth)
+
+### Sprint plan A → C (~6h)
+- **A · Synthesis service (~2h)** · `pitchSynthesisService.js` · pure ·
+  rep tot el context · construeix prompt · runPrompt amb taskTier='quality'
+- **B · Investor doc view (~3h)** · `/pitch?view=investor` · template
+  visual · 6 blocks · cada un un draft IA-generated · valida/edita inline
+- **C · Export (~1h)** · "Download PDF" via window.print + CSS @media print
+
+### Decisions pendents @alvaro
+- Volem mantenir el mode "edit form" antic com a fallback · o el matem?
+  Proposta · mantenir però collapse · 90% dels usuaris no l'usaran
+- Plantilla visual · 1 sola amb temes (light/dark/coop) · o 3 templates
+  diferents? Proposta · 1 amb 3 temes
+
+---
+
+## VNA-PROCESS-001 · Mapa de valor filtrable per procés (Verna Allee) (input @alvaro 2026-05-15)
+
+### Tesi
+Implementar el **Value Network Analysis de Verna Allee correctament** ·
+no com a un graf gegant tot junt sinó com a un graf navegable per
+**processos** · on cada procés és un subgraf que comparteix rols amb altres.
+
+Això és la meta-metodologia · SOS modela QUALSEVOL organització fent ·
+1. Identifica processos (sales · ops · learn · governance · finance · etc)
+2. Per a cada procés · subset de rols + subset de transaccions
+3. Mateix rol pot ser a 5 processos amb 5 "barrets" diferents
+4. Vista filtrada · només dibuixa el subgraf del procés escollit
+
+### Estat actual
+- VNA implementat com a `vna_roles` + `vna_transactions` + `vna_flows`
+- Tot dins el mateix array · sense agrupació per procés
+- Vista del map pinta tot junt · esdevé soroll quan ≥15 rols
+
+### Proposta · schema extension
+```yaml
+project:
+  vna_processes:                        # NOU
+    - id: "sales-process"
+      label: "Procés de vendes"
+      roleIds:    [comercial, customer-success, ...]
+      txIds:      [tx-lead-qualif, tx-close-deal, ...]
+      kpi:        "conversió mensual"
+      cycleHint:  "weekly"              # per a WO-AUTO-001
+    - id: "ops-daily"
+      label: "Operacions diàries"
+      ...
+  vna_roles:        [...]               # ja existent · sense canvis
+  vna_transactions: [...]               # ja existent · sense canvis
+```
+
+- UI · selector de procés a sobre del mapa · "Tots · vendes · ops · ..."
+- Cada rol/tx renderitzat amb opacitat 1 si pertany al filtre · 0.2 si no
+- Highlight transaccions intangibles (línia discontinua) vs tangibles
+  (línia contínua) · Verna Allee
+
+### Verna Allee deep features
+- Tangible vs intangible · ja modelats a `FOUNDER_TRANSACTIONS.type` ✓
+- "Conversation as unit of value" · cal afegir camp `conversation_pattern`
+  a transaccions (recurring · one-shot · escalation)
+- Network health metrics · centrality · redundancy · flow balance · vista
+  /vna/health amb scores
+
+### Sprint plan A → C (~12h)
+- **A · Schema + service (~3h)** · `valueProcessService.js` · CRUD ·
+  validation · helpers per a vistes
+- **B · UI filter al mapa (~5h)** · `VNAMapView.js` · selector procés ·
+  filtres · opacitats · highlights
+- **C · Network health (~4h)** · pure metrics + UI `/vna/health`
+
+### Decisions pendents @alvaro
+- Quants processos per defecte hauria d'oferir SOS per al seed Castellers?
+  Proposta · 4 (assajos · actuacions · governance · learn-cohort)
+- Quan generem processos amb IA al bootstrap (B-UNIFIED-FORM-001) · usem
+  les 5 categories de Verna Allee (sales · ops · finance · innovation ·
+  learn) o més obert?
+
+---
+
+## WO-AUTO-001 · Auto-generation de WOs · cron + event + condition (input @alvaro 2026-05-15)
+
+### Tesi
+El **cor del SOS operatiu** · WOs es generen automàticament segons el
+cicle de cada organització · sense intervenció humana · permet que SOS
+"funcioni sol" un cop l'usuari ha definit els seus processos.
+
+Exemple usuari · "Botiga obre a les 9 · cada dia a les 8:30 genera WO
+'neteja' assignat al rol oper-tienda".
+
+### Tipus de triggers
+- **Cron** · time-based · "cada dia 8:30" · "primer dilluns del mes" ·
+  "trimestralment"
+- **Event** · "quan factura X cobrada" · "quan stock < N" · "quan
+  WO Y completed"
+- **Condition** · "si saldo wallet < 100€" · "si rating workshop < 3 estrelles"
+- **Compound** · WO genera WO genera WO · workflow graph
+
+### Schema proposta
+```yaml
+wo_template:                              # NOU type al KB
+  id: "wo-tpl-clean-shop"
+  projectId: ...
+  processId: "ops-daily"                  # link a VNA-PROCESS-001
+  trigger:
+    kind: "cron"
+    cron: "30 8 * * *"                    # standard crontab
+    timezone: "Europe/Madrid"
+  woFactory:                              # template per generar WO
+    title:    "Neteja botiga · {today}"
+    roleId:   "oper-tienda"
+    sopId:    "sop-cleaning"
+    deliverable: "checklist signed"
+    estimatedHours: 0.5
+  enabled: true
+```
+
+- Background scheduler · al app init · escaneja templates · genera WOs
+  que falten · al user navigation refresca
+
+### Sprint plan A → D (~16h)
+- **A · Schema + service (~3h)** · `woTemplateService.js` · CRUD ·
+  cron parser (croner library · 2kb · pure JS)
+- **B · Trigger evaluator (~4h)** · pure · rep estat del sistema · retorna
+  llista de WOs a generar · idempotent (no genera duplicats)
+- **C · Background runner (~3h)** · service worker o setTimeout · cada
+  X minuts revisa · genera WOs · upsert KB
+- **D · UI template editor (~6h)** · `/processes/{processId}/templates` ·
+  CRUD form · cron picker · role/sop picker
+
+### Decisions pendents @alvaro
+- ¿Workflow graph (WO genera WO) en aquest sprint o diferit? Proposta ·
+  diferit · primer cron/event simple · v2 compound
+- ¿Notificacions push quan es genera WO? Proposta · sense push ·
+  notification icon a la nav (top right · igual que Gmail)
+- Permisos · qui pot crear templates per a un projecte? Proposta · només
+  rols amb shareTier >= governance · alfa simple · sense permisos per ara
+
+---
+
+## SWARM-RELOC-001 · /sprint → /kanban genèric + swarm-runner integrat (input @alvaro 2026-05-15)
+
+### Tesi
+Eliminar la duplicació entre `/sprint` (swarm runner sobre backlog) i
+`/kanban` (WOs d'un projecte) · unificar en un sol Kanban que sap
+"correr en mode swarm" si l'usuari ho activa. Així el swarm IA pot
+correr sobre QUALSEVOL projecte · no només el backlog intern de SOS.
+
+### Estat actual
+- `/sprint` · llegeix `backlogManifest.js` · pinta llista d'items · botó
+  "Run autonomous agent" llança swarm sobre l'item
+- `/kanban?project=X` · llegeix WOs del projecte X · view Kanban (4 cols ·
+  todo/in-progress/done/archived) · no swarm
+
+### Proposta
+- `/kanban?project=X` · afegeix toggle "🐝 Swarm mode" · si actiu ·
+  - Cada WO té botó "Auto-run" · llança swarm autonomous loop sobre la WO
+  - Status del swarm visible al WO · iteracions · model · cost · resultat
+- `/sprint` · esdevé alias de `/kanban?project=sos-dev-internal&swarm=on`
+- `backlogManifest.js` · es manté com a font del projecte sos-dev-internal
+  fins que NEXE-001 el converteixi a YAML
+
+### Sprint plan A → B (~6h)
+- **A · Kanban swarm toggle (~3h)** · UI + state · toggle persistit a user
+  preferences · per-projecte
+- **B · /sprint redirect (~1h)** · redirigeix a `/kanban?project=sos-dev
+  -internal&swarm=on` · mantenir backwards compat
+- **C · Tests + docs (~2h)** · regression + readme updates
+
+### Decisions pendents @alvaro
+- ¿Mantenim `/sprint` com a URL · o el deprecate completament? Proposta ·
+  redirect 301 · l'usuari aprèn la nova URL
+
+---
+
+## STRATEGIC-RETHINK-2026-05-15 (3) · review del model SOS · jerarquia Systems/Processes/SOCs/SOPs
+
+Input @alvaro 2026-05-15 (tercer rethink · post article "Difference between
+Systems, Processes, SOPs and SOCs"). Revisió del MODEL CORE del SOS amb
+marc clàssic de business systems · Verna Allee + indústria.
+
+### Diagnosi (gap analysis post-article)
+
+| Capa article | SOS avui | Gap |
+|--------------|----------|-----|
+| Organització (meta · stakeholders + tokenomics) | ❌ "project" és el top | **MAJOR** |
+| Sistema (col·lecció processos + recursos + gent + interfícies) | ❌ NO modelat | **Gap** |
+| Procés (sèrie repetible passos) | ❌ NO 1a classe (VNA-PROCESS anava a afegir) | **En backlog** |
+| **SOC** (Standard Operating CHECKLIST) | SOC = "Standard Operating CONCEPT" | **CONFLICTE SEMÀNTIC** |
+| SOP (procediment detallat) | SOP detallat ✓ | OK |
+| Interfície (link entre processos) | ❌ transactions són entre rols, no processos | **Gap** |
+| Recursos (eines · espais · materials) | ⚠️ items dispersos | **Gap** |
+
+### Insight clau (idea de @alvaro)
+
+**SOC = Concept + Checklist alhora.** El "què/per què" més la llista
+d'items verificables. Els SOPs detallats pengen com a fills de cada item ·
+versionat al nivell SOC com a snapshot. Conseqüència IA · genera SOC primer
+(barat · 500 tokens) · expandeix SOP només per ítems demanats (300-800
+tokens cada · sota demanda) · **estalvi 40-60% del cost** vs generar tot el
+procés en 1 crida monolítica.
+
+### Nous items afegits a aquesta revisió
+
+10. **ORG-ENTITY-001** · Organització com a entitat meta · stakeholders + tokenomics org-level
+11. **PROCESS-FIRST-CLASS-001** · Process com a node 1a classe (substitueix part de VNA-PROCESS-001)
+12. **SOC-DUAL-PURPOSE-001** · SOC = Concept + Checklist · SOPs pengen per item · versionat snapshot
+13. **INTERFACE-NODES-001** · Interfície explícita entre processos · contracte de dades
+14. **RESOURCES-ENTITY-001** · Resources com a entitat (tools · spaces · time · digital assets)
+
+### Items "bonus" detectats durant la review
+
+15. **PROCESS-CATALOG-001** · Marketplace de processos reusables · clonable entre orgs (com workshops federats)
+16. **MULTI-TENANT-ORG-001** · Una persona stakeholder de N organitzacions · coop d'unió de coops
+17. **SOC-CHECKLIST-UI-001** · Vista checkbox-style per executar SOC aprovat · marca completats · genera WO si en falten
+18. **IA-HIERARCHICAL-PROMPT-001** · IA gen segueix la jerarquia · SOC primer · SOP sota demanda (lliga amb AI-COST-QA-001)
+
+### Re-ordenació de prioritats v4 (post review jerarquia)
+
+ORG-ENTITY-001 és ARA la base · tot la resta penja d'aquesta entitat ·
+sense ella no es modelen correctament processes/SOCs/SOPs/interfaces.
+
+| ID | Prioritat | Compl. | Què entrega | Depèn |
+|----|-----------|--------|-------------|-------|
+| **ORG-ENTITY-001** | critical | L | Organització meta · base de tota la jerarquia | — |
+| **SOC-DUAL-PURPOSE-001** | critical | M | SOC = Concept + Checklist · SOPs fills · versionat | ORG |
+| **PROCESS-FIRST-CLASS-001** | critical | L | Process node · substitueix VNA-PROCESS-001 | ORG · SOC |
+| **AGENT-BRIDGE-001** | critical | M  | Bridge AI-agent genèric (sense canvi) | — |
+| **DEHARDCODE-CLAUDE-001** | high | S  | (sense canvi) | — |
+| **IA-HIERARCHICAL-PROMPT-001** | critical | M | SOC-first IA gen · estalvi 40-60% cost | SOC · AI-COST-QA-001 |
+| **AI-COST-QA-001** | critical | L  | Meta-orchestrator (sense canvi · ara absorbeix IA-HIERARCHICAL) | — |
+| **TDD-ALL-LEVELS-001** | high | L  | (sense canvi) | AGENT-BRIDGE-001 |
+| **INTERFACE-NODES-001** | high | M  | Interfícies entre processos | PROCESS |
+| **RESOURCES-ENTITY-001** | high | M  | Recursos com a entitat | ORG · PROCESS |
+| **SOC-CHECKLIST-UI-001** | medium | M | UI checkbox · executa SOC · genera WOs | SOC |
+| **WO-AUTO-001** | critical | XL | Triggers · ara depèn de SOC | SOC · PROCESS |
+| **CASTELLERS-001** | high | S  | Pre-load real test case (sense canvi) | ORG (recommended) |
+| **PITCH-REFRAME-001** | high | M  | (sense canvi · ara amb context org-level) | ORG |
+| **SWARM-RELOC-001** | medium | M  | (sense canvi) | AGENT-BRIDGE |
+| **PROCESS-CATALOG-001** | medium | L  | Marketplace processos reusables | PROCESS |
+| **MULTI-TENANT-ORG-001** | low | XL | 1 persona en N orgs · coop d'unió | ORG |
+| **B-UNIFIED-FORM-001** | medium | L | Form unificat (diferit) | ORG (recommended) |
+| **C2-TEMPLATES-001** | medium | L | 15 plantilles (diferit) | PROCESS |
+
+**Primer batch suggerit (post-review)** · ORG-ENTITY-001 + SOC-DUAL-PURPOSE-001
+(~16h) · estableixen les 2 entitats fundacionals · sense les quals tota la
+resta es construeix amb fonaments incorrectes. PROCESS-FIRST-CLASS-001 al
+segon batch un cop ORG i SOC són estables.
+
+---
+
+## ORG-ENTITY-001 · Organització com a entitat meta (input @alvaro 2026-05-15 · review)
+
+### Tesi
+Avui "project" és el top. Cal una capa per sobre · `type: 'organization'` ·
+que aglutina ·
+- **Stakeholders** · totes les persones/coops que tenen interès en l'org
+- **Tokenomics global** · distribució de valor a nivell org (no per projecte)
+- **Sistemes** · 1+ sistemes operatius (sales · ops · learn · ...)
+- **Recursos compartits** · tools · espais · capacitat humana
+- **Projectes** · com a "iniciatives temporals" dins l'org
+
+Una persona individual pot ser org de 1 sola (la seva pròpia · freelance) ·
+una coop és org amb 5-100 stakeholders · una xarxa coop és org amb N coops
+dins.
+
+### Schema proposta
+```yaml
+organization:
+  id: "org-castellers-gracia"
+  type: "organization"
+  legal_kind: "cooperative" | "association" | "company" | "individual" | "informal"
+  stakeholders:
+    - role: "soci-treballador" · personId · sharePct
+    - role: "consumidor" · personId · ...
+  tokenomics_global:                # NOU
+    totalSupply, distribution, vesting (com el TokenDesign actual)
+  systems: [systemId]               # NOU
+  projects: [projectId]             # ja existent · ara amb FK explícit a org
+  shared_resources: [resourceId]    # NOU
+```
+
+### Sprint plan A → D (~16h)
+- **A · Schema + service (~4h)** · `organizationService.js` · CRUD pure ·
+  validador · helpers · idempotent migration des de projects existents.
+- **B · Org dashboard (~4h)** · `/org/{orgId}` · vista holística ·
+  stakeholders + tokenomics + systems + projects + resources cards.
+- **C · Migration soft (~4h)** · projects existents · "promote to org"
+  wizard · o "join existing org". Default · auto-crea org "personal" per
+  user existent · projectes hi pengen.
+- **D · Tests (~4h)** · 20+ asserts shape + migration + KPIs derivats.
+
+### Decisions pendents @alvaro
+- ¿Org és obligatori per a projects nous · o opcional? *Proposta · opcional
+  alfa · obligatori v2 amb migració soft*
+- ¿Coop d'unió de coops · org de orgs? *Proposta · sí · MULTI-TENANT-ORG-001
+  cobreix · diferit v3*
+
+---
+
+## SOC-DUAL-PURPOSE-001 · SOC = Concept + Checklist · SOPs fills versionats (input @alvaro 2026-05-15)
+
+### Tesi
+Resoldre el conflicte semàntic · SOC avui = "Concept" · article diu
+"Checklist". **La solució és que SOC sigui les 2 coses alhora** ·
+1. **Concept side** (Standard Operating Concept) · què/per què · invariant
+2. **Checklist side** (Standard Operating Checklist) · llista verificable
+   d'items · cada item té el seu SOP detallat
+
+Versionat · al nivell SOC · canvis als SOPs no toquen SOC fins que canvia
+el propòsit o un item de checklist · SOC_v3 = snapshot dels SOPs d'aquell
+moment.
+
+### Schema actualitzat
+```yaml
+soc:
+  id: "soc-onboarding-cohort"
+  type: "soc"
+  version: "v3"
+  parent_version: "v2"          # cadena d'evolució
+  purpose: "..."
+  concept_body: "markdown..."
+  checklist:                     # NOU · array d'items verificables
+    - id: "ci-01"
+      label: "Setmana 1 · DID + perfil signat"
+      sop_ref: "sop-onboard-week-1"
+      required: true
+      verification_kind: "manual" | "auto-test" | "evidence-upload"
+    - id: "ci-02"
+      label: "Setmana 2 · pact de socis"
+      sop_ref: "sop-onboard-week-2"
+      required: true
+      verification_kind: "manual"
+    ...
+  versioned_sops: [sopId-v3...]  # snapshot SOPs at this SOC version
+  related_socs: [...]
+  status: "draft" | "review" | "approved" | "deprecated"
+```
+
+### Sprint plan A → C (~8h)
+- **A · Schema + validador (~2h)** · `socService.js` · extend schema ·
+  validador · helpers checklist items.
+- **B · Migration knowledge/socs/ (~3h)** · els 9 SOCs existents (la-colla
+  · castellers-demo · etc) · afegir `checklist` derivat dels SOPs existents.
+- **C · UI checklist + versions (~3h)** · `/soc/{socId}` · 2 modes ·
+  "Concept" (existeix) i "Checklist" (nou · vista exec) · history versions.
+
+### Decisions pendents @alvaro
+- Compatibilitat backwards · els SOCs antics sense checklist? *Proposta ·
+  checklist:[] vàlid · vista checklist es mostra buida amb CTA "Generar
+  amb IA"*
+- Versionat de SOPs · automàtic quan SOC pugi versió · o manual? *Proposta ·
+  manual · l'usuari decideix quins SOPs versiona*
+
+---
+
+## PROCESS-FIRST-CLASS-001 · Process com a node 1a classe (input @alvaro 2026-05-15)
+
+> Aquest item REEMPLAÇA i estén VNA-PROCESS-001 amb el marc complet de
+> l'article. VNA-PROCESS-001 era "afegir camp vna_processes a project" ·
+> ara és "process és entitat amb nodes pròpia".
+
+### Tesi
+Avui · processos són implicits (subgraf de VNA). Cal `type: 'process'` ·
+node 1a classe del KB · que aglutina ·
+- Lligams a SOCs (què cal verificar a aquest procés)
+- Lligams a Roles (qui hi participa)
+- Lligams a Transactions (quins exchanges)
+- Lligams a Resources (què cal)
+- Lligams a Interfaces (com es connecta amb altres processos)
+- Cicle (cron · event · manual)
+- KPIs · health metrics
+
+### Schema
+```yaml
+process:
+  id: "proc-sales-lead-to-cash"
+  type: "process"
+  orgId: "..."                     # depèn de ORG-ENTITY-001
+  systemId: "sys-sales"            # opcional · agrupació
+  label: "Lead-to-cash"
+  category: "sales" | "ops" | "finance" | "innovation" | "learn" | "governance" | "people"
+  cycle_hint: "weekly" | "daily" | "on-event" | "monthly"
+  role_ids: [comercial, customer-success]
+  tx_ids: [tx-lead-qualif, tx-close-deal]
+  soc_ids: [soc-sales-onboarding, soc-handover-ops]
+  resource_ids: [res-calendly, res-stripe]
+  interface_in:  [iface-marketing-to-sales]
+  interface_out: [iface-sales-to-ops]
+  kpis:
+    - id: "kpi-conv-rate"
+      label: "Conversion rate mensual"
+      target: 0.05
+      kind: "ratio"
+  status: "active" | "experimental" | "deprecated"
+```
+
+### Sprint plan A → D (~14h)
+- **A · Schema + CRUD (~3h)** · `processService.js` · idempotent ·
+  validador · helpers.
+- **B · UI process editor (~5h)** · `/process/{processId}` · 5 tabs
+  (overview · SOCs · roles+tx · resources · interfaces+KPIs).
+- **C · VNA map filter via process (~3h)** · `VNAMapView` · selector de
+  process · filtra subgraf (reemplaça part de VNA-PROCESS-001).
+- **D · Migration + tests (~3h)** · projectes existents · auto-detecta
+  processos heurísticament o assigna a 1 "default-process" · tests.
+
+### Decisions pendents @alvaro
+- Categories tancades (7) o obertes? *Proposta · 7 tancades + "other"
+  override personalitzable*
+- Process pot pertànyer a múltiples Systems? *Proposta · 1 sistema ·
+  pot referenciar-se inter-system via interface*
+
+---
+
+## INTERFACE-NODES-001 · Interfície entre processos (input @alvaro 2026-05-15)
+
+### Tesi
+Avui · transactions són entre rols. Cal modelar **interfícies entre
+processos** · contractes de dades · "el que surt de procés A entra a B".
+Exemple article · "make pizza" → "deliver pizza" · l'interface defineix
+què passa (pizza ready + receipt + customer info).
+
+### Schema
+```yaml
+interface:
+  id: "iface-sales-to-ops"
+  type: "interface"
+  from_process: "proc-sales-lead-to-cash"
+  to_process: "proc-ops-fulfillment"
+  payload_schema:                   # contract
+    fields:
+      - { name: "deal_id", kind: "string", required: true }
+      - { name: "customer", kind: "object", required: true }
+      - { name: "signed_quote_uri", kind: "uri", required: true }
+  sla:
+    max_delay_hours: 4
+  trigger:
+    kind: "event"
+    event: "deal-closed"
+```
+
+### Sprint plan (~6h)
+- **A · Schema + service (~2h)** · `interfaceService.js`
+- **B · UI editor + visual graph (~4h)** · /interfaces · vista força-graph
+  amb processos com a nodes + interfaces com a arestes
+
+### Decisions pendents @alvaro
+- Validació de payload · runtime check? *Proposta · sí · log warnings ·
+  no block · v2 strict mode*
+
+---
+
+## RESOURCES-ENTITY-001 · Recursos com a entitat (input @alvaro 2026-05-15)
+
+### Tesi
+Eines · espais · temps · assets digitals. Avui repartits com a items.
+Cal `type: 'resource'` per modelar disponibilitat · capacitat · cost.
+
+### Schema
+```yaml
+resource:
+  id: "res-calendly-team"
+  type: "resource"
+  orgId: "..."
+  kind: "tool" | "space" | "time" | "asset" | "subscription"
+  label: "Calendly Team plan"
+  cost_monthly_eur: 12
+  capacity: { max_users: 5, max_bookings_per_month: null }
+  used_by_processes: [procId, ...]
+```
+
+### Sprint plan (~6h)
+- A · Schema + service · CRUD · capacity check
+- B · UI catalog · /resources
+- C · Process editor integration
+
+---
+
+## SOC-CHECKLIST-UI-001 · UI checkbox per executar SOC (input @alvaro 2026-05-15)
+
+### Tesi
+Un cop SOC té checklist · l'usuari ha de poder executar-lo · marcar items
+completats · si en falten genera WOs auto-assignades. Tanca el cercle ·
+SOC concept → checklist → execució real → WO compensatori si fail.
+
+### Sprint plan (~6h)
+- A · UI checklist mode amb checkbox + evidència opcional
+- B · WO generation si items required no marcats al cap d'un periode (lliga
+  amb WO-AUTO-001)
+- C · History · qui ha marcat què · auditable
+
+---
+
+## IA-HIERARCHICAL-PROMPT-001 · IA generation hierarchical · SOC-first (input @alvaro 2026-05-15)
+
+### Tesi
+**Estalvi clau · 40-60% del cost IA** generant per la jerarquia ·
+1. "Genera SOC outline per a {procés}" · 500 tokens · barat
+2. Usuari revisa · OK · selecciona items que vol detallats
+3. Per cada item · "Genera SOP per a aquest item" · 300-800 tokens · sota
+   demanda · pots parar quan vols
+
+vs. avui · "genera tot el procés" · 5000 tokens · monolític · usuari ha
+de fer scroll · no pot fer iterativament.
+
+### Sprint plan (~6h)
+- A · `socOutlinePromptService.js` · pure · genera prompt nivell SOC
+- B · `sopExpandPromptService.js` · pure · expandeix un item del SOC en
+  un SOP detallat · 1 crida per item
+- C · UI · genera SOC primer · checklist amb botons "Expandir amb IA"
+  per cada item · indica cost previst (via aiTierIndicator)
+
+### Decisions pendents @alvaro
+- Batch d'expansions · si l'usuari marca 5 items per expandir · 1 batch
+  call o 5 calls separades? *Proposta · 1 batch (estalvi ~30%) ·
+  AI-COST-QA-001 ja preveu batching*
+
+---
+
+---
+
+## UX-CENTRAL-HUB-001 · Project Hub redissenyat · 5-click rule (input @alvaro 2026-05-15)
+
+### Tesi
+SOS té 50+ rutes · fragmentat · l'usuari es perd. Cal una **central page**
+(`/project/{id}` redissenyada) que serveixi com a brúixola diaria · des
+d'on en ≤5 clicks accedeixes a TOT.
+
+### Regla
+**5-Click Rule** · qualsevol acció a SOS s'ha de poder fer en ≤5 clicks
+des de qualsevol pantalla. Si requereix ≥6 · UX broken · refactor.
+
+### Layout proposat (7 zones · scroll vertical · mobile-first)
+1. **Org context** · OrgName · Lifecycle stage · Audit %
+2. **Avui** · top 3 WOs + SOC pendents · cash flow
+3. **Processos** · 4 cards · KPI status per cada un
+4. **IA suggests** · 3 disrupcions accionables (cost · KPI · network)
+5. **Social** · 5 updates de la xarxa (signed · published · connected)
+6. **Quick actions** · botons primaris (new WO · run swarm · etc)
+7. **Knowledge** · canvas · pitch · VNA · SOCs · SOPs · resources
+
+Cap zona ≥7 elements (Miller's Law) · cada zona té botó "→ detail" 1-click.
+
+### Sprint plan A → C (~10h)
+- A · ProjectHubView refactor (~5h) · 7-zone layout · data binding · responsive
+- B · Activity feed derivat (~3h) · `activityFeedService.js` · pure ·
+  consolida events (attestation rebuda · pact signat · WO closed · etc)
+- C · IA suggests engine (~2h) · `iaSuggestionsService.js` · pure ·
+  detecta 3 patrons (cost savings · KPI alarm · network match)
+
+### Decisions pendents @alvaro
+- Volem desktop hub diferent del mobile · o 1 layout responsive? *Proposta · 1 layout *
+- Activity feed · ordre cronològic o per relevància? *Proposta · relevància 7d, fallback chrono*
+
+---
+
+## SOCIAL-LAYER-001 · Backend xarxa social descentralitzada · explicit (input @alvaro 2026-05-15)
+
+### Tesi
+L'esquelet ja té el backend de xarxa social · només cal **explicit-lo** ·
+
+| Capa | Backend | UI |
+|------|---------|-----|
+| Perfil públic | ✓ | ✓ |
+| DID + ECDSA | ✓ | ✓ |
+| Federació permaweb | ✓ | parcial |
+| Web of trust | ✓ | parcial |
+| Attestations | ✓ | ✓ |
+| **Activity feed** | ⚠️ derivable | ❌ falta |
+| **DMs encriptats** | ❌ | ❌ falta v2 |
+| **Following** | ⚠️ via attestations | ❌ falta UI |
+| Public timeline | ✓ /registry | dispers |
+
+### Sprint plan (~12h · diferit · v2)
+- Following relationship (via attestation type 'follow') + UI · 4h
+- Public timeline integrat a /registry + filters · 4h
+- DMs E2E encriptats (Web Crypto · stub Phase 1) · 4h
+
+---
+
+*Documento vivo · actualizat el 2026-05-15 amb el sprint analysis & design v2/v3 + UX hub + social.*
