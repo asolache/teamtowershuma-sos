@@ -157,6 +157,11 @@ async function router() {
             const { injectOrUpdate } = await import('./core/mobileBottomNav.js');
             injectOrUpdate({ pathname: path });
         } catch (_) { /* non-blocking */ }
+        // A11Y · W3C/WCAG · global skip-link + live-region + focus-visible CSS
+        try {
+            const { injectGlobalA11y } = await import('./core/a11yService.js');
+            injectGlobalA11y();
+        } catch (_) { /* non-blocking */ }
         // NEURAL-PATH-001 · log de visita · fire-and-forget · zero bloqueig
         (async () => {
             try {

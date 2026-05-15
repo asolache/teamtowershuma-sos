@@ -14,21 +14,23 @@ const NAV_ID = 'sos-mobile-bottom-nav';
 const CSS_ID = 'sos-mobile-bottom-nav-css';
 const MOBILE_BREAKPOINT = '768px';
 
-// 5 primaris · "pessimistic" picks per a app navigation
-// (cap zona ≥7 · Miller's Law)
+// 5 primaris · "daily mass flow" del usuari · SOS com a cervell personal ·
+// Home (avui) · Timeline (xarxa) · Crear (contribuir valor) · Mercat
+// (descobrir valor) · Jo (identitat + wallet + skills).
+// (cap zona ≥7 · Miller's Law) · W3C/WCAG aria-labels semàntics
 const PRIMARY = Object.freeze([
-    { id: 'home',     icon: '🏠', label: 'Home',     match: ['/', '/home'] },
-    { id: 'projects', icon: '📁', label: 'Projectes', match: ['/dashboard'] },
-    { id: 'sprint',   icon: '🐝', label: 'Swarm',     match: ['/sprint'] },
-    { id: 'market',   icon: '🛒', label: 'Mercat',    match: ['/market'] },
-    { id: 'me',       icon: '👤', label: 'Jo',        match: ['/identity', '/wallet', '/u/'] },
+    { id: 'home',     icon: '🏠', label: 'Avui',      match: ['/', '/home'] },
+    { id: 'timeline', icon: '💬', label: 'Xarxa',     match: ['/timeline', '/registry'] },
+    { id: 'create',   icon: '➕', label: 'Crea',       match: ['/create', '/dashboard'] },
+    { id: 'market',   icon: '🛒', label: 'Descobreix', match: ['/market', '/opportunities', '/process-catalog'] },
+    { id: 'me',       icon: '👤', label: 'Jo',         match: ['/identity', '/wallet', '/u/', '/settings', '/settings-v2'] },
 ]);
 
 // hrefs per a cada item · sense projectId (els primaris no apliquen)
 const HREF_BY_ID = Object.freeze({
     home:     '/home',
-    projects: '/dashboard',
-    sprint:   '/sprint',
+    timeline: '/timeline',
+    create:   '/create',
     market:   '/market',
     me:       '/identity',
 });

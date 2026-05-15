@@ -178,20 +178,21 @@ export default class DashboardV2View {
     }
 
     _renderTopNav() {
-        // 5 enllaços primaris + dropdown "Més" amb la resta agrupada
+        // 5 primaris alineats amb mobile-bottom-nav · flux de massa diari ·
+        // SOS com a cervell personal · valor en totes les dimensions
         const PRIMARY = [
-            { href: '/home',      label: '🏠 Home',     active: true },
-            { href: '/registry',  label: '🌐 Registry', active: false },
-            { href: '/market',    label: '🛒 Mercat',   active: false },
-            { href: '/learn',     label: '🎓 Aprèn',    active: false },
-            { href: '/identity',  label: '👤 Jo',       active: false },
+            { href: '/home',      label: '🏠 Avui',       active: true,  aria: 'Inici · què tens d\'avui' },
+            { href: '/timeline',  label: '💬 Xarxa',      active: false, aria: 'Activitat de la xarxa social' },
+            { href: '/create',    label: '➕ Crea',        active: false, aria: 'Crear projecte · contribuir valor' },
+            { href: '/market',    label: '🛒 Descobreix', active: false, aria: 'Mercat · descobreix valor disponible' },
+            { href: '/identity',  label: '👤 Jo',          active: false, aria: 'El meu perfil · identitat · wallet' },
         ];
         return `
-            <div class="h2-primary-nav" style="display:flex;gap:4px;align-items:center;">
+            <nav class="h2-primary-nav" style="display:flex;gap:4px;align-items:center;" aria-label="Navegació principal · 5 destinacions">
                 ${PRIMARY.map(p => `
-                    <a href="${p.href}" data-link style="padding:6px 10px;font-size:0.78rem;color:${p.active ? 'var(--text-main)' : 'var(--text-secondary)'};background:${p.active ? 'rgba(99,102,241,0.15)' : 'transparent'};border-radius:4px;text-decoration:none;font-weight:${p.active ? '700' : '500'};">${p.label}</a>
+                    <a href="${p.href}" data-link aria-label="${this._esc(p.aria)}" ${p.active ? 'aria-current="page"' : ''} style="padding:6px 10px;font-size:0.78rem;color:${p.active ? 'var(--text-main)' : 'var(--text-secondary)'};background:${p.active ? 'rgba(99,102,241,0.15)' : 'transparent'};border-radius:4px;text-decoration:none;font-weight:${p.active ? '700' : '500'};">${p.label}</a>
                 `).join('')}
-            </div>
+            </nav>
         `;
     }
 
