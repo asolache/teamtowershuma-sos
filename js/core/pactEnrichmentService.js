@@ -398,3 +398,354 @@ export function applyAIDraftToPact(enrichedDraft, rawText) {
 
 function _norm(s) { return String(s || '').toLowerCase().replace(/^@/, '').trim(); }
 function _round2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+
+// =============================================================================
+// SPRINT B · extractValueContributionsPerParty
+// =============================================================================
+// Per a CADA party (cohort_manager role identificat) · agrega TOT el valor
+// aportat al projecte des de múltiples fonts · permet pact body super
+// detallat amb justificacions slicing-pie real. Pure.
+//
+// args ·
+//   parties        · sortida de extractPartiesFromRoles (han de tenir identityId+handle)
+//   members        · [matriu_member] (skills declarats · ikigai)
+//   workOrders     · [work_order nodes] (per assignment hours/value)
+//   sops           · [sop nodes] (created)
+//   proposals      · [proposal nodes] (acceptades · revenue brought)
+//   invoices       · [invoice nodes] (paid · revenue earned)
+//   marketItems    · [market_item nodes] (offered)
+//   attestations   · [attestation nodes] (rebudes per party)
+//   ikigai (opt)   · { handle: ikigaiNode } map · per Ikigai alignment
+//
+// Retorna · {
+//   [identityId]: {
+//     handle,
+//     skillsDeclared:      [...],
+//     ikigai:              { hasIkigai, completePercent, centerCount },
+//     workOrdersCompleted: { count, hoursEstimated, valueEur },
+//     sopsAuthored:        { count, sellableCount },
+//     marketOfferings:     { count, byKind },
+//     proposalsContributed:{ count, acceptedEur },
+//     invoicesIssued:      { count, paidEur, pendingEur },
+//     attestationsReceived: { count, byKind },
+//     trustScore,
+//     valuePointsRaw:      number (heurística · ordena slicing-pie)
+//   }
+// }
+export function extractValueContributionsPerParty({
+    parties      = [],
+    members      = [],
+    workOrders   = [],
+    sops         = [],
+    proposals    = [],
+    invoices     = [],
+    marketItems  = [],
+    attestations = [],
+    ikigai       = {},
+} = {}) {
+    if (!Array.isArray(parties) || parties.length === 0) return {};
+
+    // Index members per handle
+    const memberByHandle = new Map();
+    for (const m of members || []) {
+        const h = _norm(m?.content?.handle);
+        if (h) memberByHandle.set(h, m);
+    }
+
+    const result = {};
+    for (const p of parties) {
+        const handleKey = _norm(p.handle || '');
+        const member = memberByHandle.get(handleKey);
+
+        // Skills declarats al member
+        const skillsDeclared = (member?.content?.skillsDeclared || []).slice();
+
+        // Ikigai summary si existeix
+        const ikiNode = ikigai[handleKey] || member?.content?.ikigai || null;
+        let ikiSummary = { hasIkigai: false, completePercent: 0, centerCount: 0 };
+        if (ikiNode?.dimensions) {
+            const filled = Object.values(ikiNode.dimensions).filter(d => (d?.items || []).length > 0).length;
+            const total = Object.keys(ikiNode.dimensions).length || 4;
+            const intersections = ikiNode.completedAt ? 4 : filled;     // simple proxy
+            ikiSummary = {
+                hasIkigai:       filled > 0,
+                completePercent: Math.round((filled / total) * 100),
+                centerCount:     intersections >= 4 ? 1 : 0,
+            };
+        }
+
+        // WO completed · assigned to handle
+        let woCount = 0, woHours = 0, woValueEur = 0;
+        for (const wo of workOrders || []) {
+            const c = wo?.content || {};
+            const assigned = _norm(c.assignedTo || c.createdBy || '');
+            if (assigned !== handleKey) continue;
+            if (c.status === 'completed' || c.status === 'done' || c.status === 'closed') {
+                woCount++;
+                woHours += (typeof c.estimatedHours === 'number' ? c.estimatedHours : 0);
+                woValueEur += (typeof c.deliveredValueEur === 'number' ? c.deliveredValueEur : 0);
+            }
+        }
+
+        // SOPs authored · createdBy
+        let sopsCount = 0, sopsSellable = 0;
+        for (const s of sops || []) {
+            const c = s?.content || {};
+            if (_norm(c.createdBy) !== handleKey) continue;
+            sopsCount++;
+            if (c.marketSellable === true) sopsSellable++;
+        }
+
+        // Market offerings · providerHandle / createdBy
+        let marketCount = 0;
+        const marketByKind = {};
+        for (const m of marketItems || []) {
+            const c = m?.content || {};
+            const ph = _norm(c.providerHandle || c.createdBy || '');
+            if (ph !== handleKey) continue;
+            marketCount++;
+            const k = c.kind || 'product';
+            marketByKind[k] = (marketByKind[k] || 0) + 1;
+        }
+
+        // Proposals contributed · createdBy o assignedTo · accepted total
+        let propCount = 0, propAcceptedEur = 0;
+        for (const pr of proposals || []) {
+            const c = pr?.content || {};
+            const author = _norm(c.createdBy || c.authorHandle || '');
+            if (author !== handleKey) continue;
+            propCount++;
+            if (c.status === 'accepted') {
+                propAcceptedEur += (c.pricing?.total || 0);
+            }
+        }
+
+        // Invoices issued (per aquest soci) · paid + pending
+        let invCount = 0, invPaidEur = 0, invPendingEur = 0;
+        for (const inv of invoices || []) {
+            const c = inv?.content || {};
+            const issuer = _norm(c.issuedBy || c.createdBy || '');
+            if (issuer !== handleKey) continue;
+            invCount++;
+            const totals = (c.items || []).reduce((s, it) => s + (it.total || 0), 0) * (1 + (c.taxRate || 0));
+            if (c.status === 'paid') invPaidEur += totals;
+            else if (c.status === 'sent' || c.status === 'draft') invPendingEur += totals;
+        }
+
+        // Attestations rebudes
+        let attCount = 0;
+        const attByKind = {};
+        for (const a of attestations || []) {
+            const ac = a?.content || {};
+            if (ac.attestedDid !== p.identityId && _norm(ac.attestedHandle) !== handleKey) continue;
+            attCount++;
+            const k = ac.attestationKind || 'unknown';
+            attByKind[k] = (attByKind[k] || 0) + 1;
+        }
+
+        // Value points · heurística per a slicing-pie ordering
+        // Weights · WO completed (3 per WO + hores·1) + SOPs (2) + market (1) +
+        //          proposals accepted (5 + €/1000) + invoices paid (€/500) +
+        //          attestations (1.5 · founder kind 3)
+        let valuePoints = 0;
+        valuePoints += woCount * 3 + woHours * 1;
+        valuePoints += sopsCount * 2 + sopsSellable * 1;
+        valuePoints += marketCount * 1;
+        valuePoints += propCount * 5 + (propAcceptedEur / 1000);
+        valuePoints += (invPaidEur / 500);
+        valuePoints += attCount * 1.5;
+        for (const [k, n] of Object.entries(attByKind)) {
+            if (k === 'endorses-founder') valuePoints += n * 1.5;
+        }
+        valuePoints = _round2(valuePoints);
+
+        result[p.identityId] = {
+            handle:               p.handle,
+            skillsDeclared,
+            ikigai:               ikiSummary,
+            workOrdersCompleted:  { count: woCount, hoursEstimated: woHours, valueEur: _round2(woValueEur) },
+            sopsAuthored:         { count: sopsCount, sellableCount: sopsSellable },
+            marketOfferings:      { count: marketCount, byKind: marketByKind },
+            proposalsContributed: { count: propCount, acceptedEur: _round2(propAcceptedEur) },
+            invoicesIssued:       { count: invCount, paidEur: _round2(invPaidEur), pendingEur: _round2(invPendingEur) },
+            attestationsReceived: { count: attCount, byKind: attByKind },
+            trustScore:           p.attestationCount || 0,
+            valuePointsRaw:       valuePoints,
+        };
+    }
+    return result;
+}
+
+// suggestSlicingPieShares · pure · normalitza valuePointsRaw a percentages
+// que sumen 1.0 · servirà com a suggerència inicial pels initialShare
+// d'aquest pacte. NO sobreescriu res · sols proposa.
+//
+// args · contributionsMap (sortida de extractValueContributionsPerParty)
+// Retorna · { [identityId]: { share, valuePoints } } amb shares ∈ [0, 1] · sum = 1
+export function suggestSlicingPieShares(contributionsMap = {}) {
+    const entries = Object.entries(contributionsMap || {});
+    if (entries.length === 0) return {};
+    const total = entries.reduce((s, [, c]) => s + (c.valuePointsRaw || 0), 0);
+    const out = {};
+    if (total === 0) {
+        // No data · equal share
+        const equal = 1 / entries.length;
+        for (const [id, c] of entries) out[id] = { share: _round2(equal * 10000) / 10000, valuePoints: 0 };
+        return out;
+    }
+    for (const [id, c] of entries) {
+        out[id] = {
+            share:        Math.round((c.valuePointsRaw / total) * 10000) / 10000,
+            valuePoints:  c.valuePointsRaw || 0,
+        };
+    }
+    return out;
+}
+
+// =============================================================================
+// SPRINT B · permaweb-publishable docs catalog
+// =============================================================================
+// Inventariar TOT el que podem publicar al permaweb des d'un projecte. La
+// UI ho pot usar per a un "Publica tot" / "Selecciona què compartir" wizard.
+//
+// args · totes les colleccions del KB filtrades per projectId
+// Retorna · [{ kind, label, count, items, defaultVisibility, signed }, ...]
+export function extractDocsForPermaweb({
+    project       = null,
+    canvas        = null,
+    pitches       = [],
+    tokenomicsDesigns = [],
+    attestations  = [],
+    invoices      = [],
+    ledgerEntries = [],
+    proposals     = [],
+    workshops     = [],
+    sops          = [],
+    marketItems   = [],
+    pacts         = [],
+    cycles        = [],     // improvement_cycle
+    swarmRuns     = [],     // swarm_flow_run
+    ikigais       = [],
+    pathBundles   = [],     // neural_path_bundle
+} = {}) {
+    const cat = [];
+    const _signedIfHas = (arr) => (arr || []).filter(x => x?.content?.signature || x?.content?.publishedAt).length;
+
+    // 1. Project itself
+    if (project) {
+        cat.push({
+            kind: 'project', label: 'Project node', count: 1, items: [project.id],
+            defaultVisibility: 'opt-in', signed: 1, useCase: 'Federation discovery',
+        });
+    }
+    // 2. Canvas snapshot
+    if (canvas?.steps) {
+        const filledSteps = Object.values(canvas.steps).filter(s => (s?.value || '').length > 0).length;
+        cat.push({
+            kind: 'canvas_snapshot', label: 'Canvas (vision/mission/values)', count: 1,
+            items: ['embedded in project'], defaultVisibility: 'opt-in',
+            signed: filledSteps >= 3 ? 1 : 0, useCase: 'Vision lineage public', completion: filledSteps,
+        });
+    }
+    // 3. Pitches publicats
+    cat.push({
+        kind: 'project_pitch', label: 'Pitches públics', count: pitches.length,
+        items: pitches.map(p => p.id),
+        defaultVisibility: 'public', signed: _signedIfHas(pitches), useCase: 'OG share viral',
+    });
+    // 4. Tokenomics
+    cat.push({
+        kind: 'token_design', label: 'Token designs', count: tokenomicsDesigns.length,
+        items: tokenomicsDesigns.map(t => t.id),
+        defaultVisibility: 'public', signed: 0, useCase: 'Token discovery',
+    });
+    // 5. Pacts
+    cat.push({
+        kind: 'pact', label: 'Pactes signats', count: pacts.length,
+        items: pacts.map(p => p.id), defaultVisibility: 'opt-in',
+        signed: pacts.filter(p => p?.content?.signatures?.length > 0).length,
+        useCase: 'Legal lineage',
+    });
+    // 6. Attestations
+    cat.push({
+        kind: 'attestation', label: 'Attestations', count: attestations.length,
+        items: [], defaultVisibility: 'public',
+        signed: attestations.filter(a => a?.content?.signature).length,
+        useCase: 'Trust graph',
+    });
+    // 7. Invoices (sols audit-trail · privacy clients)
+    cat.push({
+        kind: 'invoice', label: 'Factures', count: invoices.length, items: [],
+        defaultVisibility: 'opt-in', signed: invoices.filter(i => i?.content?.paymentProof).length,
+        useCase: 'Audit trail · clients sensibles',
+    });
+    // 8. Ledger entries snapshots
+    cat.push({
+        kind: 'ledger_snapshot_monthly', label: 'Snapshots ledger mensuals', count: ledgerEntries.length > 0 ? 1 : 0,
+        items: [], defaultVisibility: 'opt-in', signed: 0,
+        useCase: 'Transparency dashboards', note: 'Aggregat · no entries individuals',
+    });
+    // 9. Proposals
+    cat.push({
+        kind: 'proposal', label: 'Propostes', count: proposals.length, items: [],
+        defaultVisibility: 'opt-in', signed: proposals.filter(p => p?.content?.signedAt).length,
+        useCase: 'Win-rate audit',
+    });
+    // 10. Workshops
+    cat.push({
+        kind: 'workshop', label: 'Workshops', count: workshops.length,
+        items: workshops.map(w => w.id), defaultVisibility: 'public',
+        signed: 0, useCase: 'Education catalog',
+    });
+    // 11. SOPs sellable
+    const sellableSops = (sops || []).filter(s => s?.content?.marketSellable === true);
+    cat.push({
+        kind: 'sop', label: 'SOPs (sols sellable)', count: sellableSops.length,
+        items: sellableSops.map(s => s.id), defaultVisibility: 'opt-in',
+        signed: sellableSops.filter(s => s?.content?.signature).length,
+        useCase: 'Practice sharing',
+    });
+    // 12. Market items
+    cat.push({
+        kind: 'market_item', label: 'Market items', count: marketItems.length,
+        items: marketItems.map(m => m.id), defaultVisibility: 'public', signed: 0,
+        useCase: 'Cross-network sales',
+    });
+    // 13. Ikigai snapshots
+    cat.push({
+        kind: 'ikigai_snapshot', label: 'Ikigai snapshots (opt-in)', count: ikigais.length,
+        items: [], defaultVisibility: 'opt-in', signed: 0,
+        useCase: 'Personal lineage · privacy',
+    });
+    // 14. Improvement cycles
+    cat.push({
+        kind: 'improvement_cycle', label: 'Improvement cycle runs', count: cycles.length,
+        items: [], defaultVisibility: 'opt-in', signed: 0,
+        useCase: 'Learning lineage',
+    });
+    // 15. Swarm runs
+    cat.push({
+        kind: 'swarm_flow_run', label: 'Swarm flow runs', count: swarmRuns.length,
+        items: [], defaultVisibility: 'opt-in', signed: 0,
+        useCase: 'Process audit',
+    });
+    // 16. Path bundles (CV nodal)
+    cat.push({
+        kind: 'neural_path_bundle', label: 'CV nodals', count: pathBundles.length,
+        items: [], defaultVisibility: 'public', signed: pathBundles.filter(b => b?.content?.signature).length,
+        useCase: 'Public CV nodal',
+    });
+
+    // Compute totals
+    const totals = cat.reduce((acc, c) => {
+        acc.totalItems += c.count;
+        acc.totalSigned += c.signed || 0;
+        return acc;
+    }, { totalItems: 0, totalSigned: 0 });
+
+    return {
+        catalog: cat,
+        totals,
+    };
+}
+

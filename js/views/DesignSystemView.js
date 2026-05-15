@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-14T23:15 · v25 · pact-ai';
+const BUILD_STAMP = '2026-05-14T23:45 · v26 · pact-strategy + value-contribs';
 
 export default class DesignSystemView {
 
