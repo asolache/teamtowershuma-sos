@@ -184,7 +184,7 @@ export default class DashboardV2View {
             { href: '/home',      label: '🏠 Avui',       active: true,  aria: 'Inici · què tens d\'avui' },
             { href: '/timeline',  label: '💬 Xarxa',      active: false, aria: 'Activitat de la xarxa social' },
             { href: '/create',    label: '➕ Crea',        active: false, aria: 'Crear projecte · contribuir valor' },
-            { href: '/market',    label: '🛒 Descobreix', active: false, aria: 'Mercat · descobreix valor disponible' },
+            { href: '/discover',  label: '🛒 Descobreix', active: false, aria: 'Hub permaweb · perfils · projectes · WOs · workshops · usuaris federats' },
             { href: '/identity',  label: '👤 Jo',          active: false, aria: 'El meu perfil · identitat · wallet' },
         ];
         return `
@@ -286,13 +286,14 @@ export default class DashboardV2View {
 
     _zone4_QuickLinks({ meHandle }) {
         const links = [
-            { ic: '🐝', nm: 'Sprint Swarm',  ds: 'Backlog SOS · agent IA',     href: '/sprint' },
-            { ic: '🌐', nm: 'Registry',      ds: 'Permaweb · operadors SOS',   href: '/registry' },
-            { ic: '🛒', nm: 'Mercat',        ds: 'Productes · workshops · sops', href: '/market' },
+            { ic: '🐝', nm: 'Sprint Swarm',  ds: 'Backlog SOS · agent IA · auto-loop', href: '/sprint' },
+            { ic: '🚀', nm: 'Descobreix',    ds: 'Permaweb · 7 tabs (perfils · projectes · WOs · ...)', href: '/discover' },
+            { ic: '📨', nm: 'Inbox',         ds: 'DMs · invitacions · accept/decline', href: '/inbox' },
+            { ic: '💬', nm: 'Timeline',      ds: 'Feed activitat network · sort relevància', href: '/timeline' },
+            { ic: '🗺',  nm: 'Catàleg processos', ds: '15 plantilles type×stage', href: '/process-catalog' },
             { ic: '🎓', nm: 'Aprèn',         ds: 'Catàleg learn · 108 rols',   href: '/learn' },
             { ic: '👤', nm: meHandle ? 'El meu perfil' : 'Crear identitat', ds: meHandle ? meHandle : 'DID + ECDSA local', href: meHandle ? '/u/' + meHandle.replace(/^@/, '') : '/identity' },
-            { ic: '⚙️', nm: 'Configuració',  ds: 'API keys · tema · preferències', href: '/settings' },
-            { ic: '🎨', nm: 'Disseny',       ds: 'Sistema visual · BUILD_STAMP',  href: '/design' },
+            { ic: '⚙️', nm: 'Configuració',  ds: 'API keys · tema · IA defaults', href: '/settings-v2' },
         ];
         return `
         <div class="h2-zone">

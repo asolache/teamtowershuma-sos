@@ -22,7 +22,7 @@ const PRIMARY = Object.freeze([
     { id: 'home',     icon: '🏠', label: 'Avui',      match: ['/', '/home'] },
     { id: 'timeline', icon: '💬', label: 'Xarxa',     match: ['/timeline', '/registry'] },
     { id: 'create',   icon: '➕', label: 'Crea',       match: ['/create', '/dashboard'] },
-    { id: 'market',   icon: '🛒', label: 'Descobreix', match: ['/market', '/opportunities', '/process-catalog'] },
+    { id: 'market',   icon: '🛒', label: 'Descobreix', match: ['/market', '/opportunities', '/discover', '/process-catalog', '/registry'] },
     { id: 'me',       icon: '👤', label: 'Jo',         match: ['/identity', '/wallet', '/u/', '/settings', '/settings-v2'] },
 ]);
 
@@ -31,7 +31,7 @@ const HREF_BY_ID = Object.freeze({
     home:     '/home',
     timeline: '/timeline',
     create:   '/create',
-    market:   '/market',
+    market:   '/discover',
     me:       '/identity',
 });
 

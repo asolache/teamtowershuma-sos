@@ -193,9 +193,8 @@ const DRAWER_GROUPS = Object.freeze([
     {
         title: 'Descobrir',
         items: [
+            { id: 'discover', href: '/discover',     icon: '🚀', label: 'Permaweb hub · tot' },
             { id: 'market',   href: '/market',       icon: '🛒', label: 'Mercat' },
-            { id: 'opportunities', href: '/opportunities', icon: '🚀', label: 'Oportunitats' },
-            { id: 'registry', href: '/registry',     icon: '🌐', label: 'Registry permaweb' },
             { id: 'matriu',   href: '/matriu',       icon: '✦',  label: 'Matriu cohort' },
         ],
     },

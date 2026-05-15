@@ -68,8 +68,7 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'path',      icon: '🧠', label: 'Historial neural',href: '/path',             global: true,  category: 'swarm',      hint: 'Path nodal cronològic · curador de context bundles per a IA' },
 
     // ─── Discovery · permaweb federation ──────────────────────────────────
-    { id: 'opportunities', icon: '🚀', label: 'Descobreix',  href: '/opportunities',    global: true,  category: 'discovery',  hint: 'Projectes · WOs · productes · workshops · CV nodals · usuaris federats al permaweb' },
-    { id: 'registry',  icon: '🌐', label: 'Registre',        href: '/registry',         global: true,  category: 'discovery',  hint: 'Registre públic permaweb · operadors SOS descobribles · verify free' },
+    { id: 'opportunities', icon: '🚀', label: 'Descobreix',  href: '/opportunities',    global: true,  category: 'discovery',  hint: 'Hub permaweb unificat · perfils · projectes · WOs · productes · workshops · CV nodals · usuaris' },
     { id: 'timeline',  icon: '💬', label: 'Timeline',        href: '/timeline',         global: true,  category: 'discovery',  hint: 'Feed cronològic d\'activitat al network · follows · pacts · WOs · proposals' },
     { id: 'inbox',     icon: '📨', label: 'Inbox · DMs',     href: '/inbox',            global: true,  category: 'discovery',  hint: 'Missatges directes · converses local-first · futur federat permaweb' },
     { id: 'process-catalog', icon: '🗺', label: 'Catàleg processos', href: '/process-catalog', global: true, category: 'discovery', hint: '15 plantilles · 5 types × 3 stages · canvas/pitch/vna/sops/kpis adaptats per fase' },

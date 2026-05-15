@@ -18,13 +18,18 @@ import {
 import {
     PUBLIC_WORK_ORDER_TYPE, PUBLIC_MARKET_ITEM_TYPE, PUBLIC_WORKSHOP_TYPE,
 } from '../core/publicEntityService.js';
+// REGISTRY-MERGE · perfils signats al permaweb (public_registry_entry)
+import { PUBLIC_REGISTRY_TYPE } from '../core/publicRegistryService.js';
 // PR-K · CV nodals · neural_path_bundle publicat al permaweb
 import { NEURAL_PATH_BUNDLE_TYPE } from '../core/neuralPathService.js';
 // TRUST-001 · trust score badges per a cards
 import { computeTrustForBatch, computeRecursiveTrustForBatch, renderTrustBadgeHtml } from '../core/trustScoreService.js';
 
 // Mapeig tab → public type · ORDER importa per a la UI
+// REGISTRY-MERGE 2026-05-16 · /registry consolidat aquí · tab "profiles"
+// inclou public_registry_entry signats (perfils permaweb).
 const TAB_DEFS = Object.freeze([
+    { id: 'profiles',  type: PUBLIC_REGISTRY_TYPE,   icon: '👤', label: 'Perfils' },
     { id: 'projects',  type: PUBLIC_PROJECT_TYPE,    icon: '🏛', label: 'Projectes' },
     { id: 'workorders', type: PUBLIC_WORK_ORDER_TYPE, icon: '📋', label: 'Work Orders' },
     { id: 'market',    type: PUBLIC_MARKET_ITEM_TYPE, icon: '🛍', label: 'Productes' },
@@ -126,7 +131,7 @@ export default class OpportunitiesView {
             </div>
             <div class="op-main">
                 <header class="op-hero">
-                    <h1>🚀 Oportunitats al permaweb</h1>
+                    <h1>🚀 Descobreix · Permaweb Index</h1>
                     <p>Descobreix <strong>projectes</strong>, <strong>work orders obertes</strong>, <strong>productes</strong>, <strong>workshops</strong> i <strong>CV nodals</strong> publicats per altres operadors SOS via permaweb · ownerDid verificable + signatura ECDSA · cross-device · <strong>Discovery sempre free</strong> · publish 0,02-0,05€ per entitat (Free pla ×1.5 fee).</p>
                     <p style="font-size:12px;color:var(--text-muted);margin-top:6px;"><strong>⚠ Important</strong> · les entries amb txId que comença per <code>mock-</code> són locals · no es sincronitzen entre dispositius. Cal Wander connectat o keyfile Arweave a <a href="/identity" data-link style="color:var(--accent-indigo);">/identity</a> per a upload real.</p>
                 </header>
@@ -343,6 +348,7 @@ export default class OpportunitiesView {
             // de qualsevol màquina apareix aquí via Arweave GraphQL gateway.
             const { queryPermawebRegistry, fetchEntryByTxId } = await import('../core/publicRegistryService.js');
             const SYNC_TYPES = [
+                { tab: 'profiles',   gqlType: 'public-registry-entry',    kbType: PUBLIC_REGISTRY_TYPE },
                 { tab: 'projects',   gqlType: 'public-project-entry',     kbType: PUBLIC_PROJECT_TYPE },
                 { tab: 'workorders', gqlType: 'public_work_order_entry',  kbType: PUBLIC_WORK_ORDER_TYPE },
                 { tab: 'market',     gqlType: 'public_market_item_entry', kbType: PUBLIC_MARKET_ITEM_TYPE },
