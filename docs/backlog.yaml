@@ -366,20 +366,35 @@ work_orders:
 
   - id: "wo-ux-central-hub-001"
     project_id: "sos-dev-internal"
-    title: "UX-CENTRAL-HUB-001 · /project/{id} redissenyat · 5-click rule"
+    title: "UX-CENTRAL-HUB-001 · activity feed + IA suggestions engine"
     description: |
-      7-zone layout · org · avui · processos · IA · social · actions ·
-      knowledge. Activity feed derivat. IA suggestions engine.
+      activityFeedService.js · 16 ACTIVITY_KINDS · derivers per a 6 fonts
+      (attestations · pacts · WOs · ledger · invoices · proposals) · buildFeed
+      amb relevance scoring (60% relevance + 40% recency 7d) o chrono.
+      iaSuggestionsService.js · 8 SUGGESTION_KINDS · 6 detectors (cost-savings
+      · KPI alerts · audit gaps · budget warning · WO overdue · network match)
+      · buildSuggestionsList aggregator amb priority sort + dismissed filter.
+      Pures · zero KB · zero DOM. La UI ProjectHubView consumirà aquests
+      services al sprint final.
     priority: high
     complexity: L
-    status: pending
+    status: done
     assignee_kind: ai-claude
+    claimed_by: agent-claude-code
+    claimed_at: 1747362000000
+    completed_at: 1747364200000
     required_capabilities:
       - code-write
-      - browser-debug
+      - test-run
+    deliverable_test:
+      kind: test-suite
+      command: "node js/tests/activityAndSuggestions.test.js"
+      expect: "49 pass · 0 fail"
     estimated_cost_eur: 0.20
+    cost_actual_eur: 0.165
+    deliverable_uri: "git:HEAD..activityFeedService+iaSuggestionsService+test"
     dependencies: ["wo-org-entity-001-b"]
-    tags: ["batch-3", "ux"]
+    tags: ["batch-5", "ux"]
 
   - id: "wo-castellers-001"
     project_id: "sos-dev-internal"
