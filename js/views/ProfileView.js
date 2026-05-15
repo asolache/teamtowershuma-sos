@@ -91,6 +91,91 @@ export default class ProfileView {
         this._bindIkigai();
         this._bindCoSignAccept();
         this._bindFollow();
+        this._renderPresence();
+        this._bindMessageButton();
+    }
+
+    async _renderPresence() {
+        const el = document.getElementById('profPresence');
+        if (!el || !this.profile?.handle) return;
+        try {
+            const { getPresenceFor, renderPresencePill } = await import('../core/presenceService.js');
+            const presence = await getPresenceFor(this.profile.handle);
+            el.innerHTML = renderPresencePill(presence.lastSeen);
+        } catch (_) {}
+    }
+
+    async _bindMessageButton() {
+        const btn = document.getElementById('profMessage');
+        if (!btn) return;
+        const targetHandle = btn.getAttribute('data-msg-handle');
+        // Detect self → disabled
+        try {
+            const { KB } = await import('../core/kb.js');
+            const members = await KB.query({ type: 'matriu_member' }).catch(() => []);
+            const me = members.find(m => m && (m.content?.isPrimary || m.isPrimary))?.content?.handle || null;
+            const meClean = (me || '').replace(/^@/, '');
+            const tgtClean = (targetHandle || '').replace(/^@/, '');
+            if (!me) {
+                btn.textContent = '👤 Crea identitat';
+                btn.style.opacity = '0.7';
+                btn.addEventListener('click', () => window.location.href = '/identity');
+                return;
+            }
+            if (meClean === tgtClean) {
+                btn.textContent = '👤 Tu mateix';
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                return;
+            }
+            btn.addEventListener('click', () => this._openMessageCompose({ toHandle: targetHandle, fromHandle: me }));
+        } catch (e) {
+            console.warn('[profile] message btn', e);
+        }
+    }
+
+    async _openMessageCompose({ toHandle, fromHandle }) {
+        // Modal inline · senzill
+        const wrap = document.createElement('div');
+        wrap.innerHTML = `
+        <div id="profMsgModalBg" role="dialog" aria-modal="true" aria-labelledby="profMsgTitle" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;font-family:var(--font-base);">
+            <div style="background:var(--bg-panel);color:var(--text-main);border:1px solid var(--border-default);border-radius:12px;padding:1.3rem 1.5rem;max-width:480px;width:100%;">
+                <div id="profMsgTitle" style="font-weight:800;font-size:1.05rem;margin-bottom:0.4rem;">💬 Missatge a @${this._esc(toHandle.replace(/^@/, ''))}</div>
+                <div style="color:var(--text-secondary);font-size:0.78rem;margin-bottom:0.8rem;">Local-first · es desa al teu KB · futur federat al permaweb</div>
+                <textarea id="profMsgText" maxlength="2000" placeholder="Què vols dir?" style="width:100%;box-sizing:border-box;min-height:120px;padding:9px 12px;background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;font-family:var(--font-base);font-size:0.9rem;resize:vertical;"></textarea>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0.8rem;">
+                    <button id="profMsgCancel" style="padding:8px 14px;border-radius:6px;border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);cursor:pointer;font-weight:600;">Cancel</button>
+                    <button id="profMsgSend" style="padding:8px 16px;border-radius:6px;border:0;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;cursor:pointer;font-weight:700;">📨 Enviar</button>
+                </div>
+            </div>
+        </div>`;
+        document.body.appendChild(wrap.firstElementChild);
+        const modal = document.getElementById('profMsgModalBg');
+        const ta = document.getElementById('profMsgText');
+        setTimeout(() => ta?.focus(), 50);
+        const close = () => modal?.remove();
+        modal.addEventListener('click', e => { if (e.target === modal) close(); });
+        document.getElementById('profMsgCancel')?.addEventListener('click', close);
+        document.getElementById('profMsgSend')?.addEventListener('click', async () => {
+            const text = (ta?.value || '').trim();
+            if (!text) {
+                const { toast } = await import('../core/uxComponents.js');
+                toast({ kind: 'warn', text: 'Escriu alguna cosa abans d\'enviar' });
+                return;
+            }
+            try {
+                const { buildMessage } = await import('../core/messagingService.js');
+                const { KB } = await import('../core/kb.js');
+                const { toast } = await import('../core/uxComponents.js');
+                const msg = buildMessage({ fromHandle, toHandle, text });
+                await KB.upsert(msg);
+                toast({ kind: 'success', text: '✓ Missatge enviat · veure /inbox' });
+                close();
+            } catch (e) {
+                const { toast } = await import('../core/uxComponents.js');
+                toast({ kind: 'error', text: 'Error: ' + (e?.message || e) });
+            }
+        });
     }
 
     async _bindFollow() {
@@ -509,9 +594,11 @@ export default class ProfileView {
                         ${p.bio ? `<p class="prof-bio">${this._esc(p.bio)}</p>` : ''}
                         <div class="prof-avail-pill" style="background:${av.color}25;color:${av.color};">${av.icon} ${av.label}</div>
                         ${badgesHtml}
+                        <div id="profPresence" style="margin-top:8px;"></div>
                         <div class="prof-actions">
                             <button class="prof-btn prof-btn-secondary" id="profShare">🔗 Compartir</button>
                             <button class="prof-btn" id="profFollow" data-follow-handle="${this._esc(p.handle)}" style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:0;">⏳ Follow...</button>
+                            <button class="prof-btn" id="profMessage" data-msg-handle="${this._esc(p.handle)}" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:0;">💬 Missatge</button>
                             <span id="profFollowStats" style="font-size:0.75rem;color:var(--text-secondary);margin-left:4px;align-self:center;">·</span>
                             ${p.memberNodeId ? `<a href="/n/${encodeURIComponent(p.memberNodeId)}" data-link class="prof-btn prof-btn-secondary">🔬 Node KB</a>` : ''}
                         </div>

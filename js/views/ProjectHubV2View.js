@@ -270,6 +270,12 @@ export default class ProjectHubV2View {
             { ic: '⚙️',  nm: 'Hub clàssic',         ds: 'Versió power-user · totes les eines', href: '/project-classic/' + project.id },
         ];
         return `
+        <div class="hub-zone" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <div><strong style="font-size:0.92rem;">🤝 Convidar col·laboradors a aquest projecte</strong>
+                <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px;">Invita @handles SOS · 3 rols · view / collab / admin · acceptació al seu inbox</div>
+            </div>
+            <button class="hub-invite-btn" data-action="open-invite" style="padding:8px 16px;border-radius:6px;border:0;background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer;">+ Convidar usuari</button>
+        </div>
         <details class="hub-zone" style="padding:0.6rem 1rem;">
             <summary style="cursor:pointer;font-weight:700;font-size:0.92rem;list-style:none;display:flex;align-items:center;justify-content:space-between;">
                 <span>🛠 Eines avançades · power-user</span>
@@ -457,6 +463,105 @@ export default class ProjectHubV2View {
                 const pid = card.getAttribute('data-proc-id');
                 window.navigateTo('/map?project=' + encodeURIComponent(this.projectId) + '&proc=' + encodeURIComponent(pid));
             });
+        });
+        // Open invite modal
+        document.querySelector('[data-action="open-invite"]')?.addEventListener('click', () => {
+            this._openInviteModal();
+        });
+    }
+
+    async _openInviteModal() {
+        const wrap = document.createElement('div');
+        const projId = this._project?.id || this.projectId;
+        wrap.innerHTML = `
+        <div id="hubInviteBg" role="dialog" aria-modal="true" aria-labelledby="hubInviteTitle" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;font-family:var(--font-base);">
+            <div style="background:var(--bg-panel);color:var(--text-main);border:1px solid var(--border-default);border-radius:12px;padding:1.3rem 1.5rem;max-width:480px;width:100%;">
+                <div id="hubInviteTitle" style="font-weight:800;font-size:1.05rem;margin-bottom:0.4rem;">🤝 Convidar col·laborador a "${this._esc((this._project?.nombre || this._project?.name || projId).slice(0, 32))}"</div>
+                <div style="color:var(--text-secondary);font-size:0.78rem;margin-bottom:0.8rem;">L'usuari rebrà la invitació al seu /inbox · pot acceptar o declinar · si accepta · es vincula al projecte amb el rol que tu li dones.</div>
+
+                <label for="hubInviteHandle" style="display:block;font-size:0.78rem;font-weight:700;margin-bottom:4px;">Handle SOS del convidat *</label>
+                <input id="hubInviteHandle" type="text" placeholder="@maria · @bob..." style="width:100%;box-sizing:border-box;padding:8px 12px;background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;font-family:var(--font-mono);margin-bottom:0.4rem;">
+                <div id="hubInviteHandleStatus" style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:0.7rem;min-height:18px;">·</div>
+
+                <label for="hubInviteRole" style="display:block;font-size:0.78rem;font-weight:700;margin-bottom:4px;">Rol *</label>
+                <select id="hubInviteRole" style="width:100%;box-sizing:border-box;padding:8px 12px;background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;font-family:var(--font-base);margin-bottom:0.7rem;">
+                    <option value="view">👁️ Read-only · només veure</option>
+                    <option value="collab" selected>✏️ Col·laborador · edita canvas · WOs · pacts</option>
+                    <option value="admin">🔑 Admin · tot + invitar altres</option>
+                </select>
+
+                <label for="hubInviteMsg" style="display:block;font-size:0.78rem;font-weight:700;margin-bottom:4px;">Missatge personalitzat (opcional)</label>
+                <textarea id="hubInviteMsg" maxlength="500" placeholder="Hola · vols col·laborar al projecte X?" style="width:100%;box-sizing:border-box;min-height:60px;padding:8px 12px;background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-default);border-radius:6px;font-family:var(--font-base);font-size:0.85rem;resize:vertical;margin-bottom:0.8rem;"></textarea>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button id="hubInviteCancel" style="padding:8px 14px;border-radius:6px;border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);cursor:pointer;font-weight:600;">Cancel</button>
+                    <button id="hubInviteSend" style="padding:8px 16px;border-radius:6px;border:0;background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;cursor:pointer;font-weight:700;">📨 Convidar</button>
+                </div>
+            </div>
+        </div>`;
+        document.body.appendChild(wrap.firstElementChild);
+        const modal = document.getElementById('hubInviteBg');
+        const close = () => modal?.remove();
+        const handleInput = document.getElementById('hubInviteHandle');
+        const handleStatus = document.getElementById('hubInviteHandleStatus');
+
+        // Live availability check com escriu
+        let checkTimer = null;
+        handleInput?.addEventListener('input', () => {
+            if (checkTimer) clearTimeout(checkTimer);
+            checkTimer = setTimeout(async () => {
+                const val = (handleInput.value || '').trim();
+                if (!val) { handleStatus.textContent = '·'; handleStatus.style.color = ''; return; }
+                try {
+                    const { validateHandleSyntax } = await import('../core/nicknameRegistryService.js');
+                    const syn = validateHandleSyntax(val);
+                    if (!syn.ok) {
+                        handleStatus.textContent = '✗ ' + syn.reason;
+                        handleStatus.style.color = '#ef4444';
+                    } else {
+                        handleStatus.textContent = '✓ Format vàlid · ' + syn.normalized;
+                        handleStatus.style.color = '#22c55e';
+                    }
+                } catch (_) {}
+            }, 200);
+        });
+
+        modal.addEventListener('click', e => { if (e.target === modal) close(); });
+        document.getElementById('hubInviteCancel')?.addEventListener('click', close);
+        document.getElementById('hubInviteSend')?.addEventListener('click', async () => {
+            const handle = (handleInput?.value || '').trim();
+            const role = document.getElementById('hubInviteRole')?.value || 'collab';
+            const message = (document.getElementById('hubInviteMsg')?.value || '').trim();
+            if (!handle) {
+                const { toast } = await import('../core/uxComponents.js');
+                toast({ kind: 'warn', text: 'Cal el handle' });
+                handleInput?.focus();
+                return;
+            }
+            try {
+                const { validateHandleSyntax } = await import('../core/nicknameRegistryService.js');
+                const syn = validateHandleSyntax(handle);
+                if (!syn.ok) throw new Error(syn.reason);
+                const { buildInvite } = await import('../core/projectInviteService.js');
+                const { KB } = await import('../core/kb.js');
+                const members = await KB.query({ type: 'matriu_member' }).catch(() => []);
+                const fromHandle = (members.find(m => m && (m.content?.isPrimary || m.isPrimary))?.content?.handle) || null;
+                if (!fromHandle) throw new Error('Cal crear identitat primer · /identity');
+                const invite = buildInvite({
+                    projectId: projId,
+                    fromHandle,
+                    toHandle: syn.normalized,
+                    role,
+                    message,
+                });
+                await KB.upsert(invite);
+                const { toast } = await import('../core/uxComponents.js');
+                toast({ kind: 'success', text: '✓ Convidat ' + syn.normalized + ' · rebrà al seu inbox' });
+                close();
+            } catch (e) {
+                const { toast } = await import('../core/uxComponents.js');
+                toast({ kind: 'error', text: 'Error: ' + (e?.message || e) });
+            }
         });
     }
 

@@ -56,6 +56,7 @@ const ROUTES = [
     // PERM-USER-001 sprint E · /registry · permaweb public registry
     { path: '/registry',  view: () => import('./views/RegistryView.js') },
     { path: '/timeline',         view: () => import('./views/TimelineView.js') },
+    { path: '/inbox',            view: () => import('./views/InboxView.js') },
     { path: '/process-catalog',  view: () => import('./views/ProcessCatalogView.js') },
     // FUND-FLOW-001 sprint F · /opportunities · projectes públics permaweb
     { path: '/opportunities', view: () => import('./views/OpportunitiesView.js') },
@@ -157,6 +158,12 @@ async function router() {
             const { injectOrUpdate } = await import('./core/mobileBottomNav.js');
             injectOrUpdate({ pathname: path });
         } catch (_) { /* non-blocking */ }
+        // Mobile topbar · drawer · hide-on-scroll · global · < 768px només.
+        // Aporta navegació completa via "⋯" sense ocupar pantalla.
+        try {
+            const { injectOrUpdate: injTopbar } = await import('./core/mobileTopbar.js');
+            injTopbar({ pathname: path });
+        } catch (_) { /* non-blocking */ }
         // A11Y · W3C/WCAG · global skip-link + live-region + focus-visible CSS
         try {
             const { injectGlobalA11y } = await import('./core/a11yService.js');
@@ -167,6 +174,26 @@ async function router() {
         try {
             const { injectGlobalFab } = await import('./core/quickCaptureFab.js');
             injectGlobalFab();
+        } catch (_) { /* non-blocking */ }
+        // Global Search · cmd-K / Ctrl-K / "/" · accés instantani a tot el KB
+        // Pattern Linear/Notion · cercador modal · keyboard nav · mobile bottom-sheet
+        try {
+            const { injectGlobal: injSearch } = await import('./core/globalSearch.js');
+            injSearch();
+        } catch (_) { /* non-blocking */ }
+        // First-run onboarding · welcome modal · només si l'usuari mai l'ha vist
+        // Es mostra al primer entry page · explica "cervell SOS" en 4 slides
+        if (path === '/' || path === '/home') {
+            try {
+                const { maybeShow } = await import('./core/firstRunOnboarding.js');
+                maybeShow();
+            } catch (_) { /* non-blocking */ }
+        }
+        // Presence heartbeat · global · marca lastSeen cada 30s mentre app oberta
+        // Permet a altres usuaris (futur federat) veure si estem online.
+        try {
+            const { startHeartbeat } = await import('./core/presenceService.js');
+            startHeartbeat();
         } catch (_) { /* non-blocking */ }
         // NEURAL-PATH-001 · log de visita · fire-and-forget · zero bloqueig
         (async () => {
