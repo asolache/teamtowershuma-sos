@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T12:00 · v69 · Global Search cmd-K · brain access instant · mobile bottom-sheet';
+const BUILD_STAMP = '2026-05-16T13:00 · v70 · mobile UX polish · hide view-topbars + search in drawer';
 
 export default class DesignSystemView {
 

@@ -51,6 +51,11 @@ function _ensureCss() {
         @media (min-width: 769px) {
             .sos-search-trigger { display: inline-flex; }
         }
+        /* < 768px · el search no ocupa lloc al top · pot obrir-se via "/" key
+           o · més rellevant · futur botó al drawer */
+        @media (max-width: 768px) {
+            .sos-search-trigger { display: none !important; }
+        }
 
         /* Search modal · backdrop + content */
         .sos-search-bg {

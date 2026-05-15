@@ -149,14 +149,22 @@ function _ensureCss() {
             font-weight: 700;
         }
 
-        /* Activació mobile · < 768px · amaga el topbar antic del view via override */
+        /* Activació mobile · < 768px · amaga els topbars propis dels views V2
+           perquè el global cobreix la navegació. Els classics es respecten · les
+           V2 modernes (.h2-topbar · .hub-topbar · .tlv-topbar · etc) s'amaguen. */
         @media (max-width: 768px) {
             .sos-mtb { display: flex; }
             body { padding-top: calc(48px + env(safe-area-inset-top)); }
-            /* Defensive · si una vista té un topbar amb position:sticky · l'amaguem
-               opcionalment via la classe .hide-on-mobile-topbar (les vistes V2
-               poden afegir-la per evitar dobles topbars). Per ara, NO automàtic ·
-               cada vista decideix. */
+
+            /* Hide view-local topbars on mobile · global topbar pren el lloc */
+            .h2-topbar,           /* DashboardV2View */
+            .hub-topbar,          /* ProjectHubV2View */
+            .tlv-topbar,          /* TimelineView */
+            .sv2-topbar,          /* SettingsV2View */
+            .ipv-topbar,          /* InvestorPitchView */
+            .pcv-topbar,          /* ProjectCreationV2View */
+            .pcat-topbar          /* ProcessCatalogView */
+                { display: none !important; }
         }
     `;
     document.head.appendChild(style);
@@ -168,6 +176,7 @@ const DRAWER_GROUPS = Object.freeze([
         title: 'Avui',
         items: [
             { id: 'home',     href: '/home',         icon: '🏠', label: 'Avui · Home' },
+            { id: 'search',   href: '#search',       icon: '🔍', label: 'Cerca global · "/"', action: 'open-search' },
             { id: 'timeline', href: '/timeline',     icon: '💬', label: 'Timeline · Xarxa' },
             { id: 'create',   href: '/create',       icon: '➕', label: 'Crear projecte' },
         ],
@@ -382,7 +391,21 @@ export function injectOrUpdate({ pathname = null, title = null } = {}) {
     newDrawer.querySelector('.sos-mtb-drawer-close')?.addEventListener('click', () => _closeDrawer());
     // Click qualsevol link tanca el drawer (router data-link)
     newDrawer.querySelectorAll('.sos-mtb-drawer-link').forEach(a => {
-        a.addEventListener('click', () => _closeDrawer());
+        // Special action · open global search
+        if (a.getAttribute('href') === '#search') {
+            a.addEventListener('click', async (e) => {
+                e.preventDefault();
+                _closeDrawer();
+                try {
+                    const { open } = await import('./globalSearch.js');
+                    setTimeout(() => open(), 250); // wait drawer close anim
+                } catch (_) {}
+            });
+            // Remove data-link perquè el router no l'agafi
+            a.removeAttribute('data-link');
+        } else {
+            a.addEventListener('click', () => _closeDrawer());
+        }
     });
 }
 
