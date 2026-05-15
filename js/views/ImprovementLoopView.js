@@ -9,6 +9,7 @@
 // =============================================================================
 
 import { KB } from '../core/kb.js';
+import { findProjectByIdAny } from '../core/projectLookup.js';
 import { store } from '../core/store.js';
 import {
     IMPROVEMENT_CYCLE_TYPE, IMPROVEMENT_MODEL_TYPE, FOCUS_AREAS,
@@ -35,7 +36,7 @@ export default class ImprovementLoopView {
 
     async getHtml() {
         if (!this.projectId) return this._htmlNoProject();
-        try { this.project = await KB.getNode(this.projectId); } catch (_) { this.project = null; }
+        try { this.project = await findProjectByIdAny(this.projectId); } catch (_) { this.project = null; }
         if (!this.project) return this._htmlNotFound();
         try { this.sops    = await KB.query({ type: 'sop',                    projectId: this.projectId }) || []; } catch (_) { this.sops = []; }
         try { this.cycles  = await KB.query({ type: IMPROVEMENT_CYCLE_TYPE,   projectId: this.projectId }) || []; } catch (_) { this.cycles = []; }

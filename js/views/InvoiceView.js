@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { KB } from '../core/kb.js';
+import { findProjectByIdAny } from '../core/projectLookup.js';
 import {
     INVOICE_TYPE, INVOICE_STATUS,
     generateInvoiceNumber,
@@ -34,7 +35,7 @@ export default class InvoiceView {
 
     async getHtml() {
         if (!this.projectId) return this._htmlNoProject();
-        try { this.project = await KB.getNode(this.projectId); } catch (_) { this.project = null; }
+        try { this.project = await findProjectByIdAny(this.projectId); } catch (_) { this.project = null; }
         if (!this.project) return this._htmlNotFound();
         try {
             this.invoices = await KB.query({ type: INVOICE_TYPE, projectId: this.projectId }) || [];

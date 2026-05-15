@@ -8,6 +8,7 @@
 // =============================================================================
 
 import { KB } from '../core/kb.js';
+import { findProjectByIdAny } from '../core/projectLookup.js';
 import {
     LEDGER_ENTRY_TYPE, STANDARD_ACCOUNTS,
     accountKindFor,
@@ -45,7 +46,7 @@ export default class AccountingView {
 
     async getHtml() {
         if (!this.projectId) return this._htmlNoProject();
-        try { this.project = await KB.getNode(this.projectId); } catch (_) { this.project = null; }
+        try { this.project = await findProjectByIdAny(this.projectId); } catch (_) { this.project = null; }
         if (!this.project) return this._htmlNotFound();
         try {
             this.entries = await KB.query({ type: LEDGER_ENTRY_TYPE, projectId: this.projectId }) || [];

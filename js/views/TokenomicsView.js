@@ -8,6 +8,7 @@
 // =============================================================================
 
 import { KB } from '../core/kb.js';
+import { findProjectByIdAny } from '../core/projectLookup.js';
 import {
     TOKEN_DESIGN_TYPE, TOKEN_GROUPS,
     buildEmptyTokenDesign,
@@ -34,7 +35,7 @@ export default class TokenomicsView {
 
     async getHtml() {
         if (!this.projectId) return this._htmlNoProject();
-        try { this.project = await KB.getNode(this.projectId); } catch (_) { this.project = null; }
+        try { this.project = await findProjectByIdAny(this.projectId); } catch (_) { this.project = null; }
         if (!this.project) return this._htmlNotFound();
 
         // Try existing token_design for the project
