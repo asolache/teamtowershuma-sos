@@ -147,6 +147,12 @@ async function router() {
         const app       = document.getElementById('app');
         app.innerHTML   = await view.getHtml();
         if (typeof view.afterRender === 'function') await view.afterRender();
+        // Mobile bottom-nav · global · injectat un cop · active state actualitzat
+        // a cada navegació. Visible només a pantalles < 768px (CSS media query).
+        try {
+            const { injectOrUpdate } = await import('./core/mobileBottomNav.js');
+            injectOrUpdate({ pathname: path });
+        } catch (_) { /* non-blocking */ }
         // NEURAL-PATH-001 · log de visita · fire-and-forget · zero bloqueig
         (async () => {
             try {
