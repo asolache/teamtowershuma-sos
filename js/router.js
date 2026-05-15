@@ -16,6 +16,7 @@ const ROUTES = [
     { path: '/',          view: () => import('./views/DashboardV2View.js') },
     { path: '/home',      view: () => import('./views/DashboardV2View.js') },
     { path: '/dashboard', view: () => import('./views/DashboardView.js') },
+    { path: '/create',    view: () => import('./views/ProjectCreationV2View.js') },
     { path: '/team',      view: () => import('./views/HomeView.js')     },
     { path: '/paper',     view: () => import('./views/HomeView.js')     },
     { path: '/lms',       view: () => import('./views/HomeView.js')     },
