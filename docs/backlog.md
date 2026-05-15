@@ -4604,4 +4604,65 @@ de fer scroll · no pot fer iterativament.
 
 ---
 
-*Documento vivo · actualizat el 2026-05-15 amb el sprint analysis & design v2/v3.*
+---
+
+## UX-CENTRAL-HUB-001 · Project Hub redissenyat · 5-click rule (input @alvaro 2026-05-15)
+
+### Tesi
+SOS té 50+ rutes · fragmentat · l'usuari es perd. Cal una **central page**
+(`/project/{id}` redissenyada) que serveixi com a brúixola diaria · des
+d'on en ≤5 clicks accedeixes a TOT.
+
+### Regla
+**5-Click Rule** · qualsevol acció a SOS s'ha de poder fer en ≤5 clicks
+des de qualsevol pantalla. Si requereix ≥6 · UX broken · refactor.
+
+### Layout proposat (7 zones · scroll vertical · mobile-first)
+1. **Org context** · OrgName · Lifecycle stage · Audit %
+2. **Avui** · top 3 WOs + SOC pendents · cash flow
+3. **Processos** · 4 cards · KPI status per cada un
+4. **IA suggests** · 3 disrupcions accionables (cost · KPI · network)
+5. **Social** · 5 updates de la xarxa (signed · published · connected)
+6. **Quick actions** · botons primaris (new WO · run swarm · etc)
+7. **Knowledge** · canvas · pitch · VNA · SOCs · SOPs · resources
+
+Cap zona ≥7 elements (Miller's Law) · cada zona té botó "→ detail" 1-click.
+
+### Sprint plan A → C (~10h)
+- A · ProjectHubView refactor (~5h) · 7-zone layout · data binding · responsive
+- B · Activity feed derivat (~3h) · `activityFeedService.js` · pure ·
+  consolida events (attestation rebuda · pact signat · WO closed · etc)
+- C · IA suggests engine (~2h) · `iaSuggestionsService.js` · pure ·
+  detecta 3 patrons (cost savings · KPI alarm · network match)
+
+### Decisions pendents @alvaro
+- Volem desktop hub diferent del mobile · o 1 layout responsive? *Proposta · 1 layout *
+- Activity feed · ordre cronològic o per relevància? *Proposta · relevància 7d, fallback chrono*
+
+---
+
+## SOCIAL-LAYER-001 · Backend xarxa social descentralitzada · explicit (input @alvaro 2026-05-15)
+
+### Tesi
+L'esquelet ja té el backend de xarxa social · només cal **explicit-lo** ·
+
+| Capa | Backend | UI |
+|------|---------|-----|
+| Perfil públic | ✓ | ✓ |
+| DID + ECDSA | ✓ | ✓ |
+| Federació permaweb | ✓ | parcial |
+| Web of trust | ✓ | parcial |
+| Attestations | ✓ | ✓ |
+| **Activity feed** | ⚠️ derivable | ❌ falta |
+| **DMs encriptats** | ❌ | ❌ falta v2 |
+| **Following** | ⚠️ via attestations | ❌ falta UI |
+| Public timeline | ✓ /registry | dispers |
+
+### Sprint plan (~12h · diferit · v2)
+- Following relationship (via attestation type 'follow') + UI · 4h
+- Public timeline integrat a /registry + filters · 4h
+- DMs E2E encriptats (Web Crypto · stub Phase 1) · 4h
+
+---
+
+*Documento vivo · actualizat el 2026-05-15 amb el sprint analysis & design v2/v3 + UX hub + social.*
