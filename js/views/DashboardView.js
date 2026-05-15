@@ -498,13 +498,21 @@ export default class DashboardView {
             /* ── Modal nuevo proyecto ── */
             .dash-modal-bg {
                 display: none; position: fixed; inset: 0; z-index: 1000;
-                background: rgba(0,0,0,0.65); align-items: center; justify-content: center;
+                background: rgba(0,0,0,0.65); align-items: flex-start; justify-content: center;
+                /* MODAL-SCROLL-FIX · pantalles petites · permet scroll vertical del backdrop
+                   per veure el footer del modal sense quedar tallat. */
+                overflow-y: auto; padding: 1rem 0;
             }
             .dash-modal-bg.open { display: flex; }
             .dash-modal {
                 background: var(--bg-elevated); border: 1px solid var(--glass-border);
                 border-radius: var(--radius-xl); padding: 24px; width: 400px; max-width: 95vw;
                 animation: slideUp var(--dur-base) var(--ease-spring);
+                /* MODAL-SCROLL-FIX · permet que el modal escrolli internament en lloc
+                   de quedar tallat per la viewport. max-height calc per deixar marge. */
+                max-height: calc(100dvh - 2rem);
+                overflow-y: auto;
+                margin: auto;
             }
             .dash-modal h2 { font-size: var(--text-lg); font-weight: 900; margin: 0 0 4px; color: var(--text-main); }
             .dash-modal-sub { font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 20px; font-family: var(--font-mono); }
