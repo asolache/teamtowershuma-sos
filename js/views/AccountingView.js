@@ -16,6 +16,8 @@ import {
     computeBalanceByAccount,
     computePLForPeriod,
     computeBalanceSheet,
+    computeLedgerAuditScore, computeEntryAuditState, AUDIT_LEVEL_META, AUDIT_THRESHOLD_EUR,
+    addProofToEntry, PROOF_KINDS, signLedgerEntry,
     quickEntry,
 } from '../core/ledgerService.js';
 
@@ -51,6 +53,48 @@ export default class AccountingView {
         if (!this.project) return;
         this._bindForm();
         this._bindPeriodFilter();
+        this._bindAuditActions();
+    }
+
+    // CERT-001 pas 2 · sign entries + add proofs
+    _bindAuditActions() {
+        document.querySelectorAll('[data-sign]').forEach(btn => btn.addEventListener('click', () => this._handleSign(btn.dataset.sign)));
+        document.querySelectorAll('[data-add-proof]').forEach(btn => btn.addEventListener('click', () => this._handleAddProof(btn.dataset.addProof)));
+    }
+
+    async _handleSign(entryId) {
+        const entry = this.entries.find(e => e.id === entryId);
+        if (!entry) return;
+        try {
+            const { getOrCreateSigningKey } = await import('../core/projectIO.js');
+            const key = await getOrCreateSigningKey(this.projectId);
+            if (!key || !key.privateJwk) {
+                alert('No s\'ha pogut obtenir la signing key del projecte');
+                return;
+            }
+            const signerDid = 'did:sos:' + (this.projectId);
+            const signed = await signLedgerEntry({ entry, privateJwk: key.privateJwk, signerDid });
+            await KB.upsert(signed);
+            window.location.reload();
+        } catch (e) {
+            alert('Error signant · ' + (e?.message || 'desconegut'));
+        }
+    }
+
+    async _handleAddProof(entryId) {
+        const entry = this.entries.find(e => e.id === entryId);
+        if (!entry) return;
+        const kind = window.prompt('Tipus de proof:\n\n' + PROOF_KINDS.join(' · ') + '\n\nEscriu el tipus:', 'arweave-txid');
+        if (!kind || !PROOF_KINDS.includes(kind)) return;
+        const value = window.prompt('Valor del proof (txId · attestation id · invoice id · url):', '');
+        if (!value) return;
+        try {
+            const updated = addProofToEntry(entry, { kind, value, signedBy: 'did:sos:' + this.projectId });
+            await KB.upsert(updated);
+            window.location.reload();
+        } catch (e) {
+            alert('Error afegint proof · ' + (e?.message || 'desconegut'));
+        }
     }
 
     _htmlNoProject() {
@@ -80,16 +124,28 @@ export default class AccountingView {
         const pl = computePLForPeriod(this.entries, { from: this.periodFrom, to: this.periodTo });
         const bs = computeBalanceSheet(this.entries);
         const balances = computeBalanceByAccount(this.entries);
+        // CERT-001 · audit score for entire ledger
+        const audit = computeLedgerAuditScore(this.entries);
+        const auditMeta = AUDIT_LEVEL_META[audit.level] || AUDIT_LEVEL_META.draft;
 
-        // Entries table
+        // Entries table · ara amb audit state per row (CERT-001 · pas 2 UI)
         const sorted = this.entries.slice().sort((a, b) => (b.content?.date || '').localeCompare(a.content?.date || ''));
         const rows = sorted.length === 0
-            ? '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Cap entry encara · usa el formulari de sota per a afegir-ne</td></tr>'
+            ? '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">Cap entry encara · usa el formulari de sota per a afegir-ne</td></tr>'
             : sorted.map(e => {
                 const c = e.content || {};
                 const validation = validateLedgerEntry(e);
+                const auditState = computeEntryAuditState(e);
                 const debitTotal = (c.legs || []).filter(l => l.side === 'debit').reduce((s, l) => s + l.amount, 0);
                 const legsDesc = (c.legs || []).map(l => `<code style="font-size:10px;">${this._esc(l.account)}·${l.side[0]}${l.amount.toFixed(2)}</code>`).join(' ');
+                // Audit badge per entry
+                const lvl = auditState.level;
+                const lvlColor = lvl === 'audited' ? '#facc15' : (lvl === 'signed' ? '#22c55e' : '#94a3b8');
+                const lvlIcon  = lvl === 'audited' ? '🛡' : (lvl === 'signed' ? '🔐' : '·');
+                const lvlBadge = `<span title="${this._esc(lvl)} · ${auditState.proofsCount} proofs${auditState.needsProofs ? ' (necessita ≥2)' : ''}" style="display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:999px;background:${lvlColor}25;color:${lvlColor};font-size:10px;font-weight:700;font-family:var(--font-mono);">${lvlIcon} ${this._esc(lvl)}</span>`;
+                const actionBtns = auditState.signed
+                    ? `<button class="ac-btn-mini" data-add-proof="${this._esc(e.id)}" title="Afegir proof">📎</button>`
+                    : `<button class="ac-btn-mini ac-btn-mini-primary" data-sign="${this._esc(e.id)}" title="Signar entry amb la teva ECDSA key">🔐 Signar</button>`;
                 return `
                     <tr>
                         <td style="font-family:var(--font-mono);font-size:11px;">${this._esc(c.date || '')}</td>
@@ -97,6 +153,8 @@ export default class AccountingView {
                         <td>${legsDesc}</td>
                         <td style="text-align:right;font-family:var(--font-mono);">${debitTotal.toFixed(2)} ${this._esc(c.currency || 'EUR')}</td>
                         <td>${validation.ok ? '<span style="color:#22c55e;">✓</span>' : '<span style="color:#ef4444;" title="' + this._esc(validation.errors.join(' · ')) + '">⚠</span>'}</td>
+                        <td>${lvlBadge}</td>
+                        <td style="text-align:right;white-space:nowrap;">${actionBtns}</td>
                     </tr>
                 `;
             }).join('');
@@ -151,6 +209,10 @@ export default class AccountingView {
             .ac-btn:hover { opacity:0.9; }
             .ac-period { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; font-size:0.82rem; }
             .ac-period input { background:#000; color:var(--text-main); border:1px solid var(--border-default); border-radius:4px; padding:4px 6px; }
+            .ac-btn-mini { padding:2px 8px; border-radius:3px; border:1px solid var(--border-default); background:var(--bg-dark); color:var(--text-main); font-size:10px; cursor:pointer; }
+            .ac-btn-mini:hover { background:var(--glass-hover); }
+            .ac-btn-mini-primary { background:#22c55e25; color:#22c55e; border-color:#22c55e50; }
+            .mk-stat-chip { padding:3px 8px; border-radius:999px; font-size:11px; font-family:var(--font-mono); }
             .ac-msg { font-size:11px; font-family:var(--font-mono); margin-top:6px; }
             .ac-msg.ok { color:#22c55e; }
             .ac-msg.err { color:#ef4444; }
@@ -166,6 +228,41 @@ export default class AccountingView {
             </div>
             <div class="ac-main">
                 <h1 style="margin:0 0 1rem 0;font-size:1.35rem;">📊 ${this._esc(projName)} · Comptabilitat</h1>
+
+                <!-- CERT-001 pas 2 · audit certificate card · principal i visible -->
+                <div class="ac-card" style="margin-bottom:1rem;border-left:4px solid ${auditMeta.color};background:linear-gradient(135deg,${auditMeta.color}10,transparent);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+                        <div style="flex:1;min-width:240px;">
+                            <h3 style="margin:0;color:${auditMeta.color};">${auditMeta.icon} Certificat de qualitat · ${this._esc(auditMeta.label)}</h3>
+                            <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">${this._esc(auditMeta.description)}</div>
+                            <div style="margin-top:6px;height:6px;background:#0008;border-radius:3px;overflow:hidden;">
+                                <div style="height:100%;width:${audit.score}%;background:${auditMeta.color};transition:width 0.5s;"></div>
+                            </div>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+                                <span class="mk-stat-chip" style="background:#0008;border:1px solid var(--border-default);">📋 ${audit.counts.total} entries</span>
+                                <span class="mk-stat-chip" style="background:#0008;color:${audit.ratios.balanced === 1 ? '#22c55e' : '#facc15'};border:1px solid var(--border-default);">⚖ ${audit.counts.balanced}/${audit.counts.total} quadrats</span>
+                                <span class="mk-stat-chip" style="background:#0008;color:#22c55e;border:1px solid var(--border-default);">🔐 ${audit.counts.signed} signats</span>
+                                <span class="mk-stat-chip" style="background:#0008;color:${auditMeta.color};border:1px solid var(--border-default);">🛡 ${audit.counts.audited} auditats</span>
+                                ${audit.counts.needsProofs > 0 ? `<span class="mk-stat-chip" style="background:#0008;color:#facc15;border:1px solid var(--border-default);">⚠ ${audit.counts.needsProofs - audit.counts.audited}/${audit.counts.needsProofs} grans pendents proofs</span>` : ''}
+                            </div>
+                        </div>
+                        <div style="text-align:right;font-family:var(--font-mono);">
+                            <div style="font-size:2.4rem;font-weight:700;color:${auditMeta.color};">${audit.score}</div>
+                            <div style="font-size:10px;color:var(--text-muted);">SCORE · /100</div>
+                        </div>
+                    </div>
+                    <details style="margin-top:8px;">
+                        <summary style="cursor:pointer;font-size:0.78rem;color:var(--text-secondary);">Raons del score · ${audit.reasons.length}</summary>
+                        <ul style="margin:6px 0 0 0;padding-left:1.2rem;font-size:0.78rem;line-height:1.6;">
+                            ${audit.reasons.map(r => {
+                                const c = r.kind === 'positive' ? '#22c55e' : (r.kind === 'penalty' ? '#ef4444' : '#facc15');
+                                const ic = r.kind === 'positive' ? '✓' : (r.kind === 'penalty' ? '✗' : '⚠');
+                                return `<li style="color:${c};">${ic} ${this._esc(r.text)}</li>`;
+                            }).join('')}
+                        </ul>
+                        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:6px;">Threshold proofs · entries amb total ≥ €${AUDIT_THRESHOLD_EUR} cal mínim 2 proofs (arweave-txid · polygon-txhash · attestation-id · invoice-id · external-doc).</div>
+                    </details>
+                </div>
 
                 <div class="ac-grid">
                     <div class="ac-card">
@@ -204,7 +301,7 @@ export default class AccountingView {
                 <div class="ac-card">
                     <h3>📑 Entries · ${this.entries.length}</h3>
                     <table class="ac-entries">
-                        <thead><tr><th>Data</th><th>Descripció</th><th>Legs</th><th style="text-align:right;">Total</th><th>OK</th></tr></thead>
+                        <thead><tr><th>Data</th><th>Descripció</th><th>Legs</th><th style="text-align:right;">Total</th><th>OK</th><th>Cert</th><th></th></tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
                 </div>
