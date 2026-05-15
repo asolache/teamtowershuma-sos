@@ -40,8 +40,8 @@ eq(orphanClaims.length, 0,                              'B · sense WO claimed p
 _setCacheForTests(v.normalized);
 const pending = queryWos({ status: 'pending' });
 t(pending.length >= 1,                                  `C · queryWos · pending · ${pending.length}`);
-const inProgress = queryWos({ status: 'in-progress' });
-t(inProgress.length >= 1,                               `C · queryWos · in-progress (Sprint A actiu) · ${inProgress.length}`);
+const done = queryWos({ status: 'done' });
+t(done.length >= 1,                                     `C · queryWos · done · ${done.length}`);
 const claudeWos = queryWos({ assignee_kind: 'ai-claude' });
 t(claudeWos.length >= 1,                                `C · queryWos · ai-claude · ${claudeWos.length}`);
 const batch1Wos = queryWos({ tag: 'batch-1' });
@@ -62,7 +62,7 @@ eq(cachedStats.total, stats.total,                      'E · getStats coincidei
 // 8 · Verificar el primer WO té forma correcta
 const firstActive = v.normalized.work_orders.find(w => w.id === 'wo-agent-bridge-001-a');
 t(firstActive,                                          'F · WO agent-bridge-001-a existeix');
-eq(firstActive.status, 'in-progress',                   'F · marcat in-progress');
+t(['in-progress','done'].includes(firstActive.status), 'F · status in-progress o done · ' + firstActive.status);
 eq(firstActive.claimed_by, 'agent-claude-code',         'F · claimed_by · agent-claude-code');
 t(firstActive.deliverable_test && firstActive.deliverable_test.kind === 'test-suite',
    'F · deliverable_test · test-suite');

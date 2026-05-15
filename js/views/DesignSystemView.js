@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-15T11:00 · v43 · AGENT-BRIDGE sprint A+B · YAML protocol + loader';
+const BUILD_STAMP = '2026-05-15T12:00 · v44 · Batch 1 · AGENT-BRIDGE + ORG-ENTITY + SOC-DUAL';
 
 export default class DesignSystemView {
 

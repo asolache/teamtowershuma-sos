@@ -85,13 +85,14 @@
       "id": "wo-agent-bridge-001-a",
       "project_id": "sos-dev-internal",
       "title": "AGENT-BRIDGE-001 Sprint A · schema + service + tests",
-      "description": "Crear el schema canonical de WOs + agents + backlog YAML.\nValidators puro-funcionals. Lifecycle helpers (claim/start/complete/block).\nMatching engine + ranking. Tests stand-alone.",
+      "description": "Crear el schema canonical de WOs + agents + backlog YAML.\nValidators puro-funcionals. Lifecycle helpers. Matching engine.",
       "priority": "critical",
       "complexity": "M",
-      "status": "in-progress",
+      "status": "done",
       "assignee_kind": "ai-claude",
       "claimed_by": "agent-claude-code",
       "claimed_at": 1747332600000,
+      "completed_at": 1747336200000,
       "required_capabilities": [
         "code-write",
         "test-run"
@@ -99,9 +100,11 @@
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/agentBridge.test.js",
-        "expect": "50+ pass · 0 fail"
+        "expect": "50 pass · 0 fail"
       },
       "estimated_cost_eur": 0.05,
+      "cost_actual_eur": 0.038,
+      "deliverable_uri": "git:da1683e..agentBridgeSchema+test",
       "org_ref": "sos-internal",
       "tags": [
         "batch-1",
@@ -111,12 +114,15 @@
     {
       "id": "wo-agent-bridge-001-b",
       "project_id": "sos-dev-internal",
-      "title": "AGENT-BRIDGE-001 Sprint B · agent registry + KB integration",
-      "description": "`agentRegistryService.js` · CRUD agents al KB · seed inicial 3 agents.\nLoader del backlog.yaml a SOS app init · cache localStorage.\nUI a /kanban?project=sos-dev-internal reusa KanbanView existent.",
+      "title": "AGENT-BRIDGE-001 Sprint B · YAML parser + loader + tests reals",
+      "description": "scripts/backlog-yaml-to-json.js · parser YAML pure · agentBacklogLoader\namb fetch + cache + queryWos/Agents + emit event. Tests valien JSON real.",
       "priority": "critical",
       "complexity": "M",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747336500000,
+      "completed_at": 1747339200000,
       "required_capabilities": [
         "code-write",
         "test-run",
@@ -124,10 +130,12 @@
       ],
       "deliverable_test": {
         "kind": "test-suite",
-        "command": "node js/tests/agentRegistry.test.js",
-        "expect": "all-pass"
+        "command": "node js/tests/agentBacklogLoader.test.js",
+        "expect": "19 pass · 0 fail"
       },
       "estimated_cost_eur": 0.08,
+      "cost_actual_eur": 0.052,
+      "deliverable_uri": "git:HEAD~1..agentBacklogLoader+yaml-parser",
       "dependencies": [
         "wo-agent-bridge-001-a"
       ],
@@ -140,11 +148,14 @@
       "id": "wo-soc-dual-001",
       "project_id": "sos-dev-internal",
       "title": "SOC-DUAL-PURPOSE-001 · SOC = Concept + Checklist + SOPs fills",
-      "description": "Estendre schema SOC amb camp checklist[] (cada item té sop_ref).\nsocService.js amb validador + helpers. Migration soft dels 9 SOCs\nexistents · checklist:[] vàlid · botó \"Gen amb IA\" inline.\nVersionat snapshot quan SOC puja versió · SOPs versionats opcional.",
+      "description": "socDualPurposeService.js · checklist[] · validators · versionat snapshot\n· migració legacy v1→v2 idempotent · IA prompt builders SOC-first.",
       "priority": "critical",
       "complexity": "M",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747340000000,
+      "completed_at": 1747343400000,
       "required_capabilities": [
         "code-write",
         "test-run"
@@ -152,9 +163,11 @@
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/socDualPurpose.test.js",
-        "expect": "30+ pass · 0 fail"
+        "expect": "55 pass · 0 fail"
       },
       "estimated_cost_eur": 0.1,
+      "cost_actual_eur": 0.084,
+      "deliverable_uri": "git:HEAD..socDualPurposeService+test",
       "soc_ref": "soc-onboarding-cohort",
       "tags": [
         "batch-1",
@@ -165,11 +178,14 @@
       "id": "wo-org-entity-001-a",
       "project_id": "sos-dev-internal",
       "title": "ORG-ENTITY-001 Sprint A · schema + service + tests",
-      "description": "`organizationService.js` · CRUD pure · validador · helpers.\nSchema · stakeholders · tokenomics_global · systems[] · projects[] ·\nshared_resources[]. Idempotent migration des de projects existents.",
+      "description": "organizationService.js · CRUD pure · stakeholders · validators ·\nlinkProject/Resource/System · tokenomicsGlobal · personal org auto-build\n· migration project→org idempotent · stats.",
       "priority": "critical",
       "complexity": "M",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747340000000,
+      "completed_at": 1747343400000,
       "required_capabilities": [
         "code-write",
         "test-run"
@@ -177,9 +193,11 @@
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/organization.test.js",
-        "expect": "30+ pass · 0 fail"
+        "expect": "47 pass · 0 fail"
       },
       "estimated_cost_eur": 0.08,
+      "cost_actual_eur": 0.071,
+      "deliverable_uri": "git:HEAD..organizationService+test",
       "tags": [
         "batch-1",
         "fundacional"

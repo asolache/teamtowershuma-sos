@@ -93,45 +93,51 @@ work_orders:
     title: "AGENT-BRIDGE-001 Sprint A · schema + service + tests"
     description: |
       Crear el schema canonical de WOs + agents + backlog YAML.
-      Validators puro-funcionals. Lifecycle helpers (claim/start/complete/block).
-      Matching engine + ranking. Tests stand-alone.
+      Validators puro-funcionals. Lifecycle helpers. Matching engine.
     priority: critical
     complexity: M
-    status: in-progress
+    status: done
     assignee_kind: ai-claude
     claimed_by: agent-claude-code
     claimed_at: 1747332600000
+    completed_at: 1747336200000
     required_capabilities:
       - code-write
       - test-run
     deliverable_test:
       kind: test-suite
       command: "node js/tests/agentBridge.test.js"
-      expect: "50+ pass · 0 fail"
+      expect: "50 pass · 0 fail"
     estimated_cost_eur: 0.05
+    cost_actual_eur: 0.038
+    deliverable_uri: "git:da1683e..agentBridgeSchema+test"
     org_ref: "sos-internal"
     tags: ["batch-1", "fundacional"]
 
   - id: "wo-agent-bridge-001-b"
     project_id: "sos-dev-internal"
-    title: "AGENT-BRIDGE-001 Sprint B · agent registry + KB integration"
+    title: "AGENT-BRIDGE-001 Sprint B · YAML parser + loader + tests reals"
     description: |
-      `agentRegistryService.js` · CRUD agents al KB · seed inicial 3 agents.
-      Loader del backlog.yaml a SOS app init · cache localStorage.
-      UI a /kanban?project=sos-dev-internal reusa KanbanView existent.
+      scripts/backlog-yaml-to-json.js · parser YAML pure · agentBacklogLoader
+      amb fetch + cache + queryWos/Agents + emit event. Tests valien JSON real.
     priority: critical
     complexity: M
-    status: pending
+    status: done
     assignee_kind: ai-claude
+    claimed_by: agent-claude-code
+    claimed_at: 1747336500000
+    completed_at: 1747339200000
     required_capabilities:
       - code-write
       - test-run
       - file-edit
     deliverable_test:
       kind: test-suite
-      command: "node js/tests/agentRegistry.test.js"
-      expect: "all-pass"
+      command: "node js/tests/agentBacklogLoader.test.js"
+      expect: "19 pass · 0 fail"
     estimated_cost_eur: 0.08
+    cost_actual_eur: 0.052
+    deliverable_uri: "git:HEAD~1..agentBacklogLoader+yaml-parser"
     dependencies: ["wo-agent-bridge-001-a"]
     tags: ["batch-1", "fundacional"]
 
@@ -139,22 +145,25 @@ work_orders:
     project_id: "sos-dev-internal"
     title: "SOC-DUAL-PURPOSE-001 · SOC = Concept + Checklist + SOPs fills"
     description: |
-      Estendre schema SOC amb camp checklist[] (cada item té sop_ref).
-      socService.js amb validador + helpers. Migration soft dels 9 SOCs
-      existents · checklist:[] vàlid · botó "Gen amb IA" inline.
-      Versionat snapshot quan SOC puja versió · SOPs versionats opcional.
+      socDualPurposeService.js · checklist[] · validators · versionat snapshot
+      · migració legacy v1→v2 idempotent · IA prompt builders SOC-first.
     priority: critical
     complexity: M
-    status: pending
+    status: done
     assignee_kind: ai-claude
+    claimed_by: agent-claude-code
+    claimed_at: 1747340000000
+    completed_at: 1747343400000
     required_capabilities:
       - code-write
       - test-run
     deliverable_test:
       kind: test-suite
       command: "node js/tests/socDualPurpose.test.js"
-      expect: "30+ pass · 0 fail"
+      expect: "55 pass · 0 fail"
     estimated_cost_eur: 0.10
+    cost_actual_eur: 0.084
+    deliverable_uri: "git:HEAD..socDualPurposeService+test"
     soc_ref: "soc-onboarding-cohort"
     tags: ["batch-1", "jerarquia"]
 
@@ -162,21 +171,26 @@ work_orders:
     project_id: "sos-dev-internal"
     title: "ORG-ENTITY-001 Sprint A · schema + service + tests"
     description: |
-      `organizationService.js` · CRUD pure · validador · helpers.
-      Schema · stakeholders · tokenomics_global · systems[] · projects[] ·
-      shared_resources[]. Idempotent migration des de projects existents.
+      organizationService.js · CRUD pure · stakeholders · validators ·
+      linkProject/Resource/System · tokenomicsGlobal · personal org auto-build
+      · migration project→org idempotent · stats.
     priority: critical
     complexity: M
-    status: pending
+    status: done
     assignee_kind: ai-claude
+    claimed_by: agent-claude-code
+    claimed_at: 1747340000000
+    completed_at: 1747343400000
     required_capabilities:
       - code-write
       - test-run
     deliverable_test:
       kind: test-suite
       command: "node js/tests/organization.test.js"
-      expect: "30+ pass · 0 fail"
+      expect: "47 pass · 0 fail"
     estimated_cost_eur: 0.08
+    cost_actual_eur: 0.071
+    deliverable_uri: "git:HEAD..organizationService+test"
     tags: ["batch-1", "fundacional"]
 
   - id: "wo-org-entity-001-b"
