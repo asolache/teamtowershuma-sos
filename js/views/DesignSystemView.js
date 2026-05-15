@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-15T22:00 · v55 · /project/{id} ARA és Hub V2 · zona 8 advanced tools · UX audit doc';
+const BUILD_STAMP = '2026-05-15T23:00 · v56 · UX-D mobile bottom-nav + UX components (toast · empty · confirm)';
 
 export default class DesignSystemView {
 
