@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T20:45 · v102 · AI-DRIVEN · scope brand-specific (TT-brand fora dels SOCs genèrics) · auto-detect brand context · 82 asserts';
+const BUILD_STAMP = '2026-05-16T21:30 · v103 · /create-live · streaming UI · 4 tabs (Castell · Mapa · Canvas · WOs) · quality gauge + cost live + 4 CTAs · 118 asserts';
 
 export default class DesignSystemView {
 

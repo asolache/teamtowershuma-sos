@@ -403,7 +403,7 @@ export async function createProject({
     const minScore = MIN_SCORE_FOR_AMBITION[ambition];
     // ok · rubric ≥ llindar I cap error d'integritat (warnings sí tolerats)
     const ok = evalResult.total >= minScore && integrityResult.errorCount === 0;
-    emit('validate', 'done', { score: evalResult.total, status: evalResult.status, integrityErrors: integrityResult.errorCount, ok });
+    emit('validate', 'done', { score: evalResult.total, rubric_status: evalResult.status, integrityErrors: integrityResult.errorCount, ok });
 
     // ─── 5. BUILD NODES ───────────────────────────────────────────────────
     emit('build-nodes', 'start', {});
@@ -456,7 +456,7 @@ export async function createProject({
     }));
 
     emit('build-nodes', 'done', { roles: roleNodes.length, sops: sopNodes.length, socs: socNodes.length, wos: woNodes.length });
-    emit('finish', 'done', { ok, score: evalResult.total, status: evalResult.status, ms: Date.now() - startMs });
+    emit('finish', 'done', { ok, score: evalResult.total, rubric_status: evalResult.status, ms: Date.now() - startMs });
 
     return {
         ok,

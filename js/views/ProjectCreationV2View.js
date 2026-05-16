@@ -111,6 +111,8 @@ export default class ProjectCreationV2View {
 
             .pcv-form { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:10px; padding:1.3rem 1.5rem; }
             .pcv-field { margin-bottom:1rem; }
+            .pcv-field-row { display:flex; gap:10px; flex-wrap:wrap; }
+            @media (max-width: 700px) { .pcv-field-row { flex-direction:column; gap:0.6rem; } }
             .pcv-label { display:block; font-size:0.82rem; font-weight:700; color:var(--text-main); margin-bottom:6px; }
             .pcv-help  { font-size:0.7rem; color:var(--text-secondary); margin-top:3px; line-height:1.4; }
             .pcv-input, .pcv-textarea, .pcv-select { width:100%; box-sizing:border-box; padding:8px 12px; background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); border-radius:5px; font-family:var(--font-base); font-size:0.88rem; }
@@ -189,6 +191,34 @@ export default class ProjectCreationV2View {
                             ${this._renderAmbitionCards()}
                         </div>
                         <div class="pcv-help">Light · projecte buit amb canvas IA · ràpid. Standard · canvas + VNA + SOPs · típic. MAX · tot el lifecycle + tokenomics + workshops · setup complet.</div>
+                    </div>
+
+                    <div class="pcv-field pcv-field-row">
+                        <div style="flex:1;">
+                            <label class="pcv-label" for="pcvGenMode">Mode generació</label>
+                            <select id="pcvGenMode" class="pcv-input">
+                                <option value="ai-driven">ai-driven · IA crea SOC→SOP→WO (recomanat)</option>
+                                <option value="template">template · ràpid offline (sense IA)</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label class="pcv-label" for="pcvEntityType">Tipus d'entitat</label>
+                            <select id="pcvEntityType" class="pcv-input">
+                                <option value="">auto-detect</option>
+                                <option value="organization">Organització · coop · assoc · ONG</option>
+                                <option value="business">Negoci · SL · autònom · startup</option>
+                                <option value="sos">SoS · sociotècnic federat</option>
+                                <option value="project_internal">Projecte intern · subprojecte</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label class="pcv-label" for="pcvVnaZoom">Zoom VNA · detall mapa</label>
+                            <select id="pcvVnaZoom" class="pcv-input">
+                                <option value="mid">mid · normal (4-7 SOCs)</option>
+                                <option value="macro">macro · panoràmic (1-3)</option>
+                                <option value="micro">micro · detall (8-15)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="pcv-actions">
@@ -270,6 +300,9 @@ export default class ProjectCreationV2View {
         const sector = (document.getElementById('pcvSector')?.value || this._presetSector || '').trim() || null;
         const ambition = this._selectedAmbition();
         const templateId = this._presetTemplateId || null;
+        const entityType = document.getElementById('pcvEntityType')?.value || null;
+        const vnaZoom    = document.getElementById('pcvVnaZoom')?.value || null;
+        const genMode    = document.getElementById('pcvGenMode')?.value || (ambition === 'light' ? 'template' : 'ai-driven');
 
         if (!name) {
             toast({ kind: 'error', text: 'El nom és obligatori' });
@@ -279,6 +312,20 @@ export default class ProjectCreationV2View {
         if (name.length < 3) {
             toast({ kind: 'error', text: 'El nom és massa curt (mínim 3 caràcters)' });
             return;
+        }
+
+        // ── AI-DRIVEN streaming · redirigeix a /create-live amb payload ──
+        if (genMode === 'ai-driven') {
+            try {
+                sessionStorage.setItem('createLivePayload', JSON.stringify({
+                    name, description, sector, ambition, templateId,
+                    entity_type: entityType, vna_zoom: vnaZoom, generationMode: 'ai-driven',
+                }));
+                window.location.href = '/create-live';
+                return;
+            } catch (e) {
+                console.warn('[ProjectCreationV2] sessionStorage failed · fallback síncron', e);
+            }
         }
 
         this._isCreating = true;
