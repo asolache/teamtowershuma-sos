@@ -25,6 +25,7 @@ import { CATALOG, pickTemplate, applyContext } from './projectTemplateCatalog.js
 import { evaluateRubric, fromProject } from './valueFlowRubricService.js';
 import { validateIntegrity } from './valueFlowIntegrityService.js';
 import { matchSocs, VNA_ZOOM_LEVELS, ENTITY_TYPES } from './socMatcher.js';
+import { adaptRolesBySector } from './sectorRoleCatalog.js';
 
 export const ORCHESTRATOR_VERSION = 'v1.1';
 
@@ -357,6 +358,14 @@ export async function createProject({
     emit('personalize', 'start', {});
     const ctx = { name, description, sector: sector || '', problem: description };
     let personalized = applyContext(template, ctx);
+
+    // SECTOR-ROLE-NAMING · sobreescriu noms de rol amb el catàleg sectorial
+    // (offline · zero cost IA). Si no hi ha sector · usa DEFAULT que ja és
+    // millor que els template hardcoded. Si hi ha sector conegut · noms reals
+    // d'aquell sector (ex · "CTO Founder" per J · "Cap d'Obra" per F).
+    const sectorCnae = sector || classification.sector_cnae || null;
+    personalized = { ...personalized, roles: adaptRolesBySector(personalized.roles, sectorCnae) };
+    emit('personalize', 'sector-roles-applied', { sector: sectorCnae, count: (personalized.roles || []).length });
 
     if (typeof personalize === 'function') {
         try {
