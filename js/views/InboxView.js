@@ -12,7 +12,7 @@ import {
 } from '../core/messagingService.js';
 import { getPresenceFor, renderPresencePill } from '../core/presenceService.js';
 import {
-    listInvitesForUser, acceptInvite, declineInvite, resolveStatus,
+    listInvitesForUser, listInvitesSent, acceptInvite, declineInvite, resolveStatus,
     INVITE_ROLES,
 } from '../core/projectInviteService.js';
 import { emptyStateHtml, toast } from '../core/uxComponents.js';
@@ -45,11 +45,13 @@ export default class InboxView {
 
         const conversations = listConversations(this._messages, this._meHandle);
         const pendingInvites = listInvitesForUser(this._invites, this._meHandle, { onlyPending: true });
+        // Invites enviades · resol l'issue · "envié invitació a @mazinguer i no surt al meu inbox"
+        const sentInvites = listInvitesSent(this._invites, this._meHandle);
         const activeMessages = this._activeThreadId
             ? listThread(this._messages, this._activeThreadId)
             : [];
 
-        return this._renderShell({ conversations, activeMessages, pendingInvites });
+        return this._renderShell({ conversations, activeMessages, pendingInvites, sentInvites });
     }
 
     async afterRender() {
@@ -102,9 +104,10 @@ export default class InboxView {
         await this.afterRender();
     }
 
-    _renderShell({ conversations, activeMessages, pendingInvites = [] }) {
+    _renderShell({ conversations, activeMessages, pendingInvites = [], sentInvites = [] }) {
         const unreadTotal = countUnread(this._messages, this._meHandle);
         const inviteCount = pendingInvites.length;
+        const sentCount   = sentInvites.length;
         return `
         <style>
             .ibx-shell { min-height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); padding-bottom:2rem; }
@@ -168,10 +171,19 @@ export default class InboxView {
                     ${inviteCount > 0 ? `
                     <div class="ibx-section" style="margin-bottom:0.8rem;border-color:rgba(168,85,247,0.4);">
                         <div class="ibx-section-head" style="background:rgba(168,85,247,0.10);">
-                            <h2>🤝 Invitacions pendents · ${inviteCount}</h2>
+                            <h2>🤝 Invitacions rebudes · ${inviteCount}</h2>
                         </div>
                         <div style="padding:0.5rem 0.6rem;">
                             ${pendingInvites.map(inv => this._renderInviteCard(inv)).join('')}
+                        </div>
+                    </div>` : ''}
+                    ${sentCount > 0 ? `
+                    <div class="ibx-section" style="margin-bottom:0.8rem;border-color:rgba(99,102,241,0.40);">
+                        <div class="ibx-section-head" style="background:rgba(99,102,241,0.10);">
+                            <h2>📤 Invitacions enviades · ${sentCount}</h2>
+                        </div>
+                        <div style="padding:0.5rem 0.6rem;">
+                            ${sentInvites.map(inv => this._renderSentInviteCard(inv)).join('')}
                         </div>
                     </div>` : ''}
                 <div class="ibx-section">
@@ -224,6 +236,34 @@ export default class InboxView {
                 <button data-action="invite-decline" data-id="${this._esc(inv.id)}" style="padding:5px 12px;border-radius:4px;border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);font-size:0.78rem;font-weight:600;cursor:pointer;">✕ Decline</button>
                 <span style="margin-left:auto;font-size:0.68rem;color:var(--text-muted);align-self:center;">${this._formatTime(inv.createdAt)}</span>
             </div>
+        </div>`;
+    }
+
+    // Sent invites · resol "vaig invitar @mazinguer i no surt al meu inbox"
+    _renderSentInviteCard(inv) {
+        const c = inv.content || {};
+        const role = INVITE_ROLES[c.role] || INVITE_ROLES.collab;
+        const projectId = c.projectId || '';
+        const status = resolveStatus(inv) || 'pending';
+        const statusColor = ({
+            pending:  '#facc15', accepted: '#22c55e', declined: '#ef4444', expired: '#94a3b8',
+        })[status] || '#94a3b8';
+        const statusLabel = ({
+            pending: 'pendent', accepted: 'acceptada', declined: 'rebutjada', expired: 'expirada',
+        })[status] || status;
+        return `
+        <div style="padding:0.7rem 0.85rem;margin-bottom:6px;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.25);border-radius:6px;" data-sent-invite-id="${this._esc(inv.id)}">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+                <span style="font-size:0.7rem;color:var(--text-secondary);">Vas convidar a</span>
+                <strong style="font-size:0.85rem;">${this._esc(c.toHandle || '?')}</strong>
+                <span style="margin-left:auto;padding:1px 8px;border-radius:999px;background:${statusColor}22;color:${statusColor};font-size:0.65rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">${this._esc(statusLabel)}</span>
+            </div>
+            <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:4px;">
+                ${this._esc(role.label)} a
+                <a href="/project/${encodeURIComponent(projectId)}" data-link style="color:var(--accent-indigo);text-decoration:none;font-family:var(--font-mono);">${this._esc(projectId.slice(0, 24))}</a>
+            </div>
+            ${c.message ? `<div style="padding:6px 8px;background:var(--bg-dark);border-radius:4px;font-size:0.74rem;font-style:italic;color:var(--text-secondary);">"${this._esc(c.message)}"</div>` : ''}
+            <div style="font-size:0.65rem;color:var(--text-muted);margin-top:5px;">${this._formatTime(inv.createdAt)}</div>
         </div>`;
     }
 

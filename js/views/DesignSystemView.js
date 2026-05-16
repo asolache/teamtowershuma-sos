@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T11:30 · v86 · LEGENDARY cherry-pick · /create amb orchestrator template-based · rubric 12 + integrity 7 + VSM prompts · resol crash · 346 asserts';
+const BUILD_STAMP = '2026-05-16T12:00 · v87 · Inbox sent-invites · /notes evolve view · post #121 legendary · estabilitzat';
 
 export default class DesignSystemView {
 

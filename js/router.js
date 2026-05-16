@@ -59,6 +59,8 @@ const ROUTES = [
     { path: '/registry',  view: () => import('./views/RegistryView.js') },
     { path: '/timeline',         view: () => import('./views/TimelineView.js') },
     { path: '/inbox',            view: () => import('./views/InboxView.js') },
+    // NOTES-EVOLVE-001 · llistat captures FAB · evolve a project/wo/deliverable
+    { path: '/notes',            view: () => import('./views/NotesView.js') },
     { path: '/process-catalog',  view: () => import('./views/ProcessCatalogView.js') },
     // FUND-FLOW-001 sprint F · /opportunities · projectes públics permaweb
     { path: '/opportunities', view: () => import('./views/OpportunitiesView.js') },
