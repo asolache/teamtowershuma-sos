@@ -104,4 +104,20 @@ sos_context: critical
 
 ---
 
+## 2026-05-17 · vision/best-practices-2026-05.md (NOU)
+
+- author: "@alvaro + claude-session 2026-05-16/17"
+- action: add
+- description: "10 bones pràctiques destil·lades del sprint marató del flow de creació (13 PRs · v99→v116). Information architecture · methodology-first prompts · knowledge-first defaults · pre-flight checks · streaming + skeletons · IA fallback chain · TDD string+state · CSS tokens · hub pattern · merge frequent."
+- changes:
+    - knowledge/vision/best-practices-2026-05.md (nou · v1)
+    - knowledge/_index.md (entrada nova a vision)
+    - knowledge/_search-index.json (regenerat · 69 → 70 fitxers)
+    - docs/backlog.md (secció D · hito sprint + 8 WOs pendents)
+- status: approved (self-merge · documentació)
+- pr: claude/backlog-knowledge-update
+- next: re-llegir abans de cada iteració significativa del SOS
+
+---
+
 *Final del LOG · pròximes contribucions s'afegeixen append-only sota.*

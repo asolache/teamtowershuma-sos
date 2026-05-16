@@ -1,7 +1,7 @@
 {
   "version": "v1.0",
-  "generated": "2026-05-16T18:25:34.343Z",
-  "totalFiles": 69,
+  "generated": "2026-05-16T23:06:19.689Z",
+  "totalFiles": 70,
   "items": [
     {
       "id": "clients-colla-castellera-vna-model",
@@ -1656,6 +1656,36 @@
       "sector_id": null,
       "sector_name": null,
       "scope": null,
+      "brand_owner": null
+    },
+    {
+      "id": "best-practices-2026-05",
+      "path": "knowledge/vision/best-practices-2026-05.md",
+      "relpath": "vision/best-practices-2026-05.md",
+      "folder": "vision",
+      "type": "vision",
+      "title": "best-practices-2026-05",
+      "version": "v1",
+      "status": "live",
+      "purpose": "Bones pràctiques destil·lades de la sessió marató del flow de creació (13 PRs #135-#147) · capturades aquí perquè no es perdin entre sprints i serveixin com a guia per a properes iteracions de qualsevol part del SOS.",
+      "keywords": [
+        "best-practices",
+        "ux",
+        "prompts",
+        "vna",
+        "verna-allee",
+        "testing",
+        "navigation",
+        "hub"
+      ],
+      "excerpt": "Bones pràctiques · SOS V11 · Sprint marató creació (mai 2026) > Context · sessió 2026-05-16/17 · 13 PRs (#135-#147) · v99→v116 · centrada en transformar el flow de creació de projecte de \"template clone\" a \"experiència legendària amb IA real\" alinead…",
+      "size": 10330,
+      "phase": null,
+      "sector_cnae": null,
+      "sos_context": "critical",
+      "sector_id": null,
+      "sector_name": null,
+      "scope": "universal",
       "brand_owner": null
     },
     {
