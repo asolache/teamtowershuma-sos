@@ -171,14 +171,14 @@ export function buildAiCallbacks({
             }
         },
 
-        generateSops: async ({ soc, project_ctx, role_kinds }) => {
+        generateSops: async ({ soc, project_ctx, role_kinds, sector_role_examples }) => {
             const gp = await _ensureProvider();
             if (!gp) { _logError('generate-sops-from-soc', new Error('no-provider')); return { sops: [], cost: 0 }; }
             try {
                 const { parsed, cost, modelKey } = await _runTask({
                     taskKind: 'generate-sops-from-soc',
                     routeKind: 'sop-from-soc',
-                    context: { name: project_ctx?.name || '', soc, project_ctx, role_kinds },
+                    context: { name: project_ctx?.name || '', soc, project_ctx, role_kinds, sector_role_examples },
                     generateWithProvider: gp,
                     preferredProvider: await _ensurePreferred(),
                 });

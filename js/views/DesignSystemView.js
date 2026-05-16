@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-17T05:00 · v115 · IKIGAI FIX DEFINITIU (verify + retry + render await) + HUB LEGENDARY zone 0 (quality+vision+stats clau) · 32 asserts';
+const BUILD_STAMP = '2026-05-17T05:30 · v116 · VNA PROMPTS QUALITY · Verna Allee methodology explícita + CNAE/lifecycle/entity prominent + sector_role_examples · 41 asserts (sobre v115)';
 
 export default class DesignSystemView {
 
