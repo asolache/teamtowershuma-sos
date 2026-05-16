@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T14:30 · v92 · CASTELLER MODEL · IA categoritza rols pels 6 nivells (pom_de_dalt · tronc · pinya · laterals · mans · baixos) · 61 asserts';
+const BUILD_STAMP = '2026-05-16T15:00 · v93 · SOC-SEQUENCING · agrupa transactions en SOCs · rubric C11 100% post-sequencing · 36 asserts';
 
 export default class DesignSystemView {
 
