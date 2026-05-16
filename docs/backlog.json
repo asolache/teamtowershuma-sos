@@ -1020,7 +1020,7 @@
       "description": "Estendre el flow de creació perquè agrupi value flows (transactions) entre rols en SOCs (processos d'operació) coherents · cada SOC té trigger d'entrada · seqüència de transactions · criteri de sortida · checklist sop_refs.\\n\\nImplementació · al pas `personalize` del orchestrator · després de generar roles+deliverables+transactions · agrupar transactions per criteri (frequency · rol pinya central · cicle recíproc) i materialitzar com a SOC nodes amb checklist. La IA usa context `valueFlowIntegrityService` per validar coherència cross-layer (R3 · R4 · R7).\\n\\nCriteris d'acceptació:\\n- Cada projecte té ≥1 SOC amb ≥3 items checklist apuntant a sop_ref existents\\n- `valueFlowRubric` C11 (SOC coverage ≥80%) passa al 100% post-personalize\\n- Test integration · 4 fixtures · cada un genera SOCs coherents amb les transactions\\n\\nResol la queixa · 'els fluxos no estan ordenats com a processos'. Els SOCs són la unitat de comprensió operativa.",
       "priority": "high",
       "complexity": "M",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
       "required_capabilities": [
         "code-write",
@@ -1043,7 +1043,12 @@
         "value-map",
         "soc",
         "pre-alpha"
-      ]
+      ],
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1778939369617,
+      "completed_at": 1778940869617,
+      "cost_actual_eur": 2.5,
+      "deliverable_uri": "git:claude/value-flow-soc-sequencing"
     },
     {
       "id": "wo-ia-context-audit-001",
