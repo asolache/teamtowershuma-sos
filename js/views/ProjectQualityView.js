@@ -20,6 +20,9 @@ import {
 import { suggestNextDim } from '../core/navService.js';
 // VALUEMAP-GEN-001 · subtype selector + seed reference per al panel valueMap
 import { getSubtypesForSector, getSubtypeById } from '../core/sectorSubtypes.js';
+// QUALITY-V2 · rubric 12-criteris + integrity 7-regles (post sprint legendary)
+import { evaluateRubric, fromProject, RUBRIC, RUBRIC_THRESHOLDS } from '../core/valueFlowRubricService.js';
+import { validateIntegrity } from '../core/valueFlowIntegrityService.js';
 
 function _esc(s) {
     if (s === null || s === undefined) return '';
@@ -50,15 +53,36 @@ export default class ProjectQualityView {
         const state = store.getState();
         this._project = (state.projects || []).find(p => p && p.id === pid) || null;
         if (!this._project) { this._quality = null; return; }
-        const [sops, workshops, marketItems, providerNode] = await Promise.all([
+        const [sops, workshops, marketItems, providerNode, socs, roles] = await Promise.all([
             KB.query({ type: 'sop' }).catch(() => []),
             KB.query({ type: 'workshop' }).catch(() => []),
             KB.query({ type: 'market_item' }).catch(() => []),
             // IA-PROVIDER-PREF-001 · llegim el provider preferit per al badge
             KB.getNode('sos_ai_provider').catch(() => null),
+            // QUALITY-V2 · per a rubric + integrity
+            KB.query({ type: 'soc' }).catch(() => []),
+            KB.query({ type: 'role' }).catch(() => []),
         ]);
         this._preferredProvider = providerNode?.value || null;
         this._quality = computeQualityScore(this._project, { sops, workshops, marketItems });
+
+        // QUALITY-V2 · rubric 12-criteris + integrity 7-regles
+        // Filtrem per projecte les fonts (sops · socs · roles són per-project)
+        const pSops  = (sops  || []).filter(s => s?.content?.projectId === pid);
+        const pSocs  = (socs  || []).filter(s => s?.content?.projectId === pid);
+        const pRoles = (roles || []).filter(r => r?.content?.projectId === pid);
+        const input = fromProject(this._project, { sops: pSops, socs: pSocs, roles: pRoles });
+        this._rubric = evaluateRubric({
+            roles:        input.roles,
+            deliverables: input.deliverables,
+            transactions: input.transactions,
+            sops:         input.sops,
+            socs:         input.socs,
+        });
+        this._integrity = validateIntegrity({
+            valueFlow: { roles: input.roles, deliverables: input.deliverables, transactions: input.transactions },
+            sops: input.sops, socs: input.socs,
+        });
     }
 
     async getHtml() {
@@ -201,10 +225,90 @@ export default class ProjectQualityView {
                         : `<a class="pq-hero-next" style="background:rgba(0,230,118,0.10);border-color:#00e676;color:#00e676;" href="/registry" data-link>🌟 Excel·lent · veure xarxa</a>`}
                 </header>
 
+                ${this._renderRubricV2()}
+
+                <h2 style="margin:2rem 0 0.5rem 0;font-size:1rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;">Score legacy · 5 dimensions (per backwards compat)</h2>
                 <div class="pq-grid">${this._renderDims(q)}</div>
             </div>
         </div>
         `;
+    }
+
+    // QUALITY-V2 · rubric 12-criteris + integrity 7-regles
+    _renderRubricV2() {
+        const r = this._rubric;
+        const intg = this._integrity;
+        if (!r) return '';
+        const statusColors = { gold: '#facc15', silver: '#94a3b8', bronze: '#d97706', red: '#ef4444' };
+        const statusIcons  = { gold: '🌟',      silver: '🥈',     bronze: '🥉',      red: '❌' };
+        const rc = statusColors[r.status] || '#94a3b8';
+        const ri = statusIcons[r.status]  || '·';
+        const hasErrors = (intg?.errorCount || 0) > 0;
+
+        const criteriaHtml = RUBRIC.criteria.map(c => {
+            const cr = r.byCriterion[c.id] || { score: 0, passed: false };
+            const passColor = cr.passed ? '#22c55e' : (cr.score >= 60 ? '#facc15' : '#ef4444');
+            const mark = cr.passed ? '✓' : '✘';
+            return `
+            <div style="padding:8px 12px;border:1px solid var(--border-default);border-left:3px solid ${passColor};border-radius:6px;background:var(--bg-panel);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);min-width:30px;">${c.id}</span>
+                    <span style="color:${passColor};font-weight:700;">${mark}</span>
+                    <span style="flex:1;font-size:0.82rem;">${_esc(c.label)}</span>
+                    <span style="font-family:var(--font-mono);font-size:0.78rem;color:${passColor};font-weight:700;">${cr.score}/100</span>
+                    <span style="font-size:0.65rem;color:var(--text-muted);">pes ${c.weight}</span>
+                </div>
+                ${!cr.passed ? `<div style="font-size:0.74rem;color:var(--text-secondary);margin-left:38px;font-style:italic;">💡 ${_esc(c.fix)}</div>` : ''}
+            </div>`;
+        }).join('');
+
+        const integrityHtml = (intg?.issues || []).slice(0, 8).map(i => {
+            const sevColor = i.severity === 'error' ? '#ef4444' : i.severity === 'warning' ? '#facc15' : '#94a3b8';
+            return `
+            <div style="padding:6px 10px;border-left:3px solid ${sevColor};background:${sevColor}10;border-radius:4px;margin-bottom:4px;font-size:0.78rem;">
+                <span style="font-family:var(--font-mono);font-size:0.65rem;color:${sevColor};font-weight:700;">[${i.rule}] ${i.severity.toUpperCase()}</span>
+                · ${_esc(i.human_message)}
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">💡 ${_esc(i.auto_fix_hint)}</div>
+            </div>`;
+        }).join('');
+
+        return `
+        <section style="margin-top:1.5rem;padding:1.2rem 1.4rem;background:var(--bg-panel);border:1px solid var(--border-default);border-radius:8px;">
+            <div style="display:flex;gap:1.2rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1rem;">
+                <div style="flex:1;min-width:240px;">
+                    <h2 style="margin:0 0 4px 0;font-size:1.1rem;">📐 Rubric V2 · 12 criteris auditables</h2>
+                    <p style="margin:0;font-size:0.82rem;color:var(--text-secondary);">Mètrica oficial post-legendary · cobreix value flow · SOPs · SOCs · mètriques Lean · cicles recíprocs. Pesos sumen 100. Status · gold≥85 · silver≥70 · bronze≥50.</p>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 22px;border-radius:8px;background:${rc}15;border:1px solid ${rc}50;">
+                    <div style="font-size:2rem;font-weight:900;color:${rc};line-height:1;font-family:var(--font-mono);">${r.total}<span style="font-size:0.8rem;opacity:0.7;">/100</span></div>
+                    <div style="font-size:0.7rem;font-weight:700;color:${rc};text-transform:uppercase;letter-spacing:0.05em;">${ri} ${r.status}</div>
+                </div>
+            </div>
+
+            ${hasErrors ? `
+            <div style="margin-bottom:1rem;padding:10px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-left:3px solid #ef4444;border-radius:6px;">
+                <strong style="color:#ef4444;">⚠ Integrity · ${intg.errorCount} errors + ${intg.warningCount} warnings</strong>
+                <div style="margin-top:6px;">${integrityHtml || '<em>cap detall</em>'}</div>
+            </div>` : (intg && intg.warningCount > 0 ? `
+            <div style="margin-bottom:1rem;padding:8px 12px;background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.30);border-radius:6px;font-size:0.82rem;">
+                ⚠ ${intg.warningCount} warnings cross-layer · ${integrityHtml ? '' : 'veure detalls'}
+                <div style="margin-top:5px;">${integrityHtml}</div>
+            </div>` : `
+            <div style="margin-bottom:1rem;padding:8px 12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.30);border-radius:6px;font-size:0.82rem;color:#22c55e;">
+                ✓ Integrity 7-regles · 0 errors · cap inconsistència cross-layer
+            </div>`)}
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:6px;">
+                ${criteriaHtml}
+            </div>
+
+            <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid var(--border-default);display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <span style="font-size:0.78rem;color:var(--text-secondary);">Evolucionar el projecte ·</span>
+                <a href="/map?project=${encodeURIComponent(this._projectId)}" data-link style="padding:5px 12px;border:1px solid var(--accent-indigo);background:rgba(99,102,241,0.10);color:var(--accent-indigo);border-radius:6px;text-decoration:none;font-size:0.78rem;font-weight:700;">✎ Editar manualment al mapa</a>
+                <a href="/create?templateId=founder-coop-tradicional&ambition=max&skip-prompt=false" data-link style="padding:5px 12px;border:1px solid #a855f7;background:rgba(168,85,247,0.10);color:#a855f7;border-radius:6px;text-decoration:none;font-size:0.78rem;font-weight:700;">🤖 Regenerar amb IA</a>
+                <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);font-family:var(--font-mono);">rubric v${r.rubricVersion || '1.0'}</span>
+            </div>
+        </section>`;
     }
 
     _renderDims(q) {

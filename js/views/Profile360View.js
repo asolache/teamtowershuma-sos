@@ -36,13 +36,14 @@ export default class Profile360View {
             const path = window.location.pathname;
             if (path === '/me') {
                 this._mode = 'me';
-                // Carregar handle del primary member o identity
                 this._handle = await this._resolveMyHandle();
             } else if (path.startsWith('/u/')) {
                 this._mode = 'public';
-                const raw = decodeURIComponent(path.slice(3)).replace(/^@/, '');
+                // FIX ikigai persistence · handle SEMPRE lowercase per a matching
+                // case-insensitive amb matriu_member.content.handle (que `ensureMember`
+                // sempre desa en lowercase).
+                const raw = decodeURIComponent(path.slice(3)).replace(/^@/, '').toLowerCase();
                 this._handle = '@' + raw;
-                // Si l'usuari accedeix al SEU propi /u/handle · escala a mode 'me'
                 const myHandle = await this._resolveMyHandle();
                 if (myHandle && myHandle === this._handle) this._mode = 'me';
             }
@@ -72,10 +73,11 @@ export default class Profile360View {
 
         // Identity propi · primary user_identity
         const identityNode = (identities || []).find(n => n?.content?.isPrimary) || (identities || [])[0] || null;
-        // Member del handle · cerca o auto-create si és mode='me'
+        // Member del handle · cerca case-insensitive (resol bug · si content.handle
+        // és 'Alvaro' i this._handle '@alvaro' · abans no trobava el member).
         let member = (members || []).find(m => {
-            const h = (m.content?.handle || '').replace(/^@/, '');
-            return ('@' + h) === this._handle;
+            const h = (m.content?.handle || '').replace(/^@/, '').toLowerCase();
+            return ('@' + h) === this._handle.toLowerCase();
         }) || null;
 
         // AUTO-CREATE · si mode 'me' i identity sense matriu_member · creem-lo
@@ -121,17 +123,22 @@ export default class Profile360View {
     }
 
     async _resolveMyHandle() {
-        // Prioritat · primary matriu_member · identity displayName/handle · fallback
+        // FIX ikigai persistence · SEMPRE lowercase + trim · evita mismatch case
+        // entre primary member i identity (causa real del bug "ikigai no es guarda").
+        const norm = (h) => h ? '@' + String(h).trim().replace(/^@/, '').toLowerCase() : null;
         try {
             const members = await KB.query({ type: 'matriu_member' });
             const primary = (members || []).find(m => m?.content?.isPrimary);
-            if (primary?.content?.handle) return '@' + primary.content.handle.replace(/^@/, '');
+            if (primary?.content?.handle) return norm(primary.content.handle);
+            // Fallback · qualsevol membre · sense isPrimary
+            const any = (members || [])[0];
+            if (any?.content?.handle) return norm(any.content.handle);
         } catch (_) {}
         try {
             const identities = await KB.query({ type: 'user_identity' });
             const id = (identities || []).find(n => n?.content?.isPrimary) || (identities || [])[0];
             const h = id?.content?.handle || id?.content?.displayName;
-            if (h) return '@' + String(h).replace(/^@/, '').toLowerCase();
+            if (h) return norm(h);
         } catch (_) {}
         return null;
     }
@@ -364,8 +371,10 @@ export default class Profile360View {
     // ── Edita ikigai · inline modal · resol bug persistence amb auto-create ──
     async _openIkigaiEditor() {
         // Garanteix matriu_member · si no existeix · auto-create
+        // FIX · case-insensitive match · resol bug ikigai persistence
         let members = await KB.query({ type: 'matriu_member' }).catch(() => []);
-        let member = members.find(m => ('@' + (m.content?.handle || '').replace(/^@/, '')) === this._handle);
+        const lcHandle = this._handle.toLowerCase();
+        let member = members.find(m => ('@' + (m.content?.handle || '').replace(/^@/, '').toLowerCase()) === lcHandle);
         if (!member) {
             const identities = await KB.query({ type: 'user_identity' }).catch(() => []);
             const identityNode = identities.find(n => n?.content?.isPrimary) || identities[0];

@@ -908,7 +908,7 @@
       "description": "Migrar `ProjectQualityView` (/quality) per usar els nous models V2:\\n- `valueFlowRubricService` (12 criteris · pesos 100) en lloc del legacy `projectQualityService` (5 dims hardcoded)\\n- `valueFlowIntegrityService` (7 regles R1-R7) per a errors cross-layer\\n- Mostra status `gold/silver/bronze/red` amb badge canonical\\n- Per cada criteri fallit · mostra el `fix` del rubric + CTA cap a la vista on resoldre-ho\\n- 'Evolucionar manualment' o 'Evolucionar amb IA' (CTA crida orchestrator.personalize amb context exacte)\\n- Diff visual abans/després quan IA millora el mapa\\n- Auditoria del rubric per cada projecte · score 100/100 = pot publicar al permaweb amb confiança\\n\\nResol la pregunta de l'usuari · 'estic al 100%?' amb una resposta mesurable i auditable contra el nou estàndard rubric+integrity.",
       "priority": "critical",
       "complexity": "M",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
       "required_capabilities": [
         "code-write",
@@ -930,7 +930,12 @@
         "ux",
         "quality",
         "pre-alpha"
-      ]
+      ],
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1778930492689,
+      "completed_at": 1778932292689,
+      "cost_actual_eur": 2.5,
+      "deliverable_uri": "git:claude/ikigai-real-fix..qualityV2"
     },
     {
       "id": "wo-creation-completeness-guarantee-001",
