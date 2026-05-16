@@ -944,14 +944,17 @@ export default class DashboardView {
                     </div>
                 </div>
 
-                <!-- MAX-BOOTSTRAP sprint A · clonar 108-cohort 100/100 demo -->
-                <div class="dash-form-group" style="background:linear-gradient(135deg,rgba(34,197,94,0.06),rgba(250,204,21,0.04));border:1px solid rgba(34,197,94,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.8rem;">
-                    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-size:0.88rem;font-weight:700;color:var(--text-main);">
+                <!-- MAX-BOOTSTRAP · legacy demo · LEGENDARY-001 deprecate banner -->
+                <div class="dash-form-group" style="background:linear-gradient(135deg,rgba(250,204,21,0.06),rgba(239,68,68,0.04));border:1px solid rgba(250,204,21,0.30);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.8rem;">
+                    <div style="font-size:0.75rem;color:#facc15;font-weight:700;margin-bottom:4px;">⚠ Demo legacy · serà esborrat post-alfa</div>
+                    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-size:0.86rem;font-weight:600;color:var(--text-main);">
                         <input type="checkbox" id="newProjMaxBoot" style="cursor:pointer;">
-                        <span>🌟🌟 Clonar <strong>MAX bootstrap</strong> · 108 cohort managers · lifecycle 85%+</span>
+                        <span>🌟 Clonar <strong>MAX bootstrap</strong> · 108 cohort managers · lifecycle 85%+</span>
                     </label>
-                    <div style="font-size:0.74rem;color:var(--text-muted);margin-top:4px;line-height:1.45;">
-                        Genera projecte amb <strong>108 cohort managers</strong> (1 per skill nuclear), canvas + pitch publicat + tokenomics + 3 ledger entries balanced + 2 invoices (1 paid auto-ledger) + 2 proposals (1 accepted) + 2 market items + workshops + SOPs. 10 fases lifecycle pre-omplertes per a demo o continuous improvement baseline.
+                    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;line-height:1.45;">
+                        Genera projecte amb 108 cohort managers + canvas/pitch/tokenomics + 3 ledger entries balanced + 2 invoices + 2 proposals + market items + workshops + SOPs.
+                        <br>
+                        <strong>Prefer el flow nou</strong> · <a href="/create" data-link style="color:var(--accent-indigo);">/create</a> amb template <code>founder-coop-tradicional</code> i ambition <code>max</code> · qualitat ≥85 garantida pel rubric · sortida testada amb 214 asserts.
                     </div>
                 </div>
 

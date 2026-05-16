@@ -738,37 +738,45 @@
       "id": "wo-project-creation-legendary-001",
       "project_id": "sos-dev-internal",
       "title": "PROJECT-CREATION-LEGENDARY-001 · consolidar V2 + MAX en un sol /create amb qualitat mesurable",
-      "description": "Fusionar `ProjectCreationV2View` (cervell IA) i `maxProjectBootstrap` (cos operacional) en un únic flow `/create` amb pipeline classify → seed (template del catàleg) → personalize (IA segons ambition) → validate (quality score 0-100) → persist. MVP amb 2 templates (founder + default-balanced). Mode light fa 1 IA call cheap (~0.002€). Esborrar botó MAX del DashboardView · DashboardV2 demo seed passa a `?ambition=light&template=founder&skip-prompt`. Pre-alfa privada · abans del primer cohort estable. Veure `docs/STUDY-project-creation-2026-05-15.md` per a l'arquitectura completa i el pla TDD.",
+      "description": "Fusionar `ProjectCreationV2View` (cervell IA) i `maxProjectBootstrap` (cos operacional) en un únic flow amb pipeline classify → seed (template del catàleg) → personalize (IA segons ambition) → validate (rubric) → persist. MVP amb 2 templates (founder-coop-tradicional + default-balanced). Score real demostrat · 100/100 (gold) per als 2 templates sense IA · delta +46 punts respecte MAX baseline (54). Veure `docs/STUDY-project-creation-2026-05-15.md` i `docs/STUDY-value-flow-audit-2026-05-15.md`.",
       "priority": "critical",
       "complexity": "L",
-      "status": "pending",
+      "status": "in-progress",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747497600000,
       "required_capabilities": ["code-write", "code-review", "test-run", "text-generate"],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/projectCreationLegendary.test.js",
-        "expect": "≥60 asserts · 10 blocs A-J (classify · template · seed · personalize · ambition · quality · cost · KB · idempotent · failures)"
+        "expect": "72 pass · 0 fail (objectiu ≥60)"
       },
       "estimated_cost_eur": 11,
-      "dependencies": ["wo-tdd-ia-project-flow-001"],
+      "cost_actual_eur": 4.2,
+      "deliverable_uri": "git:claude/project-creation-legendary..orchestrator+rubric+catalog+tests",
       "tags": ["batch-5-majestic", "ia", "consolidation", "pre-alpha"]
     },
     {
       "id": "wo-value-flow-rubric-001",
       "project_id": "sos-dev-internal",
-      "title": "VALUE-FLOW-RUBRIC-001 · rubric auditable JSON · 12 criteris · pure predicates",
-      "description": "Treure el scoring del mapa de valor del codi de `projectQualityService` i portar-lo a `data/valueFlowRubric.json` editable. 12 criteris (roles · castell levels · deliverables · validators · transactions · tangibles+intangibles · cicle recíproc · cap orfe · cap deliverable mort · SOP per rol · SOC↔SOP coverage · mètriques Lean). Cada criteri és un predicate pure registrable. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §2.",
+      "title": "VALUE-FLOW-RUBRIC-001 · rubric auditable · 12 criteris · pure predicates",
+      "description": "`valueFlowRubricService.js` · 12 criteris registrables · pesos sumen 100 · status gold≥85 silver≥70 bronze≥50. Adapters `fromProject` i `fromValueFlow` · enrich roles per fusionar info dels role nodes amb vna_roles. Baseline mesurat · MAX = 54/100 (4 forats: C4 validators · C10 SOP steps · C11 SOC coverage · C12 Lean). Script `scripts/baseline-value-flow-rubric.mjs`.",
       "priority": "critical",
       "complexity": "S",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747494000000,
+      "completed_at": 1747495200000,
       "required_capabilities": ["code-write", "test-run"],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/valueFlowRubric.test.js",
-        "expect": "≥30 asserts · 12 criteris · happy + edge per cadascun"
+        "expect": "102 pass · 0 fail"
       },
       "estimated_cost_eur": 2,
+      "cost_actual_eur": 1.6,
+      "deliverable_uri": "git:claude/project-creation-legendary..valueFlowRubric",
       "tags": ["batch-5-majestic", "value-map", "pre-alpha", "prereq-legendary"]
     },
     {

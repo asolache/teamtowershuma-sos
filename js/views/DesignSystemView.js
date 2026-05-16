@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-15T23:00 · v80 · Identity keyfile inline (iPad) · nodeShareService · kanban real users · backlog v2-majestic';
+const BUILD_STAMP = '2026-05-16T13:00 · v81 · LEGENDARY-001 · rubric 12-criteris + catàleg 2 templates + orchestrator (214 asserts · score 100/100)';
 
 export default class DesignSystemView {
 

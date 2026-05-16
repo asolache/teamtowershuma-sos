@@ -224,34 +224,42 @@ export default class DashboardV2View {
 
     async _seedCastellersDemo() {
         try {
-            const { buildCastellersSeed } = await import('../core/castellersSeed.js');
+            // LEGENDARY-001 · demo Castellers passa pel orchestrator unificat
+            // (`?ambition=light&template=founder-coop-tradicional`). Cap pèrdua
+            // UX · guany qualitat ≥85 garantida pel rubric.
+            const { createProject } = await import('../core/projectCreationOrchestrator.js');
             const { KB } = await import('../core/kb.js');
             const { toast } = await import('../core/uxComponents.js');
             const { store } = await import('../core/store.js');
 
             const meHandle = this._state?.meHandle || '@anonymous';
-            const seed = buildCastellersSeed({ creatorHandle: meHandle });
+            const result = await createProject({
+                name:           'Castellers de Vilafranca · demo',
+                description:    'Connectar colles via cohort cooperativa amb cervell extés SOS · permaweb federation.',
+                sector:         'cultura',
+                ambition:       'light',
+                templateId:     'founder-coop-tradicional',
+                creatorHandle:  meHandle,
+            });
 
-            // Upsert all nodes
-            await KB.upsert(seed.org);
-            await KB.upsert(seed.project);
-            for (const r of seed.roles) await KB.upsert(r);
-            for (const p of seed.processes) await KB.upsert(p);
-            for (const s of seed.socs) await KB.upsert(s);
-            for (const r of seed.resources) await KB.upsert(r);
+            // Upsert al KB · project + role + sop + soc nodes
+            await KB.upsert(result.project);
+            for (const r of result.roles) await KB.upsert(r);
+            for (const s of result.sops)  await KB.upsert(s);
+            for (const s of result.socs)  await KB.upsert(s);
 
             // Sync to store
-            await store.dispatch({ type: 'CREATE_PROJECT', payload: seed.project });
+            await store.dispatch({ type: 'CREATE_PROJECT', payload: result.project });
 
             toast({
                 kind: 'success',
-                text: '🎭 Castellers carregat · ' + seed.stats.roleCount + ' rols · '
-                    + seed.stats.transactionCount + ' transactions · ' + seed.stats.processCount + ' processos',
+                text: '🎭 Castellers carregat · score ' + result.score + '/100 · '
+                    + result.roles.length + ' rols · ' + result.transactions.length + ' transactions · '
+                    + result.sops.length + ' SOPs',
                 ttl: 5000,
             });
-            // Redirect to hub
             setTimeout(() => {
-                window.location.href = '/hub/' + encodeURIComponent(seed.project.id);
+                window.location.href = '/hub/' + encodeURIComponent(result.project.id);
             }, 1500);
         } catch (e) {
             const { toast } = await import('../core/uxComponents.js');
