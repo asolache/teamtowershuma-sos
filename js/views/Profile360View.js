@@ -50,6 +50,14 @@ export default class Profile360View {
         } catch (_) {}
 
         if (!this._handle) {
+            // Si NO tenim handle resolut · però SÍ hi ha identity primary · el
+            // fallback al DID ja ha fet feina dins _resolveMyHandle. Si encara
+            // és null · realment cap identity exists · mostrem on-boarding.
+            const identities = await KB.query({ type: 'user_identity' }).catch(() => []);
+            if (!identities || identities.length === 0) {
+                return this._renderNoIdentity();
+            }
+            // Edge · identity sense DID · prevenció (no hauria de passar)
             return this._renderNoIdentity();
         }
 
@@ -124,7 +132,8 @@ export default class Profile360View {
 
     async _resolveMyHandle() {
         // FIX ikigai persistence · SEMPRE lowercase + trim · evita mismatch case
-        // entre primary member i identity (causa real del bug "ikigai no es guarda").
+        // entre primary member i identity. + Fallback al DID si handle/displayName
+        // són buits (cas usuari amb identity generada però sense editar perfil).
         const norm = (h) => h ? '@' + String(h).trim().replace(/^@/, '').toLowerCase() : null;
         try {
             const members = await KB.query({ type: 'matriu_member' });
@@ -139,6 +148,13 @@ export default class Profile360View {
             const id = (identities || []).find(n => n?.content?.isPrimary) || (identities || [])[0];
             const h = id?.content?.handle || id?.content?.displayName;
             if (h) return norm(h);
+            // FALLBACK ROBUST · si identity existeix però NO té handle/displayName
+            // generem un handle estable des del DID · evita que l'usuari quedi
+            // bloquejat sense poder editar ikigai (bug original reportat).
+            if (id?.content?.primaryDid) {
+                const didSlug = String(id.content.primaryDid).replace(/^did:sos:/, '').slice(0, 12);
+                return norm('user-' + didSlug);
+            }
         } catch (_) {}
         return null;
     }

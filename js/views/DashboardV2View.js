@@ -377,7 +377,7 @@ export default class DashboardV2View {
         <div class="h2-zone">
             <div class="h2-zone-head">
                 <h2>📁 Els teus projectes · ${projects.length}</h2>
-                ${moreCount > 0 ? `<a href="/dashboard" data-link>→ Veure tots (${projects.length})</a>` : `<a href="/dashboard" data-link>→ Gestionar</a>`}
+                ${moreCount > 0 ? `<a href="/projects" data-link>→ Veure tots (${projects.length})</a>` : `<a href="/projects" data-link>→ Gestionar</a>`}
             </div>
             <div class="h2-proj-grid">
                 ${visibleProjects.map(p => this._renderProjectCard(p)).join('')}

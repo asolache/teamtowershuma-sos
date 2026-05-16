@@ -85,6 +85,7 @@ export default class IdentityView {
                 <a href="/" data-link class="id-logo">🗼 Team<span>Towers</span></a>
                 <span class="id-title">Identidad · perfil del operador ${renderExplainerBadge('did', { size: 'xs' })} ${renderExplainerBadge('sbt', { size: 'xs' })}</span>
                 <div class="id-spacer"></div>
+                <a href="/me" data-link style="margin-right:8px;padding:5px 12px;background:rgba(99,102,241,0.18);color:#a8b2ff;border:1px solid rgba(99,102,241,0.35);border-radius:6px;text-decoration:none;font-size:0.78rem;font-weight:700;">👤 Veure perfil 360 →</a>
                 ${identifyButtonHtml({ size: 'sm' })}
             </div>
 

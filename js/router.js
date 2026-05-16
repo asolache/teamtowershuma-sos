@@ -35,6 +35,8 @@ const ROUTES = [
     { path: '/market',    view: () => import('./views/MarketView.js')   },
     // AUTH-001 · identidad operador
     { path: '/identity',  view: () => import('./views/IdentityView.js') },
+    // PROJECTS-LIST-001 · llistat complet projectes amb filtres
+    { path: '/projects',  view: () => import('./views/ProjectsView.js') },
     // PROFILE-360-LEGENDARY · /me · perfil unificat 8 zones (privat)
     { path: '/me',        view: () => import('./views/Profile360View.js') },
     // KM-001 · folders inteligentes
