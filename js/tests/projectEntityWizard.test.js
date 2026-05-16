@@ -61,7 +61,8 @@ ok('C · sos+federat · generationMode=ai-driven', sSosFed?.generationMode === '
 
 const sIntPilot = resolveSuggestion('project_internal', 'pilot');
 ok('C · intern+pilot · ambition=light',   sIntPilot?.ambition === 'light');
-ok('C · intern+pilot · generationMode=template (light→template)', sIntPilot?.generationMode === 'template');
+// PR-J · IA per defecte a tots els ambitions · fallback a template el fa el pre-flight check
+ok('C · intern+pilot · generationMode=ai-driven (PR-J · default IA)', sIntPilot?.generationMode === 'ai-driven');
 
 // ─── D · Edge cases ─────────────────────────────────────────────────────
 console.log('\n— D · edge cases');

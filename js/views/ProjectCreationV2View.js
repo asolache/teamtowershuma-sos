@@ -298,9 +298,9 @@ export default class ProjectCreationV2View {
 
     _renderAmbitionCards() {
         const items = [
-            { id: 'light',    ic: '✏️', nm: 'Light',     ds: 'Template + 1 IA call cheap · ràpid' },
-            { id: 'standard', ic: '⚡', nm: 'Standard',  ds: 'Template + IA enriquit · típic',     active: true },
-            { id: 'max',      ic: '🏆', nm: 'MAX',       ds: 'Template + IA full · qualitat top' },
+            { id: 'light',    ic: '✏️', nm: 'Light',     ds: 'IA mínima · macro · ràpid · cost més baix' },
+            { id: 'standard', ic: '⚡', nm: 'Standard',  ds: 'IA equilibrada · mid · construcció completa',     active: true },
+            { id: 'max',      ic: '🏆', nm: 'MAX',       ds: 'IA full · micro · mega producte amb WOs' },
         ];
         return items.map(it => {
             const def = AMBITION_LEVELS[it.id];
@@ -432,8 +432,14 @@ export default class ProjectCreationV2View {
         const ambition = this._selectedAmbition();
         const templateId = this._presetTemplateId || null;
         const entityType = document.getElementById('pcvEntityType')?.value || null;
-        const vnaZoom    = document.getElementById('pcvVnaZoom')?.value || null;
-        const genMode    = document.getElementById('pcvGenMode')?.value || (ambition === 'light' ? 'template' : 'ai-driven');
+        // PR-J · vna_zoom auto-mapping si l'usuari no l'ha tocat ·
+        // light → macro · standard → mid · max → micro
+        const vnaZoomRaw = document.getElementById('pcvVnaZoom')?.value;
+        const vnaZoom    = vnaZoomRaw || ({ light: 'macro', standard: 'mid', max: 'micro' }[ambition] || 'mid');
+        // PR-J · IA per defecte a TOTS els ambitions (light/standard/max) ·
+        // si no hi ha API key · el pre-flight check hasAnyApiKey() fa fallback
+        // automàtic a template. Mode template explícit només si l'usuari el tria.
+        const genMode    = document.getElementById('pcvGenMode')?.value || 'ai-driven';
 
         if (!name) {
             toast({ kind: 'error', text: 'El nom és obligatori' });
