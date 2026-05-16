@@ -19,6 +19,32 @@
 
 export const PROMPTS_VERSION = 'v1.0';
 
+// CASTELLER-MODEL · els 6 nivells canònics · model jeràrquic català dels
+// castellers · cada projecte SOS ha de tenir rols distribuïts en aquests
+// nivells (cap zona ≥7 · capa 1 del rubric C2).
+//   pom_de_dalt · visió + estratègia (cima · 1-2 persones)
+//   tronc       · execució crítica (centre · directors operacionals)
+//   pinya       · suport diari (massa · gent de confiança)
+//   laterals    · validació · auditoria · qualitat (vores)
+//   mans        · interfície amb fora · ofertes públiques · matchmaking
+//   baixos     · responsabilitat ètica · ancoratge (fundament · 1 persona)
+export const CASTELLER_LEVELS = Object.freeze([
+    Object.freeze({ id: 'pom_de_dalt', label: 'Pom de dalt',  position: 'cima',      typical_kinds: ['visioner', 'founder'],          description: 'Visió estratègica · prioritats absolutes · 1-2 persones' }),
+    Object.freeze({ id: 'tronc',       label: 'Tronc',         position: 'centre',    typical_kinds: ['architect', 'editor', 'pm'],     description: 'Execució crítica · directors operacionals' }),
+    Object.freeze({ id: 'pinya',       label: 'Pinya',         position: 'massa',     typical_kinds: ['cohort_manager', 'curator'],     description: 'Suport diari · gent de confiança · onboarding' }),
+    Object.freeze({ id: 'laterals',    label: 'Laterals',     position: 'vores',     typical_kinds: ['reviewer', 'qa', 'sentinel'],    description: 'Validació · auditoria · qualitat' }),
+    Object.freeze({ id: 'mans',        label: 'Mans',          position: 'interface', typical_kinds: ['facilitator', 'connector'],      description: 'Interfície amb fora · ofertes públiques · matchmaking' }),
+    Object.freeze({ id: 'baixos',      label: 'Baixos',        position: 'fundament', typical_kinds: ['founder', 'founder_anchor'],     description: 'Responsabilitat ètica · ancoratge · 1 persona' }),
+]);
+
+// Build castell preamble · text injectat al SYSTEM_BASE
+function _castellerPreamble() {
+    const lines = CASTELLER_LEVELS.map(l =>
+        `   · ${l.id} (${l.position}) → ${l.description}. Kinds típics · ${l.typical_kinds.join(', ')}`
+    );
+    return lines.join('\n');
+}
+
 // ── Capa 1 · SYSTEM_BASE ──────────────────────────────────────────────────
 // Posicionament expert + marc d'anàlisi + contracte de sortida JSON estricte.
 // Mantingut sota 800 tokens (~3200 chars) per deixar budget per few-shot+user.
@@ -31,8 +57,11 @@ Marc d'anàlisi (sempre aplicat) ·
 4. SOC (Standard Operating Concept · què + per què · versionat snapshot) vs SOP (Standard Operating Procedure · com · evoluciona contínuament). Cada checklist item del SOC té un sop_ref.
 5. Rols emissor/receptor en cada transacció · sense rols orfes · sense deliverables morts · cap cicle no-recíproc no justificat.
 
+Model casteller (jerarquia del projecte SOS) · cada rol DEU tenir castell_level vàlid ·
+${_castellerPreamble()}
+
 Estructura objectiu (rubric 100 punts · cal arribar a ≥85 gold) ·
-- roles[] · ≥3 amb kind canònic + castell_level diversificats
+- roles[] · ≥3 amb kind canònic + castell_level diversificats (≥2 nivells)
 - deliverables[] · ≥1 producer per rol · ≥50% amb validator
 - transactions[] · ≥5 · mix tangible+intangible · ≥1 cicle recíproc · cap rol orfe · mètriques Lean
 - sops[] · 1 per rol amb ≥3 steps (deliverable_kind + approval_rule)
@@ -40,6 +69,7 @@ Estructura objectiu (rubric 100 punts · cal arribar a ≥85 gold) ·
 
 Contracte de sortida ·
 - SEMPRE JSON estricte sense markdown · sense codeblocks · sense comentaris
+- Cada rol SEMPRE té camp castell_level (pom_de_dalt|tronc|pinya|laterals|mans|baixos)
 - Si la tasca demana enriquir un template existent · respecta IDs i estructura · només ompla camps buits o millora text
 - Cap placeholder {{...}} a la resposta · resolt'ho amb context
 - Si el context és insuficient · genera valors raonables basats en sector i descripció · mai retornes errors`;
@@ -255,4 +285,23 @@ export function flattenPrompt(promptStruct) {
     parts.push('[USER]');
     parts.push(promptStruct.user);
     return parts.join('\n');
+}
+
+// validateCastellLevel · pure · verifica que un castell_level és canonical.
+// Útil per a checks post-IA (la IA pot inventar levels · això blinda).
+export function validateCastellLevel(level) {
+    if (!level || typeof level !== 'string') return false;
+    return CASTELLER_LEVELS.some(l => l.id === level);
+}
+
+// suggestCastellLevel · pure · retorna el castell_level típic per a un kind.
+// Útil per autocompletar a UI/template sense IA. Heurístic · cap garantia
+// d'optimalitat · cap rol restringit a 1 sol level.
+export function suggestCastellLevel(roleKind) {
+    if (!roleKind) return 'pinya';   // default fallback
+    const norm = String(roleKind).toLowerCase();
+    for (const l of CASTELLER_LEVELS) {
+        if (l.typical_kinds.some(k => norm.includes(k) || k.includes(norm))) return l.id;
+    }
+    return 'pinya';
 }
