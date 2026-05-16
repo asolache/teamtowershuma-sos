@@ -430,7 +430,7 @@ export default class DashboardV2View {
             { ic: '💬', nm: 'Timeline',      ds: 'Feed activitat network · sort relevància', href: '/timeline' },
             { ic: '🗺',  nm: 'Catàleg processos', ds: '15 plantilles type×stage', href: '/process-catalog' },
             { ic: '🎓', nm: 'Aprèn',         ds: 'Catàleg learn · 108 rols',   href: '/learn' },
-            { ic: '👤', nm: meHandle ? 'El meu perfil' : 'Crear identitat', ds: meHandle ? meHandle : 'DID + ECDSA local', href: meHandle ? '/u/' + meHandle.replace(/^@/, '') : '/identity' },
+            { ic: '👤', nm: meHandle ? 'El meu perfil 360' : 'Crear identitat', ds: meHandle ? meHandle + ' · 8 zones (ikigai · skills · trust · work · ofertes...)' : 'DID + ECDSA local', href: meHandle ? '/me' : '/identity' },
             { ic: '⚙️', nm: 'Configuració',  ds: 'API keys · tema · IA · Pagaments · Manifesto', href: '/settings' },
         ];
         return `
