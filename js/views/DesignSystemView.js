@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-17T03:30 · v112 · SECTOR ROLE NAMING · 17 sectors CNAE × 5 rols (CTO Founder · Cap d\'Obra · Managing Partner ...) zero cost IA · 141 asserts (sobre v111 markdown)';
+const BUILD_STAMP = '2026-05-17T04:00 · v113 · IA DEFAULT ALL MODES · light/standard/max sempre ai-driven · vna_zoom auto-mapping · fallback template si no key · 18 asserts';
 
 export default class DesignSystemView {
 

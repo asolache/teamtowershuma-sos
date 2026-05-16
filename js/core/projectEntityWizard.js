@@ -95,7 +95,9 @@ export function resolveSuggestion(entityType, formatId) {
     const fmt = formats.find(f => f.id === formatId) || formats[0];
 
     // generationMode default · 'ai-driven' sempre · però respecta light → template
-    const generationMode = fmt.ambition === 'light' ? 'template' : 'ai-driven';
+    // PR-J · IA sempre per defecte · si no hi ha API key · fallback a template
+    // ho fa el pre-flight check de ProjectCreationV2View
+    const generationMode = 'ai-driven';
 
     const descriptionHint = _buildDescriptionHint(entityType, fmt);
 
