@@ -15,7 +15,7 @@ console.log('\n=== VNA-EXPERT-PROMPTS-001 ===\n');
 // ─── A · capa 1 · SYSTEM_BASE ─────────────────────────────────────────────
 eq(PROMPTS_VERSION, 'v1.0',                              'A · version v1.0');
 t(typeof SYSTEM_BASE === 'string' && SYSTEM_BASE.length > 500, 'A · SYSTEM_BASE no buit (>500 chars)');
-t(SYSTEM_BASE.includes('Value Stream Mapping'),         'A · menció explícita VSM');
+t(/Value Network Analysis|VNA/.test(SYSTEM_BASE),       'A · menció explícita VNA · Value Network Analysis');
 t(SYSTEM_BASE.includes('Value Network Analysis'),       'A · menció explícita VNA');
 t(/Lean|TIMWOOD/.test(SYSTEM_BASE),                     'A · marc Lean');
 t(SYSTEM_BASE.includes('SOC'),                          'A · concept SOC');

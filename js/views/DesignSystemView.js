@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T16:30 · v95 · CLEANUP · /projects llistat + ikigai DID fallback (root cause real) + /identity↔/me cross-link';
+const BUILD_STAMP = '2026-05-16T17:00 · v96 · AGENT-SOS · manifest IA expandit + default provider selector + 6 WOs camí màgia · audit doc';
 
 export default class DesignSystemView {
 
