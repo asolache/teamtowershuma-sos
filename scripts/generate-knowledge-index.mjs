@@ -115,6 +115,8 @@ const items = files.map(full => {
         sos_context:     frontmatter.sos_context || null,
         sector_id:       frontmatter.sector_id || null,
         sector_name:     frontmatter.sector_name || null,
+        scope:           frontmatter.scope || null,
+        brand_owner:     frontmatter.brand_owner || null,
     };
 }).sort((a, b) => a.relpath.localeCompare(b.relpath));
 

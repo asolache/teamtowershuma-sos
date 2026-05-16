@@ -14,6 +14,8 @@ related_socs: [soc-teamtowers-brand]
 related_sops: [sop-teamtowers-merchandising]
 keywords: [merchandising, pañuelo, faja, faixa, souvenir, branding, upsell, cobranding]
 sos_context: secondary
+scope: brand-specific
+brand_owner: teamtowers
 ---
 
 # Merchandising TeamTowers · Concepto operativo

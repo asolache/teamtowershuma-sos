@@ -1,6 +1,6 @@
 {
   "version": "v1.0",
-  "generated": "2026-05-16T16:56:37.065Z",
+  "generated": "2026-05-16T18:25:34.343Z",
   "totalFiles": 69,
   "items": [
     {
@@ -20,7 +20,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "S",
-      "sector_name": "Arts, Culture & Human Performance"
+      "sector_name": "Arts, Culture & Human Performance",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "clients-EXAMPLE-vna-model",
@@ -44,7 +46,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "N",
-      "sector_name": "Consultoría / Actividades Profesionales"
+      "sector_name": "Consultoría / Actividades Profesionales",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "roles-CEO",
@@ -63,7 +67,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-A",
@@ -82,7 +88,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "A",
-      "sector_name": "Agricultura, Ganadería, Silvicultura y Pesca"
+      "sector_name": "Agricultura, Ganadería, Silvicultura y Pesca",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-B",
@@ -101,7 +109,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "B",
-      "sector_name": "Industrias Extractivas"
+      "sector_name": "Industrias Extractivas",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-C",
@@ -120,7 +130,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "C",
-      "sector_name": "Industria Manufacturera"
+      "sector_name": "Industria Manufacturera",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-construction",
@@ -139,7 +151,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-D",
@@ -158,7 +172,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "D",
-      "sector_name": "Suministro de Energía Eléctrica, Gas y Vapor"
+      "sector_name": "Suministro de Energía Eléctrica, Gas y Vapor",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-E",
@@ -177,7 +193,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "E",
-      "sector_name": "Suministro de Agua, Saneamiento y Gestión de Residuos"
+      "sector_name": "Suministro de Agua, Saneamiento y Gestión de Residuos",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-F",
@@ -196,7 +214,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "F",
-      "sector_name": "Construcción"
+      "sector_name": "Construcción",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-G",
@@ -215,7 +235,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "G",
-      "sector_name": "Comercio al por Mayor y Menor"
+      "sector_name": "Comercio al por Mayor y Menor",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-H",
@@ -234,7 +256,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "H",
-      "sector_name": "Transporte y Almacenamiento"
+      "sector_name": "Transporte y Almacenamiento",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-I",
@@ -253,7 +277,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "I",
-      "sector_name": "Hostelería y Turismo"
+      "sector_name": "Hostelería y Turismo",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-J",
@@ -272,7 +298,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "J",
-      "sector_name": "Información y Comunicaciones"
+      "sector_name": "Información y Comunicaciones",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-K",
@@ -291,7 +319,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "K",
-      "sector_name": "Telecomunicaciones, Programación Informática y Servicios de Información"
+      "sector_name": "Telecomunicaciones, Programación Informática y Servicios de Información",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-L",
@@ -310,7 +340,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "L",
-      "sector_name": "Actividades Financieras y de Seguros"
+      "sector_name": "Actividades Financieras y de Seguros",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-M",
@@ -329,7 +361,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "M",
-      "sector_name": "Actividades Inmobiliarias"
+      "sector_name": "Actividades Inmobiliarias",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-N",
@@ -348,7 +382,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "N",
-      "sector_name": "Actividades Profesionales, Científicas y Técnicas"
+      "sector_name": "Actividades Profesionales, Científicas y Técnicas",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-O",
@@ -367,7 +403,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "O",
-      "sector_name": "Administración Pública y Defensa"
+      "sector_name": "Administración Pública y Defensa",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-P",
@@ -386,7 +424,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "P",
-      "sector_name": "Educación Reglada (K-12)"
+      "sector_name": "Educación Reglada (K-12)",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-Q",
@@ -405,7 +445,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "Q",
-      "sector_name": "Educación"
+      "sector_name": "Educación",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-R",
@@ -424,7 +466,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "R",
-      "sector_name": "Actividades Sanitarias y de Servicios Sociales"
+      "sector_name": "Actividades Sanitarias y de Servicios Sociales",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-S",
@@ -443,7 +487,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "S",
-      "sector_name": "Otros Servicios (Arte, Deporte, Cultura y Servicios Personales)"
+      "sector_name": "Otros Servicios (Arte, Deporte, Cultura y Servicios Personales)",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-T",
@@ -462,7 +508,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "T",
-      "sector_name": "Actividades de los Hogares como Empleadores"
+      "sector_name": "Actividades de los Hogares como Empleadores",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sectors-UV",
@@ -481,7 +529,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": "UV",
-      "sector_name": "Organismos Extraterritoriales e Internacionales"
+      "sector_name": "Organismos Extraterritoriales e Internacionales",
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-castellers-demo",
@@ -510,7 +560,9 @@
       "sector_cnae": null,
       "sos_context": "critical",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-charla-conferencia",
@@ -544,7 +596,9 @@
       "sector_cnae": null,
       "sos_context": "critical",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-fent-pinya",
@@ -575,7 +629,9 @@
       "sector_cnae": null,
       "sos_context": "critical",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-la-colla",
@@ -609,7 +665,9 @@
       "sector_cnae": null,
       "sos_context": "critical",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-lifecycle-idea",
@@ -634,7 +692,9 @@
       "sector_cnae": null,
       "sos_context": "foundational",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-lifecycle-mvp",
@@ -658,7 +718,9 @@
       "sector_cnae": null,
       "sos_context": "foundational",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-lifecycle-scale",
@@ -683,7 +745,9 @@
       "sector_cnae": null,
       "sos_context": "foundational",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-lifecycle-validation",
@@ -707,7 +771,9 @@
       "sector_cnae": null,
       "sos_context": "foundational",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-proyecto-custom",
@@ -737,7 +803,9 @@
       "sector_cnae": null,
       "sos_context": "critical",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-a",
@@ -762,7 +830,9 @@
       "sector_cnae": "A",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-b",
@@ -787,7 +857,9 @@
       "sector_cnae": "B",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-c",
@@ -812,7 +884,9 @@
       "sector_cnae": "C",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-d",
@@ -837,7 +911,9 @@
       "sector_cnae": "D",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-e",
@@ -862,7 +938,9 @@
       "sector_cnae": "E",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-f",
@@ -887,7 +965,9 @@
       "sector_cnae": "F",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-g",
@@ -912,7 +992,9 @@
       "sector_cnae": "G",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-h",
@@ -937,7 +1019,9 @@
       "sector_cnae": "H",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-i",
@@ -962,7 +1046,9 @@
       "sector_cnae": "I",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-j",
@@ -987,7 +1073,9 @@
       "sector_cnae": "J",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-k",
@@ -1013,7 +1101,9 @@
       "sector_cnae": "K",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-l",
@@ -1038,7 +1128,9 @@
       "sector_cnae": "L",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-m",
@@ -1062,7 +1154,9 @@
       "sector_cnae": "M",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-n",
@@ -1087,7 +1181,9 @@
       "sector_cnae": "N",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-o",
@@ -1112,7 +1208,9 @@
       "sector_cnae": "O",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-p",
@@ -1137,7 +1235,9 @@
       "sector_cnae": "P",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-q",
@@ -1162,7 +1262,9 @@
       "sector_cnae": "Q",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-r",
@@ -1188,7 +1290,9 @@
       "sector_cnae": "R",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-s",
@@ -1214,7 +1318,9 @@
       "sector_cnae": "S",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-t",
@@ -1239,7 +1345,9 @@
       "sector_cnae": "T",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-sector-uv",
@@ -1264,7 +1372,9 @@
       "sector_cnae": "UV",
       "sos_context": "sectoral",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-vna-network",
@@ -1293,7 +1403,9 @@
       "sector_cnae": null,
       "sos_context": "critical",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "soc-teamtowers-brand",
@@ -1322,7 +1434,9 @@
       "sector_cnae": null,
       "sos_context": "critical",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": "brand-specific",
+      "brand_owner": "teamtowers"
     },
     {
       "id": "soc-teamtowers-merchandising",
@@ -1350,7 +1464,9 @@
       "sector_cnae": null,
       "sos_context": "secondary",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": "brand-specific",
+      "brand_owner": "teamtowers"
     },
     {
       "id": "sop-castellers-demo",
@@ -1379,7 +1495,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sop-charla-conferencia",
@@ -1409,7 +1527,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sop-fent-pinya-taller",
@@ -1438,7 +1558,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sop-la-colla",
@@ -1472,7 +1594,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sop-proyecto-custom",
@@ -1500,7 +1624,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "sop-teamtowers-merchandising",
@@ -1528,7 +1654,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "vision-communities-of-practice",
@@ -1557,7 +1685,9 @@
       "sector_cnae": null,
       "sos_context": "secondary",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "vision-h110-sector-evolution",
@@ -1585,7 +1715,9 @@
       "sector_cnae": null,
       "sos_context": "critical",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "vision-mind-architecture",
@@ -1604,7 +1736,9 @@
       "sector_cnae": null,
       "sos_context": null,
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "vision-sop-to-wo-model",
@@ -1633,7 +1767,9 @@
       "sector_cnae": null,
       "sos_context": "critical",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     },
     {
       "id": "vna-principles",
@@ -1652,7 +1788,9 @@
       "sector_cnae": null,
       "sos_context": "critical",
       "sector_id": null,
-      "sector_name": null
+      "sector_name": null,
+      "scope": null,
+      "brand_owner": null
     }
   ]
 }

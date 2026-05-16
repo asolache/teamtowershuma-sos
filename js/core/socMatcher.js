@@ -55,6 +55,15 @@ function _normalizeZoom(z) {
     return VNA_ZOOM_LEVELS.mid;
 }
 
+// _detectBrandContext · pure · si la descripció del projecte conté "teamtowers"
+// considerem que és el propi brand operador · activem brand-specific SOCs.
+// Extensible · afegir altres brands aquí quan apliqui.
+function _detectBrandContext({ name = '', description = '', project_type = '' } = {}) {
+    const hay = (name + ' ' + description + ' ' + project_type).toLowerCase();
+    if (/teamtowers|team-towers|team\s+towers/.test(hay)) return 'teamtowers';
+    return null;
+}
+
 // _lifecycleOrder · per detectar "fase següent"
 const LIFECYCLE_ORDER = Object.freeze(['idea', 'mvp', 'validation', 'scale']);
 function _nextPhase(p) {
@@ -120,9 +129,18 @@ function _scoreSoc(soc, ctx) {
 }
 
 // _allSocsFromIndex · extreu tots els items folder=='socs' de l'index
-function _allSocsFromIndex(idx) {
+// Per defecte EXCLOU SOCs amb scope='brand-specific' · només els inclou quan
+// el projecte és del mateix brand_owner (ex · TeamTowers operadora). Aquests
+// SOCs aporten context de marca al LLM però NO són SOCs reutilitzables.
+function _allSocsFromIndex(idx, { brandContext = null } = {}) {
     if (!idx || !Array.isArray(idx.items)) return [];
-    return idx.items.filter(it => it.folder === 'socs');
+    return idx.items
+        .filter(it => it.folder === 'socs')
+        .filter(it => {
+            if (it.scope !== 'brand-specific') return true;
+            if (!brandContext) return false;
+            return it.brand_owner === brandContext;
+        });
 }
 
 // matchSocs · pure · selecciona SOCs per al projecte
@@ -149,11 +167,15 @@ export function matchSocs({
     project_type = null,
     description = '',
     name = '',
+    brandContext = null,   // si el projecte és del brand · ex 'teamtowers' · inclou SOCs brand-specific
     index = null,
 } = {}) {
     const idx = index || getCached();
     const zoom = _normalizeZoom(vna_zoom);
-    const candidates = _allSocsFromIndex(idx);
+    // Detect brand context automàticament del nom/descripció si no s'ha passat
+    const autoBrand = _detectBrandContext({ name, description, project_type });
+    const effectiveBrand = brandContext || autoBrand;
+    const candidates = _allSocsFromIndex(idx, { brandContext: effectiveBrand });
     const ctx = { sector_cnae, lifecycle_stage, entity_type, project_type, description, name };
 
     // Score everyone

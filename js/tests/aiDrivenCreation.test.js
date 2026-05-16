@@ -223,6 +223,33 @@ const zls = listZoomLevels();
 ok('Smoke · listZoomLevels 3 entries', zls.length === 3, 3, zls.length);
 ok('Smoke · VNA_ZOOM_LEVELS.macro existeix', !!VNA_ZOOM_LEVELS.macro);
 
+// ─── M · brand-specific filtering (TeamTowers context) ─────────────────
+console.log('\n— M · brand-specific SOCs filtrats per scope');
+const BRAND_FIXTURE = {
+    version: 'test-brand',
+    items: [
+        { folder: 'socs', relpath: 'socs/sectors/J.md',     title: 'Sector J',       sector_cnae: 'J', phase: null, sos_context: null, keywords: ['sector', 'tic'] },
+        { folder: 'socs', relpath: 'socs/lifecycle/mvp.md', title: 'Fase MVP',       phase: 'mvp', keywords: ['lifecycle', 'mvp'] },
+        { folder: 'socs', relpath: 'socs/la-colla.md',      title: 'La Colla',       sos_context: 'critical', keywords: ['colla', 'vna'] },
+        // Brand-specific · NO ha d'aparèixer a projectes genèrics
+        { folder: 'socs', relpath: 'socs/teamtowers-brand.md', title: 'TT Brand', sos_context: 'critical', scope: 'brand-specific', brand_owner: 'teamtowers', keywords: ['teamtowers', 'marca'] },
+        { folder: 'socs', relpath: 'socs/teamtowers-merchandising.md', title: 'TT Merch', sos_context: 'secondary', scope: 'brand-specific', brand_owner: 'teamtowers', keywords: ['merch'] },
+    ],
+};
+
+const mGeneric = matchSocs({ sector_cnae: 'J', lifecycle_stage: 'mvp', description: 'cooperativa software', name: 'Random Project', vna_zoom: 'micro', index: BRAND_FIXTURE });
+const genericPaths = mGeneric.selected.map(s => s.relpath);
+ok('M · projecte genèric NO inclou teamtowers-brand', !genericPaths.includes('socs/teamtowers-brand.md'));
+ok('M · projecte genèric NO inclou teamtowers-merchandising', !genericPaths.includes('socs/teamtowers-merchandising.md'));
+ok('M · projecte genèric SÍ inclou la-colla (universal)', genericPaths.includes('socs/la-colla.md'));
+
+const mTTAuto = matchSocs({ sector_cnae: 'J', lifecycle_stage: 'mvp', description: 'projecte intern de TeamTowers · refonament', name: 'TT internal', vna_zoom: 'micro', index: BRAND_FIXTURE });
+const ttAutoPaths = mTTAuto.selected.map(s => s.relpath);
+ok('M · projecte TT (auto-detected pel nom) SÍ inclou teamtowers-brand', ttAutoPaths.includes('socs/teamtowers-brand.md'));
+
+const mTTExplicit = matchSocs({ sector_cnae: 'J', lifecycle_stage: 'mvp', description: 'cooperativa', name: 'X', brandContext: 'teamtowers', vna_zoom: 'micro', index: BRAND_FIXTURE });
+ok('M · brandContext=teamtowers explícit SÍ inclou teamtowers-brand', mTTExplicit.selected.some(s => s.relpath === 'socs/teamtowers-brand.md'));
+
 // ─── I · classify heurístic detecta entity_type + lifecycle_stage ───────
 console.log('\n— I · classify heurístic · entity_type + lifecycle_stage');
 const rSos = await createProject({ name: 'SOS Federat', description: 'sistema sociotècnic permaweb federation', ambition: 'light' });
