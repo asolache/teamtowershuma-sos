@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T14:00 · v91 · TDD-V2-SUITE · 105 asserts contract test · ProfileView V1 esborrat · quality gate complet · 14 suites mapejades';
+const BUILD_STAMP = '2026-05-16T14:30 · v92 · CASTELLER MODEL · IA categoritza rols pels 6 nivells (pom_de_dalt · tronc · pinya · laterals · mans · baixos) · 61 asserts';
 
 export default class DesignSystemView {
 

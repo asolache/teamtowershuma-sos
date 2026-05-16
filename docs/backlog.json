@@ -985,7 +985,7 @@
       "description": "Estendre els prompts de `vnaExpertPrompts` perquè la IA assigni `castell_level` als rols generats segons el model jeràrquic casteller existent (`pom_de_dalt` · `tronc` · `pinya` · `laterals` · `mans` · `baixos`).\\n\\n- Capa 1 (SYSTEM_BASE) afegeix definició dels 6 nivells casteller amb exemple semàntic per cada un\\n- Capa 2 (few-shot) tots els exemples ja tenen castell_level vàlid (verificable amb test)\\n- Capa 3 (task prompts) demana explícitament la categorització\\n- `valueFlowRubric` C2 (castell levels diversificats) penalitza si la IA no diversifica\\n- Tests · IA mockejada amb 4 casos · cada un retorna mix de castell_levels · cap rol sense level\\n\\nResol la queixa · 'la IA genera rols sense estructura casteller'. Cada rol té lloc clar al castell del projecte.",
       "priority": "high",
       "complexity": "S",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
       "required_capabilities": [
         "code-write",
@@ -1006,7 +1006,12 @@
         "ia",
         "casteller-model",
         "pre-alpha"
-      ]
+      ],
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1778939139688,
+      "completed_at": 1778940339688,
+      "cost_actual_eur": 1.5,
+      "deliverable_uri": "git:claude/roles-casteller-categorization"
     },
     {
       "id": "wo-value-flow-soc-sequencing-001",
