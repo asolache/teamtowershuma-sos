@@ -1,26 +1,23 @@
 // =============================================================================
-// TEAMTOWERS SOS V11 — PROJECT CREATION V2 (B-UNIFIED-FORM-001 sprint UI)
+// TEAMTOWERS SOS V11 — PROJECT CREATION V2 (LEGENDARY-001 sprint UI)
 // Ruta · /js/views/ProjectCreationV2View.js  →  /create
 //
-// Form unificat IA-driven · 1 sol model per a TOTS els projectes. Tanca el
-// cicle B-UNIFIED-FORM-001 (backend a PR #97 · sprint UI aquí).
+// Form unificat darrere del `projectCreationOrchestrator` legendary ·
+// pipeline classify → seed → personalize → validate → persist amb
+// qualitat ≥85 (rubric) i integritat cross-layer garantides per TDD.
 //
-// Pipeline · Plan → Fan-out → Reduce (via unifiedProjectCreationService) ·
-//   1. Usuari · nom + descripció + sector (opcional) + ambition (light·standard·max)
-//   2. PLAN · classifyProject (~0.002€)
-//   3. FAN-OUT · canvas + vna + sops + (tokenomics + workshops si max) paral·lel
-//   4. REDUCE · validate coherence
-//   5. Persisteix project + drafts → redirect /hub/{newId}
-//
-// Reusa uxComponents.toast() per a feedback live.
+// Query params suportats ·
+//   ?templateId=founder-coop-tradicional · ?template=… (alias legacy) ·
+//   ?ambition=light|standard|max · ?name=… · ?description=… · ?sector=… ·
+//   ?skip-prompt=true (auto-submit · útil per a seeds des de DashboardV2)
 // =============================================================================
 
 import { store } from '../core/store.js';
 import { KB } from '../core/kb.js';
 import {
-    buildCreationPlan, executeCreationPlan, estimatePlanCost,
-    AMBITION_LEVELS,
-} from '../core/unifiedProjectCreationService.js';
+    createProject, AMBITION_LEVELS,
+} from '../core/projectCreationOrchestrator.js';
+import { CATALOG } from '../core/projectTemplateCatalog.js';
 import { toast } from '../core/uxComponents.js';
 
 export default class ProjectCreationV2View {
@@ -28,14 +25,30 @@ export default class ProjectCreationV2View {
     constructor() {
         if (typeof document !== 'undefined') document.title = 'Crear projecte · SOS';
         this._isCreating = false;
-        // Llegeix ?template={key} del query string · si arrives des del
-        // ProcessCatalog amb una plantilla pre-seleccionada · classificació
-        // pre-determinada (skip classify step IA · estalvi ~0.002€)
-        this._presetTemplateKey = null;
+        // Llegeix query string · suport per a deeplinks des del catàleg ·
+        // DashboardV2 seed Castellers · ProcessCatalog plantilles.
+        this._presetTemplateId   = null;
+        this._presetAmbition     = null;
+        this._presetName         = null;
+        this._presetDescription  = null;
+        this._presetSector       = null;
+        this._presetSkipPrompt   = false;
         try {
             if (typeof window !== 'undefined' && window.location) {
                 const params = new URLSearchParams(window.location.search);
-                this._presetTemplateKey = params.get('template') || null;
+                const tid = params.get('templateId') || params.get('template') || null;
+                // Acceptem només IDs canònics del catàleg
+                this._presetTemplateId  = (tid && CATALOG[tid]) ? tid : null;
+                // Alias curts populars
+                if (!this._presetTemplateId && tid) {
+                    if (/founder|coop/i.test(tid)) this._presetTemplateId = 'founder-coop-tradicional';
+                    else if (/default|balanced|generic/i.test(tid)) this._presetTemplateId = 'default-balanced';
+                }
+                this._presetAmbition    = ['light','standard','max'].includes(params.get('ambition')) ? params.get('ambition') : null;
+                this._presetName        = params.get('name')        || null;
+                this._presetDescription = params.get('description') || null;
+                this._presetSector      = params.get('sector')      || null;
+                this._presetSkipPrompt  = params.get('skip-prompt') === 'true';
             }
         } catch (_) {}
     }
@@ -46,7 +59,31 @@ export default class ProjectCreationV2View {
 
     async afterRender() {
         this._bind();
+        this._prefillFromUrl();
         this._updateCostPreview();
+        // Auto-submit si skip-prompt + name + templateId presents (cas demo seed)
+        if (this._presetSkipPrompt && this._presetName && this._presetTemplateId) {
+            setTimeout(() => this._submit(), 80);
+        }
+    }
+
+    _prefillFromUrl() {
+        if (this._presetName) {
+            const el = document.getElementById('pcvName');
+            if (el) el.value = this._presetName;
+        }
+        if (this._presetDescription) {
+            const el = document.getElementById('pcvDescription');
+            if (el) el.value = this._presetDescription;
+        }
+        if (this._presetSector) {
+            const el = document.getElementById('pcvSector');
+            if (el) el.value = this._presetSector;
+        }
+        if (this._presetAmbition) {
+            const cards = document.querySelectorAll('[data-ambition]');
+            cards.forEach(c => c.classList.toggle('active', c.dataset.ambition === this._presetAmbition));
+        }
     }
 
     async render() {
@@ -121,11 +158,11 @@ export default class ProjectCreationV2View {
 
             <div class="pcv-main">
                 <div class="pcv-hero">
-                    <h1>🚀 Crea un projecte amb IA</h1>
-                    ${this._presetTemplateKey ? `
-                        <p>Plantilla pre-seleccionada · <code style="font-family:var(--font-mono);background:rgba(168,85,247,0.2);padding:1px 6px;border-radius:3px;font-size:0.82rem;">${this._esc(this._presetTemplateKey)}</code> · classificació automàtica skippada · 1 crida IA menys (estalvi ~0.002€). <a href="/process-catalog" data-link style="color:var(--accent-indigo);">↩ Canviar plantilla</a></p>
+                    <h1>🚀 Crea un projecte amb mapa de valor garantit</h1>
+                    ${this._presetTemplateId ? `
+                        <p>Plantilla pre-seleccionada · <code style="font-family:var(--font-mono);background:rgba(168,85,247,0.2);padding:1px 6px;border-radius:3px;font-size:0.82rem;">${this._esc(this._presetTemplateId)}</code> · pipeline · classify → seed → personalize → validate (rubric 12 criteris + integritat 7 regles) → persist. Qualitat ≥85/100 garantida abans de desar. <a href="/process-catalog" data-link style="color:var(--accent-indigo);">↩ Canviar plantilla</a></p>
                     ` : `
-                        <p>1 sol form. L'IA llegirà el teu input · classificarà el projecte · generarà drafts adaptats al tipus + fase (canvas · VNA · SOPs · etc). Tu valides el text final. <a href="/process-catalog" data-link style="color:var(--accent-indigo);">📐 Començar des d'una plantilla?</a></p>
+                        <p>Pipeline · classify → seed (template) → personalize → validate (rubric + integritat) → persist. Tots els templates puntuen ≥85/100 abans de desar. Roles + deliverables + transactions Lean + SOPs estructurats + SOC checklist · llestos per a operar. <a href="/process-catalog" data-link style="color:var(--accent-indigo);">📐 Començar des d'una plantilla?</a></p>
                     `}
                 </div>
 
@@ -171,9 +208,9 @@ export default class ProjectCreationV2View {
 
     _renderAmbitionCards() {
         const items = [
-            { id: 'light',    ic: '✏️', nm: 'Light',     ds: 'Esquelet · canvas IA · ràpid' },
-            { id: 'standard', ic: '⚡', nm: 'Standard',  ds: 'Canvas + VNA + 3 SOPs · típic',  active: true },
-            { id: 'max',      ic: '🏆', nm: 'MAX',       ds: 'Tot · tokenomics + workshops' },
+            { id: 'light',    ic: '✏️', nm: 'Light',     ds: 'Template + 1 IA call cheap · ràpid' },
+            { id: 'standard', ic: '⚡', nm: 'Standard',  ds: 'Template + IA enriquit · típic',     active: true },
+            { id: 'max',      ic: '🏆', nm: 'MAX',       ds: 'Template + IA full · qualitat top' },
         ];
         return items.map(it => {
             const def = AMBITION_LEVELS[it.id];
@@ -182,7 +219,7 @@ export default class ProjectCreationV2View {
                 <div class="ic">${it.ic}</div>
                 <div class="nm">${it.nm}</div>
                 <div class="ds">${it.ds}</div>
-                <div class="cost">${def.fanOutSteps.length} steps · ${def.tier} tier</div>
+                <div class="cost">${def.iaCalls} crida${def.iaCalls > 1 ? 'es' : ''} IA · ~${def.costEur.toFixed(3)}€</div>
             </div>`;
         }).join('');
     }
@@ -218,20 +255,21 @@ export default class ProjectCreationV2View {
 
     _updateCostPreview() {
         const ambition = this._selectedAmbition();
-        const plan = buildCreationPlan({ name: 'preview', ambition });
-        const cost = estimatePlanCost(plan);
+        const def = AMBITION_LEVELS[ambition];
         const el = document.getElementById('pcvCostPreview');
-        if (el) {
-            el.innerHTML = 'Cost estimat · <strong>' + cost.toFixed(4) + ' €</strong> · ' + plan.stepsToRun.length + ' crides IA';
+        if (el && def) {
+            el.innerHTML = 'Cost estimat · <strong>' + def.costEur.toFixed(4) + ' €</strong> · '
+                + def.iaCalls + ' crida' + (def.iaCalls > 1 ? 'es' : '') + ' IA · score ≥85 garantit pel rubric';
         }
     }
 
     async _submit() {
         if (this._isCreating) return;
-        const name = (document.getElementById('pcvName')?.value || '').trim();
-        const description = (document.getElementById('pcvDescription')?.value || '').trim();
-        const sector = (document.getElementById('pcvSector')?.value || '').trim() || null;
+        const name = (document.getElementById('pcvName')?.value || this._presetName || '').trim();
+        const description = (document.getElementById('pcvDescription')?.value || this._presetDescription || '').trim();
+        const sector = (document.getElementById('pcvSector')?.value || this._presetSector || '').trim() || null;
         const ambition = this._selectedAmbition();
+        const templateId = this._presetTemplateId || null;
 
         if (!name) {
             toast({ kind: 'error', text: 'El nom és obligatori' });
@@ -254,94 +292,59 @@ export default class ProjectCreationV2View {
         if (progressEl) progressEl.classList.add('active');
         if (stepsEl) stepsEl.innerHTML = '';
 
-        // Build plan · si tenim presetTemplateKey · derivem classification per skip IA
-        let presetClassification = null;
-        if (this._presetTemplateKey) {
-            const [type, stage] = this._presetTemplateKey.split(':');
-            const { SIMPLIFIED_TYPES, STAGE_GROUPS } = await import('../core/projectTemplateService.js');
-            const sourceType = SIMPLIFIED_TYPES[type]?.sourceTypes?.[0] || 'startup-coop-tradicional';
-            const sourceStage = STAGE_GROUPS[stage]?.sourceStages?.[0] || 'idea';
-            presetClassification = {
-                project_type: sourceType,
-                lifecycle_stage: sourceStage,
-                scale: 'local',
-                dependency_type: 'standalone',
-                confidence: 1.0,
-                source: 'preset-template',
-                rationale: 'pre-seleccionada · ' + this._presetTemplateKey,
-            };
-        }
-        const plan = buildCreationPlan({
-            name, description, sector, ambition,
-            classification: presetClassification,
-        });
-        const projectId = 'proj-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30) + '-' + Date.now().toString(36);
-
-        // Pre-add classify step
-        this._renderStep('classify', 'pending', 'Classificant projecte (type + stage)...');
-        plan.stepsToRun.forEach(step => this._renderStep(step, 'pending', this._labelForStep(step) + '...'));
+        // Etapes del pipeline legendary · classify · seed · personalize · validate · persist
+        const STAGES = ['classify', 'seed', 'personalize', 'validate', 'persist'];
+        for (const stg of STAGES) this._renderStep(stg, 'pending', this._labelForStep(stg) + '...');
 
         try {
-            const result = await executeCreationPlan(plan, {
-                projectId,
-                onProgress: ({ step, status, modelKey, cost, classification, reason }) => {
-                    let msg = this._labelForStep(step);
-                    if (status === 'done') {
-                        msg += ' · ' + (modelKey ? modelKey.split('/')[1] || modelKey : '✓') + (cost ? ' · ' + cost.toFixed(4) + '€' : '');
-                    } else if (status === 'cache-hit') {
-                        msg += ' · cache hit · 0€';
-                    } else if (status === 'error' || status === 'blocked') {
-                        msg += ' · ' + (reason || status);
-                    } else if (status === 'fallback') {
-                        msg += ' · fallback (heuristic only)';
-                    }
-                    this._renderStep(step, status === 'cache-hit' ? 'done' : status, msg);
-                },
+            // 1-4 · orchestrator (síncron · etapes ràpides)
+            this._renderStep('classify', 'running', this._labelForStep('classify'));
+            const result = await createProject({
+                name, description, sector, ambition,
+                templateId,
+                creatorHandle: this._currentHandle(),
             });
+            this._renderStep('classify',   'done', this._labelForStep('classify')   + ' · ' + (result.classification?.source || '?'));
+            this._renderStep('seed',       'done', this._labelForStep('seed')       + ' · template ' + result.templateId);
+            this._renderStep('personalize','done', this._labelForStep('personalize')+ ' · context aplicat');
+            this._renderStep(
+                'validate',
+                result.ok ? 'done' : 'error',
+                this._labelForStep('validate') + ' · score ' + result.score + '/100 (' + result.status
+                    + ')' + (result.integrity ? ' · integrity ' + (result.integrity.ok ? '✓' : result.integrity.errorCount + ' errors') : '')
+            );
 
             if (!result.ok) {
-                toast({ kind: 'error', text: 'Generació amb errors · ' + (result.errors || []).map(e => e.step).join(' · ') });
+                toast({
+                    kind: 'error',
+                    text: '✘ Output sota llindar · score ' + result.score + ' · ' + (result.missing.length || 0) + ' criteris fallits',
+                });
+                // No persistim si !ok · usuari pot ajustar input i tornar a provar
+                this._renderStep('persist', 'skip', this._labelForStep('persist') + ' · skip (score sota llindar)');
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🚀 Crear projecte'; }
+                this._isCreating = false;
+                return;
             }
 
-            // Create project node
-            const now = Date.now();
-            const projectNode = {
-                id: projectId,
-                type: 'project',
-                nombre: name,
-                name,
-                sector_id: sector,
-                description,
-                purpose: description,
-                aiClassification: result.classification ? {
-                    project_type: result.classification.project_type,
-                    lifecycle_stage: result.classification.lifecycle_stage,
-                    scale: result.classification.scale,
-                    dependency_type: result.classification.dependency_type,
-                    confidence: result.classification.confidence,
-                    classifiedAt: now,
-                } : null,
-                content: {
-                    canvas: null,
-                    quality_target: 70,
-                    creationDrafts: result.results || null,
-                    creationTemplateKey: result.template?.key || null,
-                },
-                vna_roles: [],
-                vna_transactions: [],
-                vna_flows: [],
-                tags: ['unified-creation', ambition, sector || 'no-sector'],
-                createdAt: now,
-                updatedAt: now,
-                isArchived: false,
-            };
+            // 5 · persist · project + role + sop + soc nodes
+            this._renderStep('persist', 'running', this._labelForStep('persist'));
+            await KB.upsert(result.project);
+            for (const r of result.roles) await KB.upsert(r);
+            for (const s of result.sops)  await KB.upsert(s);
+            for (const s of result.socs)  await KB.upsert(s);
+            await store.dispatch({ type: 'CREATE_PROJECT', payload: result.project });
+            this._renderStep('persist', 'done', this._labelForStep('persist') + ' · '
+                + (1 + result.roles.length + result.sops.length + result.socs.length) + ' nodes');
 
-            await KB.upsert(projectNode);
-            await store.dispatch({ type: 'CREATE_PROJECT', payload: projectNode });
-
-            toast({ kind: 'success', text: '✓ Projecte creat · ' + name + ' · cost real ' + (result.cost || 0).toFixed(4) + '€' });
+            toast({
+                kind: 'success',
+                text: '✓ Projecte creat · ' + name + ' · score ' + result.score + '/100 (' + result.status + ') · '
+                    + result.roles.length + ' rols · ' + result.transactions.length + ' tx · '
+                    + result.sops.length + ' SOPs · cost ' + (result.cost || 0).toFixed(4) + '€',
+                ttl: 6000,
+            });
             setTimeout(() => {
-                window.location.href = '/hub/' + projectId;
+                window.location.href = '/hub/' + encodeURIComponent(result.project.id);
             }, 1500);
         } catch (e) {
             toast({ kind: 'error', text: 'Error creant projecte · ' + (e?.message || e) });
@@ -351,6 +354,15 @@ export default class ProjectCreationV2View {
             }
             this._isCreating = false;
         }
+    }
+
+    _currentHandle() {
+        // Best-effort · matriu_member primary o '@anonymous'
+        try {
+            const me = this._state?.meHandle || null;
+            if (me) return me;
+        } catch (_) {}
+        return '@anonymous';
     }
 
     _renderStep(stepId, status, msg) {
@@ -370,13 +382,11 @@ export default class ProjectCreationV2View {
 
     _labelForStep(step) {
         return ({
-            classify:   'Classificar (type + stage)',
-            canvas:     'Generant canvas',
-            vna:        'Generant VNA (roles + tx)',
-            sops:       'Generant SOPs base',
-            tokenomics: 'Generant tokenomics',
-            workshops:  'Generant workshops outline',
-            reduce:     'Validant coherence',
+            classify:    'Classificant projecte',
+            seed:        'Aplicant template del catàleg',
+            personalize: 'Personalitzant amb context',
+            validate:    'Validant rubric + integritat',
+            persist:     'Desant nodes al KB',
         })[step] || step;
     }
 
@@ -388,4 +398,4 @@ export default class ProjectCreationV2View {
     destroy() {}
 }
 
-export const TPL_VERSION = 'project-creation-v2-v1.0';
+export const TPL_VERSION = 'project-creation-legendary-v1.0';
