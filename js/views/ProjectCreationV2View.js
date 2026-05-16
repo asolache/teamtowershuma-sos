@@ -20,6 +20,7 @@ import {
 import { CATALOG } from '../core/projectTemplateCatalog.js';
 import { toast } from '../core/uxComponents.js';
 import { ENTITY_CARDS, listFormats, resolveSuggestion } from '../core/projectEntityWizard.js';
+import { renderCnaeOptionsHtml, getCnae } from '../core/cnaeCatalog.js';
 
 export default class ProjectCreationV2View {
 
@@ -241,8 +242,10 @@ export default class ProjectCreationV2View {
                     </div>
 
                     <div class="pcv-field">
-                        <label class="pcv-label" for="pcvSector">Sector (opcional)</label>
-                        <input type="text" id="pcvSector" class="pcv-input" placeholder="Ex · cures · tech · agroecologia · habitatge..." maxlength="80" autocomplete="off">
+                        <label class="pcv-label" for="pcvSector">Sector CNAE (opcional · però ajuda la IA a triar bé)</label>
+                        <select id="pcvSector" class="pcv-input">${renderCnaeOptionsHtml({ selected: this._presetSector || '' })}</select>
+                        <div class="pcv-help" id="pcvSectorHint">Selecciona el sector CNAE més proper · determina noms de rols + transaccions típiques al sector. Si trios "Altres" · escriu lliurement al subsector.</div>
+                        <input type="text" id="pcvSectorFree" class="pcv-input" placeholder="Subsector lliure · ex · 'agricultura ecològica de proximitat' · 'edtech infantil'" maxlength="80" autocomplete="off" style="margin-top:6px;display:none;">
                     </div>
 
                     <div class="pcv-field">
@@ -330,6 +333,28 @@ export default class ProjectCreationV2View {
         ['pcvName', 'pcvDescription', 'pcvSector'].forEach(id => {
             document.getElementById(id)?.addEventListener('input', () => this._updateCostPreview());
         });
+        // CNAE select · toggle free input + update hint
+        const sectorSel = document.getElementById('pcvSector');
+        if (sectorSel) {
+            const onChange = () => {
+                const v = sectorSel.value;
+                const free = document.getElementById('pcvSectorFree');
+                const hint = document.getElementById('pcvSectorHint');
+                if (free) free.style.display = (v === 'other') ? '' : (v ? '' : 'none');
+                if (hint) {
+                    if (v && v !== 'other') {
+                        const c = getCnae(v);
+                        hint.innerHTML = c ? '✓ <strong>' + c.code + '</strong> · ' + c.label + '<br/><em style="font-size:0.78rem;">Subsectors típics · ' + c.subhint + '. Pots refinar al camp lliure.</em>' : '';
+                    } else if (v === 'other') {
+                        hint.innerHTML = '↓ Escriu el sector lliure (max 80 chars).';
+                    } else {
+                        hint.innerHTML = 'Selecciona el sector CNAE més proper · determina noms de rols + transaccions típiques al sector.';
+                    }
+                }
+            };
+            sectorSel.addEventListener('change', onChange);
+            onChange();   // initial state si hi ha preset
+        }
         // Cancel · back to home
         document.getElementById('pcvCancel')?.addEventListener('click', () => {
             (window.navigateTo || ((u) => window.location.href = u))('/home');
@@ -428,7 +453,10 @@ export default class ProjectCreationV2View {
         if (this._isCreating) return;
         const name = (document.getElementById('pcvName')?.value || this._presetName || '').trim();
         const description = (document.getElementById('pcvDescription')?.value || this._presetDescription || '').trim();
-        const sector = (document.getElementById('pcvSector')?.value || this._presetSector || '').trim() || null;
+        // CNAE picker · si user tria "other" · usa el camp lliure
+        const sectorSel = (document.getElementById('pcvSector')?.value || this._presetSector || '').trim();
+        const sectorFree = (document.getElementById('pcvSectorFree')?.value || '').trim();
+        const sector = sectorSel === 'other' ? (sectorFree || null) : (sectorSel || sectorFree || null);
         const ambition = this._selectedAmbition();
         const templateId = this._presetTemplateId || null;
         const entityType = document.getElementById('pcvEntityType')?.value || null;

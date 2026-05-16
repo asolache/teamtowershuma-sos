@@ -86,6 +86,7 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'skills',       icon: '🤲', label: 'Skills',          href: '/skills',          global: true,  category: 'learn',   hint: '90 skills · 5 domains · 3 tiers · 12 tipus de projecte' },
     { id: 'path',         icon: '🧠', label: 'Historial neural',href: '/path',            global: true,  category: 'learn',   hint: 'Path nodal cronològic · context bundles per a IA' },
     { id: 'notes',        icon: '📝', label: 'Notes captures',  href: '/notes',           global: true,  category: 'learn',   hint: 'Captures FAB · evolve a projecte / WO / deliverable' },
+    { id: 'prompts-debug', icon: '🔍', label: 'Prompts debug',  href: '/prompts-debug',  global: true,  category: 'learn',   hint: 'Veu els prompts EXACTES que la IA reb per cada task · transparència total · context editable' },
 
     // ─── IDENTITY (avatar-menu a la dreta · NO és un grup principal) ─────
     { id: 'me',           icon: '🧬', label: 'El meu perfil',   href: '/me',              global: true,  category: 'identity', hint: 'Profile360 · 8 zones · ikigai · skills · trust · reputació' },

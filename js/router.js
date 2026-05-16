@@ -22,6 +22,7 @@ const ROUTES = [
     // KB inline panel · explorable via /folders · /tags · /mind.
     { path: '/create',      view: () => import('./views/ProjectCreationV2View.js') },
     { path: '/create-live',  view: () => import('./views/CreateLiveView.js') },
+    { path: '/prompts-debug', view: () => import('./views/PromptsDebugView.js') },
     { path: '/map',       view: () => import('./views/ValueMapView.js')  },
     { path: '/workshops', view: () => import('./views/WorkshopsView.js') },
     { path: '/kanban',    view: () => import('./views/KanbanView.js')   },
