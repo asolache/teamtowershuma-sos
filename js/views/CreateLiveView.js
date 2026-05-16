@@ -90,10 +90,45 @@ export default class CreateLiveView {
         document.getElementById('clAmbition').textContent = this._payload.ambition || 'light';
         document.getElementById('clZoom').textContent = this._payload.vna_zoom || 'mid';
         document.getElementById('clEntityType').textContent = this._payload.entity_type || 'auto';
-        document.getElementById('clGenMode').textContent = this._payload.generationMode || 'ai-driven';
+
+        // AMBITION BANNER + NARRATIVE (legendary-all-ambitions sprint)
+        this._renderAmbitionHero();
 
         // Llançar pipeline · streaming
         await this._runPipeline();
+    }
+
+    // _renderAmbitionHero · personalitza banner + narrativa + budget per ambition
+    _renderAmbitionHero() {
+        const amb = this._payload.ambition || 'light';
+        const profiles = {
+            light: {
+                icon: '✏️', label: 'LIGHT · ràpid',
+                narrative: 'Un projecte funcional en menys d\'1 minut · 1-3 SOCs essencials del knowledge · SOPs mínimes per arrencar. Perfect per validar idees abans d\'invertir més.',
+                budget: '~0.005€',
+            },
+            standard: {
+                icon: '⚡', label: 'STANDARD · construcció completa',
+                narrative: 'El sweet spot · 4-7 SOCs equilibrats · SOPs amb steps detallats · canvas + pitch personalitzats. Llest per arrencar el primer sprint amb confiança.',
+                budget: '~0.015€',
+            },
+            max: {
+                icon: '🏆', label: 'MAX · mega producte',
+                narrative: 'L\'experiència total · 8-15 SOCs profunds · SOPs detallades · Work Orders executables al Kanban · canvas + pitch + landing. Operació al complet des del minut 1.',
+                budget: '~0.030€',
+            },
+        };
+        const p = profiles[amb] || profiles.light;
+        const banner = document.getElementById('clAmbitionBanner');
+        if (banner) banner.classList.add('cl-amb-' + amb);
+        const icon = document.getElementById('clAmbitionIcon');
+        if (icon) icon.textContent = p.icon;
+        const lbl = document.getElementById('clAmbitionLabel');
+        if (lbl) lbl.textContent = p.label;
+        const narr = document.getElementById('clNarrative');
+        if (narr) narr.textContent = p.narrative;
+        const budget = document.getElementById('clBudget');
+        if (budget) budget.textContent = p.budget;
     }
 
     async _runPipeline() {
@@ -458,9 +493,17 @@ export default class CreateLiveView {
         const wos = this._draft.wos;
         const sops = this._draft.sops;
         const isAi = (this._payload?.generationMode === 'ai-driven');
+        const amb = this._payload?.ambition || 'standard';
         if (!wos.length && !sops.length) {
+            // Hint adaptat per ambition · light/macro NO promet WOs perquè no s'inclouen
+            const hintByAmb = {
+                light: '✏️ MODE LIGHT · SOPs essencials apareixeran aquí. Per a Work Orders executables · puja a STANDARD o MAX (cost més alt · qualitat més detallada).',
+                standard: '⚡ MODE STANDARD · SOPs amb steps detallats + Work Orders al Kanban apareixeran aquí.',
+                max: '🏆 MODE MAX · SOPs profundes + WOs concrets amb DTD test booleà · llests per arrencar el primer sprint.',
+            };
+            const hint = isAi ? (hintByAmb[amb] || hintByAmb.standard) : 'Mode template · activa "ai-driven" per generar WOs';
             return `<div class="cl-skel-wos">
-                <div class="cl-skel-hint">⚡ SOPs + WOs apareixeran aquí · procediments per cada rol + work orders executables al Kanban${isAi ? '' : ' (cal mode ai-driven per generar WOs)'}</div>
+                <div class="cl-skel-hint">${hint}</div>
                 ${[1,2,3].map(() => `<div class="cl-skel-wo"><div class="cl-skel-line" style="width:70%;"></div><div class="cl-skel-line" style="width:40%;"></div></div>`).join('')}
             </div>`;
         }
@@ -497,19 +540,31 @@ export default class CreateLiveView {
         const el = document.getElementById('clFinishBar');
         if (!el) return;
         const isGold = result.score >= 85;
+        const amb = this._payload?.ambition || 'standard';
         const statusEmoji = isGold ? '🏆' : result.score >= 70 ? '✨' : result.score >= 50 ? '👍' : '🚧';
-        const statusText = isGold ? 'Llegendari' : result.score >= 70 ? 'Sòlid' : result.score >= 50 ? 'Operatiu' : 'Esborrany';
+        // Text adaptat per ambition · MAX gold = "Mega producte legendari"
+        let statusText = 'Esborrany';
+        if (isGold)              statusText = (amb === 'max') ? 'Mega producte llegendari' : (amb === 'light' ? 'Light brillant' : 'Llegendari');
+        else if (result.score >= 70) statusText = (amb === 'max') ? 'Solidesa alta' : 'Sòlid';
+        else if (result.score >= 50) statusText = 'Operatiu';
+
+        // Primary CTA · si max amb WOs · Kanban · si no · Mapa de valor
+        const hasWos = (result.wos || []).length > 0;
+        const primary = hasWos
+            ? `<a href="/kanban?project=${encodeURIComponent(pid)}" data-link class="cl-btn-primary cl-btn-hero">⚡ Comença sprint Kanban →</a>`
+            : `<a href="/map?project=${encodeURIComponent(pid)}" data-link class="cl-btn-primary cl-btn-hero">📊 Explora el mapa de valor →</a>`;
+
         el.innerHTML = `
             <div class="cl-finish-info">
                 <div class="cl-finish-badge cl-finish-badge-${result.status || 'silver'}">${statusEmoji} ${statusText}</div>
                 <div class="cl-finish-meta">
-                    <strong>${result.score}/100</strong> · ${result.roles.length} rols · ${result.sops.length} SOPs · ${(result.wos || []).length} WOs · <strong>${(result.cost || 0).toFixed(4)}€</strong>
+                    <strong>${result.score}/100</strong> · ${result.roles.length} rols · ${result.sops.length} SOPs${hasWos ? ' · ' + result.wos.length + ' WOs' : ''} · <strong>${(result.cost || 0).toFixed(4)}€</strong>
                 </div>
             </div>
             <div class="cl-finish-cta">
-                <a href="/kanban?project=${encodeURIComponent(pid)}" data-link class="cl-btn-primary cl-btn-hero">⚡ Comença sprint Kanban →</a>
+                ${primary}
                 <div class="cl-finish-secondary">
-                    <a href="/map?project=${encodeURIComponent(pid)}" data-link class="cl-btn">📊 Mapa</a>
+                    ${hasWos ? `<a href="/map?project=${encodeURIComponent(pid)}" data-link class="cl-btn">📊 Mapa</a>` : `<a href="/kanban?project=${encodeURIComponent(pid)}" data-link class="cl-btn">📋 Kanban</a>`}
                     <a href="/quality?project=${encodeURIComponent(pid)}" data-link class="cl-btn">🎯 Qualitat</a>
                     <a href="/hub/${encodeURIComponent(pid)}" data-link class="cl-btn">🏢 Hub</a>
                 </div>
@@ -552,9 +607,19 @@ export default class CreateLiveView {
             .cl-header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start; gap:14px; padding-bottom:14px; border-bottom:1px solid var(--border-default); margin-bottom:14px; }
             .cl-header h1 { margin:0 0 4px 0; font-size:1.25rem; }
             .cl-header .cl-descr { color:var(--text-secondary); font-size:0.9rem; max-width:60ch; }
-            .cl-meta-pills { display:flex; gap:6px; flex-wrap:wrap; }
+            .cl-header-main { flex:1; min-width:280px; }
+            .cl-meta-pills { display:flex; gap:6px; flex-wrap:wrap; align-self:flex-start; }
             .cl-meta-pill { background:rgba(255,255,255,0.04); border:1px solid var(--border-default); border-radius:999px; padding:3px 10px; font-size:0.75rem; }
             .cl-meta-pill strong { color:var(--accent-indigo); }
+
+            /* AMBITION BANNER (legendary-all-ambitions sprint) */
+            .cl-ambition-banner { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px; margin-bottom:8px; font-weight:700; font-size:0.78rem; letter-spacing:0.05em; text-transform:uppercase; }
+            .cl-ambition-banner.cl-amb-light    { background:linear-gradient(90deg,rgba(96,165,250,0.18),rgba(59,130,246,0.10)); color:#60a5fa; border:1px solid rgba(96,165,250,0.4); }
+            .cl-ambition-banner.cl-amb-standard { background:linear-gradient(90deg,rgba(168,85,247,0.20),rgba(99,102,241,0.10)); color:#c8b3ff; border:1px solid rgba(168,85,247,0.4); }
+            .cl-ambition-banner.cl-amb-max      { background:linear-gradient(90deg,rgba(251,191,36,0.20),rgba(245,158,11,0.10)); color:#fbbf24; border:1px solid rgba(251,191,36,0.4); box-shadow:0 0 16px rgba(251,191,36,0.25); }
+            .cl-ambition-icon { font-size:1rem; }
+
+            .cl-narrative { margin-top:10px; font-size:0.85rem; color:var(--text-secondary); line-height:1.55; padding:8px 12px; background:rgba(255,255,255,0.025); border-left:3px solid var(--accent-indigo); border-radius:0 6px 6px 0; font-style:italic; }
             .cl-progress-wrap { width:100%; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; margin-bottom:14px; position:relative; }
             .cl-progress-fill { height:100%; background:linear-gradient(90deg,#22c55e,#3b82f6); transition:width 0.3s ease; width:0%; }
             .cl-progress-pct { position:absolute; right:6px; top:-18px; font-size:0.7rem; color:var(--text-secondary); font-family:var(--font-mono); }
@@ -678,17 +743,22 @@ export default class CreateLiveView {
         </style>
 
         <div id="clRoot" class="cl-shell">
-            <div class="cl-header">
-                <div>
+            <div class="cl-header" id="clHeader">
+                <div class="cl-header-main">
+                    <div class="cl-ambition-banner" id="clAmbitionBanner">
+                        <span class="cl-ambition-icon" id="clAmbitionIcon">⚡</span>
+                        <span class="cl-ambition-label" id="clAmbitionLabel">CREANT…</span>
+                    </div>
                     <h1>🚀 Creant <span id="clProjectName">…</span></h1>
                     <div class="cl-descr" id="clProjectDescr">…</div>
+                    <div class="cl-narrative" id="clNarrative">Preparant pipeline…</div>
                 </div>
                 <div class="cl-meta-pills">
                     <span class="cl-meta-pill">sector · <strong id="clSector">—</strong></span>
-                    <span class="cl-meta-pill">ambition · <strong id="clAmbition">—</strong></span>
                     <span class="cl-meta-pill">zoom · <strong id="clZoom">—</strong></span>
                     <span class="cl-meta-pill">entitat · <strong id="clEntityType">—</strong></span>
-                    <span class="cl-meta-pill">mode · <strong id="clGenMode">—</strong></span>
+                    <span class="cl-meta-pill" id="clAmbitionPill">ambition · <strong id="clAmbition">—</strong></span>
+                    <span class="cl-meta-pill" id="clBudgetPill">inversió · <strong id="clBudget">—</strong></span>
                     <button id="clCancelBtn" class="cl-btn" style="background:transparent;padding:3px 10px;">cancel·la</button>
                 </div>
             </div>
