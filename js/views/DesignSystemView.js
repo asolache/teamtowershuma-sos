@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-17T04:30 · v114 · LEGENDARY ALL AMBITIONS · banner ambition + narrativa + budget + hint WOs adaptat + finish bar smart · 27 asserts';
+const BUILD_STAMP = '2026-05-17T05:00 · v115 · IKIGAI FIX DEFINITIU (verify + retry + render await) + HUB LEGENDARY zone 0 (quality+vision+stats clau) · 32 asserts';
 
 export default class DesignSystemView {
 

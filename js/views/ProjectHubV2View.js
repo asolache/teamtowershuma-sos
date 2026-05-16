@@ -243,6 +243,7 @@ export default class ProjectHubV2View {
             </div>
 
             <div class="hub-main">
+                ${this._zone0_Legendary({ project, todayWos, bs, sessionEur })}
                 ${this._zone1_OrgBar({ project, org, orgAudit })}
                 ${this._zone2_Today({ todayWos, cashBalance })}
                 ${this._zone3_Processes({ processes })}
@@ -253,6 +254,86 @@ export default class ProjectHubV2View {
                 ${this._zone8_AdvancedTools({ project })}
             </div>
         </div>`;
+    }
+
+    // ZONE 0 · LEGENDARY HERO · stats clau visibles d'un cop d'ull
+    // Quality score · canvas vision preview · WO progress · cost IA · num rols
+    // 5 cards en 1 fila amb les claus del projecte
+    _zone0_Legendary({ project, todayWos, bs, sessionEur }) {
+        const score   = project.rubricScore ?? project.score ?? null;
+        const status  = project.rubricStatus ?? project.status ?? (score >= 85 ? 'gold' : score >= 70 ? 'silver' : score >= 50 ? 'bronze' : 'red');
+        const scoreEmoji = score == null ? '—' : (score >= 85 ? '🏆' : score >= 70 ? '✨' : score >= 50 ? '👍' : '🚧');
+        const scoreColor = score == null ? '#94a3b8' : (score >= 85 ? '#fbbf24' : score >= 70 ? '#cbd5e1' : score >= 50 ? '#d97706' : '#ef4444');
+        const visionTxt = (project.canvas?.vision || project.purpose || project.description || '').trim();
+        const visionShort = visionTxt ? (visionTxt.length > 110 ? visionTxt.slice(0, 110) + '…' : visionTxt) : '(sense visió definida · edita el canvas)';
+        const roleCount = (project.vna_roles || []).length;
+        const txCount   = (project.vna_transactions || []).length;
+        const wosTotal  = (todayWos || []).length;
+        const wosDoing  = (todayWos || []).filter(w => w?.content?.status === 'doing' || w?.content?.status === 'in-progress').length;
+        const totalCostStr = sessionEur != null ? sessionEur.toFixed(4) + '€' : '0€';
+        const ambition = project.ambition || 'standard';
+        const ambIcon = { light: '✏️', standard: '⚡', max: '🏆' }[ambition] || '⚡';
+
+        return `
+        <section class="hub-legendary" aria-label="Visió legendària del projecte">
+            <div class="hub-leg-header">
+                <div class="hub-leg-title">
+                    <span class="hub-leg-amb-pill">${ambIcon} ${this._esc(ambition)}</span>
+                    <h2>${this._esc(project.nombre || project.name || project.id)}</h2>
+                </div>
+                <a href="/quality?project=${encodeURIComponent(project.id)}" data-link class="hub-leg-quality" style="border-color:${scoreColor};color:${scoreColor};">
+                    ${scoreEmoji} <strong>${score ?? '—'}</strong>/100 · ${this._esc(status)}
+                </a>
+            </div>
+            <div class="hub-leg-vision">
+                💭 <em>${this._esc(visionShort)}</em>
+            </div>
+            <div class="hub-leg-stats">
+                <a href="/map?project=${encodeURIComponent(project.id)}" data-link class="hub-leg-stat">
+                    <div class="hub-leg-stat-num">${roleCount}</div>
+                    <div class="hub-leg-stat-lbl">rols</div>
+                </a>
+                <a href="/map?project=${encodeURIComponent(project.id)}" data-link class="hub-leg-stat">
+                    <div class="hub-leg-stat-num">${txCount}</div>
+                    <div class="hub-leg-stat-lbl">transaccions</div>
+                </a>
+                <a href="/kanban?project=${encodeURIComponent(project.id)}" data-link class="hub-leg-stat">
+                    <div class="hub-leg-stat-num">${wosDoing}/${wosTotal}</div>
+                    <div class="hub-leg-stat-lbl">WOs · in-progress / total</div>
+                </a>
+                <a href="/accounting?project=${encodeURIComponent(project.id)}" data-link class="hub-leg-stat">
+                    <div class="hub-leg-stat-num">${this._esc(totalCostStr)}</div>
+                    <div class="hub-leg-stat-lbl">cost IA sessió</div>
+                </a>
+                <a href="/canvas?project=${encodeURIComponent(project.id)}" data-link class="hub-leg-stat">
+                    <div class="hub-leg-stat-num">${project.canvas ? '✓' : '—'}</div>
+                    <div class="hub-leg-stat-lbl">canvas</div>
+                </a>
+                <a href="/pitch?project=${encodeURIComponent(project.id)}" data-link class="hub-leg-stat">
+                    <div class="hub-leg-stat-num">${project.pitch ? '✓' : '—'}</div>
+                    <div class="hub-leg-stat-lbl">pitch</div>
+                </a>
+            </div>
+        </section>
+        <style>
+            .hub-legendary { background:linear-gradient(135deg,rgba(99,102,241,0.10),rgba(168,85,247,0.05)); border:1px solid rgba(99,102,241,0.25); border-radius:12px; padding:1.2rem 1.4rem; margin-bottom:1rem; }
+            .hub-leg-header { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:10px; flex-wrap:wrap; }
+            .hub-leg-title { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+            .hub-leg-title h2 { margin:0; font-size:1.4rem; color:var(--text-main); }
+            .hub-leg-amb-pill { background:rgba(255,255,255,0.06); border:1px solid var(--border-default); padding:3px 10px; border-radius:999px; font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; }
+            .hub-leg-quality { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border:1px solid; border-radius:8px; font-size:0.9rem; text-decoration:none; background:rgba(0,0,0,0.18); transition:all 0.15s; font-weight:600; }
+            .hub-leg-quality:hover { transform:translateY(-1px); filter:brightness(1.15); }
+            .hub-leg-quality strong { font-size:1.2rem; }
+            .hub-leg-vision { font-size:0.92rem; color:var(--text-secondary); margin-bottom:14px; padding:8px 12px; background:rgba(0,0,0,0.18); border-radius:6px; border-left:3px solid var(--accent-indigo); }
+            .hub-leg-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(115px, 1fr)); gap:8px; }
+            .hub-leg-stat { display:flex; flex-direction:column; align-items:center; padding:10px 8px; background:rgba(255,255,255,0.04); border:1px solid var(--border-default); border-radius:8px; text-decoration:none; color:var(--text-main); transition:all 0.15s; }
+            .hub-leg-stat:hover { background:rgba(99,102,241,0.12); border-color:var(--accent-indigo); transform:translateY(-1px); }
+            .hub-leg-stat-num { font-size:1.4rem; font-weight:800; line-height:1.1; color:var(--accent-indigo); font-family:var(--font-mono); }
+            .hub-leg-stat-lbl { font-size:0.7rem; color:var(--text-secondary); margin-top:3px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; }
+            @media (max-width: 600px) {
+                .hub-leg-stats { grid-template-columns:repeat(3, 1fr); }
+            }
+        </style>`;
     }
 
     _zone8_AdvancedTools({ project }) {
