@@ -1057,7 +1057,7 @@
       "description": "Auditar TOTS els llocs on l'app envia context a IA · vnaExpertPrompts · iaRouterService · woContextBuilder · projectClassifierService · roleSopGenerator · socDualPurposeService · etc. Per cada lloc · mesurar:\\n- Mida del prompt (tokens approxTokens via prompts.length/4)\\n- Token budget per ambition (light <500 · standard <1500 · max <2500)\\n- Cache hit rate via aiCacheService\\n- Cost real / cost estimat ratio (alerta si >1.5)\\n- Detecció de prompts duplicats (mateix hash · es pot fusionar?)\\n\\nDeliverable · `js/core/iaContextAuditor.js` · `audit({ source, prompt, response, cost })` registra al KB · `getStats()` retorna estadístiques per font. Vista `/audit-ia` (admin) o tab a SettingsV2 que mostra:\\n- Top 10 fonts amb més cost setmanal\\n- Token waste (prompts >budget) amb suggeriment\\n- Cache miss rate per font\\n\\nObjectiu · cap token malgastat · cada crida IA té rationale + budget + cache strategy auditables.",
       "priority": "high",
       "complexity": "M",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
       "required_capabilities": [
         "code-write",
@@ -1076,7 +1076,12 @@
         "cost-control",
         "pre-alpha",
         "observability"
-      ]
+      ],
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1778939502147,
+      "completed_at": 1778941002147,
+      "cost_actual_eur": 2,
+      "deliverable_uri": "git:claude/ia-context-audit"
     },
     {
       "id": "wo-project-creation-legendary-001",
