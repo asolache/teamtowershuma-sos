@@ -211,7 +211,7 @@ const DRAWER_GROUPS = Object.freeze([
     {
         title: 'Projectes',
         items: [
-            { id: 'dashboard', href: '/dashboard',   icon: '📁', label: 'Dashboard antic' },
+            { id: 'home',     href: '/home',         icon: '🏠', label: 'Home · Dashboard' },
             { id: 'process-catalog', href: '/process-catalog', icon: '🗺', label: 'Catàleg processos' },
             { id: 'sprint',   href: '/sprint',       icon: '🐝', label: 'Sprint Swarm' },
         ],

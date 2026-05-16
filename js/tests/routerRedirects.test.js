@@ -20,9 +20,9 @@ eq(LEGACY_REDIRECTS['/lms'],   '/learn',                'B · /lms → /learn (L
 eq(LEGACY_REDIRECTS['/focus'], '/home',                 'B · /focus → /home (per ara · pot ser vista real futur)');
 
 // ─── C · cap path ambigu sense redirect declarat ─────────────────────────
-// V2-EVOL Fase F (rutes ambígues) + Fase B (/settings-v2 canònic merge)
-const expectedKeys = ['/team', '/paper', '/lms', '/focus', '/settings-v2'];
-eq(Object.keys(LEGACY_REDIRECTS).length, expectedKeys.length, 'C · només els 5 redirects esperats');
+// V2-EVOL Fase F (rutes ambígues) + Fase B (/settings-v2) + Fase C (/dashboard)
+const expectedKeys = ['/team', '/paper', '/lms', '/focus', '/settings-v2', '/dashboard'];
+eq(Object.keys(LEGACY_REDIRECTS).length, expectedKeys.length, 'C · només els 6 redirects esperats');
 for (const k of expectedKeys) {
     t(k in LEGACY_REDIRECTS,                            'C · ' + k + ' present');
 }

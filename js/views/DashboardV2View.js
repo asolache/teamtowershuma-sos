@@ -19,6 +19,13 @@ import { store } from '../core/store.js';
 import { KB } from '../core/kb.js';
 import { buildFeed } from '../core/activityFeedService.js';
 import { renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
+// V2-EVOL Fase C · features migrades de DashboardView V1
+import {
+    ONBOARDING_STEPS, computeOnboardingState, onboardingCompletion, nextOnboardingStep,
+} from '../core/dashboardOnboardingService.js';
+import {
+    resolveCurrentMember, summarizeMemberIdentity, computeMemberImpact, AVAILABILITY_META,
+} from '../core/memberPanelService.js';
 
 const TPL_VERSION = 'dashboard-v2-v1.0';
 
@@ -56,8 +63,21 @@ export default class DashboardV2View {
             sortBy: 'relevance',
         });
 
-        this._state = { projects, feed, meHandle };
-        return this._renderShell({ projects, feed, meHandle });
+        // V2-EVOL Fase C · onboarding state + member identity (migrats de V1)
+        let identityNode = null;
+        try {
+            const identities = await KB.query({ type: 'user_identity' });
+            identityNode = (identities || []).find(n => n?.content?.isPrimary) || (identities || [])[0] || null;
+        } catch (_) { /* sense identity · onboarding mostrarà step 1 */ }
+        const allKbNodes = [...attestations, ...pacts, ...wos, ...ledger, ...invoices, ...proposals];
+        const member = resolveCurrentMember(allKbNodes, meHandle);
+        const memberImpact = computeMemberImpact({ projects, kbNodes: allKbNodes });
+        const onboardingState = computeOnboardingState({ identityNode, projects, qualityById: {} });
+        const onboardingPct = onboardingCompletion(onboardingState).pct;
+        const nextStep = nextOnboardingStep(onboardingState);
+
+        this._state = { projects, feed, meHandle, member, memberImpact, onboardingState, onboardingPct, nextStep };
+        return this._renderShell({ projects, feed, meHandle, member, memberImpact, onboardingState, onboardingPct, nextStep });
     }
 
     async afterRender() {
@@ -75,7 +95,7 @@ export default class DashboardV2View {
         await this.afterRender();
     }
 
-    _renderShell({ projects, feed, meHandle }) {
+    _renderShell({ projects, feed, meHandle, member, memberImpact, onboardingState, onboardingPct, nextStep }) {
         const hasProjects = projects.length > 0;
         const recentProject = hasProjects ? projects[0] : null;
         return `
@@ -139,6 +159,25 @@ export default class DashboardV2View {
 
             .h2-empty-feed { color:var(--text-muted); font-size:0.78rem; font-style:italic; padding:0.5rem 0; }
 
+            /* V2-EVOL Fase C · Onboarding grid + bar (migrat de DashboardView V1) */
+            .h2-onb-bar { height:4px; background:var(--bg-dark); border-radius:999px; overflow:hidden; margin:0 0 0.75rem 0; }
+            .h2-onb-fill { height:100%; background:linear-gradient(90deg,#22c55e,#a8b2ff); transition:width 0.3s; }
+            .h2-onb-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.5rem; }
+            .h2-onb-tile { display:flex; gap:0.6rem; padding:0.6rem 0.75rem; border:1px solid var(--border-default); border-radius:6px; background:var(--bg-dark); text-decoration:none; color:var(--text-main); transition:all 0.15s; align-items:flex-start; }
+            .h2-onb-tile:hover { border-color:var(--accent-indigo); transform:translateY(-1px); }
+            .h2-onb-tile.done { opacity:0.55; border-color:rgba(34,197,94,0.4); }
+            .h2-onb-tile.next { border-color:var(--accent-indigo); background:rgba(99,102,241,0.08); }
+            .h2-onb-ic { font-size:1.15rem; line-height:1; flex-shrink:0; padding-top:1px; }
+            .h2-onb-tile.done .h2-onb-ic { color:#22c55e; font-weight:800; }
+            .h2-onb-body { flex:1; min-width:0; }
+            .h2-onb-title { font-weight:700; font-size:0.82rem; line-height:1.3; }
+            .h2-onb-hint  { font-size:0.7rem; color:var(--text-secondary); margin-top:2px; line-height:1.35; }
+
+            /* V2-EVOL Fase C · Member identity card (migrat de DashboardView V1) */
+            .h2-member-stats { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; }
+            .h2-member-pill { padding:2px 8px; border-radius:999px; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; }
+            .h2-member-stat { font-size:0.75rem; color:var(--text-secondary); padding:2px 8px; background:var(--bg-dark); border-radius:999px; }
+
             /* Mobile-first · < 768px */
             @media (max-width: 768px) {
                 .h2-topbar { padding:6px 10px; gap:6px; }
@@ -170,11 +209,71 @@ export default class DashboardV2View {
 
             <div class="h2-main">
                 ${this._zone1_Hero({ projects, recentProject, meHandle })}
+                ${this._zoneOnboarding({ onboardingState, onboardingPct, nextStep })}
+                ${this._zoneMember({ member, memberImpact, meHandle })}
                 ${this._zone2_Projects({ projects })}
                 ${this._zone3_Activity({ feed })}
                 ${this._zone4_QuickLinks({ meHandle })}
             </div>
         </div>`;
+    }
+
+    // ── V2-EVOL Fase C · onboarding 5 steps · migrat de DashboardView V1 ──
+    // Només apareix si onboarding < 100% · cap soroll un cop completat.
+    _zoneOnboarding({ onboardingState, onboardingPct, nextStep }) {
+        if (!onboardingState || onboardingPct >= 100) return '';
+        const stepsHtml = ONBOARDING_STEPS.map(step => {
+            const status = onboardingState[step.id] || {};
+            const done = !!status.done;
+            const isNext = nextStep && nextStep.id === step.id;
+            const cls = done ? 'done' : isNext ? 'next' : 'pending';
+            const href = (step.cta?.href === '#new') ? '/create' : (step.cta?.href || '/');
+            return `
+            <a href="${href}" data-link class="h2-onb-tile ${cls}" aria-label="${this._esc(step.label)}">
+                <span class="h2-onb-ic" aria-hidden="true">${done ? '✓' : step.icon}</span>
+                <div class="h2-onb-body">
+                    <div class="h2-onb-title">${this._esc(step.label)}</div>
+                    <div class="h2-onb-hint">${this._esc(step.hint)}</div>
+                </div>
+            </a>`;
+        }).join('');
+        return `
+        <div class="h2-zone" data-zone="onboarding">
+            <div class="h2-zone-head">
+                <h2>🎯 Onboarding · ${onboardingPct}% complet</h2>
+                <span style="font-size:0.72rem;color:var(--text-muted);">${nextStep ? 'Següent · ' + nextStep.label : 'Quasi llest!'}</span>
+            </div>
+            <div class="h2-onb-bar"><div class="h2-onb-fill" style="width:${onboardingPct}%;"></div></div>
+            <div class="h2-onb-grid">${stepsHtml}</div>
+        </div>`;
+    }
+
+    // ── V2-EVOL Fase C · member identity card · migrat de DashboardView V1 ──
+    _zoneMember({ member, memberImpact, meHandle }) {
+        if (!member && !meHandle) return '';
+        const summary = summarizeMemberIdentity(member);
+        const handle = summary.handle || meHandle || '@anonymous';
+        const availability = summary.availability || 'available';
+        const availMeta = AVAILABILITY_META[availability] || { label: 'disponible', color: '#22c55e' };
+        const impact = memberImpact || { projectCount: 0, attestationCount: 0, pactCount: 0 };
+        return `
+        <div class="h2-zone" data-zone="member" style="border-left:3px solid ${availMeta.color};">
+            <div class="h2-zone-head">
+                <h2>👤 ${this._esc(handle)}</h2>
+                <a href="/identity" data-link aria-label="Editar identitat">Editar →</a>
+            </div>
+            <div class="h2-member-stats">
+                <span class="h2-member-pill" style="background:${availMeta.color}28;color:${availMeta.color};">${this._esc(availMeta.label)}</span>
+                <span class="h2-member-stat">🚀 ${impact.projectCount} projectes</span>
+                <span class="h2-member-stat">🤝 ${impact.attestationCount} attestacions</span>
+                <span class="h2-member-stat">📜 ${impact.pactCount} pactes</span>
+            </div>
+        </div>`;
+    }
+
+    _esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     _renderTopNav() {

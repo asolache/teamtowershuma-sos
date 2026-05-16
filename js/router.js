@@ -17,7 +17,9 @@ import { LEGACY_REDIRECTS } from './core/routerRedirects.js';
 const ROUTES = [
     { path: '/',          view: () => import('./views/DashboardV2View.js') },
     { path: '/home',      view: () => import('./views/DashboardV2View.js') },
-    { path: '/dashboard', view: () => import('./views/DashboardView.js') },
+    // V2-EVOL Fase C · /dashboard ja no carrega V1 · redirigeix a / via
+    // LEGACY_REDIRECTS. Features V1 (Onboarding · Member panel) migrades.
+    // KB inline panel · explorable via /folders · /tags · /mind.
     { path: '/create',    view: () => import('./views/ProjectCreationV2View.js') },
     { path: '/map',       view: () => import('./views/ValueMapView.js')  },
     { path: '/workshops', view: () => import('./views/WorkshopsView.js') },

@@ -21,7 +21,7 @@ const MOBILE_BREAKPOINT = '768px';
 const PRIMARY = Object.freeze([
     { id: 'home',     icon: '🏠', label: 'Avui',      match: ['/', '/home'] },
     { id: 'timeline', icon: '💬', label: 'Xarxa',     match: ['/timeline', '/registry'] },
-    { id: 'create',   icon: '➕', label: 'Crea',       match: ['/create', '/dashboard'] },
+    { id: 'create',   icon: '➕', label: 'Crea',       match: ['/create'] },
     { id: 'market',   icon: '🛒', label: 'Descobreix', match: ['/market', '/opportunities', '/discover', '/process-catalog', '/registry'] },
     { id: 'me',       icon: '👤', label: 'Jo',         match: ['/identity', '/wallet', '/u/', '/settings'] },
 ]);
