@@ -735,6 +735,25 @@
       "tags": ["batch-5-majestic", "interop", "dm"]
     },
     {
+      "id": "wo-project-creation-legendary-001",
+      "project_id": "sos-dev-internal",
+      "title": "PROJECT-CREATION-LEGENDARY-001 · consolidar V2 + MAX en un sol /create amb qualitat mesurable",
+      "description": "Fusionar `ProjectCreationV2View` (cervell IA) i `maxProjectBootstrap` (cos operacional) en un únic flow `/create` amb pipeline classify → seed (template del catàleg) → personalize (IA segons ambition) → validate (quality score 0-100) → persist. MVP amb 2 templates (founder + default-balanced). Mode light fa 1 IA call cheap (~0.002€). Esborrar botó MAX del DashboardView · DashboardV2 demo seed passa a `?ambition=light&template=founder&skip-prompt`. Pre-alfa privada · abans del primer cohort estable. Veure `docs/STUDY-project-creation-2026-05-15.md` per a l'arquitectura completa i el pla TDD.",
+      "priority": "critical",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "code-review", "test-run", "text-generate"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/projectCreationLegendary.test.js",
+        "expect": "≥60 asserts · 10 blocs A-J (classify · template · seed · personalize · ambition · quality · cost · KB · idempotent · failures)"
+      },
+      "estimated_cost_eur": 11,
+      "dependencies": ["wo-tdd-ia-project-flow-001"],
+      "tags": ["batch-5-majestic", "ia", "consolidation", "pre-alpha"]
+    },
+    {
       "id": "wo-identity-keyfile-inline-001",
       "project_id": "sos-dev-internal",
       "title": "KEYFILE-INLINE-001 · loader JSON Arweave directament a /identity (iPad-ready)",
