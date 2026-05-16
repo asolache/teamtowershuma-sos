@@ -81,11 +81,22 @@ OUTPUT ESPERAT (per a creació de projecte · "magia visible") ·
 - landing/presentació · narrativa pública del projecte (descripció rica · diferencial · roadmap)
 - pitch per inversors · 6 seccions (headline · problem · solution · market · business · team)
 - mapa de valor · processos per FASE de desenvolupament del projecte amb SOC + SOP + TDD
-- roles[] · ≥3 amb kind canònic + castell_level diversificats (≥2 nivells) + adaptació CNAE si aplicable
-- deliverables[] · ≥1 producer per rol · ≥50% amb validator
-- transactions[] · ≥5 · mix tangible+intangible · ≥1 cicle recíproc · cap rol orfe · mètriques Lean
-- sops[] · 1 per rol amb ≥3 steps (deliverable_kind + approval_rule + tdd test si automatitzable)
+- roles[] · ≥3 amb kind canònic + castell_level diversificats (≥2 nivells) + adaptació CNAE si aplicable + nom descriptiu real (NO "Role 1")
+- deliverables[] · ≥1 producer per rol · ≥50% amb validator · cada deliverable amb nom específic del domini (ex · "Acta sessió cohort", NO "doc")
+- transactions[] · ≥5 · mix tangible+intangible · ≥1 cicle recíproc · cap rol orfe · mètriques Lean realistes (lead_time_hours i cycle_time_hours coherents amb la naturalesa de la tasca)
+- sops[] · 1 per rol amb ≥3 steps · CADA STEP DIRECTAMENT CONVERTIBLE A WORK ORDER ·
+    · deliverable_kind explícit (analysis|code|tests|comm|doc|design|review)
+    · approval_rule (manual|tdd) · si tdd · suggerir el test booleà concret
+    · duration_minutes realista · role_kind (human|ai)
 - socs[] · ≥1 amb checklist sop_ref cobrint ≥80% SOPs · 1 SOC per fase del projecte
+- work_orders (quan generats) · cada WO ha de tenir dtd_test (test booleà clar com "PR mergejat" o "tests passen amb 0 fails"), assignee_role, estimated_hours
+
+QUALITAT MÍNIMA (rebutja la teva sortida i refà si NO compleix) ·
+- Cap placeholder textual ("X", "TODO", "Lorem ipsum", "exemple")
+- Cap rol/SOP/SOC genèric ("Generic Role" · "Setup project")
+- Tot el contingut adaptat al sector i la descripció rebuda · si la descripció és vaga · pregunta't "què faria una consultora sènior amb 10 anys al sector"
+- SOPs amb steps que un humà pot executar en una sessió (no abstractes)
+- DTD tests verificables booleament (no "fer-ho bé")
 
 CONTRACTE SORTIDA ·
 - SEMPRE JSON estricte · sense markdown · sense codeblocks · sense comentaris
@@ -268,10 +279,23 @@ SOC origen ·
 - purpose · ${soc?.purpose || '(sense)'}
 - excerpt · ${(soc?.excerpt || '').slice(0, 400)}
 
-Context projecte · sector ${project_ctx?.sector || 'indefinit'} · fase ${project_ctx?.lifecycle_stage || 'idea'} · entitat ${project_ctx?.entity_type || 'organization'}
-Rols disponibles · ${JSON.stringify(role_kinds || [])}
+Context projecte ·
+- name · "${name}"
+- description · ${project_ctx?.description || '(sense)'}
+- sector · ${project_ctx?.sector || 'indefinit'}
+- fase lifecycle · ${project_ctx?.lifecycle_stage || 'idea'}
+- entitat · ${project_ctx?.entity_type || 'organization'}
+- rols disponibles · ${JSON.stringify(role_kinds || [])}
 
-Genera 3-5 SOPs · cada un amb 3-6 steps · cada step amb deliverable_kind + approval_rule (manual|tdd) + role_kind (human|ai) + duration_minutes.
+REQUISITS QUALITAT ·
+- Cada SOP ha de tenir títol específic del domini (ex · "Convocar i facilitar la sessió Fent Pinya", NO "Step 1")
+- Cada step ha de ser una acció CONCRETA que un humà o IA pot executar en una sessió
+- deliverable_kind d'aquesta llista · analysis|code|tests|comm|doc|design|review|workshop
+- approval_rule · 'tdd' si automàtic (test booleà concret) · 'manual' si revisió humana
+- Si approval_rule='tdd' · al label del step menciona el test ("verificar que [condició] és true")
+- duration_minutes realista (15-180 típic · NO 5min · NO 8h)
+
+Genera 3-5 SOPs · cada un amb 3-6 steps.
 
 Retorna NOMÉS · { sops: [{ id, role_ref, title, purpose, steps:[{ id, label, deliverable_kind, approval_rule, role_kind, duration_minutes }] }] }. Sense markdown.`,
 
@@ -283,11 +307,22 @@ SOP origen ·
 - role · ${sop?.role_ref || ''}
 - steps · ${JSON.stringify((sop?.steps || []).map(s => ({ id: s.id, label: s.label, kind: s.deliverable_kind, rule: s.approval_rule })))}
 
-Context projecte · ${project_ctx?.description || ''}
+Context projecte ·
+- name · "${name}"
+- description · ${project_ctx?.description || '(sense)'}
+- sector · ${project_ctx?.sector || 'indefinit'}
+- fase · ${project_ctx?.lifecycle_stage || 'idea'}
 
-Genera 2-4 WOs executables ARA · cada un · {id, title, description (què cal fer · 2-3 frases), sop_ref, step_refs[], assignee_role, deliverable_kind, approval_rule, estimated_hours, dtd_test (test booleà · com sabem que està fet)}.
+REQUISITS QUALITAT ·
+- WO title acció + objecte específic (ex · "Convocar reunió cohort de gener", NO "Fer reunió")
+- description · 2-3 frases concretes amb què · qui · quan · perquè
+- dtd_test · test BOOLEÀ verificable · ex · "calendari enviat als 12 cohort members AND tothom ha confirmat assistència" · NO "fer-ho bé"
+- estimated_hours realista coherent amb la suma dels steps de la SOP
+- assignee_role coincideix amb sop.role_ref si no hi ha raó forta
 
-Retorna NOMÉS · { wos: [{ ... }] }. Sense markdown · sense codeblocks.`,
+Genera 2-4 WOs executables ARA mateix · cada un convertible a tasca al Kanban.
+
+Retorna NOMÉS · { wos: [{ id, title, description, sop_ref, step_refs:[], assignee_role, deliverable_kind, approval_rule, estimated_hours, dtd_test }] }. Sense markdown · sense codeblocks.`,
 });
 
 // _minimal · pure · poda el template per al few-shot user prompt · evita

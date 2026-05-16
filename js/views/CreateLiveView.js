@@ -68,7 +68,7 @@ export default class CreateLiveView {
         if (!this._payload || !this._payload.name) {
             try { toast({ kind: 'warning', text: 'Cal omplir el formulari primer · redirigint a /create', ttl: 3000 }); } catch (_) {}
             this._renderEmpty();
-            setTimeout(() => { window.location.href = '/create'; }, 1500);
+            setTimeout(() => { (window.navigateTo || ((u) => window.location.href = u))('/create'); }, 1500);
             return;
         }
 
@@ -80,7 +80,7 @@ export default class CreateLiveView {
             });
         });
         document.getElementById('clCancelBtn')?.addEventListener('click', () => {
-            window.location.href = '/create';
+            (window.navigateTo || ((u) => window.location.href = u))('/create');
         });
 
         // Render header
@@ -131,6 +131,20 @@ export default class CreateLiveView {
             });
             this._result = result;
             this._finished = true;
+
+            // FIX bug 5 · sync immediat dels tabs preview amb el result final ·
+            // (els events del pipeline arriben ABANS que this._result existeixi ·
+            // sense aquesta crida explícita els tabs queden buits per sempre)
+            this._draft.roles        = this._result.project?.vna_roles || [];
+            this._draft.transactions = this._result.transactions || [];
+            this._draft.deliverables = this._result.deliverables || [];
+            this._draft.canvas       = this._result.canvas || null;
+            this._draft.pitch        = this._result.pitch || null;
+            this._draft.sops         = (this._result.sops || []).map(s => s.content || s);
+            this._draft.socs         = (this._result.socs || []).map(s => s.content || s);
+            this._draft.wos          = (this._result.wos || []).map(w => w.content || w);
+            this._draft.socsSelected = this._result.socsSelected || [];
+            this._renderTabs();
 
             // Persist si ok
             if (result.ok) {
