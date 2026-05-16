@@ -47,12 +47,34 @@ const MIN_SCORE_FOR_AMBITION = Object.freeze({ light: 70, standard: 80, max: 85 
 // ─── Etapa 1 · CLASSIFY ───────────────────────────────────────────────────
 // Heurístic pur · si l'usuari NO passa `classify` async injectat, fa servir
 // un classifier basat en keywords. Cap IA · útil per a tests + mode offline.
+//
+// Detecta · project_type (template) · lifecycle_stage · entity_type (org · business · sos · project_internal)
 function _heuristicClassify({ name = '', description = '', sector = '' }) {
     const haystack = (name + ' ' + description + ' ' + (sector || '')).toLowerCase();
     const isCoop = /cooperat|castell|cohort|matriu|founder|sos\b|permaweb/.test(haystack);
+
+    // Entity type detection · prioritat · sos > business > project_internal > organization (default)
+    let entity_type = 'organization';
+    if (/\bsos\b|sociotècnic|federat|federation|permaweb/.test(haystack)) {
+        entity_type = 'sos';
+    } else if (/\bsl\b|\bslu\b|s\.l\.|empresa|negoci|business|startup|autònom|autonom/.test(haystack)) {
+        entity_type = 'business';
+    } else if (/subprojecte|projecte intern|sub-?project|intern\b|internal/.test(haystack)) {
+        entity_type = 'project_internal';
+    } else if (/cooperat|associació|associacio|ong|fundació|fundacio|colla|matriu/.test(haystack)) {
+        entity_type = 'organization';
+    }
+
+    // Lifecycle stage detection · keywords forts · default 'idea'
+    let lifecycle_stage = 'idea';
+    if (/escala|scale|108|federat|consolida/.test(haystack)) lifecycle_stage = 'scale';
+    else if (/validaci|metric|kpi|retention/.test(haystack)) lifecycle_stage = 'validation';
+    else if (/mvp|prototip|protot/.test(haystack)) lifecycle_stage = 'mvp';
+
     return {
         project_type:    isCoop ? 'founder-coop-tradicional' : 'default-balanced',
-        lifecycle_stage: 'idea',
+        lifecycle_stage,
+        entity_type,
         keywords:        haystack.split(/\s+/).filter(w => w.length >= 4).slice(0, 8),
         source:          'heuristic',
     };

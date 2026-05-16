@@ -16,6 +16,8 @@
 import { matchSocs, listEntityTypes, listZoomLevels, VNA_ZOOM_LEVELS } from '../core/socMatcher.js';
 import { buildPrompt, TASK_KINDS, listTasks } from '../core/vnaExpertPrompts.js';
 import { createProject, GENERATION_MODES } from '../core/projectCreationOrchestrator.js';
+import { buildAiCallbacks, __test_helpers__ } from '../core/aiDrivenCreationAdapter.js';
+import { TASK_ROUTING } from '../core/aiRouterService.js';
 
 let pass = 0, fail = 0;
 function ok(label, cond, expected = '', got = '') {
@@ -220,6 +222,97 @@ ok('Smoke · listEntityTypes 4 entries', ets.length === 4, 4, ets.length);
 const zls = listZoomLevels();
 ok('Smoke · listZoomLevels 3 entries', zls.length === 3, 3, zls.length);
 ok('Smoke · VNA_ZOOM_LEVELS.macro existeix', !!VNA_ZOOM_LEVELS.macro);
+
+// ─── I · classify heurístic detecta entity_type + lifecycle_stage ───────
+console.log('\n— I · classify heurístic · entity_type + lifecycle_stage');
+const rSos = await createProject({ name: 'SOS Federat', description: 'sistema sociotècnic permaweb federation', ambition: 'light' });
+ok('I · "sos federat" → entity_type=sos', rSos.classification.entity_type === 'sos', 'sos', rSos.classification.entity_type);
+const rBiz = await createProject({ name: 'Mi SL', description: 'una empresa SL de software · negoci consultoria', ambition: 'light' });
+ok('I · "empresa SL negoci" → entity_type=business', rBiz.classification.entity_type === 'business', 'business', rBiz.classification.entity_type);
+const rOrg = await createProject({ name: 'La Colla', description: 'cooperativa associació fundació', ambition: 'light' });
+ok('I · "cooperativa associació" → entity_type=organization', rOrg.classification.entity_type === 'organization', 'organization', rOrg.classification.entity_type);
+const rMvp = await createProject({ name: 'X', description: 'fer prototip MVP del producte', ambition: 'light' });
+ok('I · "MVP prototip" → lifecycle_stage=mvp', rMvp.classification.lifecycle_stage === 'mvp', 'mvp', rMvp.classification.lifecycle_stage);
+const rScale = await createProject({ name: 'Y', description: 'escalar a 108 operadors federation consolida', ambition: 'light' });
+ok('I · "escalar 108 federat" → lifecycle_stage=scale', rScale.classification.lifecycle_stage === 'scale', 'scale', rScale.classification.lifecycle_stage);
+
+// ─── J · aiDrivenCreationAdapter · parser JSON robust ───────────────────
+console.log('\n— J · aiDrivenCreationAdapter · _parseJsonSafe robust');
+const { _parseJsonSafe } = __test_helpers__;
+ok('J · JSON pur', _parseJsonSafe('{"a":1}')?.a === 1);
+ok('J · markdown codeblock json', _parseJsonSafe('```json\n{"a":2}\n```')?.a === 2);
+ok('J · preàmbul abans del JSON', _parseJsonSafe('Aquí està la sortida ·\n{"a":3}')?.a === 3);
+ok('J · text invalid → null', _parseJsonSafe('text random sense json') === null);
+ok('J · null → null', _parseJsonSafe(null) === null);
+
+// ─── K · buildAiCallbacks · adapter integra runEscalation ──────────────
+console.log('\n— K · buildAiCallbacks · integra amb runEscalation');
+const mockedGen = async (modelKey, opts) => {
+    // Simula resposta JSON adequada segons taskKind detectat al systemPrompt
+    if (opts.userPrompt.includes('Tria els SOCs')) {
+        return { text: JSON.stringify({ selected: [{ relpath: 'socs/sectors/J.md', weight: 1, reason: 'IA' }] }), usage: { inputTokens: 500, outputTokens: 80 } };
+    }
+    if (opts.userPrompt.includes('Expandeix el SOC')) {
+        return { text: JSON.stringify({ sops: [{ id: 'sop-adap-1', role_ref: 'creator', title: 'SOP adap', steps: [{ id: 's1', label: 'a', deliverable_kind: 'code', approval_rule: 'tdd', role_kind: 'ai', duration_minutes: 30 }, { id: 's2', label: 'b', deliverable_kind: 'tests', approval_rule: 'tdd', role_kind: 'ai', duration_minutes: 15 }, { id: 's3', label: 'c', deliverable_kind: 'comm', approval_rule: 'manual', role_kind: 'human', duration_minutes: 10 }] }] }), usage: { inputTokens: 800, outputTokens: 250 } };
+    }
+    if (opts.userPrompt.includes('Genera Work Orders')) {
+        return { text: '```json\n' + JSON.stringify({ wos: [{ id: 'wo-adap-1', title: 'WO adap', description: 'do it', sop_ref: 'sop-adap-1', step_refs: ['s1'], assignee_role: 'creator', deliverable_kind: 'code', approval_rule: 'tdd', estimated_hours: 1, dtd_test: 'tests pass' }] }) + '\n```', usage: { inputTokens: 400, outputTokens: 120 } };
+    }
+    return { text: '{}', usage: { inputTokens: 100, outputTokens: 10 } };
+};
+
+const adapterCalls = [];
+const callbacks = buildAiCallbacks({
+    generateWithProvider: mockedGen,
+    onModelUsed: ({ taskKind, modelKey, cost }) => adapterCalls.push({ taskKind, modelKey, cost }),
+});
+
+ok('K · TASK_ROUTING té soc-pick', !!TASK_ROUTING['soc-pick']);
+ok('K · TASK_ROUTING té sop-from-soc', !!TASK_ROUTING['sop-from-soc']);
+ok('K · TASK_ROUTING té wo-from-sop', !!TASK_ROUTING['wo-from-sop']);
+
+const rAdapter = await createProject({
+    name:        'Adapter test',
+    description: 'cooperativa software · sector J · MVP',
+    sector:      'J',
+    ambition:    'light',
+    generationMode: 'ai-driven',
+    vna_zoom:       'macro',
+    ...callbacks,
+    knowledgeIndex: FIXTURE_INDEX,
+    onEvent: () => {},
+});
+ok('K · adapter result returned', !!rAdapter && rAdapter.version);
+ok('K · adapter retorna score ≥0', rAdapter.score >= 0, '≥0', rAdapter.score);
+ok('K · adapter sops generats per IA', rAdapter.sops.length >= 1, '≥1', rAdapter.sops.length);
+ok('K · adapter wos generats per IA', rAdapter.wos.length >= 1, '≥1', rAdapter.wos.length);
+ok('K · adapter onModelUsed cridat ≥1', adapterCalls.length >= 1, '≥1', adapterCalls.length);
+ok('K · adapter cost acumulat (>0)', rAdapter.cost > 0, '>0', rAdapter.cost);
+
+// ─── L · cost per step · cada pas afegeix al total ──────────────────────
+console.log('\n— L · cost acumulat per step IA');
+let perStepCosts = [];
+const trackedCallbacks = {
+    pickSocs:     async ({ candidates }) => { const c = 0.003; perStepCosts.push({ step: 'pick-socs', cost: c }); return { selected: candidates.slice(0, 2), cost: c }; },
+    generateSops: async ({ soc, role_kinds }) => { const c = 0.007; perStepCosts.push({ step: 'gen-sops', cost: c }); return { sops: [{ id: 'sop-trk-' + soc.relpath.length, role_ref: role_kinds?.[0] || 'creator', title: 'T', steps: [{ id: 's1', label: 'a', deliverable_kind: 'code', approval_rule: 'tdd' }, { id: 's2', label: 'b', deliverable_kind: 'tests', approval_rule: 'tdd' }, { id: 's3', label: 'c', deliverable_kind: 'comm', approval_rule: 'manual' }] }], cost: c }; },
+    generateWos:  async ({ sop }) => { const c = 0.011; perStepCosts.push({ step: 'gen-wos', cost: c }); return { wos: [{ id: 'wo-trk-' + sop.id, title: 'W', description: 'd', sop_ref: sop.id, dtd_test: 't' }], cost: c }; },
+};
+const rCost = await createProject({
+    name: 'Cost test',
+    description: 'cooperativa software · sector J',
+    sector: 'J',
+    ambition: 'standard',
+    generationMode: 'ai-driven',
+    vna_zoom: 'macro',
+    ...trackedCallbacks,
+    knowledgeIndex: FIXTURE_INDEX,
+    onEvent: () => {},
+});
+const expectedCost = perStepCosts.reduce((a, p) => a + p.cost, 0);
+ok('L · cost total ≈ suma per step', Math.abs(rCost.cost - expectedCost) < 0.001, 'sum', { total: rCost.cost, expected: expectedCost });
+ok('L · pickSocs · 1 invocació', perStepCosts.filter(p => p.step === 'pick-socs').length === 1);
+ok('L · generateSops · ≥1 invocació', perStepCosts.filter(p => p.step === 'gen-sops').length >= 1);
+ok('L · generateWos · ≥1 invocació', perStepCosts.filter(p => p.step === 'gen-wos').length >= 1);
 
 console.log('\n' + pass + ' pass · ' + fail + ' fail');
 process.exit(fail > 0 ? 1 : 0);

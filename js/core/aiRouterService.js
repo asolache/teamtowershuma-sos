@@ -75,6 +75,13 @@ export const TASK_ROUTING = Object.freeze({
     'multimodal-image':     Object.freeze({ primary:'gemini/2.5-flash',      fallback:'openai/gpt-4o',         premium:'gemini/2.5-pro',       evaluator:'anthropic/haiku-4.5' }),
     // Tags / etiquetes / permaweb tags
     'tag-generation':       Object.freeze({ primary:'gemini/2.5-flash-lite', fallback:'anthropic/haiku-4.5',   premium:'anthropic/haiku-4.5',  evaluator:null }),
+    // ─── AI-DRIVEN cadena SOC→SOP→WO (PR1) ───────────────────────────────
+    // Classify + tria SOCs del knowledge · raonament curt amb context ric
+    'soc-pick':             Object.freeze({ primary:'deepseek/v3',           fallback:'anthropic/haiku-4.5',   premium:'anthropic/sonnet-4.6', evaluator:'anthropic/haiku-4.5' }),
+    // Generació SOPs estructurats des d'un SOC (steps + deliverable_kind + rules)
+    'sop-from-soc':         Object.freeze({ primary:'deepseek/v3',           fallback:'anthropic/sonnet-4.6',  premium:'anthropic/opus-4.7',   evaluator:'anthropic/haiku-4.5' }),
+    // Generació WOs executables des d'una SOP (concrets · DTD test inclòs)
+    'wo-from-sop':          Object.freeze({ primary:'deepseek/v3',           fallback:'anthropic/sonnet-4.6',  premium:'anthropic/opus-4.7',   evaluator:'anthropic/haiku-4.5' }),
 });
 
 export const TASK_KINDS = Object.freeze(Object.keys(TASK_ROUTING));
