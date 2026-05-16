@@ -30,6 +30,7 @@ import { suggestNextDim } from '../core/navService.js';
 import { ONBOARDING_STEPS, computeOnboardingState, onboardingCompletion, nextOnboardingStep } from '../core/dashboardOnboardingService.js';
 // FOUNDER-001 sprint B · plantilla founder clonable
 import { buildFounderProject, FOUNDER_PROJECT_DEFAULTS } from '../core/founderTemplate.js';
+import { renderDeprecatedBanner, ensureDeprecatedBannerStyle } from '../core/deprecatedBanner.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function uid() { return 'proj-' + Math.random().toString(36).slice(2, 9); }
@@ -878,6 +879,17 @@ export default class DashboardView {
                 </div>
             </div>
 
+            <!-- V2-EVOL Fase B · banner deprecation · /dashboard és la versió legacy · / és la canónica -->
+            <div style="max-width:1100px;margin:0 auto;padding:0 1rem;">
+                ${renderDeprecatedBanner({
+                    canonicalPath:  '/',
+                    canonicalLabel: 'Home (DashboardV2)',
+                    title:          'Dashboard · versió legacy',
+                    reason:         'Aquesta pàgina serà eliminada pre-alfa. La versió oficial està a `/` (Home) · més neta · mobile-first · 4 zones clares. Les funcionalitats avançades (KB panel inline · Member editor · Onboarding 5 steps) es migraran abans d\'eliminar aquesta vista.',
+                    etaSprint:      'sprint V2-EVOL Fase C',
+                })}
+            </div>
+
             <!-- MAIN -->
             <div class="dash-main" id="dashMain">
 
@@ -1010,6 +1022,7 @@ export default class DashboardView {
     }
 
     async afterRender() {
+        ensureDeprecatedBannerStyle();
         const sel = document.getElementById('dashLangSelector');
         if (sel) sel.innerHTML = langSelectorHtml();
         await this._renderProjects();
