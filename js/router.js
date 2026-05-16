@@ -20,7 +20,8 @@ const ROUTES = [
     // V2-EVOL Fase C · /dashboard ja no carrega V1 · redirigeix a / via
     // LEGACY_REDIRECTS. Features V1 (Onboarding · Member panel) migrades.
     // KB inline panel · explorable via /folders · /tags · /mind.
-    { path: '/create',    view: () => import('./views/ProjectCreationV2View.js') },
+    { path: '/create',      view: () => import('./views/ProjectCreationV2View.js') },
+    { path: '/create-live',  view: () => import('./views/CreateLiveView.js') },
     { path: '/map',       view: () => import('./views/ValueMapView.js')  },
     { path: '/workshops', view: () => import('./views/WorkshopsView.js') },
     { path: '/kanban',    view: () => import('./views/KanbanView.js')   },

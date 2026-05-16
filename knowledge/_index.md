@@ -113,23 +113,39 @@ aquest SOC com a context quan crea un projecte d'aquest sector.
 
 ---
 
-## SOCs · Standard Operating Concepts (TeamTowers)
+## SOCs · Standard Operating Concepts
 
-Conceptos invariantes (qué + por qué) de servicios, rituales y artefactos
-de TeamTowers. Cada SOC es un nodo `type: soc` en KB. Ver `socs/_README.md`
-para el esquema de frontmatter. El SOC raíz `soc-teamtowers-brand` aporta
-contexto de marca heredable a todas las llamadas LLM.
+Conceptos invariantes (qué + por qué) de servicios, rituales y artefactos.
+Cada SOC es un nodo `type: soc` en KB. Ver `socs/_README.md` para el
+esquema de frontmatter.
+
+> **Separación canónica** · los SOCs con `scope: brand-specific` aportan
+> contexto de marca al LLM pero **NO** son seleccionables como SOCs
+> reusables al crear proyectos genéricos. El `socMatcher` los filtra
+> automáticamente y solo los incluye cuando el proyecto es del mismo
+> `brand_owner` (ej · TeamTowers operadora).
+
+### SOCs universales (reusables · cualquier proyecto SOS)
 
 | Fichero | Concepto |
 |---------|----------|
-| `socs/teamtowers-brand.md` | TeamTowers · marca raíz — 20+ años, 60k+ participantes, 150+ clientes, 10 valores castellers, portfolio (taller/demo/merch/consultoría). |
 | `socs/soc-vna-network.md` | Red de valor (VNA) — concepto operativo raíz de cualquier proyecto SOS. |
 | `socs/fent-pinya.md` | Taller experiencial Fent Pinya — taller participativo 2 h, hasta 1.000 pax, valores castellers. |
 | `socs/castellers-demo.md` | Demos castelleras — espectáculo profesional no participativo, hasta 7 pisos, máx 4 castells por demo. |
 | `socs/la-colla.md` | La Colla · proceso VNA — consultoría tipo Pantheon Work / Verna Allee, multi-sesión, mapeo de la red de valor del cliente. |
-| `socs/teamtowers-merchandising.md` | Merchandising TeamTowers — pañuelos y faixas personalizables, upsell del evento. |
 | `socs/proyecto-custom.md` | Proyectos a medida — 5 variantes (escuela, gymkana, demo participativa, combinación, presupuesto ajustado). |
 | `socs/charla-conferencia.md` | Charla teatralizada 30-60 min con pre-trabajo consultivo + arte vivo opcional (clown, beatboxer, actor, músico). |
+
+### SOCs brand-specific · TeamTowers operadora
+
+Estos SOCs son **propiedad de TeamTowers** y solo se aplican a proyectos
+del mismo brand_owner. Aportan contexto de marca al LLM (no inventar
+métricas) pero quedan fuera del matching genérico.
+
+| Fichero | Concepto | Scope |
+|---------|----------|-------|
+| `socs/teamtowers-brand.md` | TeamTowers · marca raíz — 20+ años, 60k+ participantes, 150+ clientes, 10 valores castellers, portfolio (taller/demo/merch/consultoría). | `brand-specific` |
+| `socs/teamtowers-merchandising.md` | Merchandising TeamTowers — pañuelos y faixas personalizables, upsell del evento. | `brand-specific` |
 
 ---
 

@@ -189,11 +189,15 @@ export const FEW_SHOT_EXAMPLES = Object.freeze({
 // SYSTEM_BASE + few-shot present al context.
 
 export const TASK_KINDS = Object.freeze([
-    'enrich-value-map',     // omple/millora el mapa a partir del context
-    'personalize-canvas',   // canvas/vision/mission a partir de descripció
-    'personalize-pitch',    // pitch headline+problem+solution
-    'expand-sop',           // expandeix 1 SOP amb més steps detallats
-    'generate-soc',         // genera SOC checklist nou
+    'enrich-value-map',          // omple/millora el mapa a partir del context
+    'personalize-canvas',        // canvas/vision/mission a partir de descripció
+    'personalize-pitch',         // pitch headline+problem+solution
+    'expand-sop',                // expandeix 1 SOP amb més steps detallats
+    'generate-soc',              // genera SOC checklist nou
+    // ── AI-DRIVEN cadena SOC→SOP→WO (PR1) ────────────────────────────────
+    'classify-and-pick-socs',    // tria SOCs del knowledge segons projecte+zoom
+    'generate-sops-from-soc',    // expandeix 1 SOC a 3-5 SOPs amb steps
+    'generate-wos-from-sop',     // expandeix 1 SOP a 2-4 WOs executables
 ]);
 
 const TASK_PROMPTS = Object.freeze({
@@ -238,6 +242,52 @@ Retorna NOMÉS · { steps: [{ id, label, duration_minutes, role_kind: 'human'|'a
 SOPs disponibles · ${JSON.stringify((sops || []).map(s => ({ id: s.id, role_ref: s.role_ref, title: s.title })))}
 
 Retorna NOMÉS · { id, name, purpose, checklist: [{ id, label, required, verification_kind, sop_ref }] } cobrint ≥80% dels SOPs.`,
+
+    'classify-and-pick-socs': ({ name, description, sector, entity_type, project_type, vna_zoom, candidates }) =>
+`TASCA · Tria els SOCs adequats per al projecte des del catàleg knowledge/.
+
+Projecte · "${name}"
+Sector · ${sector || 'indefinit'}
+Tipus entitat · ${entity_type || 'no especificat'} (organization · business · sos · project_internal)
+Tipus projecte · ${project_type || 'genèric'}
+Zoom VNA · ${vna_zoom || 'mid'} (macro=1-3 · mid=4-7 · micro=8-15 SOCs)
+Descripció · ${description || '(sense)'}
+
+Candidats SOC (pre-filtrats per heurístic · cal validar):
+${JSON.stringify((candidates || []).slice(0, 20).map(c => ({ relpath: c.relpath, title: c.title, sector: c.sector_cnae, phase: c.phase, score: c.score, reasons: c.reasons })))}
+
+Criteri tria · 1) cobertura processos clau segons descripció · 2) fase lifecycle adequada · 3) sector match · 4) respectar el rang del zoom · 5) MAI tots iguals · diversifica fases.
+
+Retorna NOMÉS · { selected: [{ relpath, title, reason, weight }], rejected_reasons: [{ relpath, why }] }. Sense markdown · sense codeblocks.`,
+
+    'generate-sops-from-soc': ({ name, soc, project_ctx, role_kinds }) =>
+`TASCA · Expandeix el SOC "${soc?.title || soc?.relpath}" a SOPs concrets per al projecte "${name}".
+
+SOC origen ·
+- title · ${soc?.title || '(sense)'}
+- purpose · ${soc?.purpose || '(sense)'}
+- excerpt · ${(soc?.excerpt || '').slice(0, 400)}
+
+Context projecte · sector ${project_ctx?.sector || 'indefinit'} · fase ${project_ctx?.lifecycle_stage || 'idea'} · entitat ${project_ctx?.entity_type || 'organization'}
+Rols disponibles · ${JSON.stringify(role_kinds || [])}
+
+Genera 3-5 SOPs · cada un amb 3-6 steps · cada step amb deliverable_kind + approval_rule (manual|tdd) + role_kind (human|ai) + duration_minutes.
+
+Retorna NOMÉS · { sops: [{ id, role_ref, title, purpose, steps:[{ id, label, deliverable_kind, approval_rule, role_kind, duration_minutes }] }] }. Sense markdown.`,
+
+    'generate-wos-from-sop': ({ name, sop, project_ctx }) =>
+`TASCA · Genera Work Orders (WOs) executables a partir de la SOP "${sop?.title || sop?.id}" del projecte "${name}".
+
+SOP origen ·
+- title · ${sop?.title || ''}
+- role · ${sop?.role_ref || ''}
+- steps · ${JSON.stringify((sop?.steps || []).map(s => ({ id: s.id, label: s.label, kind: s.deliverable_kind, rule: s.approval_rule })))}
+
+Context projecte · ${project_ctx?.description || ''}
+
+Genera 2-4 WOs executables ARA · cada un · {id, title, description (què cal fer · 2-3 frases), sop_ref, step_refs[], assignee_role, deliverable_kind, approval_rule, estimated_hours, dtd_test (test booleà · com sabem que està fet)}.
+
+Retorna NOMÉS · { wos: [{ ... }] }. Sense markdown · sense codeblocks.`,
 });
 
 // _minimal · pure · poda el template per al few-shot user prompt · evita

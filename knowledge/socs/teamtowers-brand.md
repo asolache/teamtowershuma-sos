@@ -13,6 +13,8 @@ related_socs: [soc-fent-pinya, soc-castellers-demo, soc-teamtowers-merchandising
 related_sops: [sop-fent-pinya-taller, sop-castellers-demo, sop-teamtowers-merchandising]
 keywords: [teamtowers, marca, castellers, unesco, valores, mice, dmc, agencias, corporativo]
 sos_context: critical
+scope: brand-specific
+brand_owner: teamtowers
 ---
 
 # TeamTowers · Marca y posicionamiento

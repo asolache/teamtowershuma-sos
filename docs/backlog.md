@@ -180,6 +180,7 @@
 
 | ID | Visión | Notas |
 |---|---|---|
+| **wo-knowledge-index-scope-002** | **Revisar `knowledge/_index.md` · separar contenido brand-specific TeamTowers de universal** (S · 3€) | Mismo problema que con `teamtowers-brand.md` (resuelto en v102 con `scope: brand-specific`) aplica a SOPs y a otros bloques. NO PERDER ningún SOC/SOP — solo asociarlos al proyecto `teamtowers.eu` (brand_owner). Frontmatter `scope: brand-specific` + `brand_owner: teamtowers` a los SOPs operativos TT (fent-pinya, castellers-demo, la-colla operativa, merchandising, etc.). Update `socMatcher`/`sopMatcher` para filtrar. `_index.md` debe ser **guía completa de TODO knowledge que aporte valor a IA + usuarios** con tablas separadas Universal vs Brand-specific. Verificar también roles/clients/vision por si tienen el mismo issue. Tests: brand-specific NO aparece en proyectos genéricos · SÍ en proyectos TT auto-detected. |
 | H1.6.1 | Enriquecer `proyecto-custom` y `charla-conferencia` con info real | Esperando input @alvaro |
 | H1.7.1 | Plantilla informe ejecutivo MD descargable post-La Colla | Aprovechar el caso IKEA como referencia |
 | H2.2 | Ficha detalle de taller con agenda Fent Pinya pre-cargada | UX |

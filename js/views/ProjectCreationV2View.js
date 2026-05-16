@@ -19,6 +19,7 @@ import {
 } from '../core/projectCreationOrchestrator.js';
 import { CATALOG } from '../core/projectTemplateCatalog.js';
 import { toast } from '../core/uxComponents.js';
+import { ENTITY_CARDS, listFormats, resolveSuggestion } from '../core/projectEntityWizard.js';
 
 export default class ProjectCreationV2View {
 
@@ -111,6 +112,33 @@ export default class ProjectCreationV2View {
 
             .pcv-form { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:10px; padding:1.3rem 1.5rem; }
             .pcv-field { margin-bottom:1rem; }
+            .pcv-field-row { display:flex; gap:10px; flex-wrap:wrap; }
+            @media (max-width: 700px) { .pcv-field-row { flex-direction:column; gap:0.6rem; } }
+
+            /* Wizard pre-form (PR3) */
+            .pcv-wizard { background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.25); border-radius:10px; padding:14px 16px; margin-bottom:18px; }
+            .pcv-wizard-head { display:flex; align-items:center; gap:10px; padding-bottom:10px; border-bottom:1px dashed rgba(255,255,255,0.06); margin-bottom:12px; flex-wrap:wrap; }
+            .pcv-wizard-head strong { font-size:0.95rem; }
+            .pcv-wizard-sub { color:var(--text-secondary); font-size:0.8rem; }
+            .pcv-wizard-q { font-size:0.78rem; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:8px; }
+            .pcv-wizard-back-pill { font-size:0.85rem; color:var(--accent-indigo); text-transform:none; letter-spacing:0; }
+            .pcv-entity-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:10px; }
+            .pcv-entity-card { background:rgba(255,255,255,0.03); border:1px solid var(--border-default); border-radius:8px; padding:12px; text-align:left; cursor:pointer; color:var(--text-main); transition:all 0.15s; }
+            .pcv-entity-card:hover { background:rgba(99,102,241,0.12); border-color:var(--accent-indigo); }
+            .pcv-entity-card.active { background:rgba(99,102,241,0.18); border-color:var(--accent-indigo); box-shadow:0 0 0 1px var(--accent-indigo); }
+            .pcv-entity-icon { font-size:1.6rem; margin-bottom:4px; }
+            .pcv-entity-title { font-weight:600; font-size:0.92rem; margin-bottom:2px; }
+            .pcv-entity-sub { font-size:0.78rem; color:var(--text-secondary); margin-bottom:4px; }
+            .pcv-entity-examples { font-size:0.7rem; color:rgba(255,255,255,0.4); font-family:var(--font-mono); }
+            .pcv-format-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:8px; }
+            .pcv-format-card { background:rgba(255,255,255,0.03); border:1px solid var(--border-default); border-radius:6px; padding:10px 12px; text-align:left; cursor:pointer; color:var(--text-main); }
+            .pcv-format-card:hover { background:rgba(99,102,241,0.12); border-color:var(--accent-indigo); }
+            .pcv-format-card.active { background:rgba(99,102,241,0.18); border-color:var(--accent-indigo); }
+            .pcv-format-title { font-weight:600; font-size:0.85rem; margin-bottom:2px; }
+            .pcv-format-hint { font-size:0.72rem; color:var(--text-secondary); }
+            .pcv-wizard-summary { background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.3); border-radius:6px; padding:10px 12px; font-size:0.82rem; display:flex; flex-direction:column; gap:4px; }
+            .pcv-wizard-summary strong { color:#22c55e; }
+            .pcv-wizard-summary code { background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:3px; font-family:var(--font-mono); font-size:0.75rem; }
             .pcv-label { display:block; font-size:0.82rem; font-weight:700; color:var(--text-main); margin-bottom:6px; }
             .pcv-help  { font-size:0.7rem; color:var(--text-secondary); margin-top:3px; line-height:1.4; }
             .pcv-input, .pcv-textarea, .pcv-select { width:100%; box-sizing:border-box; padding:8px 12px; background:var(--bg-dark); color:var(--text-main); border:1px solid var(--border-default); border-radius:5px; font-family:var(--font-base); font-size:0.88rem; }
@@ -166,6 +194,35 @@ export default class ProjectCreationV2View {
                     `}
                 </div>
 
+                <!-- WIZARD · discriminator entitat (PR3) -->
+                <div class="pcv-wizard" id="pcvWizard">
+                    <div class="pcv-wizard-head">
+                        <strong>🧙 Què construeixes?</strong>
+                        <span class="pcv-wizard-sub">2 preguntes ràpides · auto-omplen el formulari · pots saltar-les.</span>
+                        <button id="pcvWizardSkip" class="pcv-btn" style="margin-left:auto;padding:4px 10px;font-size:0.78rem;background:transparent;">salta →</button>
+                    </div>
+                    <div class="pcv-wizard-body">
+                        <div class="pcv-wizard-step" id="pcvWizQ1">
+                            <div class="pcv-wizard-q">1 · Tipus d'entitat</div>
+                            <div class="pcv-entity-grid">
+                                ${ENTITY_CARDS.map(e => `
+                                    <button class="pcv-entity-card" data-entity="${e.id}" type="button">
+                                        <div class="pcv-entity-icon">${e.icon}</div>
+                                        <div class="pcv-entity-title">${e.title}</div>
+                                        <div class="pcv-entity-sub">${this._esc(e.subtitle)}</div>
+                                        <div class="pcv-entity-examples">${e.examples.map(x => this._esc(x)).join(' · ')}</div>
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="pcv-wizard-step" id="pcvWizQ2" style="display:none;">
+                            <div class="pcv-wizard-q">2 · Format · <span id="pcvWizEntityLabel" class="pcv-wizard-back-pill"></span> <button id="pcvWizBack" type="button" style="background:transparent;border:none;color:var(--text-secondary);cursor:pointer;font-size:0.78rem;">← canviar</button></div>
+                            <div class="pcv-format-grid" id="pcvFormatGrid"></div>
+                        </div>
+                        <div class="pcv-wizard-summary" id="pcvWizSummary" style="display:none;"></div>
+                    </div>
+                </div>
+
                 <div class="pcv-form">
                     <div class="pcv-field">
                         <label class="pcv-label" for="pcvName">Nom del projecte *</label>
@@ -189,6 +246,34 @@ export default class ProjectCreationV2View {
                             ${this._renderAmbitionCards()}
                         </div>
                         <div class="pcv-help">Light · projecte buit amb canvas IA · ràpid. Standard · canvas + VNA + SOPs · típic. MAX · tot el lifecycle + tokenomics + workshops · setup complet.</div>
+                    </div>
+
+                    <div class="pcv-field pcv-field-row">
+                        <div style="flex:1;">
+                            <label class="pcv-label" for="pcvGenMode">Mode generació</label>
+                            <select id="pcvGenMode" class="pcv-input">
+                                <option value="ai-driven">ai-driven · IA crea SOC→SOP→WO (recomanat)</option>
+                                <option value="template">template · ràpid offline (sense IA)</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label class="pcv-label" for="pcvEntityType">Tipus d'entitat</label>
+                            <select id="pcvEntityType" class="pcv-input">
+                                <option value="">auto-detect</option>
+                                <option value="organization">Organització · coop · assoc · ONG</option>
+                                <option value="business">Negoci · SL · autònom · startup</option>
+                                <option value="sos">SoS · sociotècnic federat</option>
+                                <option value="project_internal">Projecte intern · subprojecte</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label class="pcv-label" for="pcvVnaZoom">Zoom VNA · detall mapa</label>
+                            <select id="pcvVnaZoom" class="pcv-input">
+                                <option value="mid">mid · normal (4-7 SOCs)</option>
+                                <option value="macro">macro · panoràmic (1-3)</option>
+                                <option value="micro">micro · detall (8-15)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="pcv-actions">
@@ -246,6 +331,77 @@ export default class ProjectCreationV2View {
         });
         // Submit
         document.getElementById('pcvSubmit')?.addEventListener('click', () => this._submit());
+
+        // Wizard · entity selection
+        this._wizState = { entity: null, format: null };
+        document.querySelectorAll('[data-entity]').forEach(card => {
+            card.addEventListener('click', () => this._onWizardEntityPick(card.getAttribute('data-entity')));
+        });
+        document.getElementById('pcvWizBack')?.addEventListener('click', () => this._onWizardBack());
+        document.getElementById('pcvWizardSkip')?.addEventListener('click', () => this._onWizardSkip());
+    }
+
+    _onWizardEntityPick(entityId) {
+        const card = ENTITY_CARDS.find(e => e.id === entityId);
+        if (!card) return;
+        this._wizState.entity = entityId;
+        // Mark active
+        document.querySelectorAll('[data-entity]').forEach(el => el.classList.toggle('active', el.getAttribute('data-entity') === entityId));
+        // Show Q2
+        document.getElementById('pcvWizQ1').style.display = 'none';
+        document.getElementById('pcvWizQ2').style.display = '';
+        document.getElementById('pcvWizEntityLabel').textContent = card.icon + ' ' + card.title;
+        const grid = document.getElementById('pcvFormatGrid');
+        if (grid) {
+            grid.innerHTML = listFormats(entityId).map(f => `
+                <button class="pcv-format-card" data-format="${f.id}" type="button">
+                    <div class="pcv-format-title">${this._esc(f.title)}</div>
+                    <div class="pcv-format-hint">${this._esc(f.hint)}</div>
+                </button>
+            `).join('');
+            grid.querySelectorAll('[data-format]').forEach(btn => {
+                btn.addEventListener('click', () => this._onWizardFormatPick(btn.getAttribute('data-format')));
+            });
+        }
+    }
+
+    _onWizardBack() {
+        this._wizState.format = null;
+        document.getElementById('pcvWizQ1').style.display = '';
+        document.getElementById('pcvWizQ2').style.display = 'none';
+        document.getElementById('pcvWizSummary').style.display = 'none';
+    }
+
+    _onWizardSkip() {
+        const w = document.getElementById('pcvWizard');
+        if (w) w.style.display = 'none';
+    }
+
+    _onWizardFormatPick(formatId) {
+        this._wizState.format = formatId;
+        const sug = resolveSuggestion(this._wizState.entity, formatId);
+        if (!sug) return;
+        // Mark active
+        document.querySelectorAll('[data-format]').forEach(el => el.classList.toggle('active', el.getAttribute('data-format') === formatId));
+        // Apply to form
+        const setSel = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+        setSel('pcvEntityType', sug.entity_type);
+        setSel('pcvVnaZoom',    sug.vna_zoom);
+        setSel('pcvGenMode',    sug.generationMode);
+        // Ambition card
+        document.querySelectorAll('[data-ambition]').forEach(el => el.classList.toggle('active', el.getAttribute('data-ambition') === sug.ambition));
+        this._updateCostPreview();
+        // Description placeholder hint (if user hasn't typed yet)
+        const desc = document.getElementById('pcvDescription');
+        if (desc && !desc.value.trim()) desc.placeholder = sug.descriptionHint;
+        // Summary
+        const sum = document.getElementById('pcvWizSummary');
+        if (sum) {
+            sum.style.display = '';
+            sum.innerHTML = `
+                <div><strong>✓ Configuració aplicada</strong> · pots ajustar manualment qualsevol camp si cal.</div>
+                <div>Entitat · <code>${this._esc(sug.entity_type)}</code> · Format · <code>${this._esc(sug.format_title)}</code> · Mode · <code>${this._esc(sug.generationMode)}</code> · Zoom VNA · <code>${this._esc(sug.vna_zoom)}</code> · Ambició · <code>${this._esc(sug.ambition)}</code></div>`;
+        }
     }
 
     _selectedAmbition() {
@@ -270,6 +426,9 @@ export default class ProjectCreationV2View {
         const sector = (document.getElementById('pcvSector')?.value || this._presetSector || '').trim() || null;
         const ambition = this._selectedAmbition();
         const templateId = this._presetTemplateId || null;
+        const entityType = document.getElementById('pcvEntityType')?.value || null;
+        const vnaZoom    = document.getElementById('pcvVnaZoom')?.value || null;
+        const genMode    = document.getElementById('pcvGenMode')?.value || (ambition === 'light' ? 'template' : 'ai-driven');
 
         if (!name) {
             toast({ kind: 'error', text: 'El nom és obligatori' });
@@ -279,6 +438,20 @@ export default class ProjectCreationV2View {
         if (name.length < 3) {
             toast({ kind: 'error', text: 'El nom és massa curt (mínim 3 caràcters)' });
             return;
+        }
+
+        // ── AI-DRIVEN streaming · redirigeix a /create-live amb payload ──
+        if (genMode === 'ai-driven') {
+            try {
+                sessionStorage.setItem('createLivePayload', JSON.stringify({
+                    name, description, sector, ambition, templateId,
+                    entity_type: entityType, vna_zoom: vnaZoom, generationMode: 'ai-driven',
+                }));
+                window.location.href = '/create-live';
+                return;
+            } catch (e) {
+                console.warn('[ProjectCreationV2] sessionStorage failed · fallback síncron', e);
+            }
         }
 
         this._isCreating = true;
