@@ -23,8 +23,10 @@ const ROUTES = [
     { path: '/workshops', view: () => import('./views/WorkshopsView.js') },
     { path: '/kanban',    view: () => import('./views/KanbanView.js')   },
     { path: '/sops',      view: () => import('./views/SopsView.js')     },
-    { path: '/settings',     view: () => import('./views/SettingsView.js') },
-    { path: '/settings-v2',  view: () => import('./views/SettingsV2View.js') },
+    // V2-EVOL Fase B · /settings = SettingsV2View canònic (les features V1
+    // han estat migrades · Stripe · Plan · Manifesto · Export/Import). La
+    // ruta antiga /settings-v2 queda com a redirect via LEGACY_REDIRECTS.
+    { path: '/settings',     view: () => import('./views/SettingsV2View.js') },
     // UX-001 · folksonomía universal
     { path: '/tags',      view: () => import('./views/TagsView.js')     },
     // MKT-001 · Mercado SOS

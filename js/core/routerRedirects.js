@@ -15,11 +15,13 @@
 // ambígua al fallback genèric HomeView.
 //   /team /paper /focus → /home (cap rationale específic · tornar a Home)
 //   /lms                → /learn (LMS = Learning Management = LearnView ja existeix)
+//   /settings-v2        → /settings (canònic · V2 ja viu a /settings post-Fase B)
 export const LEGACY_REDIRECTS = Object.freeze({
-    '/team':  '/home',
-    '/paper': '/home',
-    '/lms':   '/learn',
-    '/focus': '/home',
+    '/team':         '/home',
+    '/paper':        '/home',
+    '/lms':          '/learn',
+    '/focus':        '/home',
+    '/settings-v2':  '/settings',
 });
 
 // Helper · retorna el destí canònic d'una path · null si no és legacy.

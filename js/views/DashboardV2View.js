@@ -331,7 +331,7 @@ export default class DashboardV2View {
             { ic: '🗺',  nm: 'Catàleg processos', ds: '15 plantilles type×stage', href: '/process-catalog' },
             { ic: '🎓', nm: 'Aprèn',         ds: 'Catàleg learn · 108 rols',   href: '/learn' },
             { ic: '👤', nm: meHandle ? 'El meu perfil' : 'Crear identitat', ds: meHandle ? meHandle : 'DID + ECDSA local', href: meHandle ? '/u/' + meHandle.replace(/^@/, '') : '/identity' },
-            { ic: '⚙️', nm: 'Configuració',  ds: 'API keys · tema · IA defaults', href: '/settings-v2' },
+            { ic: '⚙️', nm: 'Configuració',  ds: 'API keys · tema · IA · Pagaments · Manifesto', href: '/settings' },
         ];
         return `
         <div class="h2-zone">
