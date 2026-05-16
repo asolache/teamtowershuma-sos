@@ -1468,14 +1468,22 @@
       "complexity": "S",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/iaCostToLedger.test.js",
         "expect": "≥15 asserts · ledger entry creat · linked a projectId/userHandle · category ia-cost"
       },
       "estimated_cost_eur": 2,
-      "tags": ["batch-9-magic", "ia", "value", "observability"]
+      "tags": [
+        "batch-9-magic",
+        "ia",
+        "value",
+        "observability"
+      ]
     },
     {
       "id": "wo-cnae-role-adaptation-001",
@@ -1486,14 +1494,22 @@
       "complexity": "M",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "text-generate", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "text-generate",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/cnaeRoleAdaptation.test.js",
         "expect": "≥20 asserts · 5 sectors CNAE mapejats · roles adaptats · fallback default"
       },
       "estimated_cost_eur": 3,
-      "tags": ["batch-9-magic", "ia", "sector"]
+      "tags": [
+        "batch-9-magic",
+        "ia",
+        "sector"
+      ]
     },
     {
       "id": "wo-sop-tdd-automation-001",
@@ -1504,14 +1520,21 @@
       "complexity": "M",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/sopTddAutomation.test.js",
         "expect": "≥18 asserts · schema · templates updated · automatable SOPs identificades"
       },
       "estimated_cost_eur": 4,
-      "tags": ["batch-9-magic", "automation", "antigravity"]
+      "tags": [
+        "batch-9-magic",
+        "automation",
+        "antigravity"
+      ]
     },
     {
       "id": "wo-audit-ia-view-001",
@@ -1522,14 +1545,25 @@
       "complexity": "M",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "code-review", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "code-review",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "manual-check",
         "expect": "/audit-ia visible · top sources · cache rate · duplicates · recent calls"
       },
       "estimated_cost_eur": 4,
-      "dependencies": ["wo-ia-context-audit-001"],
-      "tags": ["batch-9-magic", "ia", "observability", "ux"]
+      "dependencies": [
+        "wo-ia-context-audit-001"
+      ],
+      "tags": [
+        "batch-9-magic",
+        "ia",
+        "observability",
+        "ux"
+      ]
     },
     {
       "id": "wo-phase-aware-value-map-001",
@@ -1540,14 +1574,22 @@
       "complexity": "L",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "text-generate", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "text-generate",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/phaseAwareValueMap.test.js",
         "expect": "≥25 asserts · 4 fases · roles+tx escalats · rubric ≥85 per cada fase"
       },
       "estimated_cost_eur": 6,
-      "tags": ["batch-9-magic", "value-map", "lifecycle"]
+      "tags": [
+        "batch-9-magic",
+        "value-map",
+        "lifecycle"
+      ]
     },
     {
       "id": "wo-personalize-rich-output-001",
@@ -1558,15 +1600,25 @@
       "complexity": "L",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "text-generate", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "text-generate",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/personalizeRichOutput.test.js",
         "expect": "≥20 asserts · canvas/pitch/landing length checks · qualitat post-IA"
       },
       "estimated_cost_eur": 5,
-      "dependencies": ["wo-ia-cost-to-ledger-001"],
-      "tags": ["batch-9-magic", "ia", "output-quality"]
+      "dependencies": [
+        "wo-ia-cost-to-ledger-001"
+      ],
+      "tags": [
+        "batch-9-magic",
+        "ia",
+        "output-quality"
+      ]
     },
     {
       "id": "wo-learn-knowledge-hub-001",
@@ -1575,16 +1627,32 @@
       "description": "Convertir la pàgina `/learn` en el HUB unificat de documentació SOS · llegint tot el contingut de `knowledge/` (vision · socs · sops · sectors · clients · LOG). Estructura dual:\\n\\n**Mode CARPETAS** (browse) · navegació jeràrquica · vision / · socs/lifecycle · socs/sectors · socs/teamtowers · clients/ · sops/ · skills/. Cada fitxer és un node clicable amb el seu contingut markdown renderitzat.\\n\\n**Mode KNOWLEDGE BASE** (search-first) · cercador full-text + filtres per tipus (vision · soc · sop · client) · sector · castell_level · phase.\\n\\n**Mode ROADMAPS DE LECTURA per ROL** · per a cada rol canònic (visioner · architect · cohort_manager · sentinel · curator · connector · founder_anchor · operations · creator · reviewer) · un roadmap ordenat de lectures · 'Para entender el rol de Cap de Colla · llegeix [1] sop-to-wo-model · [2] vna-principles · [3] soc-fent-pinya · ...'. Si l'usuari acaba el roadmap · es marca com a 'level: practitioner' a les seves skills.\\n\\nReutilitza · `KnowledgeLoader` (existent) · `profile360Service` (per a tracking progress) · `skillTaxonomy` (per a level promotion). Vista nova o estesa de LearnView.js (existent · cal revisar abans).\\n\\nFeedback usuari · 'Quiero los contenidos de /knowledge como parte de la documentacion de sos en el area Aprende. En aprende deberiamos juntar todo el conocimiento de sos y de su contenido. Documentacion skills procesos bla bla bla todo deberia estar ordenado como carpetas pero tambien como base de conocimientos con roadmaps de lectura por rol'.",
       "priority": "high",
       "complexity": "L",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "code-review", "test-run", "text-generate"],
+      "required_capabilities": [
+        "code-write",
+        "code-review",
+        "test-run",
+        "text-generate"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/learnKnowledgeHub.test.js",
         "expect": "≥30 asserts · 3 modes (browse · search · roadmaps) · indexa tot knowledge/ · ≥6 roadmaps per rol canònic"
       },
       "estimated_cost_eur": 8,
-      "tags": ["batch-9-magic", "knowledge", "ux", "learn", "documentation"]
+      "tags": [
+        "batch-9-magic",
+        "knowledge",
+        "ux",
+        "learn",
+        "documentation"
+      ],
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1778948553774,
+      "completed_at": 1778950953774,
+      "cost_actual_eur": 5,
+      "deliverable_uri": "git:claude/learn-knowledge-hub"
     }
   ]
 }
