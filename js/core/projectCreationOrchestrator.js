@@ -238,11 +238,17 @@ async function _runAiDriven({
 
     // 5) Sobrescriu template amb sortida AI (si va generar quelcom · si no · fallback template)
     const finalTemplate = { ...personalized };
+    // FIX B1 · si IA NO va generar SOPs · mantenim els del template per garantir
+    // que els SOCs seleccionats tinguin sop_ref vàlid (sense això · rubric C11=0)
+    const effectiveSops = (allSops.length > 0) ? allSops : (personalized.sops || []);
     if (allSops.length > 0) finalTemplate.sops = allSops;
     if (socsSelected.length > 0) {
         // Promociona SOCs seleccionats a primera classe · cobertura SOP
+        // Si IA no va generar SOPs específics · cobertura amb SOPs template
         finalTemplate.socs = socsSelected.map((soc, i) => {
-            const coveringSops = allSops.filter(s => s.soc_ref === soc.relpath);
+            let coveringSops = allSops.filter(s => s.soc_ref === soc.relpath);
+            // Fallback · si cap SOP IA pertany a aquest SOC · associa-li tots els template
+            if (coveringSops.length === 0) coveringSops = effectiveSops.slice(0, Math.max(1, Math.ceil(effectiveSops.length / socsSelected.length)));
             return {
                 id:          'soc-ai-' + i,
                 name:        soc.title,
@@ -251,7 +257,7 @@ async function _runAiDriven({
                 phase:       soc.phase || lifecycle_stage,
                 checklist:   coveringSops.map((sop, j) => ({
                     id:                'i' + (j + 1),
-                    label:             'SOP ' + sop.title,
+                    label:             'SOP ' + (sop.title || sop.id),
                     sop_ref:           sop.id,
                     required:          true,
                     verification_kind: 'manual',
