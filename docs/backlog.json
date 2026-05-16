@@ -1298,6 +1298,80 @@
         "value-map",
         "ui"
       ]
+    },
+    {
+      "id": "wo-ikigai-persistence-fix-001",
+      "project_id": "sos-dev-internal",
+      "title": "IKIGAI-PERSISTENCE · l'ikigai no es guarda al perfil · fix bug",
+      "description": "Bug reportat per l'usuari · 'el ikigai no se guarda en el perfil'. Investigar el flow d'edició d'ikigai a /u/{handle} o /identity · verificar que `updateIkigai()` del `ikigaiService` arriba a `KB.upsert` del matriu_member · trobar el punt on es perd la persistència.\\n\\nCriteris:\\n- Test integration · editar ikigai · refresh · ikigai persisteix\\n- Capa de privacy · usuari controla quines dimensions són públiques\\n- Cross-device sync · si l'usuari té permaweb · l'ikigai s'inclou al public_registry_entry",
+      "priority": "critical",
+      "complexity": "S",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/ikigaiPersistence.test.js",
+        "expect": "≥10 asserts · save · reload · privacy · permaweb sync"
+      },
+      "estimated_cost_eur": 2,
+      "tags": ["batch-7-v2-evol", "bug", "pre-alpha", "user-360"]
+    },
+    {
+      "id": "wo-profile-360-legendary-001",
+      "project_id": "sos-dev-internal",
+      "title": "PROFILE-360 · perfil usuari legendari · arquitectura informació pública+privada unificada",
+      "description": "Visió de l'usuari · 'integrar los dos perfiles (IdentityView + ProfileView) en una pagina con arquitectura de la información legendaria · acceso a vista privada y pública · enfocado a mostrar habilidades · reputación · conocimientos · ikigai · proyectos en curso · WOs en curso · disponibilidad · productos · workshops ofertados / realizados / adquiridos · tender a crear una red legendaria descentralizada con factores disruptivos por integración de IA · permaweb · contabilidad de triple entrada'.\\n\\nArquitectura proposada · `/me` (privat) + `/u/{handle}` (públic) compartint shell:\\n\\n**Zona 1 · IDENTITY** (DID · ECDSA · wallets · keyfile · Wander · trust score)\\n**Zona 2 · IKIGAI 🌸** (4 dimensions · 5 zones · privacy per dimensió)\\n**Zona 3 · SKILLS 🤲** (skills declarades · skills attestades · level evidence)\\n**Zona 4 · KNOWLEDGE 🧠** (workshops realitzats · learn_role progress · sectors)\\n**Zona 5 · REPUTATION 🤝** (trust score · attestations rebudes/emeses · follow counts · history)\\n**Zona 6 · WORK · IN PROGRESS** (projectes en curs · WOs assignades · disponibilitat actual · castell_level a cada projecte)\\n**Zona 7 · OFERTES MERCAT 🛒** (productes oferts · workshops oferts · sops oferts · acquisitions · revenue ledger)\\n**Zona 8 · NETWORK INFLUENCE 🌐** (xarxa decentralitzada · permaweb publishes · cross-SOS reach · triple-entry accounting · proof of contribution)\\n\\nMode privat · totes les zones. Mode públic · respecta privacy filter (cada zona configurable a Settings). \\n\\nTriple-entry accounting · per cada transacció · entry al ledger propi + entry al ledger del peer + attestation pública al permaweb · disrupció vs single-entry / double-entry tradicional.",
+      "priority": "critical",
+      "complexity": "XL",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "code-review", "test-run", "text-generate", "data-analysis"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/profile360.test.js",
+        "expect": "≥45 asserts · 8 zones · public/private mode · privacy filter · triple-entry"
+      },
+      "estimated_cost_eur": 14,
+      "dependencies": ["wo-ikigai-persistence-fix-001", "wo-profile-unified-001"],
+      "tags": ["batch-7-v2-evol", "ux", "consolidation", "pre-alpha", "user-360", "legendary"]
+    },
+    {
+      "id": "wo-triple-entry-accounting-001",
+      "project_id": "sos-dev-internal",
+      "title": "TRIPLE-ENTRY · contabilitat de triple entrada · disrupció vs double-entry tradicional",
+      "description": "Implementar el sistema de contabilitat de triple entrada que diferenciarà SOS de qualsevol coop tradicional:\\n\\n**Triple entry components:**\\n1. **Ledger propi** · entry signada per l'usuari local\\n2. **Ledger del peer** · entry equivalent signada pel peer\\n3. **Attestation permaweb** · public proof signat ECDSA · transparent · cross-SOS verificable\\n\\nQuan A paga a B per un workshop · es generen 3 entries en lloc de 2:\\n- A · debit wallet · credit workshop\\n- B · debit workshop deliverable · credit wallet\\n- Permaweb · attestation pública de la transacció (cap valor sensible · només hashes + signatures)\\n\\n**Servei** · `js/core/tripleEntryService.js` · funcions pure:\\n- `buildTripleEntry({ from, to, amount, deliverable })`\\n- `verifyTripleEntry(entry)` · verifica les 3 signatures\\n- `reconcileFromPermaweb({ peerDid })` · cross-check\\n\\n**Impacte:**\\n- Disrupció · cap empresa tradicional ho fa\\n- Trust score · attestations triple-entry valen ×3 (vs single-entry)\\n- Auditoria · qualsevol membre cross-SOS pot verificar transaccions sense accés al KB privat",
+      "priority": "high",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run", "text-generate"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/tripleEntryAccounting.test.js",
+        "expect": "≥30 asserts · build · verify · reconcile · cross-SOS"
+      },
+      "estimated_cost_eur": 9,
+      "tags": ["batch-8-disruption", "value", "permaweb", "pre-alpha", "factors-disruptius"]
+    },
+    {
+      "id": "wo-decentralized-network-fabric-001",
+      "project_id": "sos-dev-internal",
+      "title": "DECENTRALIZED-NETWORK-FABRIC · xarxa legendària descentralitzada · permaweb federation",
+      "description": "Capa de xarxa descentralitzada que connecta SOS instàncies locals via permaweb · cap servidor central · cap autoritat.\\n\\n**Components:**\\n1. **Discovery** · cada SOS publica un `instance_announcement` al permaweb amb DID + skills + ofertes (ja parcialment a publicRegistryService)\\n2. **DM federation** · DMs cross-SOS van via permaweb · public_key del peer per xifrar · cap server intermediari\\n3. **Trust graph cross-SOS** · attestations agregades de tot el permaweb · trust score global\\n4. **Reputation arweave-rooted** · cada attestation té txId i timestamp Arweave · no falsificable\\n5. **Workshop / market discovery** · query permaweb per ofertes properes (sector · ikigai · skills)\\n6. **Resilience** · si la teva instància cau · les teves ofertes segueixen visibles al permaweb · qualsevol pot agafar-les\\n\\n**Factors disruptius:**\\n- Cap fee · cap intermediari (vs Stripe / Patreon / Substack)\\n- Cap censorship · permaweb permanent\\n- IA categoritza ofertes per ikigai/skills (matching legendari)\\n- Triple-entry accounting verificable",
+      "priority": "high",
+      "complexity": "XL",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run", "data-analysis"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/decentralizedNetworkFabric.test.js",
+        "expect": "≥40 asserts · discovery · DM federation · trust graph · resilience"
+      },
+      "estimated_cost_eur": 16,
+      "dependencies": ["wo-triple-entry-accounting-001"],
+      "tags": ["batch-8-disruption", "permaweb", "post-alpha", "factors-disruptius", "legendary"]
     }
   ]
 }
