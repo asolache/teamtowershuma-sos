@@ -425,7 +425,8 @@ export default class DashboardV2View {
         const links = [
             { ic: '🐝', nm: 'Sprint Swarm',  ds: 'Backlog SOS · agent IA · auto-loop', href: '/sprint' },
             { ic: '🚀', nm: 'Descobreix',    ds: 'Permaweb · 7 tabs (perfils · projectes · WOs · ...)', href: '/discover' },
-            { ic: '📨', nm: 'Inbox',         ds: 'DMs · invitacions · accept/decline', href: '/inbox' },
+            { ic: '📨', nm: 'Inbox',         ds: 'DMs · invitacions rebudes + enviades', href: '/inbox' },
+            { ic: '📝', nm: 'Notes',         ds: 'Captures FAB · evolve a projecte/WO/deliverable', href: '/notes' },
             { ic: '💬', nm: 'Timeline',      ds: 'Feed activitat network · sort relevància', href: '/timeline' },
             { ic: '🗺',  nm: 'Catàleg processos', ds: '15 plantilles type×stage', href: '/process-catalog' },
             { ic: '🎓', nm: 'Aprèn',         ds: 'Catàleg learn · 108 rols',   href: '/learn' },
