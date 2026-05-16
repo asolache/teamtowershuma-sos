@@ -60,6 +60,13 @@ export default class SettingsV2View {
     async afterRender() {
         this._bindTabs();
         this._bindActions();
+        // Pre-fill provider select amb el current
+        try {
+            const { Orchestrator } = await import('../core/Orchestrator.js');
+            const current = await Orchestrator.getDefaultProvider();
+            const sel = document.getElementById('sv2DefaultProvider');
+            if (sel && current) sel.value = current;
+        } catch (_) {}
     }
 
     async render() {
@@ -217,7 +224,28 @@ export default class SettingsV2View {
     _renderAiDefaultsPanel(defaultBudget) {
         return `
         <div class="sv2-section">
-            <h2>🤖 IA defaults</h2>
+            <h2>🤖 IA · provider per defecte</h2>
+            <p>Quin provider s'utilitza per defecte a totes les crides IA · canvis aplicats immediatament. Cada crida es registra al ledger SOS (vinculat al projecte o a tu) via <code>iaContextAuditor</code>.</p>
+            <div class="sv2-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+                <span class="sv2-label">Provider default</span>
+                <select class="sv2-input" id="sv2DefaultProvider">
+                    <option value="anthropic">🟣 Anthropic · claude-sonnet-4-6 (Netlify proxy · recomanat)</option>
+                    <option value="openai">🟢 OpenAI · GPT-4o (direct API · cal API key)</option>
+                    <option value="deepseek">🔵 DeepSeek · V3 (direct · code optimized · low cost)</option>
+                    <option value="gemini">🟡 Gemini · 2.0 Flash (direct · fast multimodal)</option>
+                    <option value="minimax">🩷 MiniMax · Text-01 (direct · 200K ctx · low cost)</option>
+                    <option value="custom">⚙️ Local / Ollama (localhost:11434)</option>
+                </select>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <button class="sv2-btn sv2-btn-primary" data-action="save-provider">💾 Guardar provider</button>
+                    <span id="sv2ProviderStatus" class="sv2-status"></span>
+                </div>
+                <div style="font-size:0.72rem;color:var(--text-muted);">⚠ Si tries un provider sense API key configurada al tab "🔑 API keys" · les crides petaran. Anthropic via Netlify proxy és l'únic que no necessita key.</div>
+            </div>
+        </div>
+
+        <div class="sv2-section">
+            <h2>💸 Budget + tier</h2>
             <p>Configuració global del meta-orquestrador IA. Aplicable a projectes nous · els existents poden tenir override per projecte.</p>
 
             <div class="sv2-row">
@@ -238,7 +266,7 @@ export default class SettingsV2View {
 
             <p style="margin-top:0.8rem;font-size:0.75rem;">
                 💡 Llegir més sobre el sistema cost-QA · <a href="/design" data-link class="sv2-deeplink">Design system</a> ·
-                <a href="/efficiency" data-link class="sv2-deeplink">Efficiency dashboard</a>
+                <a href="/efficiency" data-link class="sv2-deeplink">Efficiency dashboard</a> · veure auditoria · <code>iaContextAuditor.getStats()</code> (vista pública a /audit-ia · WO pendent)
             </p>
         </div>`;
     }
@@ -446,6 +474,26 @@ export default class SettingsV2View {
                 toast({ kind: 'success', text: 'Budget global desat · ' + v + '€/mes' });
             } catch (e) {
                 toast({ kind: 'error', text: 'Error: ' + (e?.message || e) });
+            }
+        });
+
+        // Save default provider · resol feedback usuari "poder escoger api por defecto"
+        document.querySelector('[data-action="save-provider"]')?.addEventListener('click', async () => {
+            const sel = document.getElementById('sv2DefaultProvider');
+            const provider = sel?.value;
+            const statusEl = document.getElementById('sv2ProviderStatus');
+            const setStatus = (msg, ok = true) => { if (!statusEl) return; statusEl.textContent = msg; statusEl.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)'; };
+            if (!provider) {
+                setStatus('✗ Tria un provider', false);
+                return;
+            }
+            try {
+                const { Orchestrator } = await import('../core/Orchestrator.js');
+                await Orchestrator.setDefaultProvider(provider);
+                setStatus('✓ Provider actiu · ' + provider, true);
+                toast({ kind: 'success', text: 'Default IA provider · ' + provider });
+            } catch (e) {
+                setStatus('✗ Error · ' + (e?.message || e), false);
             }
         });
 

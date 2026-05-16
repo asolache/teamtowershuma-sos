@@ -26,12 +26,12 @@ for (const l of CASTELLER_LEVELS) {
 }
 
 // ─── B · SYSTEM_BASE conté model casteller ──────────────────────────────
-t(SYSTEM_BASE.includes('Model casteller'),               'B · SYSTEM_BASE menció explícita "Model casteller"');
+t(/MODEL CASTELLER|Model casteller/.test(SYSTEM_BASE),   'B · SYSTEM_BASE menció explícita Model casteller');
 for (const id of expected) {
     t(SYSTEM_BASE.includes(id),                          'B · SYSTEM_BASE menciona ' + id);
 }
 t(SYSTEM_BASE.includes('castell_level diversificats'),  'B · regla diversificació al SYSTEM_BASE');
-t(SYSTEM_BASE.includes('SEMPRE té camp castell_level'), 'B · contracte sortida · castell_level obligatori');
+t(/SEMPRE té castell_level|SEMPRE té camp castell_level/.test(SYSTEM_BASE), 'B · contracte sortida · castell_level obligatori');
 
 // ─── C · validateCastellLevel · whitelist estricta ──────────────────────
 t(validateCastellLevel('pom_de_dalt'),                   'C · pom_de_dalt vàlid');
@@ -66,7 +66,7 @@ for (const [templateId, ex] of Object.entries(FEW_SHOT_EXAMPLES)) {
 // ─── F · buildPrompt encara funciona post-extensió ─────────────────────
 {
     const p = buildPrompt({ templateId: 'founder-coop-tradicional', taskKind: 'enrich-value-map', context: { name: 'X', description: 'y' } });
-    t(p.system.includes('Model casteller'),              'F · prompt system inclou model casteller');
+    t(/MODEL CASTELLER|Model casteller/.test(p.system), 'F · prompt system inclou model casteller');
     t(p.system.includes('pom_de_dalt'),                  'F · prompt menciona pom_de_dalt');
     t(p.approxTokens < 3000,                             'F · token budget · still <3000 (got ' + p.approxTokens + ')');
 }

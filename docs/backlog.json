@@ -1458,6 +1458,115 @@
         "factors-disruptius",
         "legendary"
       ]
+    },
+    {
+      "id": "wo-ia-cost-to-ledger-001",
+      "project_id": "sos-dev-internal",
+      "title": "IA-COST-LEDGER · cada crida IA va al ledger SOS del projecte/persona · cost tracking automàtic",
+      "description": "Extendre `iaContextAuditor.audit()` perquè a més del ledger en memòria també escrigui un `ledger_entry` al KB · `to: projectId | userHandle` · `category: 'ia-cost'` · `amount: costActualEur`. Resultat · cada cost IA va a la contabilitat SOS associada · visible a /wallet i /accounting per projecte. Resol feedback usuari · 'todos los gastos vayan a la contabilidad SOS asociada a persona o proyecto'.",
+      "priority": "high",
+      "complexity": "S",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/iaCostToLedger.test.js",
+        "expect": "≥15 asserts · ledger entry creat · linked a projectId/userHandle · category ia-cost"
+      },
+      "estimated_cost_eur": 2,
+      "tags": ["batch-9-magic", "ia", "value", "observability"]
+    },
+    {
+      "id": "wo-cnae-role-adaptation-001",
+      "project_id": "sos-dev-internal",
+      "title": "CNAE-ROLES · IA adapta noms de rols a nomenclatura oficial CNAE quan sector conegut",
+      "description": "Al pas `personalize` del orchestrator · si el projecte té sector conegut amb codi CNAE · usar nomenclatura sectorial oficial per a roles. Ex · sector agricultura → CNAE 01 → roles 'agrònom' · 'tècnic agrari' enlloc de generic 'creator'. Reutilitzar `cnaeSeed.js` i `sectorSubtypes.js` existents. Veure `docs/AUDIT-magic-creation-2026-05-16.md` §3.2.",
+      "priority": "medium",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "text-generate", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/cnaeRoleAdaptation.test.js",
+        "expect": "≥20 asserts · 5 sectors CNAE mapejats · roles adaptats · fallback default"
+      },
+      "estimated_cost_eur": 3,
+      "tags": ["batch-9-magic", "ia", "sector"]
+    },
+    {
+      "id": "wo-sop-tdd-automation-001",
+      "project_id": "sos-dev-internal",
+      "title": "SOP-TDD · cada step amb tdd_test booleà · SOPs automatitzables identificables",
+      "description": "Estendre el schema de SOP · cada step afegeix `tdd_test` (booleà · si retorna true · step automatitzable per IA). Si tots els steps d'una SOP tenen tdd_test=true · la SOP es pot executar com a WO autònom (Antigravity engine ready). Templates al catàleg han d'afegir tdd_test segons step.deliverable_kind (ex · 'tests', 'code', 'sync' → automatitzable · 'manual review', 'decision' → no). Veure `docs/AUDIT-magic-creation-2026-05-16.md` §3.4.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/sopTddAutomation.test.js",
+        "expect": "≥18 asserts · schema · templates updated · automatable SOPs identificades"
+      },
+      "estimated_cost_eur": 4,
+      "tags": ["batch-9-magic", "automation", "antigravity"]
+    },
+    {
+      "id": "wo-audit-ia-view-001",
+      "project_id": "sos-dev-internal",
+      "title": "AUDIT-IA-VIEW · vista /audit-ia · veure què fa la IA en temps real",
+      "description": "Vista `/audit-ia` o tab a SettingsV2 que llegeix `iaContextAuditor.getStats()` + `listRecent()` · mostra · top 10 sources amb més cost setmanal · cache miss rate · duplicats · llistat última 50 crides amb timestamp · prompt size · cost. Permet expandir cada crida per veure el prompt + resposta (debug mode opcional). Resol feedback · 'poder ver siempre que está haciendo las IAs'.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "code-review", "test-run"],
+      "deliverable_test": {
+        "kind": "manual-check",
+        "expect": "/audit-ia visible · top sources · cache rate · duplicates · recent calls"
+      },
+      "estimated_cost_eur": 4,
+      "dependencies": ["wo-ia-context-audit-001"],
+      "tags": ["batch-9-magic", "ia", "observability", "ux"]
+    },
+    {
+      "id": "wo-phase-aware-value-map-001",
+      "project_id": "sos-dev-internal",
+      "title": "PHASE-VALUE-MAP · mapa de valor adaptat per fase del cicle (idea · MVP · validation · scale)",
+      "description": "Al template + orchestrator · cada projecte té un mapa de valor per FASE del cicle de vida. Fase 'idea' · roles light (founder + validator) · 1-2 transactions. Fase 'MVP' · afegeix maker + reviewer + transactions tangibles. Fase 'scale' · afegeix cohort manager + facilitator + transactions Lean completes. El lifecycle_stage del classify determina quina fase aplicar inicialment.",
+      "priority": "medium",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "text-generate", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/phaseAwareValueMap.test.js",
+        "expect": "≥25 asserts · 4 fases · roles+tx escalats · rubric ≥85 per cada fase"
+      },
+      "estimated_cost_eur": 6,
+      "tags": ["batch-9-magic", "value-map", "lifecycle"]
+    },
+    {
+      "id": "wo-personalize-rich-output-001",
+      "project_id": "sos-dev-internal",
+      "title": "PERSONALIZE-RICH · IA enriqueix canvas + pitch + landing amb >300 paraules cadascú",
+      "description": "Al pas `personalize` del orchestrator · quan ambition>=standard · IA genera content ric: canvas amb vision/mission/values/roadmap >300 paraules · pitch storytelling >300 paraules · landing/presentation_narrative_v1 >500 paraules amb diferencial vs competència · TAM/SAM/SOM. Usa el manifest IA + few-shot examples ric. Resol feedback · 'que el output parezca magia'.",
+      "priority": "high",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "text-generate", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/personalizeRichOutput.test.js",
+        "expect": "≥20 asserts · canvas/pitch/landing length checks · qualitat post-IA"
+      },
+      "estimated_cost_eur": 5,
+      "dependencies": ["wo-ia-cost-to-ledger-001"],
+      "tags": ["batch-9-magic", "ia", "output-quality"]
     }
   ]
 }
