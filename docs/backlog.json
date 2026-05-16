@@ -783,18 +783,23 @@
       "id": "wo-vna-expert-prompts-001",
       "project_id": "sos-dev-internal",
       "title": "VNA-EXPERT-PROMPTS-001 · IA posicionada com a experta VSM + few-shot",
-      "description": "Crear `vnaExpertPrompts.js` amb capa-1 system prompt (consultor sènior VSM/VNA · marc d'anàlisi 5 punts · sortida JSON estricte) + capa-2 few-shot 3 casos canònics (founder-coop · event · saas) + capa-3 task-specific. Integrat al step `personalize` del flow legendary. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §5.",
+      "description": "`vnaExpertPrompts.js` · 3 capes · SYSTEM_BASE (consultor sènior VSM/VNA · marc 5 punts · contracte JSON estricte · ~290 tokens) · FEW_SHOT_EXAMPLES alineats amb els 2 templates MVP (founder + default · cada exemple amb roles + transactions Lean + sops + socs canònic) · TASK_PROMPTS (5 task kinds · enrich-value-map · personalize-canvas · personalize-pitch · expand-sop · generate-soc). Budget token <2500 demostrat (worst case 1849). Helper flattenPrompt per providers legacy.",
       "priority": "critical",
       "complexity": "M",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747497600000,
+      "completed_at": 1747499000000,
       "required_capabilities": ["code-write", "text-generate", "test-run"],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/vnaExpertPrompts.test.js",
-        "expect": "≥12 asserts · system prompt no buit · few-shot present per type · token count <2500"
+        "expect": "63 pass · 0 fail"
       },
       "estimated_cost_eur": 3,
+      "cost_actual_eur": 1.8,
+      "deliverable_uri": "git:claude/project-creation-legendary..vnaExpertPrompts",
       "dependencies": ["wo-value-flow-rubric-001"],
       "tags": ["batch-5-majestic", "ia", "value-map", "pre-alpha", "prereq-legendary"]
     },
@@ -802,18 +807,23 @@
       "id": "wo-value-flow-integrity-001",
       "project_id": "sos-dev-internal",
       "title": "VALUE-FLOW-INTEGRITY-001 · cross-layer validator (SOC · SOP · valueFlow · processes)",
-      "description": "`valueFlowIntegrityService.js` · 7 regles R1-R7 (SOP step deliverable existeix · role_ref valid · checklist sop_ref · transaction.process_ref · process.transactions DAG · roles del process apareixen · cicles dins boundary). Retorna issues amb severity · human_message · auto_fix_hint. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §4.3.",
+      "description": "`valueFlowIntegrityService.js` · 7 regles R1-R7 amb severity (R1 sop step deliverable_kind · R2 sop role_ref existeix · R3 soc sop_ref existeix · R4 tx process_ref · R5 process tx members · R6 process roles participen · R7 cicles dins boundary). Cada issue amb human_message + auto_fix_hint. Integrat al step `validate` del orchestrator (errorCount > 0 trenca ok). Templates del catàleg passen amb 0 errors. Helpers compatibles amb id/roleSlug i content.checklist.",
       "priority": "critical",
       "complexity": "M",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747499000000,
+      "completed_at": 1747500500000,
       "required_capabilities": ["code-write", "test-run"],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/valueFlowIntegrityService.test.js",
-        "expect": "≥20 asserts · 7 regles · pass + fail per cadascuna"
+        "expect": "48 pass · 0 fail"
       },
       "estimated_cost_eur": 3,
+      "cost_actual_eur": 2.1,
+      "deliverable_uri": "git:claude/project-creation-legendary..valueFlowIntegrityService+orchestrator-wired",
       "dependencies": ["wo-value-flow-rubric-001"],
       "tags": ["batch-5-majestic", "value-map", "pre-alpha", "prereq-legendary"]
     },

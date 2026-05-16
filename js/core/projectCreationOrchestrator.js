@@ -23,6 +23,7 @@
 
 import { CATALOG, pickTemplate, applyContext } from './projectTemplateCatalog.js';
 import { evaluateRubric, fromProject } from './valueFlowRubricService.js';
+import { validateIntegrity } from './valueFlowIntegrityService.js';
 
 export const ORCHESTRATOR_VERSION = 'v1.0';
 
@@ -158,7 +159,7 @@ export async function createProject({
         } catch (_) { /* personalize és best-effort · cap excepció escapa */ }
     }
 
-    // ─── 4. VALIDATE (rubric) ─────────────────────────────────────────────
+    // ─── 4. VALIDATE (rubric + integrity cross-layer) ────────────────────
     const evalResult = evaluateRubric({
         roles:        personalized.roles,
         deliverables: personalized.deliverables,
@@ -166,8 +167,18 @@ export async function createProject({
         sops:         personalized.sops,
         socs:         personalized.socs,
     });
+    const integrityResult = validateIntegrity({
+        valueFlow: {
+            roles:        personalized.roles,
+            deliverables: personalized.deliverables,
+            transactions: personalized.transactions,
+        },
+        sops: personalized.sops,
+        socs: personalized.socs,
+    });
     const minScore = MIN_SCORE_FOR_AMBITION[ambition];
-    const ok = evalResult.total >= minScore;
+    // ok · rubric ≥ llindar I cap error d'integritat (warnings sí tolerats)
+    const ok = evalResult.total >= minScore && integrityResult.errorCount === 0;
 
     // ─── 5. BUILD NODES ───────────────────────────────────────────────────
     const projectId = 'proj-leg-' + ts.toString(36) + '-' + Math.random().toString(36).slice(2, 7);
@@ -220,6 +231,13 @@ export async function createProject({
         score:        evalResult.total,
         status:       evalResult.status,
         missing:      evalResult.missing,
+        integrity:    {
+            ok:           integrityResult.errorCount === 0,
+            errorCount:   integrityResult.errorCount,
+            warningCount: integrityResult.warningCount,
+            issues:       integrityResult.issues,
+            byRule:       integrityResult.byRule,
+        },
         ms:           Date.now() - startMs,
         cost,
     };
