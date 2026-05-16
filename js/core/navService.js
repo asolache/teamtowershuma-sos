@@ -512,7 +512,7 @@ export function renderGlobalNavHtml({ pathname = '', projectId = null } = {}) {
             <div class="sos-global-nav-search">
                 <input type="search" id="sos-global-search" placeholder="🔍 Cerca · Cmd+K" aria-label="Cerca ràpida" autocomplete="off"/>
             </div>
-            <div class="sos-nav-group sos-global-nav-identity">
+            <div class="sos-nav-group sos-global-nav-identity" data-nav-group="identity">
                 <button type="button" aria-haspopup="menu" aria-expanded="false" title="El meu compte" class="sos-global-nav-link sos-global-nav-avatar">👤 ▾</button>
                 <div role="menu" hidden>${_identityItemsHtml({ active })}</div>
             </div>
@@ -552,6 +552,13 @@ function _bindGlobalSearch(rootEl) {
     if (!input || input.dataset.bound === '1') return;
     input.dataset.bound = '1';
     input.addEventListener('keydown', (ev) => {
+        // ESC · neteja + blur · UX patró Linear/Raycast
+        if (ev.key === 'Escape') {
+            ev.preventDefault();
+            input.value = '';
+            input.blur();
+            return;
+        }
         if (ev.key !== 'Enter') return;
         const q = String(input.value || '').trim().toLowerCase();
         if (!q) return;

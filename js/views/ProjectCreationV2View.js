@@ -327,7 +327,7 @@ export default class ProjectCreationV2View {
         });
         // Cancel · back to home
         document.getElementById('pcvCancel')?.addEventListener('click', () => {
-            window.location.href = '/home';
+            (window.navigateTo || ((u) => window.location.href = u))('/home');
         });
         // Submit
         document.getElementById('pcvSubmit')?.addEventListener('click', () => this._submit());
@@ -466,7 +466,7 @@ export default class ProjectCreationV2View {
                     name, description, sector, ambition, templateId,
                     entity_type: entityType, vna_zoom: vnaZoom, generationMode: 'ai-driven',
                 }));
-                window.location.href = '/create-live';
+                (window.navigateTo || ((u) => window.location.href = u))('/create-live');
                 return;
             } catch (e) {
                 console.warn('[ProjectCreationV2] sessionStorage failed · fallback síncron', e);
@@ -536,7 +536,7 @@ export default class ProjectCreationV2View {
                 ttl: 6000,
             });
             setTimeout(() => {
-                window.location.href = '/hub/' + encodeURIComponent(result.project.id);
+                (window.navigateTo || ((u) => window.location.href = u))('/hub/' + encodeURIComponent(result.project.id));
             }, 1500);
         } catch (e) {
             toast({ kind: 'error', text: 'Error creant projecte · ' + (e?.message || e) });

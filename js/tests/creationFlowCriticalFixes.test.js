@@ -189,7 +189,7 @@ console.log('\n— A1 · CreateLiveView · sessionStorage buit · documentació'
 // al codi font. Carregem el fitxer i busquem el pattern.
 import fs from 'node:fs';
 const clvSrc = fs.readFileSync(new URL('../views/CreateLiveView.js', import.meta.url), 'utf8');
-ok('A1 · fix · CreateLiveView conté redirect a /create', clvSrc.includes("window.location.href = '/create'"));
+ok('A1 · fix · CreateLiveView conté redirect SPA a /create', clvSrc.includes("'/create'") && (clvSrc.includes('navigateTo') || clvSrc.includes('window.location.href')));
 ok('A1 · fix · CreateLiveView mostra toast warning', clvSrc.includes('warning') && clvSrc.includes('createLivePayload'));
 
 // ─── A2 · ProjectCreationV2View · fa pre-flight check ──────────────────

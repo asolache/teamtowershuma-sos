@@ -103,7 +103,7 @@ async function _runTask({ taskKind, routeKind, context, generateWithProvider, pr
 //   onModelUsed          · fn({taskKind, modelKey, cost}) · telemetria
 export function buildAiCallbacks({
     generateWithProvider = null,
-    preferredProvider = null,
+    preferredProvider = undefined,   // undefined · auto-load del KB · null · sense preferència
     onModelUsed = null,
 } = {}) {
     // Lazy-load provider · només si l'usuari NO ha injectat un de seu
@@ -119,68 +119,95 @@ export function buildAiCallbacks({
         return _provider;
     };
 
+    // Auto-load preferred provider del KB · si user té anthropic configurat
+    // i no té saldo · la chain igual saltarà al fallback (deepseek/v3 primary)
+    let _effectivePreferred = preferredProvider;
+    const _ensurePreferred = async () => {
+        if (_effectivePreferred !== undefined) return _effectivePreferred;
+        try {
+            const { KB } = await import('./kb.js');
+            await KB.init();
+            const node = await KB.getNode('sos_ai_provider');
+            _effectivePreferred = node?.value || null;
+        } catch (_) { _effectivePreferred = null; }
+        return _effectivePreferred;
+    };
+
     const _report = (taskKind, modelKey, cost) => {
         if (typeof onModelUsed === 'function') {
             try { onModelUsed({ taskKind, modelKey, cost }); } catch (_) {}
         }
     };
 
+    // _logError · sempre console.warn + notifica via onModelUsed amb error
+    const _logError = (taskKind, err) => {
+        const msg = err?.message || String(err);
+        const code = err?.code || (msg.includes('payment') ? 'payment-required' : 'unknown');
+        // eslint-disable-next-line no-console
+        console.warn('[aiDrivenAdapter] · ' + taskKind + ' · ' + code + ' · ' + msg);
+        if (typeof onModelUsed === 'function') {
+            try { onModelUsed({ taskKind, modelKey: null, cost: 0, error: msg, errorCode: code }); } catch (_) {}
+        }
+    };
+
     return {
         pickSocs: async ({ candidates, ctx }) => {
             const gp = await _ensureProvider();
-            if (!gp) return { selected: candidates.slice(0, 5), cost: 0 };
+            if (!gp) { _logError('classify-and-pick-socs', new Error('no-provider')); return { selected: candidates.slice(0, 5), cost: 0 }; }
             try {
                 const { parsed, cost, modelKey } = await _runTask({
                     taskKind: 'classify-and-pick-socs',
                     routeKind: 'soc-pick',
                     context: { ...ctx, candidates },
                     generateWithProvider: gp,
-                    preferredProvider,
+                    preferredProvider: await _ensurePreferred(),
                 });
                 _report('classify-and-pick-socs', modelKey, cost);
                 const selected = Array.isArray(parsed?.selected) ? parsed.selected : [];
                 return { selected, cost, modelKey };
-            } catch (_) {
-                // Fallback graceful · retorna heuristic original
-                return { selected: candidates.slice(0, 5), cost: 0 };
+            } catch (e) {
+                _logError('classify-and-pick-socs', e);
+                return { selected: candidates.slice(0, 5), cost: 0, error: e?.message };
             }
         },
 
         generateSops: async ({ soc, project_ctx, role_kinds }) => {
             const gp = await _ensureProvider();
-            if (!gp) return { sops: [], cost: 0 };
+            if (!gp) { _logError('generate-sops-from-soc', new Error('no-provider')); return { sops: [], cost: 0 }; }
             try {
                 const { parsed, cost, modelKey } = await _runTask({
                     taskKind: 'generate-sops-from-soc',
                     routeKind: 'sop-from-soc',
                     context: { name: project_ctx?.name || '', soc, project_ctx, role_kinds },
                     generateWithProvider: gp,
-                    preferredProvider,
+                    preferredProvider: await _ensurePreferred(),
                 });
                 _report('generate-sops-from-soc', modelKey, cost);
                 const sops = Array.isArray(parsed?.sops) ? parsed.sops : [];
                 return { sops, cost, modelKey };
-            } catch (_) {
-                return { sops: [], cost: 0 };
+            } catch (e) {
+                _logError('generate-sops-from-soc', e);
+                return { sops: [], cost: 0, error: e?.message };
             }
         },
 
         generateWos: async ({ sop, project_ctx }) => {
             const gp = await _ensureProvider();
-            if (!gp) return { wos: [], cost: 0 };
+            if (!gp) { _logError('generate-wos-from-sop', new Error('no-provider')); return { wos: [], cost: 0 }; }
             try {
                 const { parsed, cost, modelKey } = await _runTask({
                     taskKind: 'generate-wos-from-sop',
                     routeKind: 'wo-from-sop',
                     context: { name: project_ctx?.name || '', sop, project_ctx },
                     generateWithProvider: gp,
-                    preferredProvider,
+                    preferredProvider: await _ensurePreferred(),
                 });
                 _report('generate-wos-from-sop', modelKey, cost);
                 const wos = Array.isArray(parsed?.wos) ? parsed.wos : [];
                 return { wos, cost, modelKey };
-            } catch (_) {
-                return { wos: [], cost: 0 };
+            } catch (e) {
+                _logError('generate-wos-from-sop', e);
+                return { wos: [], cost: 0, error: e?.message };
             }
         },
     };
