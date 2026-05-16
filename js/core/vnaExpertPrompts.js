@@ -65,11 +65,26 @@ PRINCIPIS ·
 - DTD (Deliverable Test-Driven) · cada deliverable té un test booleà · si IA → automatitza · si humà → revisa
 - Fair Fractal Tokenomics (Matriu) · preu ex-ante · estructura composable · escalable · automatitzable
 
-MARC D'ANÀLISI (sempre aplicat) ·
-1. Adapta els rols a la NOMENCLATURA OFICIAL del sector CNAE-CNA · si el context ho indica · usa codis CNAE i nomenclatura formal.
+METODOLOGIA VERNA ALLEE · "VALUE NETWORK ANALYSIS" (sempre la base del teu raonament) ·
+Estàs aplicant Value Network Analysis · creat per Verna Allee (2000-2008) · NO un anàlisi de processos lineals. Els 5 principis sagrats ·
+A · ROLES (no jobs/positions) · els actors són rols actius en una xarxa · cada rol pot ser persona · equip · sistema · o IA · sempre amb agència
+B · TRANSACTIONS BIDIRECCIONALS · cada transacció té emissor → receptor amb sentit explícit · ÉS un flow direccional · no un "shared deliverable"
+C · TANGIBLE vs INTANGIBLE (Verna Allee insisteix · els intangibles són MÉS importants per al sustain del network) ·
+    · tangible · diners · béns físics · documents formals · serveis facturats
+    · intangible · confiança · feedback emocional · coneixement tàcit · reputació · cures · presència
+    Verna Allee diu · "si NO mapatges intangibles · el network no es sosté"
+D · DELIVERABLES amb identitat pròpia · cada deliverable té un nom específic del domini (NO "documento", NO "comunicación") · és l'objecte concret intercanviat (ex · "Pauta cures setmanal personalitzada", "Acta sessió Fent Pinya signada")
+E · PATTERN RECÍPROC DETECTION (criteri Verna Allee · l'analista busca) ·
+    · cap rol orfe (rebut però no emet · o emet però no rep)
+    · cap deliverable mort (emès sense receptor real)
+    · cicles recíprocs (rol A→B→A·tancat) · revelen confiança o dependència
+    · gaps de reciprocitat · revelen risc o opportunisme
+
+MARC D'ANÀLISI (sempre aplicat damunt de Verna Allee) ·
+1. Adapta els rols a la NOMENCLATURA OFICIAL del sector CNAE-CNA · MAI usis noms genèrics "Founder/Operations/Creator" · sempre noms del sector real (ex · per consultoria M · "Managing Partner" "Senior Consultant" "Methodology Reviewer" · per construcció F · "Cap d'Obra" "Encarregat" · per TIC J · "CTO" "Product Manager" "Engineering Lead").
 2. Segmentació per processos · agrupes transaccions en blocs operatius amb trigger d'entrada i criteri de sortida.
 3. Mètriques Lean · lead_time_hours · cycle_time_hours · flow_efficiency · wip_units · waste_kinds (TIMWOOD).
-4. Valor dual · tangible (béns · serveis · diners · documents) i intangible (confiança · coneixement · feedback · reputació). Mai oblides els intangibles.
+4. Valor dual (Allee) · tangible + intangible · MAI saltis els intangibles · típic 40-60% del valor real del network.
 5. SOC (Standard Operating Concept · què + per què · versionat snapshot) vs SOP (Standard Operating Procedure · com · evoluciona contínuament). Cada checklist item SOC té sop_ref · cada SOP té TDD per a automatització.
 6. Rols emissor/receptor en cada transacció · sense rols orfes · sense deliverables morts · cap cicle no-recíproc no justificat.
 
@@ -254,46 +269,58 @@ SOPs disponibles · ${JSON.stringify((sops || []).map(s => ({ id: s.id, role_ref
 
 Retorna NOMÉS · { id, name, purpose, checklist: [{ id, label, required, verification_kind, sop_ref }] } cobrint ≥80% dels SOPs.`,
 
-    'classify-and-pick-socs': ({ name, description, sector, entity_type, project_type, vna_zoom, candidates }) =>
-`TASCA · Tria els SOCs adequats per al projecte des del catàleg knowledge/.
+    'classify-and-pick-socs': ({ name, description, sector, entity_type, project_type, lifecycle_stage, vna_zoom, candidates }) =>
+`TASCA · COM CONSULTORA VERNA ALLEE SÈNIOR · tria els SOCs (Standard Operating Concepts) que millor mapegen els PROCESSOS REALS d'aquest projecte concret · NO el seu lema genèric.
 
-Projecte · "${name}"
-Sector · ${sector || 'indefinit'}
-Tipus entitat · ${entity_type || 'no especificat'} (organization · business · sos · project_internal)
-Tipus projecte · ${project_type || 'genèric'}
-Zoom VNA · ${vna_zoom || 'mid'} (macro=1-3 · mid=4-7 · micro=8-15 SOCs)
-Descripció · ${description || '(sense)'}
+CONTEXT PROJECTE (TOT rellevant per al teu pensament VNA) ·
+- Nom · "${name}"
+- Sector CNAE · ${sector || '(no especificat)'}    ← determina nomenclatura de rols + tipus de transaccions tangibles/intangibles típics
+- Fase lifecycle · ${lifecycle_stage || 'idea'}    ← idea (descobriment) · mvp (validació tècnica) · validation (PMF) · scale (creixement)
+- Tipus entitat · ${entity_type || 'no especificat'}    ← organization (govern democràtic·assemblea) · business (vector comercial) · sos (federació) · project_internal (subprojecte)
+- Tipus projecte · ${project_type || 'genèric'}
+- Zoom VNA · ${vna_zoom || 'mid'}    ← macro=1-3 SOCs (panoràmic helicòpter) · mid=4-7 (normal) · micro=8-15 (detall)
+- Descripció · ${description || '(no especificada)'}
 
-Candidats SOC (pre-filtrats per heurístic · cal validar):
+Candidats SOC pre-filtrats heurísticament · valida'ls amb la teva expertesa Verna Allee ·
 ${JSON.stringify((candidates || []).slice(0, 20).map(c => ({ relpath: c.relpath, title: c.title, sector: c.sector_cnae, phase: c.phase, score: c.score, reasons: c.reasons })))}
 
-Criteri tria · 1) cobertura processos clau segons descripció · 2) fase lifecycle adequada · 3) sector match · 4) respectar el rang del zoom · 5) MAI tots iguals · diversifica fases.
+CRITERI VERNA ALLEE (sempre · per cada SOC candidat pregunta't) ·
+1. Aquest SOC mapeja un PROCÉS REAL del network del projecte (no un departament estàtic)?
+2. Captura tant transaccions TANGIBLES com INTANGIBLES (Allee · si només tangibles · falta valor)?
+3. Té rols clarament emissors i receptors (no rols orfes)?
+4. La fase ${lifecycle_stage || 'idea'} requereix aquest concepte ARA (no més tard)?
+5. El sector ${sector || 'genèric'} té convencions específiques · aquest SOC encaixa?
+
+Diversifica fases · NO seleccionis 5 SOCs de la mateixa fase. Respecta el rang del zoom ${vna_zoom || 'mid'}.
 
 Retorna NOMÉS · { selected: [{ relpath, title, reason, weight }], rejected_reasons: [{ relpath, why }] }. Sense markdown · sense codeblocks.`,
 
-    'generate-sops-from-soc': ({ name, soc, project_ctx, role_kinds }) =>
-`TASCA · Expandeix el SOC "${soc?.title || soc?.relpath}" a SOPs concrets per al projecte "${name}".
+    'generate-sops-from-soc': ({ name, soc, project_ctx, role_kinds, sector_role_examples }) =>
+`TASCA · COM CONSULTORA VERNA ALLEE SÈNIOR · expandeix el SOC "${soc?.title || soc?.relpath}" a SOPs (Standard Operating Procedures) REALS i específics del sector i la fase del projecte "${name}".
 
-SOC origen ·
+SOC origen (què + per què) ·
 - title · ${soc?.title || '(sense)'}
 - purpose · ${soc?.purpose || '(sense)'}
 - excerpt · ${(soc?.excerpt || '').slice(0, 400)}
 
-Context projecte ·
-- name · "${name}"
-- description · ${project_ctx?.description || '(sense)'}
-- sector · ${project_ctx?.sector || 'indefinit'}
-- fase lifecycle · ${project_ctx?.lifecycle_stage || 'idea'}
-- entitat · ${project_ctx?.entity_type || 'organization'}
-- rols disponibles · ${JSON.stringify(role_kinds || [])}
+CONTEXT VNA del projecte (tot rellevant per al raonament Allee) ·
+- Nom · "${name}"
+- Descripció · ${project_ctx?.description || '(sense)'}
+- Sector CNAE · ${project_ctx?.sector || 'indefinit'}    ← DETERMINA nomenclatura · KPIs · ritme · approval workflow típic
+- Fase lifecycle · ${project_ctx?.lifecycle_stage || 'idea'}    ← idea=descobriment·exploració · mvp=validació·prototip · validation=PMF·retention · scale=optim·federació
+- Entitat · ${project_ctx?.entity_type || 'organization'}    ← organization=assemblea·consens · business=KPIs·revenue · sos=federat·permaweb · project_internal=ràpid·subordinat
+- Rols disponibles al projecte · ${JSON.stringify(role_kinds || [])}
+${sector_role_examples ? '- INSPIRACIÓ rols del sector (NO copia · adapta) · ' + JSON.stringify(sector_role_examples) : ''}
 
-REQUISITS QUALITAT ·
-- Cada SOP ha de tenir títol específic del domini (ex · "Convocar i facilitar la sessió Fent Pinya", NO "Step 1")
-- Cada step ha de ser una acció CONCRETA que un humà o IA pot executar en una sessió
-- deliverable_kind d'aquesta llista · analysis|code|tests|comm|doc|design|review|workshop
-- approval_rule · 'tdd' si automàtic (test booleà concret) · 'manual' si revisió humana
-- Si approval_rule='tdd' · al label del step menciona el test ("verificar que [condició] és true")
-- duration_minutes realista (15-180 típic · NO 5min · NO 8h)
+REQUISITS QUALITAT (criteri Verna Allee aplicat) ·
+A · Cada SOP és un PROCÉS REAL del sector ${project_ctx?.sector || 'genèric'} en fase ${project_ctx?.lifecycle_stage || 'idea'} · NO un títol genèric
+B · Títol del SOP usa verb + objecte específic del domini · ex per sector M (consultoria) "Facilitar workshop de Verna Allee amb client" · NO "SOP 1"
+C · Cada step és una ACCIÓ executable per humà o IA · típic 15-180 minuts · CADA STEP DIRECTAMENT CONVERTIBLE A WORK ORDER
+D · deliverable_kind · analysis|code|tests|comm|doc|design|review|workshop
+E · approval_rule · 'tdd' (test booleà concret · ex "client signa l'acta") · 'manual' (revisió humana)
+F · Si approval_rule='tdd' · al label del step menciona el test ("verificar que [condició] booleana és true")
+G · role_kind · 'human' (ritual · presència · judici) o 'ai' (text · anàlisi · estructura · drafts)
+H · MAI noms tipus "Step 1" · "Setup", "Generic Process". Imagina un consultor sènior amb 10 anys d'experiència al sector.
 
 Genera 3-5 SOPs · cada un amb 3-6 steps.
 
@@ -307,18 +334,20 @@ SOP origen ·
 - role · ${sop?.role_ref || ''}
 - steps · ${JSON.stringify((sop?.steps || []).map(s => ({ id: s.id, label: s.label, kind: s.deliverable_kind, rule: s.approval_rule })))}
 
-Context projecte ·
-- name · "${name}"
-- description · ${project_ctx?.description || '(sense)'}
-- sector · ${project_ctx?.sector || 'indefinit'}
-- fase · ${project_ctx?.lifecycle_stage || 'idea'}
+CONTEXT VNA del projecte ·
+- Nom · "${name}"
+- Descripció · ${project_ctx?.description || '(sense)'}
+- Sector CNAE · ${project_ctx?.sector || 'indefinit'}    ← determina vocabulari · ritme · approval workflow típic
+- Fase lifecycle · ${project_ctx?.lifecycle_stage || 'idea'}    ← WOs idea són exploratoris · WOs scale són optims/recurrents
+- Entitat · ${project_ctx?.entity_type || 'organization'}    ← organization=assemblea·consens · business=metric·revenue
 
-REQUISITS QUALITAT ·
-- WO title acció + objecte específic (ex · "Convocar reunió cohort de gener", NO "Fer reunió")
-- description · 2-3 frases concretes amb què · qui · quan · perquè
-- dtd_test · test BOOLEÀ verificable · ex · "calendari enviat als 12 cohort members AND tothom ha confirmat assistència" · NO "fer-ho bé"
-- estimated_hours realista coherent amb la suma dels steps de la SOP
-- assignee_role coincideix amb sop.role_ref si no hi ha raó forta
+REQUISITS QUALITAT (mode Verna Allee · "cada WO és un quanta de valor mappable") ·
+A · Title · verb concret + objecte ESPECÍFIC DEL DOMINI (ex per sector M consultoria · "Facilitar workshop Verna Allee 2h amb client IKEA" · NO "Fer reunió")
+B · Description · 2-3 frases · qui fa · què lliura · per a qui · quan
+C · dtd_test · test BOOLEÀ verificable post-execució · ex · "client signa l'acta de la sessió AND mapa VNA pujat al permaweb amb hash signat" · MAI "fer-ho bé" / "està fet"
+D · estimated_hours · coherent amb steps de la SOP · realista (típic 0.5-8h per WO · NO 0.1h ni 40h)
+E · assignee_role · coincideix amb sop.role_ref llevat que hi hagi raó forta (ex · pair amb un rol senior)
+F · MAI WOs tipus "Setup" "Configure" "Initial task" · sempre amb objecte de domini
 
 Genera 2-4 WOs executables ARA mateix · cada un convertible a tasca al Kanban.
 

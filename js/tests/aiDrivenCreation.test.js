@@ -276,10 +276,10 @@ ok('J · null → null', _parseJsonSafe(null) === null);
 console.log('\n— K · buildAiCallbacks · integra amb runEscalation');
 const mockedGen = async (modelKey, opts) => {
     // Simula resposta JSON adequada segons taskKind detectat al systemPrompt
-    if (opts.userPrompt.includes('Tria els SOCs')) {
+    if (/tria els SOCs/i.test(opts.userPrompt)) {
         return { text: JSON.stringify({ selected: [{ relpath: 'socs/sectors/J.md', weight: 1, reason: 'IA' }] }), usage: { inputTokens: 500, outputTokens: 80 } };
     }
-    if (opts.userPrompt.includes('Expandeix el SOC')) {
+    if (/expandeix el SOC/i.test(opts.userPrompt)) {
         return { text: JSON.stringify({ sops: [{ id: 'sop-adap-1', role_ref: 'creator', title: 'SOP adap', steps: [{ id: 's1', label: 'a', deliverable_kind: 'code', approval_rule: 'tdd', role_kind: 'ai', duration_minutes: 30 }, { id: 's2', label: 'b', deliverable_kind: 'tests', approval_rule: 'tdd', role_kind: 'ai', duration_minutes: 15 }, { id: 's3', label: 'c', deliverable_kind: 'comm', approval_rule: 'manual', role_kind: 'human', duration_minutes: 10 }] }] }), usage: { inputTokens: 800, outputTokens: 250 } };
     }
     if (opts.userPrompt.includes('Genera Work Orders')) {

@@ -25,7 +25,7 @@ import { CATALOG, pickTemplate, applyContext } from './projectTemplateCatalog.js
 import { evaluateRubric, fromProject } from './valueFlowRubricService.js';
 import { validateIntegrity } from './valueFlowIntegrityService.js';
 import { matchSocs, VNA_ZOOM_LEVELS, ENTITY_TYPES } from './socMatcher.js';
-import { adaptRolesBySector } from './sectorRoleCatalog.js';
+import { adaptRolesBySector, SECTOR_ROLES } from './sectorRoleCatalog.js';
 
 export const ORCHESTRATOR_VERSION = 'v1.1';
 
@@ -174,7 +174,8 @@ async function _runAiDriven({
         try {
             const r = await pickSocs({
                 candidates: matched.selected,
-                ctx: { name: project_ctx.name, description: project_ctx.description, sector: sector_cnae, entity_type, project_type: classification.project_type, vna_zoom },
+                // VNA-PROMPTS · context complet inclou lifecycle_stage (abans absent · era genèric)
+                ctx: { name: project_ctx.name, description: project_ctx.description, sector: sector_cnae, entity_type, project_type: classification.project_type, lifecycle_stage, vna_zoom },
             });
             if (r && Array.isArray(r.selected) && r.selected.length > 0) {
                 // Merge · respecta ordre IA però només dels que estaven als candidats
@@ -199,10 +200,15 @@ async function _runAiDriven({
         for (const soc of socsSelected) {
             emit('generate-sops', 'start', { soc: soc.relpath });
             try {
+                // VNA-PROMPTS · passa rols sectorials COM A INSPIRACIÓ (no copia)
+                // perquè la IA tingui nomenclatura real del sector
+                const sectorTable = SECTOR_ROLES[String(sector_cnae || '').toUpperCase()] || SECTOR_ROLES.DEFAULT;
+                const sector_role_examples = Object.entries(sectorTable).slice(0, 5).map(([k, v]) => ({ kind: k, name: v.name, description: v.description }));
                 const r = await generateSops({
                     soc,
                     project_ctx: { ...project_ctx, sector: sector_cnae, lifecycle_stage, entity_type },
                     role_kinds,
+                    sector_role_examples,
                 });
                 if (r && Array.isArray(r.sops)) {
                     for (const s of r.sops) {

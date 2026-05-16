@@ -90,7 +90,7 @@ ok('B6 · SYSTEM_BASE menciona consultora sènior', SYSTEM_BASE.includes('consul
 // Task prompts enriquits
 const sopPrompt = buildPrompt({ taskKind: 'generate-sops-from-soc', context: { name: 'X', soc: { title: 'T' }, project_ctx: { description: 'd' }, role_kinds: ['founder'] } });
 ok('B6 · generate-sops prompt menciona REQUISITS QUALITAT', sopPrompt.user.includes('REQUISITS QUALITAT'));
-ok('B6 · generate-sops prompt menciona description', sopPrompt.user.includes('description'));
+ok('B6 · generate-sops prompt menciona Descripció', sopPrompt.user.includes('Descripció'));
 ok('B6 · generate-sops prompt menciona test booleà', sopPrompt.user.includes('booleà') || sopPrompt.user.includes('test'));
 
 const woPrompt = buildPrompt({ taskKind: 'generate-wos-from-sop', context: { name: 'X', sop: { id: 's', steps: [] }, project_ctx: { description: 'd' } } });
