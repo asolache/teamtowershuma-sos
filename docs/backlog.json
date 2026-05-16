@@ -754,6 +754,137 @@
       "tags": ["batch-5-majestic", "ia", "consolidation", "pre-alpha"]
     },
     {
+      "id": "wo-value-flow-rubric-001",
+      "project_id": "sos-dev-internal",
+      "title": "VALUE-FLOW-RUBRIC-001 · rubric auditable JSON · 12 criteris · pure predicates",
+      "description": "Treure el scoring del mapa de valor del codi de `projectQualityService` i portar-lo a `data/valueFlowRubric.json` editable. 12 criteris (roles · castell levels · deliverables · validators · transactions · tangibles+intangibles · cicle recíproc · cap orfe · cap deliverable mort · SOP per rol · SOC↔SOP coverage · mètriques Lean). Cada criteri és un predicate pure registrable. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §2.",
+      "priority": "critical",
+      "complexity": "S",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/valueFlowRubric.test.js",
+        "expect": "≥30 asserts · 12 criteris · happy + edge per cadascun"
+      },
+      "estimated_cost_eur": 2,
+      "tags": ["batch-5-majestic", "value-map", "pre-alpha", "prereq-legendary"]
+    },
+    {
+      "id": "wo-vna-expert-prompts-001",
+      "project_id": "sos-dev-internal",
+      "title": "VNA-EXPERT-PROMPTS-001 · IA posicionada com a experta VSM + few-shot",
+      "description": "Crear `vnaExpertPrompts.js` amb capa-1 system prompt (consultor sènior VSM/VNA · marc d'anàlisi 5 punts · sortida JSON estricte) + capa-2 few-shot 3 casos canònics (founder-coop · event · saas) + capa-3 task-specific. Integrat al step `personalize` del flow legendary. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §5.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "text-generate", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/vnaExpertPrompts.test.js",
+        "expect": "≥12 asserts · system prompt no buit · few-shot present per type · token count <2500"
+      },
+      "estimated_cost_eur": 3,
+      "dependencies": ["wo-value-flow-rubric-001"],
+      "tags": ["batch-5-majestic", "ia", "value-map", "pre-alpha", "prereq-legendary"]
+    },
+    {
+      "id": "wo-value-flow-integrity-001",
+      "project_id": "sos-dev-internal",
+      "title": "VALUE-FLOW-INTEGRITY-001 · cross-layer validator (SOC · SOP · valueFlow · processes)",
+      "description": "`valueFlowIntegrityService.js` · 7 regles R1-R7 (SOP step deliverable existeix · role_ref valid · checklist sop_ref · transaction.process_ref · process.transactions DAG · roles del process apareixen · cicles dins boundary). Retorna issues amb severity · human_message · auto_fix_hint. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §4.3.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/valueFlowIntegrityService.test.js",
+        "expect": "≥20 asserts · 7 regles · pass + fail per cadascuna"
+      },
+      "estimated_cost_eur": 3,
+      "dependencies": ["wo-value-flow-rubric-001"],
+      "tags": ["batch-5-majestic", "value-map", "pre-alpha", "prereq-legendary"]
+    },
+    {
+      "id": "wo-value-stream-service-001",
+      "project_id": "sos-dev-internal",
+      "title": "VALUE-STREAM-001 · mètriques Lean (lead/cycle/WIP · bottleneck · waste) · post-alfa",
+      "description": "`valueStreamService.js` pure · `buildValueStream` calcula leadTime · cycleTime · flowEfficiency · WIP per procés · `detectBottlenecks` · `suggestImprovements` (regles TIMWOOD). Permet VSM Lean complet. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §4.2.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run", "data-analysis"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/valueStreamService.test.js",
+        "expect": "≥25 asserts · bottleneck · waste · flow efficiency · suggestions"
+      },
+      "estimated_cost_eur": 4,
+      "dependencies": ["wo-value-flow-integrity-001"],
+      "tags": ["batch-6-post-alpha", "value-map", "lean"]
+    },
+    {
+      "id": "wo-vna-schema-enriched-001",
+      "project_id": "sos-dev-internal",
+      "title": "VNA-SCHEMA-ENRICHED-001 · nodes `process` · `value_offer` · transaction Lean fields",
+      "description": "Schema additiu backwards-compat · transaction afegeix `process_ref` · `lead_time_hours` · `cycle_time_hours` · `wip_units` · `flow_efficiency` · `waste_kinds[]` · `health_signal`. Nous nodes `process` (1a classe · agrupació de transaccions amb trigger/exit) i `value_offer` (oferta pública pendent d'acceptar). Migració idempotent. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §4.1.",
+      "priority": "high",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/vnaSchemaEnriched.test.js",
+        "expect": "schema validats · migració idempotent · backwards-compat"
+      },
+      "estimated_cost_eur": 5,
+      "dependencies": ["wo-value-stream-service-001"],
+      "tags": ["batch-6-post-alpha", "value-map", "schema"]
+    },
+    {
+      "id": "wo-value-accounting-reconcile-001",
+      "project_id": "sos-dev-internal",
+      "title": "VALUE-ACCOUNTING-RECONCILE-001 · reconciliació pie ↔ transactions · zero double-spend",
+      "description": "Test i utilitat que verifica per cada `proposalDeliverable` resolt l'existència de `transaction` corresponent (from · to · deliverable iguals). Suma `share%` del pie sempre ≤100%. Reporta inconsistències a la UI.",
+      "priority": "medium",
+      "complexity": "S",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run", "data-analysis"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/valueAccountingReconcile.test.js",
+        "expect": "≥10 asserts · proposal↔transaction match · pie ≤100%"
+      },
+      "estimated_cost_eur": 2,
+      "dependencies": ["wo-vna-schema-enriched-001"],
+      "tags": ["batch-6-post-alpha", "value-map", "accounting"]
+    },
+    {
+      "id": "wo-value-map-ui-lean-001",
+      "project_id": "sos-dev-internal",
+      "title": "VALUE-MAP-UI-LEAN-001 · ValueMapView · regions de procés · badges Lean",
+      "description": "Estendre `ValueMapView` D3 amb regions visuals per `process` (clusters amb halo · etiquetes lead/cycle/efficiency) · badges per transaction segons `health_signal` (verd/ambar/vermell) · panel lateral de bottlenecks i waste. Només visualització · data layer ja existeix.",
+      "priority": "medium",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "code-review"],
+      "deliverable_test": {
+        "kind": "manual-check",
+        "expect": "regions visibles · badges Lean · panel bottleneck/waste"
+      },
+      "estimated_cost_eur": 3,
+      "dependencies": ["wo-vna-schema-enriched-001"],
+      "tags": ["batch-6-post-alpha", "value-map", "ui"]
+    },
+    {
       "id": "wo-identity-keyfile-inline-001",
       "project_id": "sos-dev-internal",
       "title": "KEYFILE-INLINE-001 · loader JSON Arweave directament a /identity (iPad-ready)",
