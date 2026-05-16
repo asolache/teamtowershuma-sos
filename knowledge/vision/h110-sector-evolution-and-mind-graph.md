@@ -23,23 +23,33 @@ Hoy tenemos los 22 sectores CNAE como **plantillas genéricas**. La
 visión final es que cada cliente recorra esta cadena:
 
 ```
-Sector seed (CNAE)              ← genérico, 22 plantillas
+Sector seed (CNAE)              ← genérico, 22 plantillas (+ SOCs base sectoriales)
    ↓ H1.10 fase 1
 Cliente VNA model               ← 1 por cliente (cloneado + personalizado por LLM)
+   ↓ H1.10 fase 1.5 (consolidación de SOCs)
+Cliente SOCs específicos        ← conceptos invariantes del cliente · 1 SOC = N SOPs
    ↓ H1.10 fase 2 (futura)
-Cliente SOPs específicos        ← procedimientos para los roles del cliente
+Cliente SOPs específicos        ← procedimientos por rol · cada SOP tiene soc_ref
    ↓ H7.3 (ya hecho)
 Cliente WOs ejecutables         ← humanos | IA
    ↓ H7.2 (ya hecho)
-Deliverables firmados           ← outputs con coste real
+Deliverables firmados           ← outputs con coste real · TDD test booleano
    ↓ Ledger auto
 Valor económico + ahorro IA contabilizados
 ```
 
 **La cadena completa = Antigravity aplicado a cualquier cliente, no
 sólo a TeamTowers.** Esto es el modelo de negocio "SOS para clientes":
-cada cliente trae su contexto, SOS le entrega su mapa VNA + SOPs + WOs
-con automatización progresiva.
+cada cliente trae su contexto, SOS le entrega su mapa VNA + SOCs +
+SOPs + WOs con automatización progresiva.
+
+> **Nota canónica · por qué SOC antes de SOP** ·
+> 1 SOC = 1 concepto invariante (ej. "Proceso VNA La Colla"). N SOPs =
+> N maneras de ejecutar el concepto (ej. "La Colla 4 sesiones" vs
+> "La Colla express 2 sesiones"). Cuando cambias un SOP no cambias el
+> SOC, solo la implementación. La IA carga el SOC como **contexto
+> inmutable** y el SOP como **plantilla de ejecución**. Ver
+> `sop-to-wo-model.md` para el contrato canónico de referencia.
 
 ---
 
