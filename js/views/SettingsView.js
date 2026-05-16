@@ -1,4 +1,6 @@
 // TEAMTOWERS SOS V11 — SETTINGS VIEW
+// V2-EVOL Fase A · banner deprecation actiu · usuari ha d'anar a /settings-v2
+// Plan complet a `docs/STUDY-v2-evolution-plan-2026-05-16.md` Fase B.
 import { store }                from '../core/store.js';
 import { KB }                   from '../core/kb.js';
 import { Orchestrator }         from '../core/Orchestrator.js';
@@ -7,6 +9,7 @@ import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavG
 import { loadManifesto, saveManifesto, restoreDefaultManifesto, isDefaultManifesto, SOS_MANIFESTO } from '../core/sosManifesto.js';
 import { SOS_PLANS, VALID_PLAN_IDS, DEFAULT_TOPUP_AMOUNTS, validatePublishableKey, detectKeyType, validatePaymentLinkUrl, loadStripeConfig, saveStripeConfig, loadCurrentPlan, setCurrentPlan, openTopupPaymentLink } from '../core/stripeService.js';
 import { loadCurrentTheme, saveTheme, applyThemeToDocument } from '../core/themeService.js';
+import { renderDeprecatedBanner, ensureDeprecatedBannerStyle } from '../core/deprecatedBanner.js';
 
 function escapeForTextarea(s) {
     if (typeof s !== 'string') return '';
@@ -123,9 +126,18 @@ export default class SettingsView {
             <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;margin-bottom:var(--space-4);">
                 <a href="/" data-link class="sv-back" style="margin-bottom:0;">← Home</a>
                 <span style="color:var(--text-muted);">·</span>
-                
+
             </div>
-            <h1 class="mat-hero-h1">Settings <strong>·</strong> Vault <a href="/settings-v2" data-link style="margin-left:12px;padding:3px 10px;border-radius:999px;background:rgba(99,102,241,0.18);color:#a8b2ff;text-decoration:none;font-size:11px;font-weight:700;border:1px solid rgba(99,102,241,0.4);vertical-align:middle;" title="Settings simplificades · 5 tabs · KISS">🆕 V2 (5 tabs) →</a></h1>
+
+            ${renderDeprecatedBanner({
+                canonicalPath:  '/settings-v2',
+                canonicalLabel: 'Settings V2',
+                title:          'Settings · versió legacy',
+                reason:         'Aquesta pàgina serà eliminada pre-alfa. La versió oficial (V2) té 5 tabs (Vault · IA · Permaweb · Wallet · Backup) i és més senzilla. Les funcionalitats avançades (Stripe · Pla · Manifesto · Export/Import complet) es migraran a V2 abans d\'eliminar aquesta vista.',
+                etaSprint:      'sprint V2-EVOL Fase B',
+            })}
+
+            <h1 class="mat-hero-h1">Settings <strong>·</strong> Vault <span style="margin-left:12px;padding:3px 10px;border-radius:999px;background:rgba(250,204,21,0.18);color:#facc15;font-size:11px;font-weight:700;border:1px solid rgba(250,204,21,0.4);vertical-align:middle;letter-spacing:0.04em;text-transform:uppercase;">⚠ Legacy V1</span></h1>
             <p style="color:var(--text-muted);margin-bottom:var(--space-8);">API Keys · AI Engine · IndexedDB (zero localStorage)</p>
 
             <div class="sv-card" style="border-top:3px solid ${pColor};">
@@ -352,6 +364,7 @@ export default class SettingsView {
     }
 
     async afterRender() {
+        ensureDeprecatedBannerStyle();
         const sel = document.getElementById('settLangSel');
         if (sel) sel.innerHTML = langSelectorHtml();
 

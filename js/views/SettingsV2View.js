@@ -21,6 +21,7 @@ import { loadCurrentTheme, saveTheme, applyThemeToDocument } from '../core/theme
 import { toast } from '../core/uxComponents.js';
 import { setBudget, getBudget, budgetStatus, _resetAll as resetBudget } from '../core/aiBudgetService.js';
 import { renderTierIndicatorHtml } from '../core/aiTierIndicator.js';
+import { renderCanonicalBadge } from '../core/deprecatedBanner.js';
 
 export default class SettingsV2View {
 
@@ -103,9 +104,10 @@ export default class SettingsV2View {
         <div class="sv2-shell">
             <div class="sv2-topbar">
                 <a href="/home" data-link class="sv2-logo">🗼 Team<span>Towers</span></a>
-                <span style="color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Settings v2</span>
+                <span style="color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Settings</span>
+                ${renderCanonicalBadge({ label: 'V2 · oficial', title: 'Versió oficial · 5 tabs · KISS · l\'antiga /settings serà eliminada pre-alfa.' })}
                 <span style="flex:1;"></span>
-                <a href="/settings" data-link class="sv2-back" title="Settings clàssic · totes les opcions avançades">↩ Antic complet</a>
+                <a href="/settings" data-link class="sv2-back" title="Settings clàssic · opcions avançades pendents de migrar">↩ Legacy (pendent de migrar)</a>
             </div>
 
             <div class="sv2-main">
