@@ -61,15 +61,22 @@ el scoring hardcoded i serà el contracte TDD del flow legendari.
 **Llindars (mateixos que projectQualityService actual):**
 - `gold` ≥ 85 · `silver` ≥ 70 · `bronze` ≥ 50 · `red` < 50.
 
-**Score actual estimat** (sense executar):
-| Flow | C1-C9 | C10-C11 | C12 | Total |
-| --- | ---: | ---: | ---: | ---: |
-| V2 (`/create`) | ~0 (només drafts text) | 0 | 0 | **~5/100** |
-| MAX (`/dashboard`) | ~52 (9 roles · sops · ledger) | ~14 | 0 | **~66/100** |
+**Score real mesurat** (executat amb `scripts/baseline-value-flow-rubric.mjs` · 2026-05-16):
 
-→ El barem actual del `projectQualityService` infla l'score perquè
-**no penalitza l'absència de mètriques Lean** (24 punts dormits).
-Aquesta és la primera correcció.
+| Flow | C1-C9 (paquet base) | C10 (SOP) | C11 (SOC) | C12 (Lean) | **Total** | Status |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| V2 (`/create`) | 0 (drafts text · cap node estructurat) | 0 | 0 | 0 | **~5/100** | red |
+| MAX (`/dashboard`) | **54** (8 de 9 passen · falta C4 validators) | 0 (steps son body markdown) | 0 (cap SOC creat) | 0 (cap mètrica Lean) | **54/100** | bronze |
+
+**Delta 54 → 100 = 46 pts a recuperar amb el flow legendary:**
+- C12 (24 pts · més gros) · afegir `lead_time_hours · cycle_time_hours · wip_units` a transactions del template.
+- C10 (10 pts) · canviar SOPs de `body` markdown a `steps[]` estructurats amb `deliverable_kind` + `approval_rule`.
+- C11 (8 pts) · generar SOCs amb checklist amb `sop_ref` per cobrir ≥80% dels SOPs.
+- C4 (4 pts) · afegir `validator` als deliverables.
+
+El `projectQualityService` actual donaria un nombre molt més alt
+perquè **no penalitza Lean** · per això el rubric nou és l'únic
+instrument honest abans d'alfa.
 
 ---
 
