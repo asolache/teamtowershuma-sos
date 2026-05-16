@@ -211,7 +211,7 @@ const DRAWER_GROUPS = Object.freeze([
     {
         title: 'Projectes',
         items: [
-            { id: 'dashboard', href: '/dashboard',   icon: '📁', label: 'Dashboard antic' },
+            { id: 'home',     href: '/home',         icon: '🏠', label: 'Home · Dashboard' },
             { id: 'process-catalog', href: '/process-catalog', icon: '🗺', label: 'Catàleg processos' },
             { id: 'sprint',   href: '/sprint',       icon: '🐝', label: 'Sprint Swarm' },
         ],
@@ -238,7 +238,7 @@ const DRAWER_GROUPS = Object.freeze([
         items: [
             { id: 'identity', href: '/identity',     icon: '👤', label: 'Identitat · DID' },
             { id: 'wallet',   href: '/wallet',       icon: '💼', label: 'Wallet personal' },
-            { id: 'settings-v2', href: '/settings-v2', icon: '⚙️', label: 'Settings V2' },
+            { id: 'settings', href: '/settings', icon: '⚙️', label: 'Settings' },
             { id: 'design',   href: '/design',       icon: '🎨', label: 'Design system' },
         ],
     },

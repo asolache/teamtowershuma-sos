@@ -36,7 +36,7 @@ export const NAV_CATEGORIES = Object.freeze([
 // Per a re-aplicar copy v2 · usar applyToNavDestinations(NAV_DESTINATIONS).
 export const NAV_DESTINATIONS = Object.freeze([
     // ─── Foundation · defineix el projecte ────────────────────────────────
-    { id: 'dashboard', icon: '🏠', label: 'Dashboard',       href: '/dashboard',        global: true,  category: 'foundation', hint: 'Inici · llistat dels teus projectes · entrada al cicle' },
+    { id: 'home',      icon: '🏠', label: 'Home',            href: '/home',             global: true,  category: 'foundation', hint: 'Inici · llistat dels teus projectes · entrada al cicle' },
     { id: 'canvas',    icon: '🎨', label: 'Canvas',          href: '/canvas',           global: false, category: 'foundation', hint: 'Vision · mission · values · stakeholders · north-star del projecte' },
     { id: 'pitch',     icon: '📣', label: 'Pitch',           href: '/pitch',            global: false, category: 'foundation', hint: 'One-pager públic shareable amb OG meta · 6 seccions' },
     { id: 'pact',      icon: '🤝', label: 'Pacte',           href: '/pact',             global: false, category: 'foundation', hint: 'Pacte de socis dinàmic · ECDSA signatures · primer contracte SOS' },
@@ -255,7 +255,7 @@ function _esc(s) {
 
 // Mapeo de routes globales a labels legibles
 const ROUTE_LABELS = Object.freeze({
-    '/dashboard':  '🏠 Inicio',
+    '/home':       '🏠 Inicio',
     '/map':        '🗺 Mapa',
     '/sops':       '📜 SOPs',
     '/kanban':     '📋 Kanban',
@@ -312,7 +312,7 @@ export function buildBreadcrumb({ pathname = '/', search = '', projects = [] } =
 
     const out = [];
     // Inicio siempre primero (excepto en `/` y `/dashboard`)
-    out.push({ label: '🏠 Inicio', href: '/dashboard', current: false });
+    out.push({ label: '🏠 Inicio', href: '/home', current: false });
 
     // Caso /n/{id}
     const nMatch = path.match(/^\/n\/(.+)$/);
@@ -336,7 +336,7 @@ export function buildBreadcrumb({ pathname = '/', search = '', projects = [] } =
     }
     // Caso global sin project · ruta conocida
     else if (ROUTE_LABELS[path]) {
-        if (path === '/dashboard') {
+        if (path === '/home') {
             // ya tenemos Inicio · marcamos current
             out[0].current = true;
         } else {
@@ -601,7 +601,7 @@ export function ensureGlobalNavStyle() {
 // Categoria → ruta representativa (no necessàriament la primera del grup,
 // sinó la que té més sentit com a "landing" mobile).
 const BOTTOM_NAV_DEFAULTS = Object.freeze({
-    home:       '/dashboard',
+    home:       '/home',
     operations: '/map',
     knowledge:  '/tags',
     market:     '/market',
@@ -640,7 +640,7 @@ function _categoryForPath(pathname = '') {
 export function renderBottomNavHtml({ pathname = '', projectId = null, active = null } = {}) {
     const activeCat = active || _categoryForPath(pathname);
     const items = NAV_CATEGORIES.map(cat => {
-        let href = BOTTOM_NAV_DEFAULTS[cat.id] || '/dashboard';
+        let href = BOTTOM_NAV_DEFAULTS[cat.id] || '/home';
         // Operations és project-aware quan hi ha projectId
         if (cat.id === 'operations' && projectId) {
             href = '/map?project=' + encodeURIComponent(projectId);

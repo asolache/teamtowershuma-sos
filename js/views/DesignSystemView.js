@@ -320,7 +320,7 @@ export default class DesignSystemView {
 
     _hrefFor(id) {
         const map = {
-            dashboard: '/dashboard', map: '/map', sops: '/sops', kanban: '/kanban',
+            dashboard: '/home', map: '/map', sops: '/sops', kanban: '/kanban',
             wallet: '/wallet', tags: '/tags', folders: '/folders', mind: '/mind',
             sectors: '/sectors', registry: '/registry', opportunities: '/opportunities',
             market: '/market', efficiency: '/efficiency', path: '/path',

@@ -18,6 +18,7 @@ import {
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 import { listSeats, listAvailableSeats, seedDemoSeatsToKb, extractSwarmInput, persistAssignments, listProjectAssignments } from '../core/cohortSeatService.js';
 import { getProjectTypeById } from '../core/critical108Roles.js';
+import { renderDeprecatedBanner, ensureDeprecatedBannerStyle } from '../core/deprecatedBanner.js';
 
 export default class ProjectHubView {
     constructor() {
@@ -122,9 +123,18 @@ export default class ProjectHubView {
         </style>
 
         <div class="ph-shell">
+            <div style="padding:12px 16px 0 16px;background:var(--bg-panel);">
+                ${renderDeprecatedBanner({
+                    canonicalPath:  '/project/' + encodeURIComponent(this.projectId || ''),
+                    canonicalLabel: 'Project Hub V2',
+                    title:          'Project Hub · versió legacy',
+                    reason:         'Aquesta pàgina serà eliminada pre-alfa. La versió oficial està a `/project/{id}` · 7 zones · activity feed · IA suggestions · process KPIs. Swarm matchmaker i Seat CRUD es migraran abans d\'eliminar aquesta vista.',
+                    etaSprint:      'sprint V2-EVOL Fase D',
+                })}
+            </div>
             <div class="ph-topbar">
                 <a href="/" data-link class="ph-logo">🗼 Team<span>Towers</span></a>
-                <span class="ph-title">⚙ Admin del projecte</span>
+                <span class="ph-title">⚙ Admin del projecte <span style="margin-left:8px;padding:2px 8px;border-radius:999px;background:rgba(250,204,21,0.18);color:#facc15;font-size:10px;font-weight:700;border:1px solid rgba(250,204,21,0.4);letter-spacing:0.04em;text-transform:uppercase;">⚠ Legacy V1</span></span>
                 <div class="ph-spacer"></div>
                 <a href="/presentation?project=${encodeURIComponent(p.id)}" data-link class="ph-link" style="font-weight:700;">👁 Veure presentació pública →</a>
                 <span style="color:var(--text-muted);">·</span>
@@ -223,6 +233,7 @@ export default class ProjectHubView {
     }
 
     async afterRender() {
+        ensureDeprecatedBannerStyle();
         // Tools no-stub click → navegar a su route
         document.querySelectorAll('.ph-tile[data-tool]').forEach(el => {
             const tool = PROJECT_TOOLS.find(t => t.id === el.dataset.tool);

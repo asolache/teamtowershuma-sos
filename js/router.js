@@ -12,21 +12,23 @@ import {
 } from './core/navService.js';
 import { bootTheme } from './core/themeService.js';
 
+import { LEGACY_REDIRECTS } from './core/routerRedirects.js';
+
 const ROUTES = [
     { path: '/',          view: () => import('./views/DashboardV2View.js') },
     { path: '/home',      view: () => import('./views/DashboardV2View.js') },
-    { path: '/dashboard', view: () => import('./views/DashboardView.js') },
+    // V2-EVOL Fase C · /dashboard ja no carrega V1 · redirigeix a / via
+    // LEGACY_REDIRECTS. Features V1 (Onboarding · Member panel) migrades.
+    // KB inline panel · explorable via /folders · /tags · /mind.
     { path: '/create',    view: () => import('./views/ProjectCreationV2View.js') },
-    { path: '/team',      view: () => import('./views/HomeView.js')     },
-    { path: '/paper',     view: () => import('./views/HomeView.js')     },
-    { path: '/lms',       view: () => import('./views/HomeView.js')     },
     { path: '/map',       view: () => import('./views/ValueMapView.js')  },
     { path: '/workshops', view: () => import('./views/WorkshopsView.js') },
     { path: '/kanban',    view: () => import('./views/KanbanView.js')   },
     { path: '/sops',      view: () => import('./views/SopsView.js')     },
-    { path: '/focus',     view: () => import('./views/HomeView.js')     },
-    { path: '/settings',     view: () => import('./views/SettingsView.js') },
-    { path: '/settings-v2',  view: () => import('./views/SettingsV2View.js') },
+    // V2-EVOL Fase B · /settings = SettingsV2View canònic (les features V1
+    // han estat migrades · Stripe · Plan · Manifesto · Export/Import). La
+    // ruta antiga /settings-v2 queda com a redirect via LEGACY_REDIRECTS.
+    { path: '/settings',     view: () => import('./views/SettingsV2View.js') },
     // UX-001 · folksonomía universal
     { path: '/tags',      view: () => import('./views/TagsView.js')     },
     // MKT-001 · Mercado SOS
@@ -119,6 +121,16 @@ const PITCH_DOC_PATH_PREFIX = '/pitch-doc/';
 
 async function router() {
     const path  = window.location.pathname.replace(/\/$/, '') || '/';
+
+    // V2-EVOL Fase F · legacy redirects (301-style via replaceState)
+    // Evita carregar la vista i re-dispatch la URL canónica · cap historial
+    // brut · cap doble render.
+    if (LEGACY_REDIRECTS[path]) {
+        const target = LEGACY_REDIRECTS[path] + window.location.search + window.location.hash;
+        window.history.replaceState({}, '', target);
+        return router();
+    }
+
     let match;
     if (path.startsWith(NODE_PATH_PREFIX)) {
         match = { path, view: () => import('./views/NodeView.js') };

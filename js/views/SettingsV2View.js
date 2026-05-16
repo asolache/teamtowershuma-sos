@@ -1,6 +1,7 @@
 // =============================================================================
 // TEAMTOWERS SOS V11 — SETTINGS V2 (UX-C · sprint settings unificades)
-// Ruta · /js/views/SettingsV2View.js  →  /settings-v2
+// Ruta · /js/views/SettingsV2View.js  →  /settings (canònic post-Fase B)
+//    · /settings-v2 redirigeix a /settings via LEGACY_REDIRECTS
 //
 // Settings unificades amb tabs · agrupa configuracions disperses en 1 sol
 // lloc · cap tab ≥ 7 items (Miller's Law).
@@ -21,6 +22,20 @@ import { loadCurrentTheme, saveTheme, applyThemeToDocument } from '../core/theme
 import { toast } from '../core/uxComponents.js';
 import { setBudget, getBudget, budgetStatus, _resetAll as resetBudget } from '../core/aiBudgetService.js';
 import { renderTierIndicatorHtml } from '../core/aiTierIndicator.js';
+import { renderCanonicalBadge } from '../core/deprecatedBanner.js';
+import {
+    SOS_PLANS, VALID_PLAN_IDS, DEFAULT_TOPUP_AMOUNTS,
+    validatePublishableKey, detectKeyType, validatePaymentLinkUrl,
+    loadStripeConfig, saveStripeConfig, loadCurrentPlan, setCurrentPlan,
+    openTopupPaymentLink,
+} from '../core/stripeService.js';
+import {
+    loadManifesto, saveManifesto, restoreDefaultManifesto,
+    isDefaultManifesto, SOS_MANIFESTO,
+} from '../core/sosManifesto.js';
+import {
+    exportSnapshot, importSnapshot, downloadSnapshotJson, readSnapshotFromFile,
+} from '../core/projectIO.js';
 
 export default class SettingsV2View {
 
@@ -33,9 +48,13 @@ export default class SettingsV2View {
         const currentTheme = await loadCurrentTheme(KB).catch(() => 'dark');
         const apiKeys = await this._loadApiKeys();
         const defaultBudget = getBudget('default-global') || 5.0;
+        // V2-EVOL Fase B · features migrades de SettingsView V1
+        const stripeCfg   = await loadStripeConfig(KB).catch(() => ({ publishableKey: '', paymentLinks: {} }));
+        const currentPlan = await loadCurrentPlan(KB).catch(() => null) || { planId: 'free', walletBalanceEur: 0 };
+        const manifesto   = await loadManifesto(KB).catch(() => ({ text: SOS_MANIFESTO, isDefault: true, exists: false }));
 
-        this._state = { currentTheme, apiKeys, defaultBudget };
-        return this._renderShell({ currentTheme, apiKeys, defaultBudget });
+        this._state = { currentTheme, apiKeys, defaultBudget, stripeCfg, currentPlan, manifesto };
+        return this._renderShell({ currentTheme, apiKeys, defaultBudget, stripeCfg, currentPlan, manifesto });
     }
 
     async afterRender() {
@@ -50,7 +69,7 @@ export default class SettingsV2View {
         await this.afterRender();
     }
 
-    _renderShell({ currentTheme, apiKeys, defaultBudget }) {
+    _renderShell({ currentTheme, apiKeys, defaultBudget, stripeCfg, currentPlan, manifesto }) {
         return `
         <style>
             .sv2-shell { min-height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); padding-bottom:2rem; }
@@ -103,9 +122,9 @@ export default class SettingsV2View {
         <div class="sv2-shell">
             <div class="sv2-topbar">
                 <a href="/home" data-link class="sv2-logo">🗼 Team<span>Towers</span></a>
-                <span style="color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Settings v2</span>
+                <span style="color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Settings</span>
+                ${renderCanonicalBadge({ label: 'V2 · oficial', title: 'Versió canónica · 7 tabs · totes les features migrades de V1.' })}
                 <span style="flex:1;"></span>
-                <a href="/settings" data-link class="sv2-back" title="Settings clàssic · totes les opcions avançades">↩ Antic complet</a>
             </div>
 
             <div class="sv2-main">
@@ -113,7 +132,9 @@ export default class SettingsV2View {
                     <button class="sv2-tab active" data-tab="api-keys" role="tab">🔑 API keys</button>
                     <button class="sv2-tab" data-tab="theme" role="tab">🎨 Tema</button>
                     <button class="sv2-tab" data-tab="ai-defaults" role="tab">🤖 IA</button>
+                    <button class="sv2-tab" data-tab="payments" role="tab">💳 Pagaments</button>
                     <button class="sv2-tab" data-tab="permaweb" role="tab">🌐 Permaweb</button>
+                    <button class="sv2-tab" data-tab="manifesto" role="tab">📜 Manifesto</button>
                     <button class="sv2-tab" data-tab="backup" role="tab">💾 Backup</button>
                 </div>
 
@@ -126,8 +147,14 @@ export default class SettingsV2View {
                 <div class="sv2-panel" data-panel="ai-defaults">
                     ${this._renderAiDefaultsPanel(defaultBudget)}
                 </div>
+                <div class="sv2-panel" data-panel="payments">
+                    ${this._renderPaymentsPanel(stripeCfg, currentPlan)}
+                </div>
                 <div class="sv2-panel" data-panel="permaweb">
                     ${this._renderPermawebPanel()}
+                </div>
+                <div class="sv2-panel" data-panel="manifesto">
+                    ${this._renderManifestoPanel(manifesto)}
                 </div>
                 <div class="sv2-panel" data-panel="backup">
                     ${this._renderBackupPanel()}
@@ -240,6 +267,78 @@ export default class SettingsV2View {
         </div>`;
     }
 
+    // ── Pagaments · Stripe + Plan · migrat de SettingsView V1 ──────────────
+    _renderPaymentsPanel(stripeCfg, currentPlan) {
+        const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        return `
+        <div class="sv2-section">
+            <h2>💳 Pla SOS</h2>
+            <p>Trieu el pla actiu · controla quotes IA · saldo · features. Migració completa de Stripe Payment Links · zero claus secret al codi.</p>
+            <div class="sv2-row" style="flex-direction:column;align-items:stretch;gap:8px;">
+                <label class="sv2-label">Pla actual</label>
+                <select id="sv2Plan" class="sv2-input">
+                    ${VALID_PLAN_IDS.map(p => {
+                        const pl = SOS_PLANS[p];
+                        const label = pl.label + (pl.priceEurMonth !== null ? ' · ' + pl.priceEurMonth + ' €/mes' : ' · custom');
+                        return `<option value="${esc(p)}" ${p === currentPlan.planId ? 'selected' : ''}>${esc(label)}</option>`;
+                    }).join('')}
+                </select>
+                <button class="sv2-btn" data-action="save-plan">💾 Guardar pla</button>
+                <div id="sv2PlanStatus" class="sv2-status"></div>
+            </div>
+        </div>
+
+        <div class="sv2-section">
+            <h2>🪪 Stripe Publishable Key (OPCIONAL)</h2>
+            <p>Només la clau pública (<code>pk_test_</code> o <code>pk_live_</code>) · NO acceptem <code>sk_</code> ni <code>rk_</code>. Si tens claus secrètes exposades · revoca-les a <a href="https://dashboard.stripe.com/test/apikeys" target="_blank" rel="noopener noreferrer" class="sv2-deeplink">dashboard.stripe.com</a>.</p>
+            <div class="sv2-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+                <input type="text" id="sv2StripePk" class="sv2-input" value="${esc(stripeCfg.publishableKey || '')}" placeholder="pk_test_... · NOMÉS pk_ accepted">
+                <div id="sv2StripePkStatus" class="sv2-status"></div>
+            </div>
+        </div>
+
+        <div class="sv2-section">
+            <h2>🔗 Payment Links · top-up wallet</h2>
+            <p>Crea un Payment Link per cada amount al Stripe Dashboard · enganxa'l aquí. Cap clau secreta · només URL.</p>
+            <div class="sv2-row" style="flex-direction:column;align-items:stretch;gap:8px;">
+                ${DEFAULT_TOPUP_AMOUNTS.map(amount => {
+                    const cur = stripeCfg.paymentLinks?.[String(amount)] || '';
+                    return `
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-weight:700;min-width:50px;">${amount} €</span>
+                        <input type="url" id="sv2StripeLink${amount}" class="sv2-input" style="flex:1;" value="${esc(cur)}" placeholder="https://buy.stripe.com/test_...">
+                        ${cur ? `<button class="sv2-btn" data-action="open-topup" data-amount="${amount}">↗ Test</button>` : ''}
+                    </div>`;
+                }).join('')}
+                <button class="sv2-btn sv2-btn-primary" data-action="save-stripe">💾 Guardar config Stripe</button>
+                <div id="sv2StripeStatus" class="sv2-status"></div>
+            </div>
+        </div>`;
+    }
+
+    // ── Manifesto editor · migrat de SettingsView V1 ───────────────────────
+    _renderManifestoPanel(manifesto) {
+        const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const isDef = manifesto.isDefault !== false;
+        return `
+        <div class="sv2-section">
+            <h2>📜 Manifesto del projecte</h2>
+            <p>Text manifesto · embedded a cada export · serveix per documentar la teva visió cooperativa SOS. Per defecte SOS V11 · pots editar-lo.</p>
+            <div class="sv2-row" style="flex-direction:column;align-items:stretch;gap:8px;">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span class="sv2-label" style="margin:0;">Estat</span>
+                    <span style="padding:2px 8px;border-radius:999px;background:${isDef ? 'rgba(148,163,184,0.18)' : 'rgba(34,197,94,0.18)'};color:${isDef ? '#94a3b8' : '#22c55e'};font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">${isDef ? 'Default' : 'Personalitzat'}</span>
+                </div>
+                <textarea id="sv2Manifesto" class="sv2-input" rows="14" style="font-family:var(--font-mono);font-size:0.78rem;line-height:1.55;">${esc(manifesto.text || SOS_MANIFESTO)}</textarea>
+                <div class="sv2-row" style="gap:6px;">
+                    <button class="sv2-btn sv2-btn-primary" data-action="save-manifesto">💾 Guardar</button>
+                    <button class="sv2-btn" data-action="restore-manifesto">↺ Restaurar default</button>
+                </div>
+                <div id="sv2ManifestoStatus" class="sv2-status"></div>
+            </div>
+        </div>`;
+    }
+
     _renderBackupPanel() {
         return `
         <div class="sv2-section">
@@ -251,6 +350,7 @@ export default class SettingsV2View {
                 <button class="sv2-btn" data-action="import-snapshot">📥 Importa snapshot</button>
                 <input type="file" id="sv2ImportFile" accept=".json,application/json" style="display:none;">
             </div>
+            <div id="sv2BackupStatus" class="sv2-status" style="margin-top:8px;"></div>
         </div>
         <div class="sv2-section" style="border-color:rgba(239,68,68,0.25);">
             <h2 style="color:#ef4444;">⚠ Zona perillosa</h2>
@@ -374,12 +474,143 @@ export default class SettingsV2View {
             }
         });
 
-        // Export/import · delegate to existing settings flow
-        document.querySelector('[data-action="export-snapshot"]')?.addEventListener('click', () => {
-            window.location.href = '/settings#export';
+        // ── Export/import · migrat de V1 · ja no redirigeix a /settings ────
+        const backupStatus = (msg, kind = 'ok') => {
+            const el = document.getElementById('sv2BackupStatus');
+            if (!el) return;
+            el.textContent = msg;
+            el.style.color = kind === 'ok' ? 'var(--accent-green)' : kind === 'warn' ? 'var(--accent-orange)' : 'var(--accent-red)';
+        };
+        document.querySelector('[data-action="export-snapshot"]')?.addEventListener('click', async () => {
+            try {
+                backupStatus('⏳ Generant snapshot...', 'warn');
+                await downloadSnapshotJson();
+                backupStatus('✓ Snapshot descarregat', 'ok');
+            } catch (e) {
+                backupStatus('✗ Error · ' + (e?.message || e), 'err');
+                toast({ kind: 'error', text: 'Error exportant: ' + (e?.message || e) });
+            }
         });
         document.querySelector('[data-action="import-snapshot"]')?.addEventListener('click', () => {
-            window.location.href = '/settings#import';
+            document.getElementById('sv2ImportFile')?.click();
+        });
+        document.getElementById('sv2ImportFile')?.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+                backupStatus('⏳ Llegint fitxer...', 'warn');
+                const snap = await readSnapshotFromFile(file);
+                const result = await importSnapshot(snap, { mode: 'merge' });
+                backupStatus('✓ Snapshot importat · ' + (result?.imported || 0) + ' nodes', 'ok');
+                toast({ kind: 'success', text: 'Snapshot importat · refresca per veure dades' });
+                e.target.value = '';
+            } catch (err) {
+                backupStatus('✗ Error · ' + (err?.message || err), 'err');
+                toast({ kind: 'error', text: 'Error important: ' + (err?.message || err) });
+                e.target.value = '';
+            }
+        });
+
+        // ── Plan · migrat de V1 ─────────────────────────────────────────────
+        document.querySelector('[data-action="save-plan"]')?.addEventListener('click', async () => {
+            const sel = document.getElementById('sv2Plan');
+            const planId = sel?.value;
+            const statusEl = document.getElementById('sv2PlanStatus');
+            const setStatus = (msg, ok = true) => { if (!statusEl) return; statusEl.textContent = msg; statusEl.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)'; };
+            if (!planId || !VALID_PLAN_IDS.includes(planId)) {
+                setStatus('✗ Pla invàlid', false);
+                return;
+            }
+            try {
+                await setCurrentPlan(KB, planId);
+                setStatus('✓ Pla actiu · ' + SOS_PLANS[planId].label, true);
+                toast({ kind: 'success', text: 'Pla canviat a ' + SOS_PLANS[planId].label });
+            } catch (e) {
+                setStatus('✗ Error · ' + (e?.message || e), false);
+            }
+        });
+
+        // ── Stripe · migrat de V1 ───────────────────────────────────────────
+        const pkInput = document.getElementById('sv2StripePk');
+        const pkStatus = document.getElementById('sv2StripePkStatus');
+        const setPkStatus = (msg, ok = true) => { if (!pkStatus) return; pkStatus.textContent = msg; pkStatus.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)'; };
+        pkInput?.addEventListener('input', () => {
+            const v = (pkInput.value || '').trim();
+            if (!v) { setPkStatus(''); return; }
+            const type = detectKeyType(v);
+            if (type === 'sk' || type === 'rk') {
+                setPkStatus('⚠ ' + type.toUpperCase() + ' KEY · NO USIS AQUÍ · revoca-la i fes "Roll key" al dashboard Stripe', false);
+            } else if (validatePublishableKey(v)) {
+                setPkStatus('✓ Format pk_* vàlid', true);
+            } else {
+                setPkStatus('✗ Format invàlid · ha de començar amb pk_test_ o pk_live_', false);
+            }
+        });
+        document.querySelector('[data-action="save-stripe"]')?.addEventListener('click', async () => {
+            const statusEl = document.getElementById('sv2StripeStatus');
+            const setStatus = (msg, ok = true) => { if (!statusEl) return; statusEl.textContent = msg; statusEl.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)'; };
+            const pk = (pkInput?.value || '').trim();
+            if (pk && !validatePublishableKey(pk)) {
+                setStatus('✗ Stripe pk_ invàlida · no s\'ha desat', false);
+                return;
+            }
+            const links = {};
+            for (const amount of DEFAULT_TOPUP_AMOUNTS) {
+                const v = document.getElementById('sv2StripeLink' + amount)?.value?.trim() || '';
+                if (v && !validatePaymentLinkUrl(v)) {
+                    setStatus('✗ Payment Link per a ' + amount + '€ invàlid · ha de ser https://buy.stripe.com/...', false);
+                    return;
+                }
+                if (v) links[String(amount)] = v;
+            }
+            try {
+                await saveStripeConfig(KB, { publishableKey: pk, paymentLinks: links });
+                setStatus('✓ Config Stripe desada · ' + Object.keys(links).length + ' Payment Links actius', true);
+                toast({ kind: 'success', text: 'Stripe config desada' });
+            } catch (e) {
+                setStatus('✗ Error · ' + (e?.message || e), false);
+            }
+        });
+        document.querySelectorAll('[data-action="open-topup"]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const amount = parseInt(btn.dataset.amount, 10);
+                if (!Number.isFinite(amount)) return;
+                try { await openTopupPaymentLink(KB, amount); } catch (e) {
+                    toast({ kind: 'error', text: 'Error obrint link · ' + (e?.message || e) });
+                }
+            });
+        });
+
+        // ── Manifesto · migrat de V1 ────────────────────────────────────────
+        document.querySelector('[data-action="save-manifesto"]')?.addEventListener('click', async () => {
+            const ta = document.getElementById('sv2Manifesto');
+            const text = ta?.value || '';
+            const statusEl = document.getElementById('sv2ManifestoStatus');
+            const setStatus = (msg, ok = true) => { if (!statusEl) return; statusEl.textContent = msg; statusEl.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)'; };
+            try {
+                await saveManifesto(KB, { text });
+                setStatus('✓ Manifesto desat · ' + text.length + ' caràcters', true);
+                toast({ kind: 'success', text: 'Manifesto desat' });
+            } catch (e) {
+                setStatus('✗ Error · ' + (e?.message || e), false);
+            }
+        });
+        document.querySelector('[data-action="restore-manifesto"]')?.addEventListener('click', async () => {
+            const { confirm } = await import('../core/uxComponents.js');
+            const ok = await confirm({
+                title: 'Restaurar manifesto default',
+                body: 'Substituirà el manifesto actual pel default de SOS V11. Continuar?',
+                confirmLabel: 'Sí · restaurar',
+                cancelLabel: 'No',
+            });
+            if (!ok) return;
+            try {
+                await restoreDefaultManifesto(KB);
+                toast({ kind: 'success', text: 'Manifesto restaurat · recarregant...' });
+                setTimeout(() => this.render(), 600);
+            } catch (e) {
+                toast({ kind: 'error', text: 'Error · ' + (e?.message || e) });
+            }
         });
     }
 

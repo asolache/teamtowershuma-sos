@@ -203,7 +203,7 @@ const QUICK_LINKS = Object.freeze([
     { icon: '🛒', title: 'Mercat · Descobrir',  href: '/market',         type: 'page' },
     { icon: '👤', title: 'El meu perfil',       href: '/identity',       type: 'page' },
     { icon: '🐝', title: 'Sprint · Swarm',      href: '/sprint',         type: 'page' },
-    { icon: '⚙️', title: 'Settings V2',          href: '/settings-v2',    type: 'page' },
+    { icon: '⚙️', title: 'Settings',             href: '/settings',       type: 'page' },
     { icon: '🗺', title: 'Catàleg processos',  href: '/process-catalog',type: 'page' },
 ]);
 
