@@ -944,7 +944,7 @@
       "description": "Tests TDD que verifiquen que el flux `projectCreationOrchestrator` sempre retorna un projecte amb mapa de valor COMPLET segons el rubric V2 · cap missing critical · evolucionable des de `/quality` tant manualment (UI inline edit) com via IA (orchestrator.personalize amb context).\\n\\nCriteris d'acceptació:\\n- `createProject({ ambition })` sempre retorna `result.score ≥ 70` per a light · ≥80 standard · ≥85 max\\n- `result.integrity.errorCount === 0` per qualsevol ambition\\n- Cada criteri rubric pendent té un `fix` actionable (UI inline edit o IA personalize)\\n- Test integration · creació + evolució humana → score puja\\n- Test integration · creació + evolució IA → score puja · cost mesurat · cap regressió\\n\\nObjectiu · l'usuari pot confiar que cada projecte creat és complet i pot millorar-lo de forma dirigida.",
       "priority": "critical",
       "complexity": "M",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
       "required_capabilities": [
         "code-write",
@@ -966,7 +966,12 @@
         "tdd",
         "pre-alpha",
         "quality-gate"
-      ]
+      ],
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1778930736511,
+      "completed_at": 1778932536511,
+      "cost_actual_eur": 2,
+      "deliverable_uri": "git:claude/creation-completeness-tdd..creationCompleteness"
     },
     {
       "id": "wo-roles-casteller-categorization-001",
