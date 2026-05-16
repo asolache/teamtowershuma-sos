@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T18:30 · v98 · LEARN-HUB · /learn unificat · 3 modes (roadmaps/carpetas/cerca) · 10 rols · 69 docs · 71 asserts';
+const BUILD_STAMP = '2026-05-16T19:00 · v99 · MANIFEST-DTD · createProject ↔ manifest Agent SOS V11 · 94 asserts · canvas/pitch/workshops/SOPs/SOCs/castell · rubric 96 · integrity 0';
 
 export default class DesignSystemView {
 
