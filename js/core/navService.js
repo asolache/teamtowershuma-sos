@@ -11,22 +11,21 @@
 // la lista canónica de destinos sale de aquí.
 // =============================================================================
 
-// UX-NAV-002 · categorías canónicas para agrupar el menú superior
-// (la topbar con 13 destinos saturaba; ahora se renderizan en 4 grupos
-// + dashboard suelto · cada vista decide si renderizar plano o agrupado).
-// UX-NAV-V2 · arquitectura informació v2 · agrupació pel viatge del fundador
-// (Foundation → Execution → Value → Commercial) + Swarm + Discovery + Identity.
-// 7 grups · max 5-6 items per grup · ordre natural cap → cua del cicle.
-// Copy human-readable centralitzat via sosCopy.label('nav.<id>').
+// UX-NAV-V3 (PR-A) · 5 grups imperatius · viatge del fundador en verbs
+// Crear → Treballar → Comptabilitzar → Connectar → Aprendre
+// Identitat (perfil/wallet/settings/identity/design) viu a la dreta com a
+// avatar-menu separat · NO és un grup més. KISS · max 7-8 items per grup.
+// Copy via sosCopy.label('group.<id>').
 export const NAV_CATEGORIES = Object.freeze([
-    { id: 'foundation',  label: 'Fundació',           icon: '🏛', hint: 'Defineix el projecte abans d\'engegar el cicle · canvas · pitch · pacte de socis' },
-    { id: 'execution',   label: 'Execució',           icon: '⚙',  hint: 'Operativa diària · kanban · procediments · mapa de valor' },
-    { id: 'value',       label: 'Valor',              icon: '💎', hint: 'Disseny econòmic · tokenomics · comptabilitat · wallet' },
-    { id: 'commercial',  label: 'Comercial',          icon: '💼', hint: 'Cicle de venda · propostes · factures · mercat · estalvi vs convencional' },
-    { id: 'swarm',       label: 'Swarm Intel·ligència', icon: '🐝', hint: 'Automatització IA · sprints · flux paral·lel · millora contínua · cicle del projecte' },
-    { id: 'discovery',   label: 'Descobriment',       icon: '🌐', hint: 'Permaweb federation · oportunitats · registre públic · Matriu' },
-    { id: 'identity',    label: 'Identitat',          icon: '👤', hint: 'Tu · skills · aprendre · settings · saldo personal' },
+    { id: 'create',  label: 'Crear',         icon: '➕', hint: 'Definir el projecte · canvas · pitch · pacte de socis · plantilles · creació live' },
+    { id: 'work',    label: 'Treballar',     icon: '⚙',  hint: 'Operativa diària · kanban · SOPs · mapa de valor · sprint · swarm · qualitat' },
+    { id: 'account', label: 'Comptabilitzar', icon: '📒', hint: 'Disseny econòmic · tokenomics · ledger · wallet · factures · pastís · estalvi' },
+    { id: 'connect', label: 'Connectar',     icon: '🌐', hint: 'Xarxa · mercat · propostes · oportunitats · Matriu · registre · timeline · inbox' },
+    { id: 'learn',   label: 'Aprendre',      icon: '📚', hint: 'Coneixement SOS · /learn hub · sectors · skills · mind-graph · carpetes · tags' },
 ]);
+
+// Identity menu · agrupat a la dreta · NO és un grup del navbar principal
+export const IDENTITY_MENU_ITEMS = Object.freeze(['me', 'identity', 'mywallet', 'settings', 'design']);
 
 // Catálogo cerrado de destinos principales · ordenado por flujo natural
 // del operador: descubrir → diseñar → ejecutar → contabilizar → ofertar.
@@ -35,57 +34,63 @@ export const NAV_CATEGORIES = Object.freeze([
 // Per a actualitzar copy human-readable · editar sosCopy.js (DRY).
 // Per a re-aplicar copy v2 · usar applyToNavDestinations(NAV_DESTINATIONS).
 export const NAV_DESTINATIONS = Object.freeze([
-    // ─── Foundation · defineix el projecte ────────────────────────────────
-    { id: 'home',      icon: '🏠', label: 'Home',            href: '/home',             global: true,  category: 'foundation', hint: 'Inici · llistat dels teus projectes · entrada al cicle' },
-    { id: 'canvas',    icon: '🎨', label: 'Canvas',          href: '/canvas',           global: false, category: 'foundation', hint: 'Vision · mission · values · stakeholders · north-star del projecte' },
-    { id: 'pitch',     icon: '📣', label: 'Pitch',           href: '/pitch',            global: false, category: 'foundation', hint: 'One-pager públic shareable amb OG meta · 6 seccions' },
-    { id: 'pact',      icon: '🤝', label: 'Pacte',           href: '/pact',             global: false, category: 'foundation', hint: 'Pacte de socis dinàmic · ECDSA signatures · primer contracte SOS' },
-    { id: 'presentation', icon: '🎤', label: 'Presentació',  href: '/presentation',     global: false, category: 'foundation', hint: 'Landing read-only del projecte · imprimible · roles + tx + SOPs' },
+    // Home no és cap grup · viu a l'esquerra del navbar (logo + Home pill)
+    { id: 'home',      icon: '🏠', label: 'Home',            href: '/home',             global: true,  category: 'home',    hint: 'Inici · llistat dels teus projectes · entrada al cicle' },
 
-    // ─── Execution · operativa diària ─────────────────────────────────────
-    { id: 'map',       icon: '🗺',  label: 'Mapa',            href: '/map',              global: true,  category: 'execution',  hint: 'Mapa de valor del projecte actiu · roles · transactions · entregables' },
-    { id: 'kanban',    icon: '📋', label: 'Tasques',         href: '/kanban',           global: true,  category: 'execution',  hint: 'Work orders · backlog → in-progress → done · WO context SOS' },
-    { id: 'sops',      icon: '📜', label: 'Procediments',    href: '/sops',             global: false, category: 'execution',  hint: 'SOPs · procediments del projecte · pots publicar al mercat' },
+    // ─── CREAR · definir el projecte ──────────────────────────────────────
+    { id: 'create',       icon: '➕', label: 'Crear projecte',  href: '/create',          global: true,  category: 'create',  hint: 'Form unificat IA-driven · wizard d\'entitat + format + zoom VNA' },
+    { id: 'create-live',  icon: '⚡', label: 'Creació live',    href: '/create-live',     global: true,  category: 'create',  hint: 'Pipeline IA streaming · 4 tabs preview · quality gauge live (després de /create)' },
+    { id: 'canvas',       icon: '🎨', label: 'Canvas',          href: '/canvas',          global: false, category: 'create',  hint: 'Vision · mission · values · stakeholders · north-star del projecte' },
+    { id: 'pitch',        icon: '📣', label: 'Pitch',           href: '/pitch',           global: false, category: 'create',  hint: 'One-pager públic shareable amb OG meta · 6 seccions' },
+    { id: 'pact',         icon: '🤝', label: 'Pacte',           href: '/pact',            global: false, category: 'create',  hint: 'Pacte de socis dinàmic · ECDSA signatures · primer contracte SOS' },
+    { id: 'presentation', icon: '🎤', label: 'Presentació',     href: '/presentation',    global: false, category: 'create',  hint: 'Landing read-only del projecte · imprimible · roles + tx + SOPs' },
+    { id: 'process-catalog', icon: '📐', label: 'Catàleg processos', href: '/process-catalog', global: true, category: 'create', hint: '15 plantilles · 5 types × 3 stages · canvas/pitch/vna/sops/kpis adaptats per fase' },
+    { id: 'projects',     icon: '📂', label: 'Tots els projectes', href: '/projects',     global: true,  category: 'create',  hint: 'Llistat complet · filtres per fase · status · sector' },
 
-    // ─── Value · disseny econòmic ─────────────────────────────────────────
-    { id: 'tokenomics',icon: '🪙', label: 'Tokenomics',      href: '/tokenomics',       global: false, category: 'value',      hint: 'Disseny del token · 6 grups + vesting + quality score live' },
-    { id: 'accounting',icon: '📒', label: 'Comptabilitat',   href: '/accounting',       global: false, category: 'value',      hint: 'Ledger double-entry · balance sheet · P&L per període' },
-    { id: 'wallet',    icon: '💶', label: 'Wallet',          href: '/wallet',           global: false, category: 'value',      hint: 'Saldo prepago del projecte · moviments del ledger' },
-    { id: 'value',     icon: '🥧', label: 'Pastís de valor', href: '/value-accounting', global: false, category: 'value',      hint: 'Slicing Pie + FairShares · pastís del projecte · equity dinàmic' },
+    // ─── TREBALLAR · operativa diària ─────────────────────────────────────
+    { id: 'map',          icon: '🗺',  label: 'Mapa de valor',  href: '/map',             global: true,  category: 'work',    hint: 'Mapa de valor del projecte actiu · roles · transactions · entregables' },
+    { id: 'kanban',       icon: '📋', label: 'Kanban WOs',      href: '/kanban',          global: true,  category: 'work',    hint: 'Work orders · backlog → in-progress → done · WO context SOS' },
+    { id: 'sops',         icon: '📜', label: 'SOPs',            href: '/sops',            global: false, category: 'work',    hint: 'Procediments del projecte · publicables al mercat' },
+    { id: 'sprint',       icon: '🐝', label: 'Sprint',          href: '/sprint',          global: true,  category: 'work',    hint: 'Sprint orchestrator · backlog estructurat + IA runs autonomous TDD' },
+    { id: 'swarm',        icon: '🌪', label: 'Swarm paral·lel', href: '/swarm',           global: false, category: 'work',    hint: 'DAG executor paral·lel · Promise.all per level · pillar Antigravity' },
+    { id: 'improve',      icon: '🔁', label: 'Millora contínua',href: '/improve',         global: false, category: 'work',    hint: 'TDD WO + feedback agent · cicle continu auto-orquestrat' },
+    { id: 'quality',      icon: '🎯', label: 'Qualitat',        href: '/quality',         global: false, category: 'work',    hint: 'Audit rubric 12-criteris + integritat 7-regles · score live' },
+    { id: 'lifecycle',    icon: '🌀', label: 'Cicle',           href: '/lifecycle',       global: false, category: 'work',    hint: 'Dashboard amb 10 fases · status % · next-best-action' },
 
-    // ─── Commercial · cicle de venda ──────────────────────────────────────
-    { id: 'proposals', icon: '📝', label: 'Propostes',       href: '/proposals',        global: false, category: 'commercial', hint: 'IA brief + skill matching + PDF · win rate tracker' },
-    { id: 'invoices',  icon: '🧾', label: 'Factures',        href: '/invoices',         global: false, category: 'commercial', hint: 'CRUD invoices · IVA · auto-ledger entry quan paid · print-PDF' },
-    { id: 'market',    icon: '🛒', label: 'Mercat',          href: '/market',           global: true,  category: 'commercial', hint: 'Catàleg productes · serveis · workshops · subscripcions · sops · permaweb federation' },
-    { id: 'savings',   icon: '📊', label: 'Estalvi',         href: '/savings',          global: true,  category: 'commercial', hint: 'Estalvi vs notaria · contable · PM · consultoria · global o per projecte' },
-    { id: 'efficiency',icon: '⚡', label: 'Eficiència',      href: '/efficiency',       global: true,  category: 'commercial', hint: 'Tokens · cost · pruning · ROI IA · KM-001' },
+    // ─── COMPTABILITZAR · disseny econòmic ────────────────────────────────
+    { id: 'tokenomics',   icon: '🪙', label: 'Tokenomics',      href: '/tokenomics',      global: false, category: 'account', hint: 'Disseny del token · 6 grups + vesting + quality score live' },
+    { id: 'accounting',   icon: '📒', label: 'Comptabilitat',   href: '/accounting',      global: false, category: 'account', hint: 'Ledger double-entry · balance sheet · P&L per període' },
+    { id: 'wallet',       icon: '💶', label: 'Wallet projecte', href: '/wallet',          global: false, category: 'account', hint: 'Saldo prepago del projecte · moviments del ledger' },
+    { id: 'value',        icon: '🥧', label: 'Pastís de valor', href: '/value-accounting', global: false, category: 'account', hint: 'Slicing Pie + FairShares · pastís del projecte · equity dinàmic' },
+    { id: 'invoices',     icon: '🧾', label: 'Factures',        href: '/invoices',        global: false, category: 'account', hint: 'CRUD invoices · IVA · auto-ledger entry quan paid · print-PDF' },
+    { id: 'savings',      icon: '📊', label: 'Estalvi',         href: '/savings',         global: true,  category: 'account', hint: 'Estalvi vs notaria · contable · PM · consultoria · global o per projecte' },
+    { id: 'efficiency',   icon: '⚡', label: 'Eficiència IA',   href: '/efficiency',      global: true,  category: 'account', hint: 'Tokens · cost · pruning · ROI IA' },
 
-    // ─── Swarm · automatització IA ────────────────────────────────────────
-    { id: 'lifecycle', icon: '🌀', label: 'Cicle',           href: '/lifecycle',        global: false, category: 'swarm',      hint: 'Dashboard amb 10 fases · status %  · next-best-action · capstone Wave 2' },
-    { id: 'sprint',    icon: '🐝', label: 'Sprint Swarm',    href: '/sprint',           global: true,  category: 'swarm',      hint: 'Sprint orchestrator · backlog estructurat + IA runs autonomous TDD' },
-    { id: 'swarm',     icon: '🌪', label: 'Flux paral·lel',  href: '/swarm',            global: false, category: 'swarm',      hint: 'DAG executor paral·lel · Promise.all per level · pillar Antigravity' },
-    { id: 'improve',   icon: '🔁', label: 'Millora contínua',href: '/improve',          global: false, category: 'swarm',      hint: 'TDD WO + feedback agent · cicle continu auto-orquestrat' },
-    { id: 'path',      icon: '🧠', label: 'Historial neural',href: '/path',             global: true,  category: 'swarm',      hint: 'Path nodal cronològic · curador de context bundles per a IA' },
+    // ─── CONNECTAR · xarxa + comercial ────────────────────────────────────
+    { id: 'market',       icon: '🛒', label: 'Mercat',          href: '/market',          global: true,  category: 'connect', hint: 'Catàleg productes · serveis · workshops · sops · permaweb federation' },
+    { id: 'proposals',    icon: '📝', label: 'Propostes',       href: '/proposals',       global: false, category: 'connect', hint: 'IA brief + skill matching + PDF · win rate tracker' },
+    { id: 'opportunities', icon: '🚀', label: 'Oportunitats',   href: '/opportunities',   global: true,  category: 'connect', hint: 'Hub permaweb · projectes · WOs · workshops · usuaris' },
+    { id: 'matriu',       icon: '✦',  label: 'Matriu Incoopadora', href: '/matriu',       global: true,  category: 'connect', hint: 'Landing Matriu · Cohort 0 oberta · 108 places' },
+    { id: 'registry',     icon: '📡', label: 'Registry públic', href: '/registry',        global: true,  category: 'connect', hint: 'Permaweb public registry · projectes signats' },
+    { id: 'timeline',     icon: '💬', label: 'Timeline',        href: '/timeline',        global: true,  category: 'connect', hint: 'Feed cronològic activitat al network · follows · pacts · WOs' },
+    { id: 'inbox',        icon: '📨', label: 'Inbox · DMs',     href: '/inbox',           global: true,  category: 'connect', hint: 'Missatges directes · converses local-first · futur federat' },
 
-    // ─── Discovery · permaweb federation ──────────────────────────────────
-    { id: 'opportunities', icon: '🚀', label: 'Descobreix',  href: '/opportunities',    global: true,  category: 'discovery',  hint: 'Hub permaweb unificat · perfils · projectes · WOs · productes · workshops · CV nodals · usuaris' },
-    { id: 'timeline',  icon: '💬', label: 'Timeline',        href: '/timeline',         global: true,  category: 'discovery',  hint: 'Feed cronològic d\'activitat al network · follows · pacts · WOs · proposals' },
-    { id: 'inbox',     icon: '📨', label: 'Inbox · DMs',     href: '/inbox',            global: true,  category: 'discovery',  hint: 'Missatges directes · converses local-first · futur federat permaweb' },
-    { id: 'process-catalog', icon: '🗺', label: 'Catàleg processos', href: '/process-catalog', global: true, category: 'discovery', hint: '15 plantilles · 5 types × 3 stages · canvas/pitch/vna/sops/kpis adaptats per fase' },
-    { id: 'matriu',    icon: '✦',  label: 'Matriu',          href: '/matriu',           global: true,  category: 'discovery',  hint: 'Landing pública Matriu Incoopadora · Cohort 0 oberta · 108 places' },
-    { id: 'create',    icon: '➕', label: 'Crear projecte',  href: '/create',           global: true,  category: 'foundation', hint: 'Form unificat IA-driven · plan→fan-out→reduce · light/standard/max' },
+    // ─── APRENDRE · coneixement SOS ───────────────────────────────────────
+    { id: 'learn',        icon: '📚', label: 'Hub coneixement', href: '/learn',           global: true,  category: 'learn',   hint: 'Hub unificat · roadmaps per rol · carpetes knowledge/ · cerca' },
+    { id: 'sectors',      icon: '🏭', label: 'Sectors CNAE',    href: '/sectors',         global: true,  category: 'learn',   hint: 'Catàleg A-S · readiness · roles + transactions per sector' },
+    { id: 'skills',       icon: '🤲', label: 'Skills',          href: '/skills',          global: true,  category: 'learn',   hint: '90 skills · 5 domains · 3 tiers · 12 tipus de projecte' },
+    { id: 'mind',         icon: '🕸',  label: 'Mind-graph',      href: '/mind',            global: true,  category: 'learn',   hint: 'Mind-as-Graph total · panoràmica galàctica del KB' },
+    { id: 'path',         icon: '🧠', label: 'Historial neural',href: '/path',            global: true,  category: 'learn',   hint: 'Path nodal cronològic · context bundles per a IA' },
+    { id: 'folders',      icon: '📁', label: 'Carpetes',        href: '/folders',         global: true,  category: 'learn',   hint: 'Carpetes intel·ligents · queries persistents' },
+    { id: 'tags',         icon: '🏷', label: 'Tags',            href: '/tags',            global: true,  category: 'learn',   hint: 'Folksonomia · cloud de tags' },
+    { id: 'notes',        icon: '📝', label: 'Notes captures',  href: '/notes',           global: true,  category: 'learn',   hint: 'Captures FAB · evolve a projecte / WO / deliverable' },
 
-    // ─── Identity · tu ────────────────────────────────────────────────────
-    { id: 'identity',  icon: '👤', label: 'Identitat',       href: '/identity',         global: true,  category: 'identity',   hint: 'El teu perfil · DID local-first · ECDSA keypair' },
-    { id: 'mywallet',  icon: '💼', label: 'Saldo personal',  href: '/wallet',           global: true,  category: 'identity',   hint: 'Saldo personal per pagar APIs IA · transferible a projectes' },
-    { id: 'skills',    icon: '🤲', label: 'Skills',          href: '/skills',           global: true,  category: 'identity',   hint: '90 skills · 5 domains · 3 tiers · 12 tipus de projecte' },
-    { id: 'sectors',   icon: '📚', label: 'Sectors',         href: '/sectors',          global: true,  category: 'identity',   hint: 'Catàleg A-S · readiness · roles + transactions del KB' },
-    { id: 'learn',     icon: '🎓', label: 'Aprèn',           href: '/learn',            global: true,  category: 'identity',   hint: 'Glossari navegable · aprendre fent' },
-    { id: 'tags',      icon: '🏷', label: 'Tags',            href: '/tags',             global: true,  category: 'identity',   hint: 'Folksonomia · cloud de tags' },
-    { id: 'folders',   icon: '📁', label: 'Carpetes',        href: '/folders',          global: true,  category: 'identity',   hint: 'Carpetes intel·ligents · queries persistents' },
-    { id: 'mind',      icon: '🕸',  label: 'Mind-graph',      href: '/mind',             global: true,  category: 'identity',   hint: 'Mind-as-Graph total · panoràmica galàctica del KB' },
-    { id: 'settings',  icon: '⚙',  label: 'Settings',        href: '/settings',         global: true,  category: 'identity',   hint: 'Claus API · IA · purga · preferències' },
-    { id: 'design',    icon: '🎨', label: 'Disseny SOS',     href: '/design',           global: true,  category: 'identity',   hint: 'Design system v1 · mockup deluxe · arquitectura informació · component library' },
+    // ─── IDENTITY (avatar-menu a la dreta · NO és un grup principal) ─────
+    { id: 'me',           icon: '🧬', label: 'El meu perfil',   href: '/me',              global: true,  category: 'identity', hint: 'Profile360 · 8 zones · ikigai · skills · trust · reputació' },
+    { id: 'identity',     icon: '👤', label: 'Identitat',       href: '/identity',        global: true,  category: 'identity', hint: 'DID local-first · ECDSA keypair · wallet attestations' },
+    { id: 'mywallet',     icon: '💼', label: 'Saldo personal',  href: '/wallet',          global: true,  category: 'identity', hint: 'Saldo personal per pagar APIs IA · transferible a projectes' },
+    { id: 'settings',     icon: '⚙',  label: 'Settings',        href: '/settings',        global: true,  category: 'identity', hint: 'Claus API · IA · purga · preferències' },
+    { id: 'design',       icon: '🎨', label: 'Design system',   href: '/design',          global: true,  category: 'identity', hint: 'Mockup deluxe · arquitectura informació · component library' },
 ]);
 
 // Devuelve la lista de links contextualizada al projectId activo.
@@ -148,6 +153,11 @@ export function groupNavByCategory({ active = '', projectId = null } = {}) {
     })).filter(g => g.links.length > 0);
     return groups;
 }
+
+// groupNavByCategory ja filtra automàticament categories no presents als
+// destins · vol dir que 'home' i 'identity' (que tenen items propis) no
+// surten als 5 grups principals · es renderitzen a part al navbar.
+// Garantim però que NAV_CATEGORIES només té els 5 grups · res a filtrar.
 
 // Render compacto · Dashboard suelto + 4 dropdowns por categoría.
 // Cada vista decide su CSS con los hooks provistos.
@@ -472,12 +482,39 @@ function _destinationForPath(pathname = '') {
     return dest ? dest.id : '';
 }
 
-// renderGlobalNavHtml · pura · genera el HTML de la nav global
+// _identityItemsHtml · render del dropdown "perfil" a la dreta
+function _identityItemsHtml({ active = '' } = {}) {
+    const items = NAV_DESTINATIONS.filter(d => d.category === 'identity');
+    return items.map(d => {
+        const cls = d.id === active ? 'sos-nav-active' : '';
+        return `<a href="${d.href}" data-link class="${cls}" title="${_esc(d.hint)}">
+            <span class="sos-nav-icon" aria-hidden="true">${d.icon}</span>
+            <span class="sos-nav-content"><span class="sos-nav-label">${_esc(d.label)}</span><span class="sos-nav-hint">${_esc(d.hint)}</span></span>
+        </a>`;
+    }).join('');
+}
+
+// renderGlobalNavHtml · pura · genera el HTML de la nav global v3 (PR-A) ·
+// Layout · [Logo · Home pill · projecte actiu pill?] | [5 grups dropdown] | [Search · Avatar]
 export function renderGlobalNavHtml({ pathname = '', projectId = null } = {}) {
     const active = _destinationForPath(pathname);
+    const homeActive = (active === 'home' || pathname === '/' || pathname === '/home') ? ' sos-global-nav-link-active' : '';
+    const projectPill = projectId ? `<a href="/hub/${encodeURIComponent(projectId)}" data-link class="sos-global-nav-project-pill" title="Projecte actiu · ${_esc(projectId)}">🎯 <span>${_esc(projectId.slice(0, 10))}…</span></a>` : '';
+
     return `<div class="sos-global-nav-inner">
         <a href="/" data-link class="sos-global-nav-logo" title="Inicio · SOS V11">🗼 <span>SOS</span></a>
+        <a href="/home" data-link class="sos-global-nav-home${homeActive}" title="Home · llistat de projectes">🏠 <span>Home</span></a>
+        ${projectPill}
         <div class="sos-global-nav-groups">${renderNavGroupedHtml({ active, projectId, className: 'sos-global-nav-link' })}</div>
+        <div class="sos-global-nav-right">
+            <div class="sos-global-nav-search">
+                <input type="search" id="sos-global-search" placeholder="🔍 Cerca · Cmd+K" aria-label="Cerca ràpida" autocomplete="off"/>
+            </div>
+            <div class="sos-nav-group sos-global-nav-identity">
+                <button type="button" aria-haspopup="menu" aria-expanded="false" title="El meu compte" class="sos-global-nav-link sos-global-nav-avatar">👤 ▾</button>
+                <div role="menu" hidden>${_identityItemsHtml({ active })}</div>
+            </div>
+        </div>
     </div>`;
 }
 
@@ -500,6 +537,41 @@ export function paintGlobalNav({
     el.innerHTML = `<nav class="sos-global-nav" aria-label="Global navigation">${renderGlobalNavHtml({ pathname, projectId })}</nav>`;
     // Re-bind dropdown handlers · nous botons emesos
     bindNavGroupDropdowns(el);
+    // PR-A · cerca incremental complementària (sense palette completa)
+    _bindGlobalSearch(el);
+}
+
+// _bindGlobalSearch · enter → navega al destí més rellevant si match exact
+// per id o label. Si no, redirigeix a /learn?q=… (fallback al hub de cerca).
+function _bindGlobalSearch(rootEl) {
+    const input = (rootEl || document).querySelector('#sos-global-search');
+    if (!input || input.dataset.bound === '1') return;
+    input.dataset.bound = '1';
+    input.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Enter') return;
+        const q = String(input.value || '').trim().toLowerCase();
+        if (!q) return;
+        // Match exact per id o label
+        const match = NAV_DESTINATIONS.find(d =>
+            d.id.toLowerCase() === q ||
+            String(d.label).toLowerCase() === q ||
+            String(d.label).toLowerCase().startsWith(q)
+        );
+        if (match) {
+            window.location.href = match.href;
+            return;
+        }
+        // Fallback · /learn amb query (LearnView ja té cerca)
+        window.location.href = '/learn?q=' + encodeURIComponent(q);
+    });
+    // Cmd+K / Ctrl+K focus
+    document.addEventListener('keydown', (ev) => {
+        if ((ev.metaKey || ev.ctrlKey) && (ev.key === 'k' || ev.key === 'K')) {
+            ev.preventDefault();
+            input.focus();
+            input.select();
+        }
+    }, { once: false });
 }
 
 const GLOBAL_NAV_STYLE_ID = 'sos-global-nav-style';
@@ -535,14 +607,84 @@ const GLOBAL_NAV_CSS = `
 }
 .sos-global-nav-logo:hover { background: var(--glass-hover); }
 .sos-global-nav-logo span { color: var(--accent-indigo); }
+.sos-global-nav-home {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.3;
+    transition: all var(--dur-fast);
+}
+.sos-global-nav-home:hover {
+    color: var(--text-main);
+    background: var(--glass-hover);
+}
+.sos-global-nav-home.sos-global-nav-link-active {
+    color: var(--accent-indigo);
+    background: rgba(99,102,241,0.10);
+}
+.sos-global-nav-project-pill {
+    color: var(--accent-indigo);
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(99,102,241,0.12);
+    border: 1px solid rgba(99,102,241,0.35);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.3;
+    transition: all var(--dur-fast);
+    max-width: 220px;
+    overflow: hidden;
+}
+.sos-global-nav-project-pill:hover {
+    background: rgba(99,102,241,0.20);
+}
 .sos-global-nav-groups {
     display: flex;
     align-items: center;
     gap: 4px;
     margin-left: auto;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
 }
+.sos-global-nav-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 8px;
+}
+.sos-global-nav-search {
+    display: flex;
+    align-items: center;
+}
+.sos-global-nav-search input {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    padding: 5px 10px;
+    color: var(--text-main);
+    font-size: 0.82rem;
+    width: 200px;
+    transition: all var(--dur-fast);
+}
+.sos-global-nav-search input::placeholder { color: var(--text-muted); }
+.sos-global-nav-search input:focus {
+    outline: none;
+    border-color: var(--accent-indigo);
+    background: rgba(99,102,241,0.05);
+    width: 260px;
+}
+.sos-global-nav-avatar { font-weight: 700; }
+.sos-global-nav-identity > [role="menu"] { right: 0; left: auto; min-width: 240px; }
 .sos-global-nav-link {
     color: var(--text-secondary);
     text-decoration: none;
@@ -571,9 +713,14 @@ const GLOBAL_NAV_CSS = `
     background: rgba(99,102,241,0.10);
 }
 @media (max-width: 720px) {
-    .sos-global-nav { padding: 0 12px; }
+    .sos-global-nav { padding: 0 12px; height: auto; min-height: 48px; }
+    .sos-global-nav-inner { flex-wrap: wrap; gap: 8px; }
     .sos-global-nav-link { font-size: var(--text-xs); padding: 6px 8px; }
     .sos-global-nav-logo { font-size: var(--text-xs); }
+    .sos-global-nav-search { display: none; }
+    .sos-global-nav-project-pill { max-width: 140px; font-size: 0.72rem; }
+    .sos-global-nav-home span,
+    .sos-global-nav-logo span { display: none; }
 }
 `;
 
@@ -657,22 +804,14 @@ export function renderBottomNavHtml({ pathname = '', projectId = null, active = 
 }
 
 // paintBottomNav · async · injecta o actualitza la bottom nav al body.
-// Idempotent · localitza per id `sos-bottom-nav` · substitueix l'HTML.
-export function paintBottomNav({
-    pathname = window.location.pathname,
-    search   = window.location.search,
-} = {}) {
+// UX-NAV-V3 (PR-A) · bottom-nav DEPRECATED · esborrada al desktop + mobile.
+// La nav única top cobreix tots els destins. El mobile tindrà mini-app
+// launcher dedicat al PR-D. Mantenim la funció exportada com a no-op +
+// cleanup defensiu del DOM existent per a backwards-compat amb router.js.
+export function paintBottomNav() {
     if (typeof document === 'undefined' || !document.body) return;
-    const params = new URLSearchParams(search || '');
-    const projectId = params.get('project') || (pathname.startsWith('/project/') ? decodeURIComponent(pathname.slice(9)) : null);
-    let el = document.getElementById('sos-bottom-nav');
-    const html = renderBottomNavHtml({ pathname, projectId });
-    if (!el) {
-        el = document.createElement('div');
-        el.id = 'sos-bottom-nav';
-        document.body.appendChild(el);
-    }
-    el.innerHTML = html;
+    const el = document.getElementById('sos-bottom-nav');
+    if (el && el.parentNode) el.parentNode.removeChild(el);
 }
 
 // CSS mínimo común para los dropdowns · se inyecta una sola vez en <head>.

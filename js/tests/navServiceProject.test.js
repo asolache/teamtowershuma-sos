@@ -42,7 +42,7 @@ for (const id of GLOBAL_BUT_CONTEXTUAL) {
 
 // Globals purs · NO han de rebre projectId (preserva semàntica)
 // REGISTRY-MERGE 2026-05-16 · 'registry' eliminat del nav · consolidat a /opportunities
-const PURE_GLOBALS = ['dashboard', 'sprint', 'matriu', 'opportunities', 'identity', 'skills', 'sectors'];
+const PURE_GLOBALS = ['home', 'sprint', 'matriu', 'opportunities', 'identity', 'skills', 'sectors'];
 for (const id of PURE_GLOBALS) {
     const link = find(id);
     t(link,                                          'C · ' + id + ' present (global)');
