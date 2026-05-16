@@ -618,14 +618,22 @@
       "priority": "high",
       "complexity": "L",
       "status": "pending",
-      "required_capabilities": ["code-write", "code-review", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "code-review",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "manual-check",
         "command": "node js/tests/dashboardV2.test.js && node js/tests/hubV2.test.js",
         "expect": "V2 routes són la primera opció · legacy disponible amb deprecation banner"
       },
       "estimated_cost_eur": 6,
-      "tags": ["batch-5-majestic", "v2", "ux"]
+      "tags": [
+        "batch-5-majestic",
+        "v2",
+        "ux"
+      ]
     },
     {
       "id": "wo-tdd-ia-project-flow-001",
@@ -635,14 +643,23 @@
       "priority": "critical",
       "complexity": "L",
       "status": "pending",
-      "required_capabilities": ["code-write", "test-run", "text-generate"],
+      "required_capabilities": [
+        "code-write",
+        "test-run",
+        "text-generate"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/iaProjectFlowIntegration.test.js",
         "expect": "≥30 asserts · happy path + edge cases (timeout, JSON invalid)"
       },
       "estimated_cost_eur": 8,
-      "tags": ["batch-5-majestic", "ia", "tdd", "critical-path"]
+      "tags": [
+        "batch-5-majestic",
+        "ia",
+        "tdd",
+        "critical-path"
+      ]
     },
     {
       "id": "wo-matriu-108-scale-001",
@@ -652,14 +669,22 @@
       "priority": "high",
       "complexity": "XL",
       "status": "pending",
-      "required_capabilities": ["code-write", "data-analysis", "bash-execute"],
+      "required_capabilities": [
+        "code-write",
+        "data-analysis",
+        "bash-execute"
+      ],
       "deliverable_test": {
         "kind": "manual-check",
         "command": "node scripts/simulate-108-users.js",
         "expect": "108 users · sync OK · cap perdua · p95 < 500ms"
       },
       "estimated_cost_eur": 14,
-      "tags": ["batch-5-majestic", "alpha", "fundacional"]
+      "tags": [
+        "batch-5-majestic",
+        "alpha",
+        "fundacional"
+      ]
     },
     {
       "id": "wo-sprint-kanban-merge-001",
@@ -669,15 +694,26 @@
       "priority": "high",
       "complexity": "L",
       "status": "pending",
-      "required_capabilities": ["code-write", "code-review", "test-run", "text-generate"],
+      "required_capabilities": [
+        "code-write",
+        "code-review",
+        "test-run",
+        "text-generate"
+      ],
       "deliverable_test": {
         "kind": "multi",
         "command": "node js/tests/sprintKanbanMerged.test.js",
         "expect": "ruta única `/sprint` cobreix kanban · WO claim flow · swarm matching"
       },
       "estimated_cost_eur": 9,
-      "dependencies": ["wo-kanban-ai-context-001"],
-      "tags": ["batch-5-majestic", "swarm", "ux"]
+      "dependencies": [
+        "wo-kanban-ai-context-001"
+      ],
+      "tags": [
+        "batch-5-majestic",
+        "swarm",
+        "ux"
+      ]
     },
     {
       "id": "wo-kanban-ai-context-001",
@@ -687,14 +723,23 @@
       "priority": "high",
       "complexity": "M",
       "status": "pending",
-      "required_capabilities": ["code-write", "code-review", "test-run", "text-generate"],
+      "required_capabilities": [
+        "code-write",
+        "code-review",
+        "test-run",
+        "text-generate"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/kanbanAiContext.test.js",
         "expect": "kanban-IA invoca woContextBuilder · cost mesurat · qualitat ≥ baseline"
       },
       "estimated_cost_eur": 4,
-      "tags": ["batch-5-majestic", "ia", "dry-kiss"]
+      "tags": [
+        "batch-5-majestic",
+        "ia",
+        "dry-kiss"
+      ]
     },
     {
       "id": "wo-kanban-real-users-001",
@@ -706,14 +751,20 @@
       "status": "in-progress",
       "assignee_kind": "ai-claude",
       "claimed_by": "agent-claude-code",
-      "required_capabilities": ["code-write"],
+      "required_capabilities": [
+        "code-write"
+      ],
       "deliverable_test": {
         "kind": "manual-check",
         "command": "node js/tests/kanbanAssignee.test.js",
         "expect": "cap placeholder hardcoded · select pobla amb identities reals"
       },
       "estimated_cost_eur": 1.5,
-      "tags": ["batch-5-majestic", "ux", "quick-win"]
+      "tags": [
+        "batch-5-majestic",
+        "ux",
+        "quick-win"
+      ]
     },
     {
       "id": "wo-node-share-json-001",
@@ -725,14 +776,21 @@
       "status": "in-progress",
       "assignee_kind": "ai-claude",
       "claimed_by": "agent-claude-code",
-      "required_capabilities": ["code-write", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/nodeShareService.test.js",
         "expect": "≥30 asserts · roundtrip · DM detect · rebase mode"
       },
       "estimated_cost_eur": 3,
-      "tags": ["batch-5-majestic", "interop", "dm"]
+      "tags": [
+        "batch-5-majestic",
+        "interop",
+        "dm"
+      ]
     },
     {
       "id": "wo-identity-keyfile-inline-001",
@@ -745,14 +803,21 @@
       "assignee_kind": "ai-claude",
       "claimed_by": "agent-claude-code",
       "completed_at": 1747432200000,
-      "required_capabilities": ["code-write"],
+      "required_capabilities": [
+        "code-write"
+      ],
       "deliverable_test": {
         "kind": "manual-check",
         "expect": "iPad · /identity · loader funcional · status visible · Turbo balance"
       },
       "estimated_cost_eur": 0.6,
       "cost_actual_eur": 0.4,
-      "tags": ["batch-5-majestic", "ipad", "ux", "v80"]
+      "tags": [
+        "batch-5-majestic",
+        "ipad",
+        "ux",
+        "v80"
+      ]
     },
     {
       "id": "wo-market-opportunities-merge-001",
@@ -763,14 +828,23 @@
       "complexity": "L",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "code-review", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "code-review",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/discoverUnified.test.js",
         "expect": "≥30 asserts · 6 tabs · filtres compartits · search global · fallback sync permaweb"
       },
       "estimated_cost_eur": 8,
-      "tags": ["batch-7-v2-evol", "ux", "consolidation", "pre-alpha"]
+      "tags": [
+        "batch-7-v2-evol",
+        "ux",
+        "consolidation",
+        "pre-alpha"
+      ]
     },
     {
       "id": "wo-profile-unified-001",
@@ -781,14 +855,25 @@
       "complexity": "L",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "code-review", "test-run", "text-generate"],
+      "required_capabilities": [
+        "code-write",
+        "code-review",
+        "test-run",
+        "text-generate"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/profileUnified.test.js",
         "expect": "≥35 asserts · 7 tabs · public/private mode · ikigai integration · privacy filter"
       },
       "estimated_cost_eur": 10,
-      "tags": ["batch-7-v2-evol", "ux", "consolidation", "pre-alpha", "user-360"]
+      "tags": [
+        "batch-7-v2-evol",
+        "ux",
+        "consolidation",
+        "pre-alpha",
+        "user-360"
+      ]
     },
     {
       "id": "wo-tdd-v2-suite-001",
@@ -799,14 +884,22 @@
       "complexity": "L",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "for f in js/tests/{dashboardV2,settingsV2,projectHubV2,discoverUnified,profileUnified,routerRedirects,migrationContract}.test.js; do node $f; done",
         "expect": "≥210 asserts (30/suite × 7 suites) · 0 fails"
       },
       "estimated_cost_eur": 10,
-      "tags": ["batch-7-v2-evol", "tdd", "pre-alpha", "quality-gate"]
+      "tags": [
+        "batch-7-v2-evol",
+        "tdd",
+        "pre-alpha",
+        "quality-gate"
+      ]
     },
     {
       "id": "wo-quality-view-v2-integration-001",
@@ -817,15 +910,27 @@
       "complexity": "M",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "code-review", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "code-review",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/qualityViewV2.test.js",
         "expect": "≥25 asserts · rubric integration · integrity issues display · evolve CTAs · diff view"
       },
       "estimated_cost_eur": 5,
-      "dependencies": ["wo-value-flow-rubric-001", "wo-value-flow-integrity-001"],
-      "tags": ["batch-7-v2-evol", "ux", "quality", "pre-alpha"]
+      "dependencies": [
+        "wo-value-flow-rubric-001",
+        "wo-value-flow-integrity-001"
+      ],
+      "tags": [
+        "batch-7-v2-evol",
+        "ux",
+        "quality",
+        "pre-alpha"
+      ]
     },
     {
       "id": "wo-creation-completeness-guarantee-001",
@@ -836,15 +941,27 @@
       "complexity": "M",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "test-run", "text-generate"],
+      "required_capabilities": [
+        "code-write",
+        "test-run",
+        "text-generate"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/creationCompletenessGuarantee.test.js",
         "expect": "≥25 asserts · score thresholds per ambition · integrity 0 errors · evolve workflow"
       },
       "estimated_cost_eur": 4,
-      "dependencies": ["wo-project-creation-legendary-001", "wo-value-flow-rubric-001"],
-      "tags": ["batch-7-v2-evol", "tdd", "pre-alpha", "quality-gate"]
+      "dependencies": [
+        "wo-project-creation-legendary-001",
+        "wo-value-flow-rubric-001"
+      ],
+      "tags": [
+        "batch-7-v2-evol",
+        "tdd",
+        "pre-alpha",
+        "quality-gate"
+      ]
     },
     {
       "id": "wo-roles-casteller-categorization-001",
@@ -855,15 +972,26 @@
       "complexity": "S",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "text-generate", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "text-generate",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/rolesCastellerCategorization.test.js",
         "expect": "≥15 asserts · prompts contenen 6 levels · few-shot diversificats · rubric C2 valida"
       },
       "estimated_cost_eur": 2,
-      "dependencies": ["wo-vna-expert-prompts-001"],
-      "tags": ["batch-7-v2-evol", "ia", "casteller-model", "pre-alpha"]
+      "dependencies": [
+        "wo-vna-expert-prompts-001"
+      ],
+      "tags": [
+        "batch-7-v2-evol",
+        "ia",
+        "casteller-model",
+        "pre-alpha"
+      ]
     },
     {
       "id": "wo-value-flow-soc-sequencing-001",
@@ -874,15 +1002,28 @@
       "complexity": "M",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "text-generate", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "text-generate",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/valueFlowSocSequencing.test.js",
         "expect": "≥20 asserts · SOC generation · checklist coverage · integrity R3+R7"
       },
       "estimated_cost_eur": 4,
-      "dependencies": ["wo-vna-expert-prompts-001", "wo-value-flow-integrity-001"],
-      "tags": ["batch-7-v2-evol", "ia", "value-map", "soc", "pre-alpha"]
+      "dependencies": [
+        "wo-vna-expert-prompts-001",
+        "wo-value-flow-integrity-001"
+      ],
+      "tags": [
+        "batch-7-v2-evol",
+        "ia",
+        "value-map",
+        "soc",
+        "pre-alpha"
+      ]
     },
     {
       "id": "wo-ia-context-audit-001",
@@ -893,14 +1034,270 @@
       "complexity": "M",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "test-run", "data-analysis"],
+      "required_capabilities": [
+        "code-write",
+        "test-run",
+        "data-analysis"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/iaContextAudit.test.js",
         "expect": "≥20 asserts · audit logging · stats per source · budget guards · cache rate"
       },
       "estimated_cost_eur": 4,
-      "tags": ["batch-7-v2-evol", "ia", "cost-control", "pre-alpha", "observability"]
+      "tags": [
+        "batch-7-v2-evol",
+        "ia",
+        "cost-control",
+        "pre-alpha",
+        "observability"
+      ]
+    },
+    {
+      "id": "wo-project-creation-legendary-001",
+      "project_id": "sos-dev-internal",
+      "title": "PROJECT-CREATION-LEGENDARY-001 · consolidar V2 + MAX en un sol /create amb qualitat mesurable",
+      "description": "Fusionar `ProjectCreationV2View` (cervell IA) i `maxProjectBootstrap` (cos operacional) en un únic flow amb pipeline classify → seed (template del catàleg) → personalize (IA segons ambition) → validate (rubric) → persist. MVP amb 2 templates (founder-coop-tradicional + default-balanced). Score real demostrat · 100/100 (gold) per als 2 templates sense IA · delta +46 punts respecte MAX baseline (54). Veure `docs/STUDY-project-creation-2026-05-15.md` i `docs/STUDY-value-flow-audit-2026-05-15.md`.",
+      "priority": "critical",
+      "complexity": "L",
+      "status": "in-progress",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747497600000,
+      "required_capabilities": [
+        "code-write",
+        "code-review",
+        "test-run",
+        "text-generate"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/projectCreationLegendary.test.js",
+        "expect": "72 pass · 0 fail (objectiu ≥60)"
+      },
+      "estimated_cost_eur": 11,
+      "cost_actual_eur": 4.2,
+      "deliverable_uri": "git:claude/project-creation-legendary..orchestrator+rubric+catalog+tests",
+      "tags": [
+        "batch-5-majestic",
+        "ia",
+        "consolidation",
+        "pre-alpha"
+      ]
+    },
+    {
+      "id": "wo-value-flow-rubric-001",
+      "project_id": "sos-dev-internal",
+      "title": "VALUE-FLOW-RUBRIC-001 · rubric auditable · 12 criteris · pure predicates",
+      "description": "`valueFlowRubricService.js` · 12 criteris registrables · pesos sumen 100 · status gold≥85 silver≥70 bronze≥50. Adapters `fromProject` i `fromValueFlow` · enrich roles per fusionar info dels role nodes amb vna_roles. Baseline mesurat · MAX = 54/100 (4 forats: C4 validators · C10 SOP steps · C11 SOC coverage · C12 Lean). Script `scripts/baseline-value-flow-rubric.mjs`.",
+      "priority": "critical",
+      "complexity": "S",
+      "status": "done",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747494000000,
+      "completed_at": 1747495200000,
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/valueFlowRubric.test.js",
+        "expect": "102 pass · 0 fail"
+      },
+      "estimated_cost_eur": 2,
+      "cost_actual_eur": 1.6,
+      "deliverable_uri": "git:claude/project-creation-legendary..valueFlowRubric",
+      "tags": [
+        "batch-5-majestic",
+        "value-map",
+        "pre-alpha",
+        "prereq-legendary"
+      ]
+    },
+    {
+      "id": "wo-vna-expert-prompts-001",
+      "project_id": "sos-dev-internal",
+      "title": "VNA-EXPERT-PROMPTS-001 · IA posicionada com a experta VSM + few-shot",
+      "description": "`vnaExpertPrompts.js` · 3 capes · SYSTEM_BASE (consultor sènior VSM/VNA · marc 5 punts · contracte JSON estricte · ~290 tokens) · FEW_SHOT_EXAMPLES alineats amb els 2 templates MVP (founder + default · cada exemple amb roles + transactions Lean + sops + socs canònic) · TASK_PROMPTS (5 task kinds · enrich-value-map · personalize-canvas · personalize-pitch · expand-sop · generate-soc). Budget token <2500 demostrat (worst case 1849). Helper flattenPrompt per providers legacy.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "done",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747497600000,
+      "completed_at": 1747499000000,
+      "required_capabilities": [
+        "code-write",
+        "text-generate",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/vnaExpertPrompts.test.js",
+        "expect": "63 pass · 0 fail"
+      },
+      "estimated_cost_eur": 3,
+      "cost_actual_eur": 1.8,
+      "deliverable_uri": "git:claude/project-creation-legendary..vnaExpertPrompts",
+      "dependencies": [
+        "wo-value-flow-rubric-001"
+      ],
+      "tags": [
+        "batch-5-majestic",
+        "ia",
+        "value-map",
+        "pre-alpha",
+        "prereq-legendary"
+      ]
+    },
+    {
+      "id": "wo-value-flow-integrity-001",
+      "project_id": "sos-dev-internal",
+      "title": "VALUE-FLOW-INTEGRITY-001 · cross-layer validator (SOC · SOP · valueFlow · processes)",
+      "description": "`valueFlowIntegrityService.js` · 7 regles R1-R7 amb severity (R1 sop step deliverable_kind · R2 sop role_ref existeix · R3 soc sop_ref existeix · R4 tx process_ref · R5 process tx members · R6 process roles participen · R7 cicles dins boundary). Cada issue amb human_message + auto_fix_hint. Integrat al step `validate` del orchestrator (errorCount > 0 trenca ok). Templates del catàleg passen amb 0 errors. Helpers compatibles amb id/roleSlug i content.checklist.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "done",
+      "assignee_kind": "ai-claude",
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1747499000000,
+      "completed_at": 1747500500000,
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/valueFlowIntegrityService.test.js",
+        "expect": "48 pass · 0 fail"
+      },
+      "estimated_cost_eur": 3,
+      "cost_actual_eur": 2.1,
+      "deliverable_uri": "git:claude/project-creation-legendary..valueFlowIntegrityService+orchestrator-wired",
+      "dependencies": [
+        "wo-value-flow-rubric-001"
+      ],
+      "tags": [
+        "batch-5-majestic",
+        "value-map",
+        "pre-alpha",
+        "prereq-legendary"
+      ]
+    },
+    {
+      "id": "wo-value-stream-service-001",
+      "project_id": "sos-dev-internal",
+      "title": "VALUE-STREAM-001 · mètriques Lean (lead/cycle/WIP · bottleneck · waste) · post-alfa",
+      "description": "`valueStreamService.js` pure · `buildValueStream` calcula leadTime · cycleTime · flowEfficiency · WIP per procés · `detectBottlenecks` · `suggestImprovements` (regles TIMWOOD). Permet VSM Lean complet. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §4.2.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run",
+        "data-analysis"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/valueStreamService.test.js",
+        "expect": "≥25 asserts · bottleneck · waste · flow efficiency · suggestions"
+      },
+      "estimated_cost_eur": 4,
+      "dependencies": [
+        "wo-value-flow-integrity-001"
+      ],
+      "tags": [
+        "batch-6-post-alpha",
+        "value-map",
+        "lean"
+      ]
+    },
+    {
+      "id": "wo-vna-schema-enriched-001",
+      "project_id": "sos-dev-internal",
+      "title": "VNA-SCHEMA-ENRICHED-001 · nodes `process` · `value_offer` · transaction Lean fields",
+      "description": "Schema additiu backwards-compat · transaction afegeix `process_ref` · `lead_time_hours` · `cycle_time_hours` · `wip_units` · `flow_efficiency` · `waste_kinds[]` · `health_signal`. Nous nodes `process` (1a classe · agrupació de transaccions amb trigger/exit) i `value_offer` (oferta pública pendent d'acceptar). Migració idempotent. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §4.1.",
+      "priority": "high",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/vnaSchemaEnriched.test.js",
+        "expect": "schema validats · migració idempotent · backwards-compat"
+      },
+      "estimated_cost_eur": 5,
+      "dependencies": [
+        "wo-value-stream-service-001"
+      ],
+      "tags": [
+        "batch-6-post-alpha",
+        "value-map",
+        "schema"
+      ]
+    },
+    {
+      "id": "wo-value-accounting-reconcile-001",
+      "project_id": "sos-dev-internal",
+      "title": "VALUE-ACCOUNTING-RECONCILE-001 · reconciliació pie ↔ transactions · zero double-spend",
+      "description": "Test i utilitat que verifica per cada `proposalDeliverable` resolt l'existència de `transaction` corresponent (from · to · deliverable iguals). Suma `share%` del pie sempre ≤100%. Reporta inconsistències a la UI.",
+      "priority": "medium",
+      "complexity": "S",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "test-run",
+        "data-analysis"
+      ],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/valueAccountingReconcile.test.js",
+        "expect": "≥10 asserts · proposal↔transaction match · pie ≤100%"
+      },
+      "estimated_cost_eur": 2,
+      "dependencies": [
+        "wo-vna-schema-enriched-001"
+      ],
+      "tags": [
+        "batch-6-post-alpha",
+        "value-map",
+        "accounting"
+      ]
+    },
+    {
+      "id": "wo-value-map-ui-lean-001",
+      "project_id": "sos-dev-internal",
+      "title": "VALUE-MAP-UI-LEAN-001 · ValueMapView · regions de procés · badges Lean",
+      "description": "Estendre `ValueMapView` D3 amb regions visuals per `process` (clusters amb halo · etiquetes lead/cycle/efficiency) · badges per transaction segons `health_signal` (verd/ambar/vermell) · panel lateral de bottlenecks i waste. Només visualització · data layer ja existeix.",
+      "priority": "medium",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": [
+        "code-write",
+        "code-review"
+      ],
+      "deliverable_test": {
+        "kind": "manual-check",
+        "expect": "regions visibles · badges Lean · panel bottleneck/waste"
+      },
+      "estimated_cost_eur": 3,
+      "dependencies": [
+        "wo-vna-schema-enriched-001"
+      ],
+      "tags": [
+        "batch-6-post-alpha",
+        "value-map",
+        "ui"
+      ]
     }
   ]
 }
