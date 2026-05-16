@@ -88,6 +88,31 @@ const resultErr = await runSprintItem({ itemId: item.id, runner: failRunner });
 t(resultErr.run.content.error && resultErr.run.content.error.includes('IA down'), 'F3 · error capturat al run');
 t(!resultErr.run.content.output,                                 'F3 · output null on error');
 
+// F4 · SWARM-OP-002 · runner amb attempts (failover trace) · output ok
+const failoverRunner = async () => ({
+    text: 'fallback output',
+    usage: { inputTokens: 80, outputTokens: 40 },
+    modelKey: 'openai/gpt-4o',
+    attempts: [
+        { modelKey: 'anthropic/sonnet-4.6', evalOk: false, evalReason: 'generate-failed: http 400 credit balance too low' },
+        { modelKey: 'openai/gpt-4o',         evalOk: true },
+    ],
+});
+const resultFO = await runSprintItem({ itemId: item.id, runner: failoverRunner });
+t(Array.isArray(resultFO.run.content.attempts) && resultFO.run.content.attempts.length === 2, 'F4 · attempts trace propagat al run.content');
+eq(resultFO.run.content.modelKey, 'openai/gpt-4o',               'F4 · modelKey reflecteix el que ha funcionat');
+
+// F5 · SWARM-OP-002 · runner throw amb attempts · errorAttempts surface
+const exhaustedErr = new Error('escalation exhausted');
+exhaustedErr.attempts = [
+    { modelKey: 'anthropic/sonnet-4.6', evalOk: false, evalReason: 'http 400' },
+    { modelKey: 'openai/gpt-4o',         evalOk: false, evalReason: 'http 401 no key' },
+];
+const exhaustedRunner = async () => { throw exhaustedErr; };
+const resultExh = await runSprintItem({ itemId: item.id, runner: exhaustedRunner });
+t(Array.isArray(resultExh.run.content.attempts) && resultExh.run.content.attempts.length === 2, 'F5 · errorAttempts surface al run.content tot i throw');
+t(resultExh.run.content.error && resultExh.run.content.error.includes('exhausted'), 'F5 · error message preservat');
+
 // G · persistSprintRun · KB mock
 const upserts = [];
 const mockKb = { upsert: async (n) => { upserts.push(n); return n; } };

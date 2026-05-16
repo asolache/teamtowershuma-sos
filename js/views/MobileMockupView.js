@@ -284,7 +284,7 @@ export default class MobileMockupView {
 
                 <div class="ms-card">
                     <div class="ms-row">
-                        <div style="font-size:13px;"><span class="ms-acc-purple">🤖</span> WO #12 · IA Claude</div>
+                        <div style="font-size:13px;"><span class="ms-acc-purple">🤖</span> WO #12 · IA Orchestrator</div>
                         <div class="ms-acc-red">−0,18 €</div>
                     </div>
                     <div class="ms-mut" style="font-size:10px;">142 tokens · 16 min</div>

@@ -1,13 +1,15 @@
 ---
 id: _index
 type: index
-version: "v11.1"
-updated_at: "2025-04-10"
+version: "v11.2"
+updated_at: "2026-05-17"
 ---
 
 # Knowledge Base · SOS V11
 
 Base de conocimiento de TeamTowers SOS. Tres capas: pública (sectores + roles + visión), cliente (modelos VNA guardados), swarm (prompts + skills).
+
+> **🆕 v11.2** · afegit `_LOG.md` (audit trail IA-humà · WORKFLOW per a tota mutació de knowledge) · clients/_README.md (convenció paths client) · socs/lifecycle/ (4 SOCs · idea·MVP·validation·scale) · socs/sectors/ (21 SOCs · 1 per CNAE).
 
 ---
 
@@ -53,23 +55,97 @@ Ficheros disponibles. KnowledgeLoader los carga por id CNAE o alias.
 
 ---
 
+## 🆕 _LOG.md · workflow IA-humà (v11.2)
+
+**Cap mutació de knowledge/ sense entry al `_LOG.md`.** IA proposa →
+@alvaro aprova ('merge' o 'ok') → IA actualitza entry a `approved`.
+Vegeu `_LOG.md` per a l'historial complet.
+
+API · `js/core/knowledgeLogService.js` · parseLog · validateEntry ·
+buildEntry · formatEntry · getStats.
+
+---
+
+## 🆕 SOCs · ciclo de vida (lifecycle · v11.2)
+
+4 SOCs canónicos · 1 per fase del cicle de vida del projecte. Carregats
+automàticament per la IA al pas `personalize` del orchestrator segons
+`classification.lifecycle_stage`.
+
+| Fitxer | Fase | Outcomes |
+|--------|------|----------|
+| `socs/lifecycle/idea.md`      | Idea       | Founder articula problema + validator extern confirma interès |
+| `socs/lifecycle/mvp.md`       | MVP        | Producte mínim · 1 client real pagador · primera tx tangible |
+| `socs/lifecycle/validation.md`| Validation | 5-20 clients · PMF · mètriques Lean reals |
+| `socs/lifecycle/scale.md`     | Scale      | >20 clients · IA automatitza ≥50% WOs · cohort 108 activa |
+
+---
+
+## 🆕 SOCs · sectorials per CNAE (v11.2)
+
+21 SOCs seeds · 1 per cada sector CNAE (A-T · UV). Cada SOC té essència
+sectorial · principis guiadors · kinds canònics de rols. La IA carrega
+aquest SOC com a context quan crea un projecte d'aquest sector.
+
+| Fitxer | CNAE | Sector |
+|--------|------|--------|
+| `socs/sectors/A.md` | A | Agricultura, Ganadería, Silvicultura y Pesca |
+| `socs/sectors/B.md` | B | Industrias Extractivas |
+| `socs/sectors/C.md` | C | Industria Manufacturera |
+| `socs/sectors/D.md` | D | Suministro de Energía Eléctrica, Gas y Vapor |
+| `socs/sectors/E.md` | E | Suministro de Agua, Saneamiento y Gestión de Residuos |
+| `socs/sectors/F.md` | F | Construcción |
+| `socs/sectors/G.md` | G | Comercio al por Mayor y Menor |
+| `socs/sectors/H.md` | H | Transporte y Almacenamiento |
+| `socs/sectors/I.md` | I | Hostelería y Turismo |
+| `socs/sectors/J.md` | J | Información y Comunicaciones |
+| `socs/sectors/K.md` | K | Tech / Software / IA |
+| `socs/sectors/L.md` | L | Actividades Financieras y de Seguros |
+| `socs/sectors/M.md` | M | Actividades Inmobiliarias |
+| `socs/sectors/N.md` | N | Consultoría / Actividades Profesionales |
+| `socs/sectors/O.md` | O | Administración Pública y Defensa |
+| `socs/sectors/P.md` | P | Educación Reglada (K-12) |
+| `socs/sectors/Q.md` | Q | Educación Superior y Formación |
+| `socs/sectors/R.md` | R | Salud y Servicios Sociales |
+| `socs/sectors/S.md` | S | Arte, Deporte, Cultura y Servicios Personales |
+| `socs/sectors/T.md` | T | Actividades de los Hogares como Empleadores |
+| `socs/sectors/UV.md`| UV| Organismos Extraterritoriales e Internacionales |
+
+---
+
 ## SOCs · Standard Operating Concepts
 
-Conceptos invariantes (qué + por qué) de servicios, rituales y artefactos
-de TeamTowers. Cada SOC es un nodo `type: soc` en KB. Ver `socs/_README.md`
-para el esquema de frontmatter. El SOC raíz `soc-teamtowers-brand` aporta
-contexto de marca heredable a todas las llamadas LLM.
+Conceptos invariantes (qué + por qué) de servicios, rituales y artefactos.
+Cada SOC es un nodo `type: soc` en KB. Ver `socs/_README.md` para el
+esquema de frontmatter.
+
+> **Separación canónica** · los SOCs con `scope: brand-specific` aportan
+> contexto de marca al LLM pero **NO** son seleccionables como SOCs
+> reusables al crear proyectos genéricos. El `socMatcher` los filtra
+> automáticamente y solo los incluye cuando el proyecto es del mismo
+> `brand_owner` (ej · TeamTowers operadora).
+
+### SOCs universales (reusables · cualquier proyecto SOS)
 
 | Fichero | Concepto |
 |---------|----------|
-| `socs/teamtowers-brand.md` | TeamTowers · marca raíz — 20+ años, 60k+ participantes, 150+ clientes, 10 valores castellers, portfolio (taller/demo/merch/consultoría). |
 | `socs/soc-vna-network.md` | Red de valor (VNA) — concepto operativo raíz de cualquier proyecto SOS. |
 | `socs/fent-pinya.md` | Taller experiencial Fent Pinya — taller participativo 2 h, hasta 1.000 pax, valores castellers. |
 | `socs/castellers-demo.md` | Demos castelleras — espectáculo profesional no participativo, hasta 7 pisos, máx 4 castells por demo. |
 | `socs/la-colla.md` | La Colla · proceso VNA — consultoría tipo Pantheon Work / Verna Allee, multi-sesión, mapeo de la red de valor del cliente. |
-| `socs/teamtowers-merchandising.md` | Merchandising TeamTowers — pañuelos y faixas personalizables, upsell del evento. |
 | `socs/proyecto-custom.md` | Proyectos a medida — 5 variantes (escuela, gymkana, demo participativa, combinación, presupuesto ajustado). |
 | `socs/charla-conferencia.md` | Charla teatralizada 30-60 min con pre-trabajo consultivo + arte vivo opcional (clown, beatboxer, actor, músico). |
+
+### SOCs brand-specific · TeamTowers operadora
+
+Estos SOCs son **propiedad de TeamTowers** y solo se aplican a proyectos
+del mismo brand_owner. Aportan contexto de marca al LLM (no inventar
+métricas) pero quedan fuera del matching genérico.
+
+| Fichero | Concepto | Scope |
+|---------|----------|-------|
+| `socs/teamtowers-brand.md` | TeamTowers · marca raíz — 20+ años, 60k+ participantes, 150+ clientes, 10 valores castellers, portfolio (taller/demo/merch/consultoría). | `brand-specific` |
+| `socs/teamtowers-merchandising.md` | Merchandising TeamTowers — pañuelos y faixas personalizables, upsell del evento. | `brand-specific` |
 
 ---
 

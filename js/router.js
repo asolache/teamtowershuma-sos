@@ -12,24 +12,34 @@ import {
 } from './core/navService.js';
 import { bootTheme } from './core/themeService.js';
 
+import { LEGACY_REDIRECTS } from './core/routerRedirects.js';
+
 const ROUTES = [
-    { path: '/',          view: () => import('./views/DashboardView.js') },
-    { path: '/dashboard', view: () => import('./views/DashboardView.js') },
-    { path: '/team',      view: () => import('./views/HomeView.js')     },
-    { path: '/paper',     view: () => import('./views/HomeView.js')     },
-    { path: '/lms',       view: () => import('./views/HomeView.js')     },
+    { path: '/',          view: () => import('./views/DashboardV2View.js') },
+    { path: '/home',      view: () => import('./views/DashboardV2View.js') },
+    // V2-EVOL Fase C · /dashboard ja no carrega V1 · redirigeix a / via
+    // LEGACY_REDIRECTS. Features V1 (Onboarding · Member panel) migrades.
+    // KB inline panel · explorable via /folders · /tags · /mind.
+    { path: '/create',      view: () => import('./views/ProjectCreationV2View.js') },
+    { path: '/create-live',  view: () => import('./views/CreateLiveView.js') },
     { path: '/map',       view: () => import('./views/ValueMapView.js')  },
     { path: '/workshops', view: () => import('./views/WorkshopsView.js') },
     { path: '/kanban',    view: () => import('./views/KanbanView.js')   },
     { path: '/sops',      view: () => import('./views/SopsView.js')     },
-    { path: '/focus',     view: () => import('./views/HomeView.js')     },
-    { path: '/settings',  view: () => import('./views/SettingsView.js') },
+    // V2-EVOL Fase B · /settings = SettingsV2View canònic (les features V1
+    // han estat migrades · Stripe · Plan · Manifesto · Export/Import). La
+    // ruta antiga /settings-v2 queda com a redirect via LEGACY_REDIRECTS.
+    { path: '/settings',     view: () => import('./views/SettingsV2View.js') },
     // UX-001 · folksonomía universal
     { path: '/tags',      view: () => import('./views/TagsView.js')     },
     // MKT-001 · Mercado SOS
     { path: '/market',    view: () => import('./views/MarketView.js')   },
     // AUTH-001 · identidad operador
     { path: '/identity',  view: () => import('./views/IdentityView.js') },
+    // PROJECTS-LIST-001 · llistat complet projectes amb filtres
+    { path: '/projects',  view: () => import('./views/ProjectsView.js') },
+    // PROFILE-360-LEGENDARY · /me · perfil unificat 8 zones (privat)
+    { path: '/me',        view: () => import('./views/Profile360View.js') },
     // KM-001 · folders inteligentes
     { path: '/folders',   view: () => import('./views/FoldersView.js')  },
     // H8.1 · vista panorámica del Mind-as-Graph
@@ -52,8 +62,14 @@ const ROUTES = [
     { path: '/sectors',   view: () => import('./views/SectorsView.js') },
     // PERM-USER-001 sprint E · /registry · permaweb public registry
     { path: '/registry',  view: () => import('./views/RegistryView.js') },
+    { path: '/timeline',         view: () => import('./views/TimelineView.js') },
+    { path: '/inbox',            view: () => import('./views/InboxView.js') },
+    // NOTES-EVOLVE-001 · llistat captures FAB · evolve a project/wo/deliverable
+    { path: '/notes',            view: () => import('./views/NotesView.js') },
+    { path: '/process-catalog',  view: () => import('./views/ProcessCatalogView.js') },
     // FUND-FLOW-001 sprint F · /opportunities · projectes públics permaweb
     { path: '/opportunities', view: () => import('./views/OpportunitiesView.js') },
+    { path: '/discover',      view: () => import('./views/OpportunitiesView.js') },
     // VAL-001 sprint B · vista /value-accounting · tarta del proyecto (Slicing Pie + FairShares)
     { path: '/value-accounting', view: () => import('./views/ValueAccountingView.js') },
     // PACT-001 sprint B · UI builder del primer contrato (pacto socios)
@@ -68,21 +84,77 @@ const ROUTES = [
     { path: '/path',         view: () => import('./views/NeuralPathView.js') },
     // SWARM-OP-001 · sprint orchestrator · backlog autonomous + IA runs
     { path: '/sprint',       view: () => import('./views/SprintView.js') },
+    // CANVAS-WIZARD sprint A · /canvas?project=X · 5-step project canvas
+    { path: '/canvas',       view: () => import('./views/ProjectCanvasView.js') },
+    // LEDGER-ACCOUNTING sprint A · /accounting?project=X · double-entry
+    { path: '/accounting',   view: () => import('./views/AccountingView.js') },
+    // LIFECYCLE-DASHBOARD sprint A · /lifecycle?project=X · 10 phases status
+    { path: '/lifecycle',    view: () => import('./views/ProjectLifecycleView.js') },
+    // INVOICE-BILLING sprint A · /invoices?project=X · CRUD + auto-ledger
+    { path: '/invoices',     view: () => import('./views/InvoiceView.js') },
+    // TOKENOMICS sprint A · /tokenomics?project=X · designer + vesting
+    { path: '/tokenomics',   view: () => import('./views/TokenomicsView.js') },
+    // PITCH-PUBLIC sprint A · /pitch?project=X · public one-pager + edit
+    { path: '/pitch',        view: () => import('./views/ProjectPitchView.js') },
+    // PROPOSAL-GENERATOR sprint A · /proposals?project=X · IA brief + skill match
+    { path: '/proposals',    view: () => import('./views/ProposalView.js') },
+    // SWARM-PARALLEL sprint A · /swarm?project=X · DAG executor paral·lel
+    { path: '/swarm',        view: () => import('./views/SwarmFlowView.js') },
+    // IMPROVEMENT-LOOP sprint A · /improve?project=X · TDD WO + feedback agent kanban
+    { path: '/improve',      view: () => import('./views/ImprovementLoopView.js') },
+    // DESIGN-SYSTEM sprint A · /design · mockup deluxe + arquitectura informació + components
+    { path: '/design',       view: () => import('./views/DesignSystemView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
 // UX-001 · prefijo dinámico /n/{nodeId} resuelto por NodeView
 const NODE_PATH_PREFIX    = '/n/';
-// UX-001 sprint C · prefijo dinámico /project/{projectId} resuelto por ProjectHubView
+// MARKET-CATALOG sprint A · /market/{id} · detail view multi-source
+const MARKET_PATH_PREFIX  = '/market/';
+// PROFILE sprint A · /u/{handle} · perfil públic d'usuari amb skills + projects
+const PROFILE_PATH_PREFIX = '/u/';
+// UX-001 sprint C · prefijo dinámico /project/{projectId} ·
+// 2026-05-15 · /project/{id} ara resol al ProjectHubV2View (clean 7-zones).
+// L'antic ProjectHubView accessible a /project-classic/{id} per a
+// power-users que necessitin swarm matchmaker · permaweb publish · etc.
 const PROJECT_PATH_PREFIX = '/project/';
+const PROJECT_CLASSIC_PATH_PREFIX = '/project-classic/';
+// UX-CENTRAL-HUB-001 · /hub/{projectId} · nou layout 7-zones consumint
+// activityFeedService + iaSuggestionsService. L'antic /project/{id} es manté.
+const HUB_V2_PATH_PREFIX = '/hub/';
+// PITCH-REFRAME-001 · /pitch-doc/{projectId} · document visual investor
+// auto-generat des de canvas + VNA + tokenomics + ledger + proposals.
+const PITCH_DOC_PATH_PREFIX = '/pitch-doc/';
 
 async function router() {
     const path  = window.location.pathname.replace(/\/$/, '') || '/';
+
+    // V2-EVOL Fase F · legacy redirects (301-style via replaceState)
+    // Evita carregar la vista i re-dispatch la URL canónica · cap historial
+    // brut · cap doble render.
+    if (LEGACY_REDIRECTS[path]) {
+        const target = LEGACY_REDIRECTS[path] + window.location.search + window.location.hash;
+        window.history.replaceState({}, '', target);
+        return router();
+    }
+
     let match;
     if (path.startsWith(NODE_PATH_PREFIX)) {
         match = { path, view: () => import('./views/NodeView.js') };
-    } else if (path.startsWith(PROJECT_PATH_PREFIX)) {
+    } else if (path.startsWith(MARKET_PATH_PREFIX)) {
+        match = { path, view: () => import('./views/MarketDetailView.js') };
+    } else if (path.startsWith(PROFILE_PATH_PREFIX)) {
+        // PROFILE-360-LEGENDARY · /u/{handle} consumeix Profile360View ·
+        // ProfileView legacy disponible a /u-legacy/{handle} per a back-compat.
+        match = { path, view: () => import('./views/Profile360View.js') };
+    } else if (path.startsWith(PITCH_DOC_PATH_PREFIX)) {
+        match = { path, view: () => import('./views/InvestorPitchView.js') };
+    } else if (path.startsWith(HUB_V2_PATH_PREFIX)) {
+        match = { path, view: () => import('./views/ProjectHubV2View.js') };
+    } else if (path.startsWith(PROJECT_CLASSIC_PATH_PREFIX)) {
         match = { path, view: () => import('./views/ProjectHubView.js') };
+    } else if (path.startsWith(PROJECT_PATH_PREFIX)) {
+        match = { path, view: () => import('./views/ProjectHubV2View.js') };
     } else {
         match = ROUTES.find(r => r.path === path) || ROUTES.find(r => r.path === null);
     }
@@ -102,6 +174,49 @@ async function router() {
         const app       = document.getElementById('app');
         app.innerHTML   = await view.getHtml();
         if (typeof view.afterRender === 'function') await view.afterRender();
+        // Mobile bottom-nav · global · injectat un cop · active state actualitzat
+        // a cada navegació. Visible només a pantalles < 768px (CSS media query).
+        try {
+            const { injectOrUpdate } = await import('./core/mobileBottomNav.js');
+            injectOrUpdate({ pathname: path });
+        } catch (_) { /* non-blocking */ }
+        // Mobile topbar · drawer · hide-on-scroll · global · < 768px només.
+        // Aporta navegació completa via "⋯" sense ocupar pantalla.
+        try {
+            const { injectOrUpdate: injTopbar } = await import('./core/mobileTopbar.js');
+            injTopbar({ pathname: path });
+        } catch (_) { /* non-blocking */ }
+        // A11Y · W3C/WCAG · global skip-link + live-region + focus-visible CSS
+        try {
+            const { injectGlobalA11y } = await import('./core/a11yService.js');
+            injectGlobalA11y();
+        } catch (_) { /* non-blocking */ }
+        // Quick Capture FAB · cervell SOS · "+" floating · noies/WO/idees/skills
+        // Activable amb la tecla "c" o click al botó · al fons-dreta.
+        try {
+            const { injectGlobalFab } = await import('./core/quickCaptureFab.js');
+            injectGlobalFab();
+        } catch (_) { /* non-blocking */ }
+        // Global Search · cmd-K / Ctrl-K / "/" · accés instantani a tot el KB
+        // Pattern Linear/Notion · cercador modal · keyboard nav · mobile bottom-sheet
+        try {
+            const { injectGlobal: injSearch } = await import('./core/globalSearch.js');
+            injSearch();
+        } catch (_) { /* non-blocking */ }
+        // First-run onboarding · welcome modal · només si l'usuari mai l'ha vist
+        // Es mostra al primer entry page · explica "cervell SOS" en 4 slides
+        if (path === '/' || path === '/home') {
+            try {
+                const { maybeShow } = await import('./core/firstRunOnboarding.js');
+                maybeShow();
+            } catch (_) { /* non-blocking */ }
+        }
+        // Presence heartbeat · global · marca lastSeen cada 30s mentre app oberta
+        // Permet a altres usuaris (futur federat) veure si estem online.
+        try {
+            const { startHeartbeat } = await import('./core/presenceService.js');
+            startHeartbeat();
+        } catch (_) { /* non-blocking */ }
         // NEURAL-PATH-001 · log de visita · fire-and-forget · zero bloqueig
         (async () => {
             try {

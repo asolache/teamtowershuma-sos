@@ -116,6 +116,66 @@ export async function appendStep({ kb = null, ...args } = {}) {
     }
 }
 
+// purgeOldSteps · async · esborra neural_path_step nodes més antics que
+// retentionDays (default 90 · ve de PATH_STEP_RETENTION_DAYS).
+//
+// SAFETY · els bundles ja firmats NO es toquen · els steps que ja s'han
+// inclòs a un bundle s'han copiat al bundle.content.stepsSnapshot (sprint A
+// del neural path), així que purgar-los no perd informació.
+//
+// Retorna · { purgedCount, retainedCount, cutoffTs, dryRun, errors }
+// dryRun=true · NO esborra, sols compta (per a UI preview)
+export async function purgeOldSteps({
+    kb           = null,
+    retentionDays = PATH_STEP_RETENTION_DAYS,
+    nowTs        = null,
+    dryRun       = false,
+    ownerHandle  = null,   // opcional · sols purga steps d'un usuari concret
+} = {}) {
+    const k = kb || (await import('./kb.js')).KB;
+    if (!k || typeof k.query !== 'function') {
+        throw new Error('purgeOldSteps requires kb with query()');
+    }
+    const now = typeof nowTs === 'number' ? nowTs : Date.now();
+    const cutoffTs = now - (retentionDays * 24 * 3600 * 1000);
+    let nodes = [];
+    try {
+        nodes = await k.query({ type: NEURAL_PATH_STEP_TYPE });
+    } catch (e) {
+        return { purgedCount: 0, retainedCount: 0, cutoffTs, dryRun, errors: [e?.message || String(e)] };
+    }
+    const handleFilter = ownerHandle
+        ? (ownerHandle.startsWith('@') ? ownerHandle : ('@' + ownerHandle))
+        : null;
+    const errors = [];
+    let purgedCount = 0;
+    let retainedCount = 0;
+    for (const n of nodes) {
+        const ts = n?.content?.ts ?? n?.createdAt ?? 0;
+        if (handleFilter && n?.content?.ownerHandle !== handleFilter) {
+            retainedCount++;
+            continue;
+        }
+        if (ts >= cutoffTs) {
+            retainedCount++;
+            continue;
+        }
+        if (dryRun) {
+            purgedCount++;
+            continue;
+        }
+        try {
+            if (typeof k.deleteNode === 'function')      await k.deleteNode(n.id);
+            else if (typeof k.remove === 'function')     await k.remove(n.id);
+            else throw new Error('kb has no deleteNode/remove method');
+            purgedCount++;
+        } catch (e) {
+            errors.push((n.id || '?') + ': ' + (e?.message || String(e)));
+        }
+    }
+    return { purgedCount, retainedCount, cutoffTs, dryRun, errors };
+}
+
 // queryStepsForOwner · async · llegeix steps d'un usuari (ordenats DESC per ts)
 export async function queryStepsForOwner({ kb, ownerHandle, limit = 100 } = {}) {
     if (!kb)          throw new Error('queryStepsForOwner requires kb');

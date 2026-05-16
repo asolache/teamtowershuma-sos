@@ -70,7 +70,7 @@ export default class SectorsView {
                 box-shadow: var(--shadow-sm);
             }
             .sec-item:hover { background: var(--glass-hover); border-color: var(--accent-indigo); transform: translateY(-1px); }
-            .sec-item.active { border-color: var(--accent-claude); background: rgba(212,168,83,0.06); }
+            .sec-item.active { border-color: var(--accent-orchestrator); background: rgba(212,168,83,0.06); }
             .sec-item-name { font-size: var(--text-sm); color: var(--text-main); font-weight: 600; }
             .sec-item-meta { color: var(--text-muted); font-size: 11px; font-family: var(--font-mono); margin-top: 2px; }
             .sec-item-badge { font-size: 10px; font-family: var(--font-mono); padding: 3px 10px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
@@ -183,7 +183,7 @@ export default class SectorsView {
 
         html += '<div class="sec-section-h">Transaccions clau</div>';
         seed.transactions.slice(0, 12).forEach(function(t) {
-            const color = t.type === 'intangible' ? 'var(--accent-claude)' : 'var(--accent-green)';
+            const color = t.type === 'intangible' ? 'var(--accent-orchestrator)' : 'var(--accent-green)';
             html += '<div class="sec-tx-item">'
                 + '<div class="sec-tx-dot" style="background:' + color + ';"></div>'
                 + '<div>' + escapeHtml(t.deliverable || t.id) + (t.is_must ? ' <span style="color:var(--text-muted);font-family:var(--font-mono);font-size:10px;">[MUST]</span>' : '') + '</div>'

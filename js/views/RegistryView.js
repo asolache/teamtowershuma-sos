@@ -254,8 +254,11 @@ export default class RegistryView {
                 <button class="rg-btn rg-btn-primary" id="rgSyncBtn" title="Refresca des de permaweb · gratis (només lectura)">↻ Sync des de permaweb</button>
             </div>
             <div class="rg-main">
+                <div style="padding:10px 14px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);border-radius:6px;margin-bottom:0.8rem;font-size:0.85rem;line-height:1.55;">
+                    ℹ️ <strong>Permaweb Index integrat</strong> · ara consolidat al hub <a href="/opportunities" data-link style="color:#22c55e;font-weight:700;">Descobrir / Oportunitats</a> com a tab "👤 Perfils" + altres tabs. Aquesta vista clàssica es manté per a power-users · els nous flows van pel hub unificat.
+                </div>
                 <header class="rg-hero">
-                    <h1>🌐 Permaweb Index</h1>
+                    <h1>🌐 Permaweb Index <span style="color:#facc15;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;padding:2px 8px;background:rgba(250,204,21,0.15);border-radius:999px;border:1px solid rgba(250,204,21,0.35);vertical-align:middle;margin-left:8px;">Clàssic</span></h1>
                     <p>Catàleg descentralitzat de tot el contingut SOS registrable a la permaweb. Avui ja són publicables els <strong>perfils</strong> signats des de <a href="/identity" data-link style="color:var(--accent-indigo);">/identity</a> · projectes, workshops, mercat, SOPs i WOs estaran disponibles a la propera onada. Discovery i verify són sempre gratuïts.</p>
                 </header>
                 <div class="rg-stats" id="rgStats"></div>

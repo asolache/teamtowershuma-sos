@@ -229,6 +229,19 @@ export default class KanbanView {
             @media (max-width: 1100px) { .kb-board { grid-template-columns:repeat(2, 1fr); } }
             @media (max-width: 700px)  { .kb-board { grid-template-columns:1fr; } }
 
+            /* mobile-first responsive · UX-MOBILE-D continuation */
+            @media (max-width: 768px) {
+                .kb-topbar { padding:0.6rem 0.8rem; gap:0.5rem; flex-wrap:wrap; }
+                .kb-title { display:none; }
+                .kb-spacer { display:none; }
+                .kb-btn { padding:0.45rem 0.7rem; font-size:0.78rem; }
+                .kb-main { padding:0.8rem; }
+                .kb-stats { gap:0.5rem; }
+                .kb-stat { min-width:0; flex:1 1 130px; padding:0.6rem 0.8rem; }
+                .kb-stat-num { font-size:1.15rem; }
+                #kbSwarmToggle { font-size:0.72rem !important; padding:5px 8px !important; }
+            }
+
             .kb-col        { background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:0.85rem; display:flex; flex-direction:column; gap:0.7rem; }
             .kb-col-h      { color:var(--text-secondary); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.1em; font-weight:700; display:flex; align-items:center; gap:0.5rem; padding-bottom:0.5rem; border-bottom:2px solid var(--accent,var(--accent-indigo)); }
             .kb-col-h .pill{ background:var(--bg-elevated); padding:1px 8px; border-radius:10px; font-size:0.7rem; color:var(--text-secondary); }
@@ -241,11 +254,11 @@ export default class KanbanView {
             .kb-badge      { font-size:0.68rem; padding:1px 6px; border-radius:8px; background:var(--bg-elevated); color:var(--text-secondary); }
             .kb-badge.ai   { background:rgba(99,102,241,0.18); color:var(--accent-indigo); }
             .kb-badge.human{ background:rgba(16,185,129,0.18); color:var(--accent-green); }
-            .kb-badge.tdd  { background:rgba(212,168,83,0.18); color:var(--accent-claude); }
+            .kb-badge.tdd  { background:rgba(212,168,83,0.18); color:var(--accent-orchestrator); }
             .kb-badge.high { background:rgba(239,68,68,0.18); color:var(--accent-red); }
             .kb-badge.med  { background:rgba(99,102,241,0.18); color:var(--accent-indigo); }
             .kb-badge.cost { background:rgba(16,185,129,0.18); color:var(--accent-green); font-family:var(--font-mono); }
-            .kb-badge.save { background:rgba(212,168,83,0.18); color:var(--accent-claude); font-family:var(--font-mono); }
+            .kb-badge.save { background:rgba(212,168,83,0.18); color:var(--accent-orchestrator); font-family:var(--font-mono); }
 
             .kb-empty      { text-align:center; color:var(--text-muted); font-size:0.85rem; padding:1rem; border:1px dashed var(--border-default); border-radius:var(--radius-sm); }
 
@@ -272,6 +285,10 @@ export default class KanbanView {
                 </select>
                 <button class="kb-btn" id="kbBtnFromSop">📋 Desde SOP</button>
                 <button class="kb-btn kb-btn-primary" id="kbBtnNew">＋ Nueva WO</button>
+                <label id="kbSwarmToggle" style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:4px;background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.30);font-size:0.78rem;cursor:pointer;color:#a8b2ff;user-select:none;" title="Mode swarm · cada WO té botó auto-run amb agent IA · llegeix de docs/backlog.yaml">
+                    <input type="checkbox" id="kbSwarmCheckbox" style="width:14px;height:14px;cursor:pointer;accent-color:#a855f7;">
+                    🐝 Swarm mode
+                </label>
             </div>
 
             <div class="kb-main">
@@ -300,6 +317,44 @@ export default class KanbanView {
         this._render();
         document.getElementById('kbBtnNew').addEventListener('click',     () => this._openCreateModal());
         document.getElementById('kbBtnFromSop').addEventListener('click', () => this._openFromSopModal());
+
+        // SWARM-RELOC-001 · swarm mode toggle · persisteix a localStorage per
+        // projecte · si actiu · cada WO té botó "🐝 Auto-run" amb agent IA
+        try {
+            const swarmCheckbox = document.getElementById('kbSwarmCheckbox');
+            if (swarmCheckbox) {
+                const lsKey = 'sos_kanban_swarm_mode_' + (this.projectFilter || 'global');
+                const stored = localStorage.getItem(lsKey);
+                swarmCheckbox.checked = stored === 'true';
+                this._swarmMode = swarmCheckbox.checked;
+                if (this._swarmMode) {
+                    document.getElementById('kbSwarmToggle')?.classList.add('swarm-active');
+                }
+                swarmCheckbox.addEventListener('change', () => {
+                    this._swarmMode = swarmCheckbox.checked;
+                    try { localStorage.setItem(lsKey, String(this._swarmMode)); } catch (_) {}
+                    this._render();
+                    try {
+                        const { toast } = require('../core/uxComponents.js');
+                        toast({
+                            kind: this._swarmMode ? 'success' : 'info',
+                            text: this._swarmMode
+                                ? '🐝 Swarm mode actiu · WOs amb botó Auto-run'
+                                : 'Swarm mode desactivat',
+                            ttl: 3000,
+                        });
+                    } catch (_) {
+                        import('../core/uxComponents.js').then(m => m.toast({
+                            kind: this._swarmMode ? 'success' : 'info',
+                            text: this._swarmMode
+                                ? '🐝 Swarm mode actiu · WOs amb botó Auto-run'
+                                : 'Swarm mode desactivat',
+                            ttl: 3000,
+                        })).catch(() => {});
+                    }
+                });
+            }
+        } catch (_) {}
 
         // H7.5 · listener del selector de proyecto
         const sel = document.getElementById('kbProjectFilter');
@@ -446,11 +501,31 @@ export default class KanbanView {
                 taskContext: 'Ejecutar Work Order: ' + (c.title || woId),
             });
 
+            // KANBAN-IA-SOS sprint A · pre-pend SOS-branded WO context bundle
+            // (principis canònics · sector · subtype · roles · transactions ·
+            // accounting hints) ABANS del context KnowledgeLoader.
+            let sosHeader = '';
+            try {
+                const { buildWoContext } = await import('../core/woContextBuilder.js');
+                const project = (this.projects || []).find(p => p && p.id === wo.projectId) || null;
+                const roleNodes = project?.roles || project?.vna_roles || [];
+                const txNodes   = project?.vna_transactions || project?.transactions || [];
+                const woCtx = buildWoContext({
+                    wo:           { ...wo, content: c },
+                    project,
+                    roles:        roleNodes,
+                    transactions: txNodes,
+                });
+                sosHeader = woCtx.systemPrompt;
+            } catch (e) {
+                console.warn('[kanban] buildWoContext failed · fallback al base context', e?.message);
+            }
+
             // Cache-bust dinámico para Orchestrator (ver BUG-002/003)
             const { Orchestrator } = await import('../core/Orchestrator.js?v=' + Date.now());
             const result = await Orchestrator.callLLM({
                 preferredEngine: c.assignee?.engine || 'anthropic',
-                systemPrompt:    ctx.systemPrompt,
+                systemPrompt:    sosHeader ? (sosHeader + '\n\n---\n\n' + ctx.systemPrompt) : ctx.systemPrompt,
                 userPrompt:      buildExecutionPrompt({ ...wo, content: c }),
                 responseFormat:  'text',
                 temperature:     0.3,
@@ -588,6 +663,38 @@ export default class KanbanView {
     _render() {
         this._renderStats();
         this._renderBoard();
+        // SWARM-RELOC-001 · bind dels botons "🐝 Auto-run" si swarm mode actiu
+        if (this._swarmMode) this._bindSwarmButtons();
+    }
+
+    _bindSwarmButtons() {
+        document.querySelectorAll('[data-swarm-wo]').forEach(btn => {
+            // Stop propagation perquè el card click (open detail) no es dispari
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const woId = btn.getAttribute('data-swarm-wo');
+                if (!woId) return;
+                const wo = (this.workOrders || []).find(w => w.id === woId);
+                if (!wo) return;
+                btn.disabled = true;
+                btn.textContent = '⏳ Llançant swarm loop...';
+                try {
+                    const { toast } = await import('../core/uxComponents.js');
+                    toast({
+                        kind: 'info',
+                        text: '🐝 Swarm autonomous loop · veure /sprint per a status',
+                        ttl: 4000,
+                    });
+                    // Per a alfa · redirigim a /sprint amb el WO pre-seleccionat
+                    setTimeout(() => {
+                        window.location.href = '/sprint?wo=' + encodeURIComponent(woId);
+                    }, 1500);
+                } catch (e) {
+                    btn.disabled = false;
+                    btn.textContent = '🐝 Auto-run amb agent IA';
+                }
+            });
+        });
     }
 
     _renderStats() {
@@ -678,6 +785,9 @@ export default class KanbanView {
         const saveBadge = isLedgered && c.savingEur != null && c.savingEur > 0
             ? `<span class="kb-badge save">+${fmtEur(c.savingEur)}</span>`
             : '';
+        const swarmBtn = this._swarmMode
+            ? `<button class="kb-swarm-btn" data-swarm-wo="${this._esc(w.id)}" title="Llança autonomous loop agent IA sobre aquesta WO" style="margin-top:6px;padding:4px 10px;border-radius:4px;background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:0;font-size:0.7rem;font-weight:700;cursor:pointer;width:100%;">🐝 Auto-run amb agent IA</button>`
+            : '';
         return `
             <div class="kb-card" data-wo="${w.id}">
                 <h5>${this._esc(c.title || '(sin título)')}</h5>
@@ -693,6 +803,7 @@ export default class KanbanView {
                     ${costBadge}
                     ${saveBadge}
                 </div>
+                ${swarmBtn}
             </div>
         `;
     }
@@ -913,6 +1024,28 @@ export default class KanbanView {
             defaultEngine = await Orchestrator.getDefaultProvider() || DEFAULT_ENGINE;
         } catch (_) { /* fallback DEFAULT_ENGINE */ }
 
+        // KANBAN-ASSIGNEE-001 · carregar usuaris reals del KB (user_identity)
+        // + matriu seats si hi ha projecte actiu. Substitueix el placeholder
+        // hardcoded "@alvaro" per autocomplete real i dropdown amb tothom.
+        let knownAssignees = [];   // [{ handle, label, kind: 'identity'|'seat' }]
+        try {
+            const identities = await KB.query({ type: 'user_identity' });
+            for (const ide of (identities || [])) {
+                const h = ide?.content?.handle;
+                if (h) {
+                    const name = ide.content?.displayName || h;
+                    knownAssignees.push({ handle: '@' + String(h).replace(/^@/, ''), label: '👤 ' + name + ' (@' + h + ')', kind: 'identity' });
+                }
+            }
+            if (this.projectFilter && Array.isArray(this.seats)) {
+                for (const s of this.seats) {
+                    const name = s?.content?.name || s?.id;
+                    if (name) knownAssignees.push({ handle: s.id, label: '🪑 ' + name + ' · seat', kind: 'seat' });
+                }
+            }
+        } catch (_) { /* sense identities · fallback input lliure */ }
+        const _myHandle = (knownAssignees.find(a => a.kind === 'identity')?.handle) || '';
+
         // H1.10.6 · SOP de referencia → dropdown de SOPs del proyecto activo.
         // Si hay projectFilter → carga SOPs del proyecto y renderiza <select>.
         // Si no hay proyecto → conserva <input type="text"> libre.
@@ -1027,6 +1160,7 @@ export default class KanbanView {
         document.getElementById('kbCreateBg').addEventListener('click', e => { if (e.target.id === 'kbCreateBg') close(); });
 
         // H1.10.8 · alternar input/select del campo assignee según el tipo
+        // KANBAN-ASSIGNEE-001 · si tenim usuaris reals al KB · select; si no · input lliure
         const ENGINE_OPTIONS = ['anthropic', 'openai', 'deepseek', 'gemini', 'minimax', 'custom'];
         const renderAssigneeField = (kind) => {
             const wrap = document.getElementById('kbfAssIdWrap');
@@ -1036,8 +1170,23 @@ export default class KanbanView {
                     `<option value="${e}" ${e === defaultEngine ? 'selected' : ''}>${e}${e === defaultEngine ? ' (por defecto)' : ''}</option>`
                 ).join('');
                 wrap.innerHTML = `<select id="kbfAssId">${opts}</select>`;
+                return;
+            }
+            // Humano · si hi ha known assignees · select amb datalist; sinó · input lliure
+            if (knownAssignees.length > 0) {
+                const opts = knownAssignees.map(a => {
+                    const sel = a.handle === _myHandle ? ' selected' : '';
+                    return `<option value="${this._esc(a.handle)}"${sel}>${this._esc(a.label)}</option>`;
+                }).join('');
+                wrap.innerHTML = `
+                    <select id="kbfAssId" style="margin-bottom:4px;">
+                        ${opts}
+                        <option value="">— altre · escriu handle manualment —</option>
+                    </select>
+                `;
             } else {
-                wrap.innerHTML = `<input id="kbfAssId" type="text" placeholder="@alvaro · ej. asignar humano">`;
+                const ph = _myHandle || '@handle · ex. @alvaro';
+                wrap.innerHTML = `<input id="kbfAssId" type="text" placeholder="${this._esc(ph)}" value="${this._esc(_myHandle)}">`;
             }
         };
         document.getElementById('kbfAssKind').addEventListener('change', e => renderAssigneeField(e.target.value));

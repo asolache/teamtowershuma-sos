@@ -441,7 +441,7 @@ export default class ValueAccountingView {
                 </div>
                 <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:8px 12px;">
                     <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);text-transform:uppercase;">Claimable global</div>
-                    <div style="font-size:1.2rem;font-weight:700;font-family:var(--font-mono);color:var(--accent-claude);">${pool.claimableEur.toFixed(2)} €</div>
+                    <div style="font-size:1.2rem;font-weight:700;font-family:var(--font-mono);color:var(--accent-orchestrator);">${pool.claimableEur.toFixed(2)} €</div>
                 </div>
             </div>
 

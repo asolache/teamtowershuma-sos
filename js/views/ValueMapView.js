@@ -989,7 +989,7 @@ export default class ValueMapView {
                 </div>
                 <div class="vmap-form-group">
                     <label class="vmap-form-label">Nivel
-                        <span id="modalRoleLevelTooltip" style="color:var(--accent-claude);font-family:var(--font-mono);margin-left:6px;font-size:9px;text-transform:none;letter-spacing:0;"></span>
+                        <span id="modalRoleLevelTooltip" style="color:var(--accent-orchestrator);font-family:var(--font-mono);margin-left:6px;font-size:9px;text-transform:none;letter-spacing:0;"></span>
                     </label>
                     <select class="vmap-form-input vmap-form-select" id="modalRoleLevel">
                         <option value="pinya">Base operativa</option>

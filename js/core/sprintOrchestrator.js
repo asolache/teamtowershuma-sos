@@ -103,31 +103,47 @@ export function buildItemPrompt({ item, kind = 'draft', principlesContext = '' }
 
 // runSprintItem · async · executa l'item amb IA via aiFillDim (delegated)
 // Retorna · { run, attempts, output, totalCostEur }
-export async function runSprintItem({ itemId, kind = 'draft', items = INITIAL_BACKLOG, runner = null } = {}) {
+//
+// SWARM-OP-002 · default runner ara usa `runEscalation` · si Anthropic
+// torna HTTP 400 (saldo baix / credit balance too low) salta a OpenAI →
+// Gemini → DeepSeek automàticament. Captura `attempts[]` per a la UI.
+export async function runSprintItem({ itemId, kind = 'draft', items = INITIAL_BACKLOG, runner = null, taskKind = 'creative-narrative', preferredProvider = null } = {}) {
     const item = items.find(i => i.id === itemId);
     if (!item) throw new Error('runSprintItem · unknown itemId: ' + itemId);
     const prompt = buildItemPrompt({ item, kind });
 
-    // Default runner · usa aiProviderService directament · preferredProvider auto
+    // Default runner · escalation chain via aiRouterService
     const run = runner || (async (p) => {
         const { generateWithProvider } = await import('./aiProviderService.js');
-        const { TASK_ROUTING } = await import('./aiRouterService.js');
-        const route = TASK_ROUTING['creative-narrative'] || {};
-        const modelKey = route.primary || 'anthropic/sonnet-4.6';
-        return generateWithProvider(modelKey, {
+        const { runEscalation } = await import('./aiRouterService.js');
+        const generate = (modelKey) => generateWithProvider(modelKey, {
             systemPrompt:    p.systemPrompt,
             userPrompt:      p.userPrompt,
             maxOutputTokens: 1800,
             temperature:     0.5,
         });
+        const { output, modelKey, attempts, escalatedExhausted } = await runEscalation({
+            taskKind,
+            generate,
+            preferredProvider,
+        });
+        if (!output) {
+            const err = new Error('sprint runner · escalation exhausted · ' + (attempts || []).map(a => a.modelKey + '=' + (a.errorCode || 'fail')).join(', '));
+            err.attempts = attempts;
+            err.escalatedExhausted = !!escalatedExhausted;
+            throw err;
+        }
+        // Propagate attempts perquè el caller pugui mostrar quins models s'han provat
+        return { ...output, modelKey: modelKey || output.modelKey, attempts };
     });
 
     const startTs = Date.now();
-    let output, error = null;
+    let output, error = null, errorAttempts = null;
     try {
         output = await run(prompt);
     } catch (e) {
         error = e?.message || String(e);
+        errorAttempts = e?.attempts || null;   // SWARM-OP-002 · keep trace even on throw
     }
 
     const sprintRun = {
@@ -139,6 +155,8 @@ export async function runSprintItem({ itemId, kind = 'draft', items = INITIAL_BA
             output:    output?.text || null,
             usage:     output?.usage || null,
             modelKey:  output?.modelKey || null,
+            // SWARM-OP-002 · trace de quins models s'han provat (per UI failover)
+            attempts:  output?.attempts || errorAttempts || null,
             error,
             startTs,
             endTs:     Date.now(),

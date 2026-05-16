@@ -14,43 +14,78 @@
 // UX-NAV-002 · categorías canónicas para agrupar el menú superior
 // (la topbar con 13 destinos saturaba; ahora se renderizan en 4 grupos
 // + dashboard suelto · cada vista decide si renderizar plano o agrupado).
+// UX-NAV-V2 · arquitectura informació v2 · agrupació pel viatge del fundador
+// (Foundation → Execution → Value → Commercial) + Swarm + Discovery + Identity.
+// 7 grups · max 5-6 items per grup · ordre natural cap → cua del cicle.
+// Copy human-readable centralitzat via sosCopy.label('nav.<id>').
 export const NAV_CATEGORIES = Object.freeze([
-    { id: 'home',         label: 'Inicio',        icon: '🏠' },
-    { id: 'operations',   label: 'Operaciones',   icon: '⚙',  hint: 'Mapa · SOPs · Kanban · Wallet del proyecto activo' },
-    { id: 'knowledge',    label: 'Conocimiento',  icon: '📚', hint: 'Tags · Folders · Mind-Graph del KB' },
-    { id: 'market',       label: 'Mercado & ROI', icon: '🛒', hint: 'Mercado · Eficiencia IA · Ahorro acumulado' },
-    { id: 'identity',     label: 'Cuenta',        icon: '👤', hint: 'Identidad · Settings' },
+    { id: 'foundation',  label: 'Fundació',           icon: '🏛', hint: 'Defineix el projecte abans d\'engegar el cicle · canvas · pitch · pacte de socis' },
+    { id: 'execution',   label: 'Execució',           icon: '⚙',  hint: 'Operativa diària · kanban · procediments · mapa de valor' },
+    { id: 'value',       label: 'Valor',              icon: '💎', hint: 'Disseny econòmic · tokenomics · comptabilitat · wallet' },
+    { id: 'commercial',  label: 'Comercial',          icon: '💼', hint: 'Cicle de venda · propostes · factures · mercat · estalvi vs convencional' },
+    { id: 'swarm',       label: 'Swarm Intel·ligència', icon: '🐝', hint: 'Automatització IA · sprints · flux paral·lel · millora contínua · cicle del projecte' },
+    { id: 'discovery',   label: 'Descobriment',       icon: '🌐', hint: 'Permaweb federation · oportunitats · registre públic · Matriu' },
+    { id: 'identity',    label: 'Identitat',          icon: '👤', hint: 'Tu · skills · aprendre · settings · saldo personal' },
 ]);
 
 // Catálogo cerrado de destinos principales · ordenado por flujo natural
 // del operador: descubrir → diseñar → ejecutar → contabilizar → ofertar.
 // Cada destino lleva ahora `category` (id de NAV_CATEGORIES) para UX-NAV-002.
+// UX-NAV-V2 · destins · category restructurada · copy via sosCopy.label('nav.X')
+// Per a actualitzar copy human-readable · editar sosCopy.js (DRY).
+// Per a re-aplicar copy v2 · usar applyToNavDestinations(NAV_DESTINATIONS).
 export const NAV_DESTINATIONS = Object.freeze([
-    { id: 'dashboard', icon: '🏠', label: 'Dashboard', href: '/dashboard',  global: true,  category: 'home',       hint: 'Inicio · proyectos' },
-    { id: 'map',       icon: '🗺',  label: 'Mapa',      href: '/map',        global: true,  category: 'operations', hint: 'Mapa de valor del proyecto activo' },
-    { id: 'sops',      icon: '📜', label: 'SOPs',      href: '/sops',       global: false, category: 'operations', hint: 'Procedimientos del proyecto' },
-    { id: 'kanban',    icon: '📋', label: 'Kanban',    href: '/kanban',     global: true,  category: 'operations', hint: 'Work orders · backlog → ledger' },
-    { id: 'wallet',    icon: '💶', label: 'Wallet',    href: '/wallet',     global: false, category: 'operations', hint: 'Saldo prepago del proyecto · ledger movimientos' },
-    { id: 'tags',      icon: '🏷', label: 'Tags',      href: '/tags',       global: true,  category: 'knowledge',  hint: 'Folksonomía · cloud de tags' },
-    { id: 'folders',   icon: '📁', label: 'Folders',   href: '/folders',    global: true,  category: 'knowledge',  hint: 'Carpetas inteligentes · queries persistentes' },
-    { id: 'mind',      icon: '🕸',  label: 'Mind-Graph',href: '/mind',       global: true,  category: 'knowledge',  hint: 'Mind-as-Graph total · panorámica del KB' },
-    { id: 'sectors',   icon: '📚', label: 'Sectores',  href: '/sectors',    global: true,  category: 'knowledge',  hint: 'Catálogo A-S · readiness · roles y transacciones tipo del KB' },
-    { id: 'registry',  icon: '🌐', label: 'Registre',  href: '/registry',   global: true,  category: 'knowledge',  hint: 'Registre públic permaweb · operadors SOS descobribles · verify free' },
-    { id: 'opportunities', icon: '🚀', label: 'Oportunitats', href: '/opportunities', global: true, category: 'market', hint: 'Projectes públics permaweb · descobreix · sol·licita unir-te com a stakeholder · FUND-FLOW-001 sprint F' },
-    { id: 'market',    icon: '🛒', label: 'Mercado',   href: '/market',     global: true,  category: 'market',     hint: 'Catálogo de productos y servicios' },
-    { id: 'efficiency',icon: '⚡', label: 'Eficiencia', href: '/efficiency', global: true,  category: 'market',     hint: 'KM-001 · tokens/coste/pruning · ROI IA' },
-    { id: 'path',      icon: '🧠', label: 'Path nodal', href: '/path',       global: true,  category: 'knowledge',  hint: 'Historial nodal cronològic · curador de context bundles per a IA · NEURAL-PATH-001' },
-    { id: 'sprint',    icon: '🐝', label: 'Swarm OP',   href: '/sprint',     global: true,  category: 'knowledge',  hint: 'Sprint orchestrator · backlog estructurat + IA runs autonomous · SWARM-OP-001' },
-    { id: 'savings',   icon: '📊', label: 'Ahorro',    href: '/savings',    global: true,  category: 'market',     hint: 'Cuadro comparativo de ahorro vs convencional · global o por proyecto' },
-    { id: 'value',     icon: '🥧', label: 'Tarta',     href: '/value-accounting', global: false, category: 'market', hint: 'Contabilidad de valor · Slicing Pie + FairShares · tarta del proyecto' },
-    { id: 'pact',      icon: '📜', label: 'Pacte',     href: '/pact',       global: false, category: 'operations', hint: 'Pacte de socis dinàmic · primer contrato del Mètode SOS' },
-    { id: 'presentation', icon: '🎤', label: 'Presentació', href: '/presentation', global: false, category: 'market', hint: 'UX-AUDIT-001 · landing read-only del projecte (rols + tx + SOPs + SOC) · imprimible' },
-    { id: 'learn',     icon: '🎓', label: 'Aprendre',  href: '/learn',      global: true,  category: 'knowledge',  hint: 'UX-EDU-001 · glosario navegable · aprendre fent' },
-    { id: 'skills',    icon: '🧠', label: 'Skills',    href: '/skills',     global: true,  category: 'knowledge',  hint: 'SKILL-TAX-002 · 90 skills · 5 categories · 5 audiències · 12 tipus de projecte' },
-    { id: 'matriu',    icon: '✦',  label: 'Matriu',    href: '/matriu',     global: true,  category: 'home',       hint: 'Landing pública Matriu Incoopadora · Cohort 0 oberta' },
-    { id: 'identity',  icon: '👤', label: 'Identidad', href: '/identity',   global: true,  category: 'identity',   hint: 'Tu perfil · DID local-first · wallet' },
-    { id: 'mywallet',  icon: '💼', label: 'El meu saldo', href: '/wallet',  global: true,  category: 'identity',   hint: 'FUND-FLOW-001 · saldo personal per pagar APIs IA · permaweb · blockchain · transferible a projectes' },
-    { id: 'settings',  icon: '⚙',  label: 'Settings',  href: '/settings',   global: true,  category: 'identity',   hint: 'Claves API · IA · purga' },
+    // ─── Foundation · defineix el projecte ────────────────────────────────
+    { id: 'home',      icon: '🏠', label: 'Home',            href: '/home',             global: true,  category: 'foundation', hint: 'Inici · llistat dels teus projectes · entrada al cicle' },
+    { id: 'canvas',    icon: '🎨', label: 'Canvas',          href: '/canvas',           global: false, category: 'foundation', hint: 'Vision · mission · values · stakeholders · north-star del projecte' },
+    { id: 'pitch',     icon: '📣', label: 'Pitch',           href: '/pitch',            global: false, category: 'foundation', hint: 'One-pager públic shareable amb OG meta · 6 seccions' },
+    { id: 'pact',      icon: '🤝', label: 'Pacte',           href: '/pact',             global: false, category: 'foundation', hint: 'Pacte de socis dinàmic · ECDSA signatures · primer contracte SOS' },
+    { id: 'presentation', icon: '🎤', label: 'Presentació',  href: '/presentation',     global: false, category: 'foundation', hint: 'Landing read-only del projecte · imprimible · roles + tx + SOPs' },
+
+    // ─── Execution · operativa diària ─────────────────────────────────────
+    { id: 'map',       icon: '🗺',  label: 'Mapa',            href: '/map',              global: true,  category: 'execution',  hint: 'Mapa de valor del projecte actiu · roles · transactions · entregables' },
+    { id: 'kanban',    icon: '📋', label: 'Tasques',         href: '/kanban',           global: true,  category: 'execution',  hint: 'Work orders · backlog → in-progress → done · WO context SOS' },
+    { id: 'sops',      icon: '📜', label: 'Procediments',    href: '/sops',             global: false, category: 'execution',  hint: 'SOPs · procediments del projecte · pots publicar al mercat' },
+
+    // ─── Value · disseny econòmic ─────────────────────────────────────────
+    { id: 'tokenomics',icon: '🪙', label: 'Tokenomics',      href: '/tokenomics',       global: false, category: 'value',      hint: 'Disseny del token · 6 grups + vesting + quality score live' },
+    { id: 'accounting',icon: '📒', label: 'Comptabilitat',   href: '/accounting',       global: false, category: 'value',      hint: 'Ledger double-entry · balance sheet · P&L per període' },
+    { id: 'wallet',    icon: '💶', label: 'Wallet',          href: '/wallet',           global: false, category: 'value',      hint: 'Saldo prepago del projecte · moviments del ledger' },
+    { id: 'value',     icon: '🥧', label: 'Pastís de valor', href: '/value-accounting', global: false, category: 'value',      hint: 'Slicing Pie + FairShares · pastís del projecte · equity dinàmic' },
+
+    // ─── Commercial · cicle de venda ──────────────────────────────────────
+    { id: 'proposals', icon: '📝', label: 'Propostes',       href: '/proposals',        global: false, category: 'commercial', hint: 'IA brief + skill matching + PDF · win rate tracker' },
+    { id: 'invoices',  icon: '🧾', label: 'Factures',        href: '/invoices',         global: false, category: 'commercial', hint: 'CRUD invoices · IVA · auto-ledger entry quan paid · print-PDF' },
+    { id: 'market',    icon: '🛒', label: 'Mercat',          href: '/market',           global: true,  category: 'commercial', hint: 'Catàleg productes · serveis · workshops · subscripcions · sops · permaweb federation' },
+    { id: 'savings',   icon: '📊', label: 'Estalvi',         href: '/savings',          global: true,  category: 'commercial', hint: 'Estalvi vs notaria · contable · PM · consultoria · global o per projecte' },
+    { id: 'efficiency',icon: '⚡', label: 'Eficiència',      href: '/efficiency',       global: true,  category: 'commercial', hint: 'Tokens · cost · pruning · ROI IA · KM-001' },
+
+    // ─── Swarm · automatització IA ────────────────────────────────────────
+    { id: 'lifecycle', icon: '🌀', label: 'Cicle',           href: '/lifecycle',        global: false, category: 'swarm',      hint: 'Dashboard amb 10 fases · status %  · next-best-action · capstone Wave 2' },
+    { id: 'sprint',    icon: '🐝', label: 'Sprint Swarm',    href: '/sprint',           global: true,  category: 'swarm',      hint: 'Sprint orchestrator · backlog estructurat + IA runs autonomous TDD' },
+    { id: 'swarm',     icon: '🌪', label: 'Flux paral·lel',  href: '/swarm',            global: false, category: 'swarm',      hint: 'DAG executor paral·lel · Promise.all per level · pillar Antigravity' },
+    { id: 'improve',   icon: '🔁', label: 'Millora contínua',href: '/improve',          global: false, category: 'swarm',      hint: 'TDD WO + feedback agent · cicle continu auto-orquestrat' },
+    { id: 'path',      icon: '🧠', label: 'Historial neural',href: '/path',             global: true,  category: 'swarm',      hint: 'Path nodal cronològic · curador de context bundles per a IA' },
+
+    // ─── Discovery · permaweb federation ──────────────────────────────────
+    { id: 'opportunities', icon: '🚀', label: 'Descobreix',  href: '/opportunities',    global: true,  category: 'discovery',  hint: 'Hub permaweb unificat · perfils · projectes · WOs · productes · workshops · CV nodals · usuaris' },
+    { id: 'timeline',  icon: '💬', label: 'Timeline',        href: '/timeline',         global: true,  category: 'discovery',  hint: 'Feed cronològic d\'activitat al network · follows · pacts · WOs · proposals' },
+    { id: 'inbox',     icon: '📨', label: 'Inbox · DMs',     href: '/inbox',            global: true,  category: 'discovery',  hint: 'Missatges directes · converses local-first · futur federat permaweb' },
+    { id: 'process-catalog', icon: '🗺', label: 'Catàleg processos', href: '/process-catalog', global: true, category: 'discovery', hint: '15 plantilles · 5 types × 3 stages · canvas/pitch/vna/sops/kpis adaptats per fase' },
+    { id: 'matriu',    icon: '✦',  label: 'Matriu',          href: '/matriu',           global: true,  category: 'discovery',  hint: 'Landing pública Matriu Incoopadora · Cohort 0 oberta · 108 places' },
+    { id: 'create',    icon: '➕', label: 'Crear projecte',  href: '/create',           global: true,  category: 'foundation', hint: 'Form unificat IA-driven · plan→fan-out→reduce · light/standard/max' },
+
+    // ─── Identity · tu ────────────────────────────────────────────────────
+    { id: 'identity',  icon: '👤', label: 'Identitat',       href: '/identity',         global: true,  category: 'identity',   hint: 'El teu perfil · DID local-first · ECDSA keypair' },
+    { id: 'mywallet',  icon: '💼', label: 'Saldo personal',  href: '/wallet',           global: true,  category: 'identity',   hint: 'Saldo personal per pagar APIs IA · transferible a projectes' },
+    { id: 'skills',    icon: '🤲', label: 'Skills',          href: '/skills',           global: true,  category: 'identity',   hint: '90 skills · 5 domains · 3 tiers · 12 tipus de projecte' },
+    { id: 'sectors',   icon: '📚', label: 'Sectors',         href: '/sectors',          global: true,  category: 'identity',   hint: 'Catàleg A-S · readiness · roles + transactions del KB' },
+    { id: 'learn',     icon: '🎓', label: 'Aprèn',           href: '/learn',            global: true,  category: 'identity',   hint: 'Glossari navegable · aprendre fent' },
+    { id: 'tags',      icon: '🏷', label: 'Tags',            href: '/tags',             global: true,  category: 'identity',   hint: 'Folksonomia · cloud de tags' },
+    { id: 'folders',   icon: '📁', label: 'Carpetes',        href: '/folders',          global: true,  category: 'identity',   hint: 'Carpetes intel·ligents · queries persistents' },
+    { id: 'mind',      icon: '🕸',  label: 'Mind-graph',      href: '/mind',             global: true,  category: 'identity',   hint: 'Mind-as-Graph total · panoràmica galàctica del KB' },
+    { id: 'settings',  icon: '⚙',  label: 'Settings',        href: '/settings',         global: true,  category: 'identity',   hint: 'Claus API · IA · purga · preferències' },
+    { id: 'design',    icon: '🎨', label: 'Disseny SOS',     href: '/design',           global: true,  category: 'identity',   hint: 'Design system v1 · mockup deluxe · arquitectura informació · component library' },
 ]);
 
 // Devuelve la lista de links contextualizada al projectId activo.
@@ -59,13 +94,30 @@ export const NAV_DESTINATIONS = Object.freeze([
 // - active: marca el destino activo (vista actual)
 // - projectId: si hay, se concatena ?project={id} a los hrefs que apliquen
 //   (map, kanban, sops, market) para preservar contexto al navegar.
+// BUG-FIX 2026-05-15 · ?project= s'afegia a una llista hardcoded de 9 ids ·
+// faltaven canvas · pitch · tokenomics · accounting · proposals · invoices ·
+// lifecycle · swarm · improve · sops · presentation · etc. Resultat ·
+// clicar Swarm dins un projecte portava a /swarm sense ?project= → error
+// "Cal indicar projecte". Solució regla simple · si la vista NO és global
+// (és a dir · necessita projecte) i tenim projectId · concatena ?project=.
+// La regla del global garanteix que /sprint · /matriu · /registry · etc
+// (que són globals) NO reben projectId (preserva semàntica).
+//
+// Excepció · /kanban i /map són global=true (apareixen sempre al menú) ·
+// però accepten i milloren amb ?project=. Per a aquestes mantenim
+// l'override · si projectId · concatena.
+const ALWAYS_APPEND_PROJECT_IF_GLOBAL = new Set(['kanban', 'map', 'market', 'wallet', 'savings']);
+
 export function buildNavLinks({ active = '', projectId = null } = {}) {
     return NAV_DESTINATIONS
         .filter(d => d.global || !!projectId)
         .map(d => {
             let href = d.href;
-            if (projectId && ['map', 'sops', 'kanban', 'market', 'wallet', 'savings', 'presentation', 'pact', 'value'].includes(d.id)) {
-                href += '?project=' + encodeURIComponent(projectId);
+            // Regla principal · vistes project-scoped (no global) sempre reben ?project=
+            // si en tenim. Globals SOLS si està a la llista d'excepcions.
+            const shouldAppend = projectId && (!d.global || ALWAYS_APPEND_PROJECT_IF_GLOBAL.has(d.id));
+            if (shouldAppend) {
+                href += (href.includes('?') ? '&' : '?') + 'project=' + encodeURIComponent(projectId);
             }
             return {
                 ...d,
@@ -203,7 +255,7 @@ function _esc(s) {
 
 // Mapeo de routes globales a labels legibles
 const ROUTE_LABELS = Object.freeze({
-    '/dashboard':  '🏠 Inicio',
+    '/home':       '🏠 Inicio',
     '/map':        '🗺 Mapa',
     '/sops':       '📜 SOPs',
     '/kanban':     '📋 Kanban',
@@ -260,7 +312,7 @@ export function buildBreadcrumb({ pathname = '/', search = '', projects = [] } =
 
     const out = [];
     // Inicio siempre primero (excepto en `/` y `/dashboard`)
-    out.push({ label: '🏠 Inicio', href: '/dashboard', current: false });
+    out.push({ label: '🏠 Inicio', href: '/home', current: false });
 
     // Caso /n/{id}
     const nMatch = path.match(/^\/n\/(.+)$/);
@@ -284,7 +336,7 @@ export function buildBreadcrumb({ pathname = '/', search = '', projects = [] } =
     }
     // Caso global sin project · ruta conocida
     else if (ROUTE_LABELS[path]) {
-        if (path === '/dashboard') {
+        if (path === '/home') {
             // ya tenemos Inicio · marcamos current
             out[0].current = true;
         } else {
@@ -549,7 +601,7 @@ export function ensureGlobalNavStyle() {
 // Categoria → ruta representativa (no necessàriament la primera del grup,
 // sinó la que té més sentit com a "landing" mobile).
 const BOTTOM_NAV_DEFAULTS = Object.freeze({
-    home:       '/dashboard',
+    home:       '/home',
     operations: '/map',
     knowledge:  '/tags',
     market:     '/market',
@@ -588,7 +640,7 @@ function _categoryForPath(pathname = '') {
 export function renderBottomNavHtml({ pathname = '', projectId = null, active = null } = {}) {
     const activeCat = active || _categoryForPath(pathname);
     const items = NAV_CATEGORIES.map(cat => {
-        let href = BOTTOM_NAV_DEFAULTS[cat.id] || '/dashboard';
+        let href = BOTTOM_NAV_DEFAULTS[cat.id] || '/home';
         // Operations és project-aware quan hi ha projectId
         if (cat.id === 'operations' && projectId) {
             href = '/map?project=' + encodeURIComponent(projectId);

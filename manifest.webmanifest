@@ -1,0 +1,57 @@
+{
+  "name": "TeamTowers SOS V11 · Swarm Operative System",
+  "short_name": "SOS",
+  "description": "Cervell extés cooperatiu · local-first · IA + permaweb + blockchain · gestió de valor en totes les dimensions",
+  "start_url": "/home",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#6366f1",
+  "background_color": "#0a0e1a",
+  "lang": "ca",
+  "categories": ["productivity", "business", "social"],
+  "icons": [
+    {
+      "src": "/icons/sos.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/sos.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Avui",
+      "short_name": "Avui",
+      "description": "Què tinc d'avui · home dashboard",
+      "url": "/home",
+      "icons": [{ "src": "/icons/sos.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Crear projecte",
+      "short_name": "Crear",
+      "description": "Nou projecte amb IA",
+      "url": "/create",
+      "icons": [{ "src": "/icons/sos.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Captura ràpida",
+      "short_name": "Captura",
+      "description": "Nota · WO · idea · skill",
+      "url": "/home?capture=1",
+      "icons": [{ "src": "/icons/sos.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Timeline",
+      "short_name": "Timeline",
+      "description": "Activitat de la xarxa",
+      "url": "/timeline",
+      "icons": [{ "src": "/icons/sos.svg", "sizes": "192x192" }]
+    }
+  ]
+}

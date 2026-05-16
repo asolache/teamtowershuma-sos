@@ -14,6 +14,7 @@ import { store } from '../core/store.js';
 import { KB }    from '../core/kb.js';
 import {
     buildGraphFromKb, graphStats, MIND_TYPE_COLORS, colorForType,
+    assignSpatialLayout, tierForType, PHI,
 } from '../core/mindGraphService.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
 import { visibleProjects } from '../core/projectFilter.js';
@@ -41,6 +42,9 @@ export default class MindGraphView {
         this.graph    = { nodes: [], edges: [] };
         this.simulation = null;
         this.filter   = { onlyProjectId: '', minTagWeight: 1, includeTagEdges: true };
+        // H8.2 · galaxy mode (per defecte) vs. classic force-directed
+        this.layoutMode = 'galaxy';
+        this.depth3d    = true;   // pseudo-3D · opacitat/escala per cz
     }
 
     async getHtml() {
@@ -93,6 +97,11 @@ export default class MindGraphView {
                 <select id="mgProjectFilter" title="Filtrar por proyecto">
                     <option value="">Todo el grafo (KB)</option>
                 </select>
+                <select id="mgLayoutMode" title="Layout · galàxia per sector (φ) o clàssic force-directed">
+                    <option value="galaxy">🌌 Galàxies (sector · φ)</option>
+                    <option value="classic">🕸 Force-directed clàssic</option>
+                </select>
+                <label title="Pseudo-3D · galàxies més llunyanes es veuen més tènues"><input type="checkbox" id="mg3d" checked> Profunditat 3D</label>
                 <label><input type="checkbox" id="mgTagEdges" checked> Aristas por tags</label>
                 <label>Min weight tags <input type="number" id="mgMinTag" value="1" min="1" max="9" style="width:50px;"></label>
                 <span id="mgStatLine" style="margin-left:auto;color:var(--text-muted);font-family:monospace;font-size:0.72rem;">cargando…</span>
@@ -118,6 +127,10 @@ export default class MindGraphView {
                     <h3 style="margin-top:1.2rem;">Cómo navegar</h3>
                     <div style="font-size:0.75rem;color:var(--text-secondary);line-height:1.45;">
                         Click en un nodo → abre <code>/n/{id}</code> · arrastra para reorganizar · scroll/pinch para zoom · doble click en canvas para liberar.
+                    </div>
+                    <h3 style="margin-top:1.2rem;">🌌 Layout galàctic</h3>
+                    <div style="font-size:0.74rem;color:var(--text-secondary);line-height:1.45;">
+                        Cada <strong>sector</strong> és una galàxia (centres distribuïts en espiral àuria). Dins de cada galàxia, els nodes formen <strong>capes de ceba</strong> per tipus: <em>project</em> al centre, després <em>roles · transactions</em>, <em>SOPs · WOs · workshops</em>, <em>market · ledger</em>, perifèria <em>identity · folders · SOC</em>. Els radis segueixen la <strong>proporció àuria φ ≈ 1.618</strong>. La profunditat 3D atenua galàxies llunyanes.
                     </div>
                 </aside>
             </div>
@@ -240,6 +253,14 @@ export default class MindGraphView {
             this.filter.minTagWeight = isNaN(v) || v < 1 ? 1 : v;
             this._rebuildAndDraw();
         });
+        document.getElementById('mgLayoutMode')?.addEventListener('change', e => {
+            this.layoutMode = e.target.value || 'galaxy';
+            this._rebuildAndDraw();
+        });
+        document.getElementById('mg3d')?.addEventListener('change', e => {
+            this.depth3d = e.target.checked;
+            this._rebuildAndDraw();
+        });
     }
 
     async _loadD3() {
@@ -300,17 +321,18 @@ export default class MindGraphView {
         if (empty) empty.style.display = 'none';
 
         const canvas = document.getElementById('mgCanvas');
-        const width  = canvas.clientWidth || 800;
-        const height = canvas.clientHeight || 600;
+        // H8.2 · viewBox més gran que el viewport · espai per a galàxies + zoom
+        const vw = Math.max(canvas.clientWidth  || 800,  1400);
+        const vh = Math.max(canvas.clientHeight || 600,  1000);
 
         d3.select(svgEl).selectAll('*').remove();
-        const svg = d3.select(svgEl).attr('viewBox', `0 0 ${width} ${height}`);
+        const svg = d3.select(svgEl).attr('viewBox', `0 0 ${vw} ${vh}`).attr('preserveAspectRatio', 'xMidYMid meet');
 
         // Capa zoom
         const g = svg.append('g');
-        svg.call(d3.zoom().scaleExtent([0.2, 4]).on('zoom', (e) => g.attr('transform', e.transform)));
+        svg.call(d3.zoom().scaleExtent([0.15, 4]).on('zoom', (e) => g.attr('transform', e.transform)));
 
-        // Defs · marker arrowheads para aristas relation
+        // Defs · marker + radial-gradient per a halos de galàxia (pseudo-3D)
         const defs = svg.append('defs');
         defs.append('marker').attr('id', 'mg-arrow').attr('viewBox', '0 0 10 10')
             .attr('refX', 9).attr('refY', 5).attr('markerWidth', 6).attr('markerHeight', 6).attr('orient', 'auto')
@@ -319,34 +341,99 @@ export default class MindGraphView {
         const nodes = this.graph.nodes.map(n => ({ ...n }));
         const links = this.graph.edges.map(e => ({ ...e }));
 
+        // H8.2 · assigna layout galàctic ABANS d'iniciar la sim (anchors)
+        let sectorMeta = { sectorCenters: {}, sectors: [], sectorCount: 0 };
+        if (this.layoutMode === 'galaxy') {
+            // Reconstruir un graph-like amb nodes mutables (assignSpatialLayout muta)
+            sectorMeta = assignSpatialLayout({ nodes }, { width: vw, height: vh, baseRingR: 100 });
+        }
+
+        // Sector halos · radial gradient subtil per a cada galàxia · pseudo-3D
+        if (this.layoutMode === 'galaxy') {
+            const haloLayer = g.append('g').attr('class', 'mg-halos').attr('pointer-events', 'none');
+            const haloR = Math.max(140, 100 * Math.pow(PHI, 2.4));   // engloba les 5 capes
+            for (const [key, s] of Object.entries(sectorMeta.sectorCenters)) {
+                // gradient únic per a aquest sector
+                const gid = 'mg-halo-' + key.replace(/[^a-zA-Z0-9-]/g, '_');
+                const grad = defs.append('radialGradient').attr('id', gid).attr('cx', '50%').attr('cy', '50%').attr('r', '50%');
+                const baseHue = (s.index * 137.508) % 360;   // golden angle per a hue
+                grad.append('stop').attr('offset', '0%').attr('stop-color', `hsla(${baseHue}, 70%, 55%, ${this.depth3d ? 0.18 - 0.10 * s.cz : 0.10})`);
+                grad.append('stop').attr('offset', '100%').attr('stop-color', 'transparent');
+                haloLayer.append('circle')
+                    .attr('cx', s.cx).attr('cy', s.cy).attr('r', haloR)
+                    .attr('fill', `url(#${gid})`)
+                    .attr('opacity', this.depth3d ? (1 - 0.55 * s.cz) : 0.85);
+                // Etiqueta sector al centre
+                haloLayer.append('text')
+                    .attr('x', s.cx).attr('y', s.cy - haloR * 0.78).attr('text-anchor', 'middle')
+                    .attr('font-size', 14 - 4 * s.cz).attr('font-weight', 700)
+                    .attr('fill', `hsla(${baseHue}, 60%, 75%, ${this.depth3d ? 0.6 - 0.30 * s.cz : 0.5})`)
+                    .attr('font-family', 'system-ui, sans-serif')
+                    .attr('letter-spacing', '0.1em').attr('text-transform', 'uppercase')
+                    .text('· ' + key + ' ·');
+            }
+        }
+
         // Stop sim previa si existía
         if (this.simulation) this.simulation.stop();
 
+        // H8.2 · forces · galaxy mode usa forceX/Y per-node + forceRadial per
+        // a la capa de ceba (tier) · classic mode usa forceCenter clàssic.
+        const linkDist = (d) => {
+            const base = d.kind === 'parent' ? 80 : d.kind === 'relation' ? 100 : 160;
+            return this.layoutMode === 'galaxy' ? base * 0.7 : base;
+        };
+        const charge = this.layoutMode === 'galaxy' ? -260 : -320;
+
         const sim = d3.forceSimulation(nodes)
-            .force('link',    d3.forceLink(links).id(d => d.id).distance(d => d.kind === 'parent' ? 50 : d.kind === 'relation' ? 70 : 110).strength(d => d.kind === 'parent' ? 1 : 0.3))
-            .force('charge',  d3.forceManyBody().strength(-180))
-            .force('center',  d3.forceCenter(width / 2, height / 2))
-            .force('collide', d3.forceCollide().radius(d => 14 + (d.weight || 1) * 2));
+            .force('link',    d3.forceLink(links).id(d => d.id).distance(linkDist).strength(d => d.kind === 'parent' ? 1 : 0.3))
+            .force('charge',  d3.forceManyBody().strength(charge))
+            .force('collide', d3.forceCollide().radius(d => 22 + (d.weight || 1) * 3))
+            .alphaDecay(0.025);
+
+        if (this.layoutMode === 'galaxy') {
+            // Atracció a la posició (cx, cy) inicial · suau · permet als links flexibilitzar
+            sim.force('xpos', d3.forceX(d => d.cx).strength(0.10));
+            sim.force('ypos', d3.forceY(d => d.cy).strength(0.10));
+            // Capa de ceba per tier · forceRadial des del centre de cada galàxia
+            sim.force('radial', d3.forceRadial(d => d.ringRadius, d => d.sectorCx, d => d.sectorCy).strength(0.35));
+        } else {
+            sim.force('center', d3.forceCenter(vw / 2, vh / 2));
+        }
 
         // Aristas (3 capas con estilos distintos)
-        const link = g.append('g').attr('stroke-opacity', 0.6).selectAll('line').data(links).join('line')
+        const link = g.append('g').attr('stroke-opacity', 0.55).selectAll('line').data(links).join('line')
             .attr('stroke', d => d.kind === 'parent' ? '#475569' : d.kind === 'relation' ? '#6366f1' : '#7dd3fc')
             .attr('stroke-width', d => d.kind === 'parent' ? 1.5 : d.kind === 'relation' ? 1.2 : 0.6 + (d.weight || 1) * 0.4)
             .attr('stroke-dasharray', d => d.kind === 'tag' ? '3 2' : null)
             .attr('marker-end', d => d.kind === 'relation' ? 'url(#mg-arrow)' : null);
 
-        // Nodos (círculo + label)
+        // Nodos · pseudo-3D · opacitat + escala en funció de sectorCz (depth)
         const tooltip = document.getElementById('mgTooltip');
-        const node = g.append('g').selectAll('g.mg-node').data(nodes).join('g').attr('class', 'mg-node').style('cursor', 'pointer');
+        const depth3d = this.depth3d && this.layoutMode === 'galaxy';
+        const depthOpacity = (d) => depth3d ? (1 - 0.55 * (d.sectorCz ?? 0)) : 1;
+        const depthScale   = (d) => depth3d ? (1 - 0.30 * (d.sectorCz ?? 0)) : 1;
+
+        const node = g.append('g').selectAll('g.mg-node').data(nodes).join('g')
+            .attr('class', 'mg-node').style('cursor', 'pointer')
+            .attr('opacity', d => depthOpacity(d));
 
         node.append('circle')
-            .attr('r', d => 6 + Math.min(6, (d.weight || 1) * 2))
+            .attr('r', d => (6 + Math.min(6, (d.weight || 1) * 2)) * depthScale(d))
             .attr('fill', d => d.color)
             .attr('stroke', '#0a0a14').attr('stroke-width', 1.5);
 
+        // Anell tier · subtil halo brillant més fort quan el tier és central (0)
+        node.filter(d => this.layoutMode === 'galaxy' && d.tier === 0).append('circle')
+            .attr('r', d => (10 + Math.min(8, (d.weight || 1) * 2)) * depthScale(d))
+            .attr('fill', 'none')
+            .attr('stroke', d => d.color)
+            .attr('stroke-opacity', 0.35).attr('stroke-width', 1).attr('stroke-dasharray', '2 3');
+
         node.append('text')
             .text(d => (d.label || d.id).slice(0, 22))
-            .attr('x', 10).attr('y', 4).attr('font-size', 9.5)
+            .attr('x', d => 12 * depthScale(d)).attr('y', 4)
+            .attr('font-size', d => Math.max(7, 9.5 * depthScale(d)))
             .attr('fill', '#cbd5e1').attr('font-family', 'system-ui, sans-serif')
             .attr('pointer-events', 'none');
 
@@ -355,7 +442,7 @@ export default class MindGraphView {
             .on('mouseenter', (event, d) => {
                 if (!tooltip) return;
                 tooltip.innerHTML = `
-                    <div class="ttype">${this._esc(d.type)}</div>
+                    <div class="ttype">${this._esc(d.type)}${d.sectorKey ? ' · sector ' + this._esc(d.sectorKey) : ''}${typeof d.tier === 'number' ? ' · tier ' + d.tier : ''}</div>
                     <div class="ttitle">${this._esc(d.label || d.id)}</div>
                     <div class="tid">${this._esc(d.id)}</div>
                     ${d.tags && d.tags.length ? `<div style="margin-top:4px;font-size:0.7rem;color:var(--accent-indigo);">${d.tags.slice(0, 3).map(t => '#' + this._esc(t)).join(' ')}</div>` : ''}

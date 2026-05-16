@@ -21,6 +21,12 @@ import {
     MARKET_ITEM_KINDS, MARKET_VISIBILITY, computeSaving,
     DEFAULT_CONVENTIONAL_RANGES,
 } from '../core/marketService.js';
+import {
+    buildCatalog, computeCatalogStats, SELLABLE_SOP_KEYWORD,
+} from '../core/marketCatalogService.js';
+import {
+    PUBLIC_MARKET_ITEM_TYPE, PUBLIC_WORKSHOP_TYPE,
+} from '../core/publicEntityService.js';
 import { searchCnae, getCnae } from '../core/cnaeSeed.js';
 import { KnowledgeLoader } from '../core/KnowledgeLoader.js';
 import { renderNavLinksHtml, renderNavGroupedHtml, ensureNavGroupStyle, bindNavGroupDropdowns } from '../core/navService.js';
@@ -90,6 +96,8 @@ export default class MarketView {
             .mk-count  { color:var(--text-muted); font-size:0.78rem; font-family:monospace; }
 
             .mk-main   { padding:1.2rem 1.5rem; flex:1; overflow-y:auto; max-width:1400px; margin:0 auto; width:100%; box-sizing:border-box; }
+            .mk-stats  { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:1rem; padding:8px 12px; background:var(--bg-panel); border:1px solid var(--border-default); border-radius:6px; }
+            .mk-stat-chip { background:#0006; border:1px solid var(--border-default); border-radius:999px; padding:3px 10px; font-size:11px; font-family:var(--font-mono); font-weight:600; color:var(--text-secondary); }
             .mk-empty  { text-align:center; padding:3rem 1rem; color:var(--text-muted); border:1px dashed #2a2a35; border-radius:8px; margin-top:1.5rem; }
             .mk-grid   { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:1rem; }
             .mk-card   { background:var(--bg-panel); border:1px solid var(--border-default); border-left:3px solid var(--mk-color,#6366f1); border-radius:8px; padding:0.9rem; cursor:pointer; transition:background 0.15s; display:flex; flex-direction:column; gap:0.4rem; }
@@ -150,6 +158,15 @@ export default class MarketView {
                 <span id="mkCount" class="mk-count">cargando…</span>
             </div>
 
+            <!-- MKT-002 · banner cross-link · /market és l'EDITOR local · per al
+                 descobridor federat (items publicats al permaweb d'altres usuaris)
+                 cal anar a /opportunities?tab=market -->
+            <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.30);border-radius:6px;padding:8px 14px;margin:8px 1.5rem;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-secondary);line-height:1.45;">
+                <span style="font-size:16px;">💡</span>
+                <span><strong>Aquesta vista és l'<u>editor local</u></strong> · els teus productes/serveis. Per a descobrir el <strong>mercat federat cross-device</strong> (items publicats al permaweb) ves a
+                    <a href="/opportunities?tab=market" data-link style="color:var(--accent-indigo);font-weight:600;">/opportunities · 🛍 Productes</a>.
+                </span>
+            </div>
             <div class="mk-main" id="mkMain">
                 <p style="color:var(--text-muted);">Cargando…</p>
             </div>
@@ -174,9 +191,42 @@ export default class MarketView {
 
     async _load() {
         await KB.init();
-        this.items = await KB.query({ type: 'market_item' });
+        // MKT-002 · els projects que omplen el dropdown són `visibleProjects()`
+        // (exclou arxivats/test). Així el set de projectes disponibles és
+        // coherent · però aquí carreguem TOTS els items (incloent òrfens i
+        // dels arxivats per si l'usuari activa `showArchived`).
+        const allProjects = (store.getState().projects || []);
+        this.projects = visibleProjects(allProjects);
+        const visibleIds = new Set(this.projects.map(p => p.id));
+        // MARKET-CATALOG · agreguem 5 fonts · 3 locals + 2 permaweb (cross-device)
+        const [rawItems, rawWorkshops, rawSops, pubItems, pubWorkshops] = await Promise.all([
+            KB.query({ type: 'market_item' }).catch(() => []),
+            KB.query({ type: 'workshop'    }).catch(() => []),
+            KB.query({ type: 'sop'         }).catch(() => []),
+            KB.query({ type: PUBLIC_MARKET_ITEM_TYPE }).catch(() => []),
+            KB.query({ type: PUBLIC_WORKSHOP_TYPE }).catch(() => []),
+        ]);
+        this.itemsAll = rawItems || [];
+        // Items NO associats a un projecte (sense providerProjectId) → visibles
+        // sempre. Items d'un projecte concret · visibles sols si el projecte
+        // és a `visibleProjects` (no arxivat · no test).
+        this.items = (rawItems || []).filter(it => {
+            const pid = it?.content?.providerProjectId;
+            if (!pid) return true;
+            return visibleIds.has(pid);
+        });
         this.items.sort((a, b) => (b.content?.createdAt || b.createdAt || 0) - (a.content?.createdAt || a.createdAt || 0));
-        this.projects = visibleProjects(store.getState().projects);
+
+        // Catalog unificat · local + permaweb federation · pure
+        this.catalog = buildCatalog({
+            marketItems:       this.items,
+            workshops:         rawWorkshops || [],
+            sops:              rawSops || [],
+            publicMarketItems: pubItems || [],
+            publicWorkshops:   pubWorkshops || [],
+            visibleProjectIds: visibleIds,
+        });
+        this.catalogStats = computeCatalogStats(this.catalog);
     }
 
     _populateProjectSelect() {
@@ -208,16 +258,50 @@ export default class MarketView {
         const count = document.getElementById('mkCount');
         if (!main) return;
 
-        const filtered = searchMarketItems(this.items, this.filter);
-        if (count) count.textContent = filtered.length + ' / ' + this.items.length + (this.items.length === 1 ? ' oferta' : ' ofertas');
+        // MARKET-CATALOG · filtrem catalog (multi-source) en lloc de sols market_items.
+        // filterCatalog usa el shape unificat · però alguns filtres del UI antic
+        // s'apliquen sols a market_item · els fem servir parcialment.
+        const cat = this.catalog || [];
+        const filtered = cat.filter(e => {
+            if (this.filter.kinds && this.filter.kinds.length > 0 && !this.filter.kinds.includes(e.kind)) return false;
+            if (this.filter.visibility && e.visibility !== this.filter.visibility) return false;
+            if (this.filter.projectId && e.providerProjectId !== this.filter.projectId) return false;
+            if (this.filter.text) {
+                const text = String(this.filter.text).toLowerCase();
+                const hay = (e.title + ' ' + e.description + ' ' + (e.tags || []).join(' ')).toLowerCase();
+                if (!hay.includes(text)) return false;
+            }
+            // sectorTT i cnaes · sols pels market_items raw
+            if (this.filter.sectorTT && e.raw?.content?.sectorTT !== this.filter.sectorTT) return false;
+            return true;
+        });
+        if (count) count.textContent = filtered.length + ' / ' + cat.length + (cat.length === 1 ? ' oferta' : ' ofertas');
+
+        // Stats strip · per kind + per source
+        const stats = this.catalogStats || { total: 0, byKind: {}, bySourceType: {} };
+        const permawebCount = (stats.bySourceType.public_market_item_entry || 0) + (stats.bySourceType.public_workshop_entry || 0);
+        const statsHtml = `
+            <div class="mk-stats">
+                <span class="mk-stat-chip"><strong>${stats.total}</strong> total</span>
+                ${permawebCount > 0                     ? `<span class="mk-stat-chip" style="color:#22c55e;border-color:#22c55e50;" title="Cross-device · federated">🌐 ${permawebCount} permaweb</span>` : ''}
+                ${(stats.byKind.product || 0) > 0       ? `<span class="mk-stat-chip" style="color:#86efac;">📦 ${stats.byKind.product} prod</span>` : ''}
+                ${(stats.byKind.service || 0) > 0       ? `<span class="mk-stat-chip" style="color:#a5b4fc;">💡 ${stats.byKind.service} serv</span>` : ''}
+                ${(stats.byKind.workshop || 0) > 0      ? `<span class="mk-stat-chip" style="color:#fbbf24;">🎓 ${stats.byKind.workshop} workshop</span>` : ''}
+                ${(stats.byKind.subscription || 0) > 0  ? `<span class="mk-stat-chip" style="color:#f472b6;">🔁 ${stats.byKind.subscription} subs</span>` : ''}
+                ${(stats.byKind.skill || 0) > 0         ? `<span class="mk-stat-chip" style="color:#7dd3fc;">🤲 ${stats.byKind.skill} skill</span>` : ''}
+                ${(stats.byKind.template || 0) > 0      ? `<span class="mk-stat-chip" style="color:#fb7185;">📋 ${stats.byKind.template} plt</span>` : ''}
+                ${(stats.bySourceType.sop || 0) > 0     ? `<span class="mk-stat-chip" style="color:#cbd5e1;">📜 ${stats.bySourceType.sop} sop</span>` : ''}
+                ${stats.avgPrice != null                ? `<span class="mk-stat-chip" style="color:var(--accent-green);">💰 €${stats.avgPrice} promig</span>` : ''}
+                <a href="/opportunities" data-link class="mk-stat-chip" style="color:var(--accent-indigo);text-decoration:none;border-color:var(--accent-indigo)50;">↻ Sync permaweb</a>
+            </div>`;
 
         if (!filtered.length) {
-            const isEmpty = this.items.length === 0;
-            main.innerHTML = `
+            const isEmpty = cat.length === 0;
+            main.innerHTML = statsHtml + `
                 <div class="mk-empty">
                     ${isEmpty
                         ? `<p>El Mercado SOS está vacío.</p>
-                           <p style="font-size:0.85rem;color:#777;">Publica tu primera oferta · cualquier output del VNA del proyecto puede convertirse en producto/servicio del catálogo.</p>
+                           <p style="font-size:0.85rem;color:#777;">Publica tu primera oferta · cualquier output del VNA del proyecto puede convertirse en producto/servicio del catálogo. També exposem automàticament workshops + SOPs marcats com a vendibles.</p>
                            <p style="margin-top:1rem;"><button class="mk-btn mk-btn-primary" id="mkEmptyNew">＋ Nueva oferta</button></p>`
                         : `<p>Sin resultados con los filtros actuales.</p>
                            <p style="font-size:0.85rem;color:#777;">Prueba a relajar el buscador o cambia el sector / tipo.</p>`}
@@ -226,10 +310,62 @@ export default class MarketView {
             return;
         }
 
-        main.innerHTML = `<div class="mk-grid">${filtered.map(it => this._cardHtml(it)).join('')}</div>`;
-        main.querySelectorAll('.mk-card').forEach(card => {
-            card.addEventListener('click', () => this._openDetailModal(card.dataset.itemId));
+        main.innerHTML = statsHtml + `<div class="mk-grid">${filtered.map(e => this._catalogCardHtml(e)).join('')}</div>`;
+        // Click · navegar a /market/{id} (detail view nova · per a tots els sources)
+        main.querySelectorAll('.mk-card[data-cat-id]').forEach(card => {
+            card.addEventListener('click', () => {
+                const id = card.dataset.catId;
+                if (!id) return;
+                // Si és market_item · podem mantenir modal antic (rich detail · té saving)
+                // Per tots els altres · navegar a /market/{id}
+                const entry = (this.catalog || []).find(x => x.id === id);
+                if (entry && entry.sourceType === 'market_item') {
+                    // També suportem /market/{id} per market_item · usuari pot triar
+                    if (window.event && window.event.shiftKey) {
+                        window.location.href = '/market/' + encodeURIComponent(id);
+                        return;
+                    }
+                    this._openDetailModal(id);
+                } else {
+                    window.location.href = '/market/' + encodeURIComponent(id);
+                }
+            });
         });
+    }
+
+    // _catalogCardHtml · renderitza una CatalogEntry (multi-source)
+    _catalogCardHtml(entry) {
+        const kindColor = entry.kind === 'service' ? '#a5b4fc'
+            : entry.kind === 'workshop' ? '#fbbf24'
+            : entry.kind === 'product' ? '#86efac'
+            : entry.kind === 'template' ? '#f472b6'
+            : entry.kind === 'skill' ? '#7dd3fc'
+            : entry.kind === 'subscription' ? '#fb7185'
+            : '#6366f1';
+        const provider = entry.providerProjectId ? this.projects.find(p => p.id === entry.providerProjectId) : null;
+        const tags = (Array.isArray(entry.tags) ? entry.tags : []).slice(0, 5);
+        const sourceBadge = entry.isPermaweb
+            ? `<span style="background:#22c55e18;color:#22c55e;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;" title="Cross-device · ${entry.txId ? this._esc(entry.txId.slice(0, 10)) + '…' : 'permaweb'}">🌐 permaweb</span>`
+            : entry.sourceType === 'workshop'
+                ? '<span style="background:#fbbf2418;color:#fbbf24;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;">📥 workshop</span>'
+                : entry.sourceType === 'sop'
+                    ? '<span style="background:#cbd5e118;color:#cbd5e1;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;">📥 sop</span>'
+                    : '';
+        return `
+            <div class="mk-card" data-cat-id="${this._esc(entry.id)}" style="--mk-color:${kindColor};">
+                <div class="mk-kind">${KIND_LABELS[entry.kind] || entry.kind}${entry.visibility && entry.visibility !== 'public' ? ' · 🔒 ' + entry.visibility : ''} ${sourceBadge}</div>
+                <h4>${this._esc(entry.title || entry.id)}</h4>
+                ${entry.description ? `<div class="mk-desc">${this._esc(String(entry.description).slice(0, 200))}</div>` : ''}
+                <div class="mk-meta">
+                    ${provider ? `<span>· ${this._esc(provider.nombre || provider.id)}</span>` : ''}
+                    ${entry.cnae ? `<span>CNAE ${this._esc(entry.cnae)}</span>` : ''}
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;">
+                    <span class="mk-price">${entry.priceEur != null ? entry.priceEur + ' €' : '— €'}</span>
+                </div>
+                ${tags.length ? `<div class="mk-tags">${tags.map(t => `<span class="mk-tag ${String(t).includes(':') ? 'tax' : ''}">${this._esc(t)}</span>`).join('')}</div>` : ''}
+            </div>
+        `;
     }
 
     _cardHtml(item) {
