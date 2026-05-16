@@ -108,7 +108,11 @@ export default class ProjectCreationV2View {
 
             .pcv-hero { background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(99,102,241,0.10)); border:1px solid rgba(168,85,247,0.3); border-radius:10px; padding:1.4rem 1.6rem; margin-bottom:1.2rem; }
             .pcv-hero h1 { margin:0 0 0.4rem 0; font-size:1.5rem; }
-            .pcv-hero p { margin:0; font-size:0.9rem; color:var(--text-secondary); line-height:1.55; }
+            .pcv-hero p { margin:0 0 0.6rem 0; font-size:0.92rem; color:var(--text-secondary); line-height:1.5; }
+            .pcv-hero-pill { display:inline-block; padding:5px 12px; background:rgba(255,255,255,0.06); border-radius:999px; font-size:0.78rem; color:var(--text-secondary); }
+            .pcv-hero-pill code { font-family:var(--font-mono); background:rgba(168,85,247,0.2); padding:1px 6px; border-radius:3px; font-size:0.78rem; color:var(--text-main); }
+            .pcv-hero-pill a { color:var(--accent-indigo); text-decoration:none; }
+            .pcv-hero-pill a:hover { text-decoration:underline; }
 
             .pcv-form { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:10px; padding:1.3rem 1.5rem; }
             .pcv-field { margin-bottom:1rem; }
@@ -186,11 +190,12 @@ export default class ProjectCreationV2View {
 
             <div class="pcv-main">
                 <div class="pcv-hero">
-                    <h1>🚀 Crea un projecte amb mapa de valor garantit</h1>
+                    <h1>🚀 Crea el teu projecte amb IA · en 90 segons</h1>
+                    <p>Roles · mapa de valor · canvas · SOPs · Work Orders · tot llest per executar. Score ≥85/100 garantit abans de desar.</p>
                     ${this._presetTemplateId ? `
-                        <p>Plantilla pre-seleccionada · <code style="font-family:var(--font-mono);background:rgba(168,85,247,0.2);padding:1px 6px;border-radius:3px;font-size:0.82rem;">${this._esc(this._presetTemplateId)}</code> · pipeline · classify → seed → personalize → validate (rubric 12 criteris + integritat 7 regles) → persist. Qualitat ≥85/100 garantida abans de desar. <a href="/process-catalog" data-link style="color:var(--accent-indigo);">↩ Canviar plantilla</a></p>
+                        <div class="pcv-hero-pill">📐 Plantilla activa · <code>${this._esc(this._presetTemplateId)}</code> · <a href="/process-catalog" data-link>canvia-la</a></div>
                     ` : `
-                        <p>Pipeline · classify → seed (template) → personalize → validate (rubric + integritat) → persist. Tots els templates puntuen ≥85/100 abans de desar. Roles + deliverables + transactions Lean + SOPs estructurats + SOC checklist · llestos per a operar. <a href="/process-catalog" data-link style="color:var(--accent-indigo);">📐 Començar des d'una plantilla?</a></p>
+                        <div class="pcv-hero-pill">💡 <a href="/process-catalog" data-link>O comença des d'una plantilla</a></div>
                     `}
                 </div>
 
