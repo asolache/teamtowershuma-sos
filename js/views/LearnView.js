@@ -18,8 +18,16 @@
 
 import { loadIndex, searchIndex, listByFolder, getRoadmap, listRoles, stats } from '../core/knowledgeIndexService.js';
 import { ROADMAPS_BY_ROLE } from '../core/knowledgeRoadmaps.js';
+import { store } from '../core/store.js';
 
-const TPL_VERSION = 'learn-v2-hub';
+const TPL_VERSION = 'learn-v3-subhub';
+
+// LEARN-CONSOLIDATION-PR-B · 7 modes ·
+//   roadmaps · carpetas · search       (originals · LEARN-HUB-001)
+//   sectors · mind · folders · tags    (absorbits a aquest hub · PR-B)
+// Cada mode és un subhub · els 4 nous tenen "Obre vista completa →" link
+// que porta a la vista standalone existent (compatibilitat 100%).
+const VALID_MODES = Object.freeze(['roadmaps', 'carpetas', 'search', 'sectors', 'mind', 'folders', 'tags']);
 
 const FOLDER_META = Object.freeze({
     vision:   { icon: '🧭', label: 'Visió',         desc: 'Documents fundacionals · principis VNA · arquitectura · cadena canònica' },
@@ -50,7 +58,9 @@ export default class LearnView {
             if (typeof window !== 'undefined' && window.location) {
                 const p = new URLSearchParams(window.location.search);
                 const mode = p.get('mode');
-                if (['carpetas', 'search', 'roadmaps'].includes(mode)) this._mode = mode;
+                if (VALID_MODES.includes(mode)) this._mode = mode;
+                const tab = p.get('tab');
+                if (tab && VALID_MODES.includes(tab)) this._mode = tab;
                 const role = p.get('role');
                 if (role && ROADMAPS_BY_ROLE[role]) this._activeRole = role;
                 if (p.get('q')) { this._mode = 'search'; this._search.query = p.get('q'); }
@@ -187,13 +197,21 @@ export default class LearnView {
                 </div>
 
                 <div class="lv-tabs" role="tablist">
-                    <button class="lv-tab ${this._mode === 'roadmaps' ? 'active' : ''}" data-mode="roadmaps">🤲 Roadmaps per rol</button>
-                    <button class="lv-tab ${this._mode === 'carpetas' ? 'active' : ''}" data-mode="carpetas">📁 Carpetas</button>
+                    <button class="lv-tab ${this._mode === 'roadmaps' ? 'active' : ''}" data-mode="roadmaps">🤲 Roadmaps</button>
+                    <button class="lv-tab ${this._mode === 'carpetas' ? 'active' : ''}" data-mode="carpetas">📚 Knowledge</button>
                     <button class="lv-tab ${this._mode === 'search'   ? 'active' : ''}" data-mode="search">🔍 Cerca</button>
+                    <button class="lv-tab ${this._mode === 'sectors'  ? 'active' : ''}" data-mode="sectors">🏭 Sectors</button>
+                    <button class="lv-tab ${this._mode === 'mind'     ? 'active' : ''}" data-mode="mind">🕸 Mind</button>
+                    <button class="lv-tab ${this._mode === 'folders'  ? 'active' : ''}" data-mode="folders">📁 Carpetes</button>
+                    <button class="lv-tab ${this._mode === 'tags'     ? 'active' : ''}" data-mode="tags">🏷 Tags</button>
                 </div>
 
                 ${this._mode === 'roadmaps' ? this._renderRoadmaps()
                  : this._mode === 'carpetas' ? this._renderCarpetas()
+                 : this._mode === 'sectors'  ? this._renderSectorsTab()
+                 : this._mode === 'mind'     ? this._renderMindTab()
+                 : this._mode === 'folders'  ? this._renderFoldersTab()
+                 : this._mode === 'tags'     ? this._renderTagsTab()
                  : this._renderSearch()}
             </div>
         </div>`;
@@ -282,6 +300,131 @@ export default class LearnView {
         <div class="lv-card">
             <h2>🔍 Resultats · <span id="lvCount">${results.length}</span></h2>
             <div id="lvResults">${this._renderResults(results)}</div>
+        </div>`;
+    }
+
+    // ── SUBHUB · 4 nous tabs (PR-B · consolidació) ────────────────────────
+    _ctaFullView(href, label) {
+        return `<div style="margin-top:14px;text-align:right;">
+            <a href="${href}" data-link style="display:inline-block;padding:7px 14px;border-radius:6px;background:linear-gradient(90deg,#3b82f6,#6366f1);color:#fff;text-decoration:none;font-size:0.82rem;font-weight:600;">${this._esc(label)} →</a>
+        </div>`;
+    }
+
+    _renderSectorsTab() {
+        const sectors = (this._index?.items || []).filter(it => it.folder === 'sectors');
+        // També mostra els SOCs de carpeta socs/sectors/ (CNAE)
+        const sectorSocs = (this._index?.items || []).filter(it => it.folder === 'socs' && (it.relpath || '').includes('sectors/'));
+        return `
+        <div class="lv-card">
+            <h2>🏭 Sectors CNAE · ${sectorSocs.length} SOCs sector + ${sectors.length} fitxers</h2>
+            <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:14px;">Catàleg de sectors CNAE (A-T · UV) per a adaptació automàtica de roles · transactions · SOPs segons la indústria del projecte. Els SOCs sector són matched pel <code style="font-size:0.78rem;font-family:var(--font-mono);background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;">socMatcher</code> en crear projecte.</p>
+            <div class="lv-folder-grid">
+                ${sectorSocs.slice(0, 12).map(it => `
+                    <div class="lv-folder-card">
+                        <h3>🏷 ${this._esc(it.sector_cnae || it.title)}</h3>
+                        <div class="desc">${this._esc((it.excerpt || it.purpose || '').slice(0, 120))}</div>
+                        <div class="count">CNAE · ${this._esc(it.sector_cnae || '?')}</div>
+                        <div style="margin-top:6px;"><a href="/n/${encodeURIComponent(it.id)}" data-link style="color:var(--accent-indigo);font-size:0.75rem;text-decoration:none;">📖 Llegir SOC →</a></div>
+                    </div>`).join('')}
+            </div>
+            ${this._ctaFullView('/sectors', 'Obre vista completa de sectors')}
+        </div>`;
+    }
+
+    _renderMindTab() {
+        // Stats del KB · sense carregar tota la galàxia (delegat a /mind)
+        let kbStats = { total: 0, byType: {} };
+        try {
+            const allNodes = store.getState?.()?.nodes || {};
+            const ids = Object.keys(allNodes);
+            kbStats.total = ids.length;
+            for (const id of ids) {
+                const n = allNodes[id];
+                const t = n?.type || 'unknown';
+                kbStats.byType[t] = (kbStats.byType[t] || 0) + 1;
+            }
+        } catch (_) {}
+        const typeRows = Object.entries(kbStats.byType).sort((a, b) => b[1] - a[1]).slice(0, 12);
+
+        return `
+        <div class="lv-card">
+            <h2>🕸 Mind-as-Graph · ${kbStats.total} nodes al KB local</h2>
+            <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:14px;">Tot el coneixement del SOS és un graf · cada document · projecte · rol · transacció · SOP · WO és un node amb tags i relacions. Aquesta vista compacta mostra el comptatge per tipus; per a la vista galàctica D3 amb 3 layers d'edges · obre la vista completa.</p>
+            <div class="lv-folder-grid">
+                ${typeRows.map(([type, n]) => `
+                    <div class="lv-folder-card">
+                        <h3>${TYPE_META[type]?.icon || '·'} ${this._esc(type)}</h3>
+                        <div class="count" style="font-size:1.4rem;font-weight:700;color:${TYPE_META[type]?.color || '#94a3b8'};">${n}</div>
+                        <div class="desc">node${n === 1 ? '' : 's'} d'aquest tipus</div>
+                    </div>`).join('')}
+                ${kbStats.total === 0 ? `<div class="lv-folder-card"><h3>Buit</h3><div class="desc">Encara no hi ha nodes · crea un projecte primer.</div></div>` : ''}
+            </div>
+            ${this._ctaFullView('/mind', 'Obre Mind-Graph galàctic')}
+        </div>`;
+    }
+
+    _renderFoldersTab() {
+        let folders = [];
+        try {
+            const allNodes = store.getState?.()?.nodes || {};
+            folders = Object.values(allNodes).filter(n => n?.type === 'smart_folder');
+        } catch (_) {}
+        return `
+        <div class="lv-card">
+            <h2>📁 Carpetes intel·ligents · ${folders.length} guardades</h2>
+            <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:14px;">Queries persistents sobre el KB · cada carpeta és un filtre vivint que es recalcula amb cada nou node. Útil per a "tots els WOs pendents del projecte X" · "totes les notes amb tag #idea" · etc. Mantenen el coneixement organitzat sense duplicar res.</p>
+            ${folders.length > 0 ? `
+                <div class="lv-folder-grid">
+                    ${folders.slice(0, 12).map(f => `
+                        <div class="lv-folder-card">
+                            <h3>📂 ${this._esc(f.content?.name || f.id)}</h3>
+                            <div class="desc">${this._esc((f.content?.description || '').slice(0, 100))}</div>
+                            <div class="count">${this._esc(JSON.stringify(f.content?.query || {}).slice(0, 60))}</div>
+                            <div style="margin-top:6px;"><a href="/n/${encodeURIComponent(f.id)}" data-link style="color:var(--accent-indigo);font-size:0.75rem;text-decoration:none;">📖 Obrir →</a></div>
+                        </div>`).join('')}
+                </div>
+            ` : `<div style="padding:1.5rem;text-align:center;color:var(--text-muted);">Encara no hi ha carpetes intel·ligents. Crea'n al vista completa.</div>`}
+            ${this._ctaFullView('/folders', 'Obre gestor de carpetes')}
+        </div>`;
+    }
+
+    _renderTagsTab() {
+        // Agrega keywords de tots els items del knowledge index com a tag cloud
+        const counts = new Map();
+        for (const it of (this._index?.items || [])) {
+            for (const kw of (it.keywords || [])) {
+                const k = String(kw).toLowerCase().trim();
+                if (!k || k.length < 2) continue;
+                counts.set(k, (counts.get(k) || 0) + 1);
+            }
+        }
+        // També KB local · tags de qualsevol node
+        try {
+            const allNodes = store.getState?.()?.nodes || {};
+            for (const n of Object.values(allNodes)) {
+                const tags = n?.content?.tags || n?.tags || [];
+                for (const t of (Array.isArray(tags) ? tags : [])) {
+                    const k = String(t).toLowerCase().trim();
+                    if (!k || k.length < 2) continue;
+                    counts.set(k, (counts.get(k) || 0) + 1);
+                }
+            }
+        } catch (_) {}
+        const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 60);
+        const maxCount = sorted[0]?.[1] || 1;
+
+        return `
+        <div class="lv-card">
+            <h2>🏷 Tag cloud · ${counts.size} tags únics</h2>
+            <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:14px;">Folksonomia · etiquetes lliures aplicades a docs del <code style="font-size:0.78rem;font-family:var(--font-mono);background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;">knowledge/</code> i a nodes del KB local. La mida del tag és proporcional a la freqüència. Click → cerca instantània a la pestanya 🔍 Cerca.</p>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;line-height:1.8;">
+                ${sorted.map(([tag, c]) => {
+                    const scale = 0.7 + 0.6 * (c / maxCount);
+                    return `<a href="/learn?tab=search&q=${encodeURIComponent(tag)}" data-link style="font-size:${scale.toFixed(2)}rem;padding:3px 9px;border-radius:999px;background:rgba(99,102,241,0.12);color:var(--accent-indigo);text-decoration:none;font-weight:600;">#${this._esc(tag)} <span style="opacity:0.5;font-size:0.7rem;">${c}</span></a>`;
+                }).join('')}
+                ${sorted.length === 0 ? `<span style="color:var(--text-muted);">Encara no hi ha tags.</span>` : ''}
+            </div>
+            ${this._ctaFullView('/tags', 'Obre gestor de tags')}
         </div>`;
     }
 
