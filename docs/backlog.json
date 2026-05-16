@@ -753,6 +753,60 @@
       "estimated_cost_eur": 0.6,
       "cost_actual_eur": 0.4,
       "tags": ["batch-5-majestic", "ipad", "ux", "v80"]
+    },
+    {
+      "id": "wo-market-opportunities-merge-001",
+      "project_id": "sos-dev-internal",
+      "title": "MARKET+OPPORTUNITIES MERGE · una sola superfície de descobriment amb tota la info",
+      "description": "Fusionar MarketView (/market · 632 LOC · productes locals + savings) i OpportunitiesView (/opportunities + /discover · 784 LOC · permaweb index 5 tabs · profiles · projects · workorders · workshops · etc) en una sola superfície `/discover` amb tots els items de valor descobribles · tabs unificats (Profils · Projectes · Workorders · Productes · Workshops · Ofertes). Eliminar /market route · redirect 301 → /discover?tab=market. Veure `docs/STUDY-v2-evolution-plan-2026-05-16.md` §3 (vistes a consolidar). Manté MarketDetailView com a /market/{id} fins fer detall unificat /discover/{itemId}.",
+      "priority": "high",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "code-review", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/discoverUnified.test.js",
+        "expect": "≥30 asserts · 6 tabs · filtres compartits · search global · fallback sync permaweb"
+      },
+      "estimated_cost_eur": 8,
+      "tags": ["batch-7-v2-evol", "ux", "consolidation", "pre-alpha"]
+    },
+    {
+      "id": "wo-profile-unified-001",
+      "project_id": "sos-dev-internal",
+      "title": "PROFILE UNIFIED · evolució perfil usuari · accés total (ikigai · skills · projects · trust · wallets · attestations)",
+      "description": "Evolucionar IdentityView (/identity · 626 LOC · DID + wallets + permaweb publish) i ProfileView (/u/{handle} · 699 LOC · perfil públic amb ikigai + skills + trust + market offerings) cap a una arquitectura unificada amb 2 modes:\\n\\n1. **/me** (privat · l'usuari propi) · tabs · 🪪 Identity (DID · wallets · keyfile · Wander) · 🌸 Ikigai (4 dimensions · centre · zones) · 🤲 Skills (skills + ofertes a market) · 🚀 Projects (els meus projectes amb roles assignats) · 🤝 Trust (attestations rebudes + emeses · follow stats) · 🎓 Aprenentatge (workshops apuntats · learn_role progress) · ⚙ Backup (export JSON identity)\\n2. **/u/{handle}** (públic · perfil d'altres) · mateixos tabs però read-only · respecta privacy settings\\n\\nReutilitza `ikigaiService` · `profileService` · `skillTaxonomy` · `walletService`. Substitueix /identity per redirect a /me. Manté /u/{handle} per a perfils públics. Compatible amb publishProfileToPermaweb.",
+      "priority": "high",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "code-review", "test-run", "text-generate"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/profileUnified.test.js",
+        "expect": "≥35 asserts · 7 tabs · public/private mode · ikigai integration · privacy filter"
+      },
+      "estimated_cost_eur": 10,
+      "tags": ["batch-7-v2-evol", "ux", "consolidation", "pre-alpha", "user-360"]
+    },
+    {
+      "id": "wo-tdd-v2-suite-001",
+      "project_id": "sos-dev-internal",
+      "title": "TDD-V2-SUITE · cobertura TDD completa de les vistes V2 oficials abans d'alfa",
+      "description": "Suite TDD per a cada vista V2 oficial garantint contractes mínims abans d'alfa privada · `dashboardV2.test.js` (hero · empty state · feed · projects grid) · `settingsV2.test.js` (5 tabs · API keys · theme · budget · permaweb · backup) · `projectHubV2.test.js` (7 zones · activity feed · IA suggestions) · `discoverUnified.test.js` (tabs · search · filtres) · `profileUnified.test.js` (public/private · ikigai · skills) · `routerRedirects.test.js` (done) · `migrationContract.test.js` (cap V1 sense banner). Mínim 30 asserts per vista. Objectiu · 0 regressions post-consolidació.",
+      "priority": "critical",
+      "complexity": "L",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "for f in js/tests/{dashboardV2,settingsV2,projectHubV2,discoverUnified,profileUnified,routerRedirects,migrationContract}.test.js; do node $f; done",
+        "expect": "≥210 asserts (30/suite × 7 suites) · 0 fails"
+      },
+      "estimated_cost_eur": 10,
+      "tags": ["batch-7-v2-evol", "tdd", "pre-alpha", "quality-gate"]
     }
   ]
 }
