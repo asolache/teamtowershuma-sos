@@ -807,6 +807,100 @@
       },
       "estimated_cost_eur": 10,
       "tags": ["batch-7-v2-evol", "tdd", "pre-alpha", "quality-gate"]
+    },
+    {
+      "id": "wo-quality-view-v2-integration-001",
+      "project_id": "sos-dev-internal",
+      "title": "QUALITY-V2 · ProjectQualityView usa els nous models V2 (rubric + integrity)",
+      "description": "Migrar `ProjectQualityView` (/quality) per usar els nous models V2:\\n- `valueFlowRubricService` (12 criteris · pesos 100) en lloc del legacy `projectQualityService` (5 dims hardcoded)\\n- `valueFlowIntegrityService` (7 regles R1-R7) per a errors cross-layer\\n- Mostra status `gold/silver/bronze/red` amb badge canonical\\n- Per cada criteri fallit · mostra el `fix` del rubric + CTA cap a la vista on resoldre-ho\\n- 'Evolucionar manualment' o 'Evolucionar amb IA' (CTA crida orchestrator.personalize amb context exacte)\\n- Diff visual abans/després quan IA millora el mapa\\n- Auditoria del rubric per cada projecte · score 100/100 = pot publicar al permaweb amb confiança\\n\\nResol la pregunta de l'usuari · 'estic al 100%?' amb una resposta mesurable i auditable contra el nou estàndard rubric+integrity.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "code-review", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/qualityViewV2.test.js",
+        "expect": "≥25 asserts · rubric integration · integrity issues display · evolve CTAs · diff view"
+      },
+      "estimated_cost_eur": 5,
+      "dependencies": ["wo-value-flow-rubric-001", "wo-value-flow-integrity-001"],
+      "tags": ["batch-7-v2-evol", "ux", "quality", "pre-alpha"]
+    },
+    {
+      "id": "wo-creation-completeness-guarantee-001",
+      "project_id": "sos-dev-internal",
+      "title": "CREATION-COMPLETENESS · garantir que la creació de projecte sempre dóna mapa complet (humà o IA evolucionable)",
+      "description": "Tests TDD que verifiquen que el flux `projectCreationOrchestrator` sempre retorna un projecte amb mapa de valor COMPLET segons el rubric V2 · cap missing critical · evolucionable des de `/quality` tant manualment (UI inline edit) com via IA (orchestrator.personalize amb context).\\n\\nCriteris d'acceptació:\\n- `createProject({ ambition })` sempre retorna `result.score ≥ 70` per a light · ≥80 standard · ≥85 max\\n- `result.integrity.errorCount === 0` per qualsevol ambition\\n- Cada criteri rubric pendent té un `fix` actionable (UI inline edit o IA personalize)\\n- Test integration · creació + evolució humana → score puja\\n- Test integration · creació + evolució IA → score puja · cost mesurat · cap regressió\\n\\nObjectiu · l'usuari pot confiar que cada projecte creat és complet i pot millorar-lo de forma dirigida.",
+      "priority": "critical",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run", "text-generate"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/creationCompletenessGuarantee.test.js",
+        "expect": "≥25 asserts · score thresholds per ambition · integrity 0 errors · evolve workflow"
+      },
+      "estimated_cost_eur": 4,
+      "dependencies": ["wo-project-creation-legendary-001", "wo-value-flow-rubric-001"],
+      "tags": ["batch-7-v2-evol", "tdd", "pre-alpha", "quality-gate"]
+    },
+    {
+      "id": "wo-roles-casteller-categorization-001",
+      "project_id": "sos-dev-internal",
+      "title": "ROLES-CASTELLER · IA categoritza rols segons el model casteller existent",
+      "description": "Estendre els prompts de `vnaExpertPrompts` perquè la IA assigni `castell_level` als rols generats segons el model jeràrquic casteller existent (`pom_de_dalt` · `tronc` · `pinya` · `laterals` · `mans` · `baixos`).\\n\\n- Capa 1 (SYSTEM_BASE) afegeix definició dels 6 nivells casteller amb exemple semàntic per cada un\\n- Capa 2 (few-shot) tots els exemples ja tenen castell_level vàlid (verificable amb test)\\n- Capa 3 (task prompts) demana explícitament la categorització\\n- `valueFlowRubric` C2 (castell levels diversificats) penalitza si la IA no diversifica\\n- Tests · IA mockejada amb 4 casos · cada un retorna mix de castell_levels · cap rol sense level\\n\\nResol la queixa · 'la IA genera rols sense estructura casteller'. Cada rol té lloc clar al castell del projecte.",
+      "priority": "high",
+      "complexity": "S",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "text-generate", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/rolesCastellerCategorization.test.js",
+        "expect": "≥15 asserts · prompts contenen 6 levels · few-shot diversificats · rubric C2 valida"
+      },
+      "estimated_cost_eur": 2,
+      "dependencies": ["wo-vna-expert-prompts-001"],
+      "tags": ["batch-7-v2-evol", "ia", "casteller-model", "pre-alpha"]
+    },
+    {
+      "id": "wo-value-flow-soc-sequencing-001",
+      "project_id": "sos-dev-internal",
+      "title": "VALUE-FLOW-SOC-SEQ · IA seqüencia value flows entre rols com a SOCs",
+      "description": "Estendre el flow de creació perquè agrupi value flows (transactions) entre rols en SOCs (processos d'operació) coherents · cada SOC té trigger d'entrada · seqüència de transactions · criteri de sortida · checklist sop_refs.\\n\\nImplementació · al pas `personalize` del orchestrator · després de generar roles+deliverables+transactions · agrupar transactions per criteri (frequency · rol pinya central · cicle recíproc) i materialitzar com a SOC nodes amb checklist. La IA usa context `valueFlowIntegrityService` per validar coherència cross-layer (R3 · R4 · R7).\\n\\nCriteris d'acceptació:\\n- Cada projecte té ≥1 SOC amb ≥3 items checklist apuntant a sop_ref existents\\n- `valueFlowRubric` C11 (SOC coverage ≥80%) passa al 100% post-personalize\\n- Test integration · 4 fixtures · cada un genera SOCs coherents amb les transactions\\n\\nResol la queixa · 'els fluxos no estan ordenats com a processos'. Els SOCs són la unitat de comprensió operativa.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "text-generate", "test-run"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/valueFlowSocSequencing.test.js",
+        "expect": "≥20 asserts · SOC generation · checklist coverage · integrity R3+R7"
+      },
+      "estimated_cost_eur": 4,
+      "dependencies": ["wo-vna-expert-prompts-001", "wo-value-flow-integrity-001"],
+      "tags": ["batch-7-v2-evol", "ia", "value-map", "soc", "pre-alpha"]
+    },
+    {
+      "id": "wo-ia-context-audit-001",
+      "project_id": "sos-dev-internal",
+      "title": "IA-CONTEXT-AUDIT · auditoria de tokens · cap waste · context exacte",
+      "description": "Auditar TOTS els llocs on l'app envia context a IA · vnaExpertPrompts · iaRouterService · woContextBuilder · projectClassifierService · roleSopGenerator · socDualPurposeService · etc. Per cada lloc · mesurar:\\n- Mida del prompt (tokens approxTokens via prompts.length/4)\\n- Token budget per ambition (light <500 · standard <1500 · max <2500)\\n- Cache hit rate via aiCacheService\\n- Cost real / cost estimat ratio (alerta si >1.5)\\n- Detecció de prompts duplicats (mateix hash · es pot fusionar?)\\n\\nDeliverable · `js/core/iaContextAuditor.js` · `audit({ source, prompt, response, cost })` registra al KB · `getStats()` retorna estadístiques per font. Vista `/audit-ia` (admin) o tab a SettingsV2 que mostra:\\n- Top 10 fonts amb més cost setmanal\\n- Token waste (prompts >budget) amb suggeriment\\n- Cache miss rate per font\\n\\nObjectiu · cap token malgastat · cada crida IA té rationale + budget + cache strategy auditables.",
+      "priority": "high",
+      "complexity": "M",
+      "status": "pending",
+      "assignee_kind": "ai-claude",
+      "required_capabilities": ["code-write", "test-run", "data-analysis"],
+      "deliverable_test": {
+        "kind": "test-suite",
+        "command": "node js/tests/iaContextAudit.test.js",
+        "expect": "≥20 asserts · audit logging · stats per source · budget guards · cache rate"
+      },
+      "estimated_cost_eur": 4,
+      "tags": ["batch-7-v2-evol", "ia", "cost-control", "pre-alpha", "observability"]
     }
   ]
 }
