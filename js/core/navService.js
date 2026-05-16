@@ -76,13 +76,15 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'inbox',        icon: '📨', label: 'Inbox · DMs',     href: '/inbox',           global: true,  category: 'connect', hint: 'Missatges directes · converses local-first · futur federat' },
 
     // ─── APRENDRE · coneixement SOS ───────────────────────────────────────
-    { id: 'learn',        icon: '📚', label: 'Hub coneixement', href: '/learn',           global: true,  category: 'learn',   hint: 'Hub unificat · roadmaps per rol · carpetes knowledge/ · cerca' },
-    { id: 'sectors',      icon: '🏭', label: 'Sectors CNAE',    href: '/sectors',         global: true,  category: 'learn',   hint: 'Catàleg A-S · readiness · roles + transactions per sector' },
+    // PR-B · /learn absorbeix sectors/mind/folders/tags com a tabs ·
+    // les rutes standalone segueixen accessibles (compat) però desapareixen
+    // del navbar per simplicitat. Skills + Path + Notes queden ortogonals.
+    { id: 'learn',        icon: '📚', label: 'Hub coneixement', href: '/learn',           global: true,  category: 'learn',   hint: 'Hub unificat · 7 tabs · roadmaps · knowledge · cerca · sectors · mind · carpetes · tags' },
+    { id: 'learn-sectors',icon: '🏭', label: 'Sectors CNAE',    href: '/learn?tab=sectors', global: true, category: 'learn',  hint: '21 SOCs CNAE · A-T · UV · match automàtic en crear projecte' },
+    { id: 'learn-mind',   icon: '🕸',  label: 'Mind-graph',      href: '/learn?tab=mind',  global: true,  category: 'learn',   hint: 'Mind-as-Graph · stats per tipus + accés vista galàctica D3' },
+    { id: 'learn-tags',   icon: '🏷', label: 'Tag cloud',       href: '/learn?tab=tags',  global: true,  category: 'learn',   hint: 'Folksonomia · etiquetes knowledge/ + KB · cloud freqüencial' },
     { id: 'skills',       icon: '🤲', label: 'Skills',          href: '/skills',          global: true,  category: 'learn',   hint: '90 skills · 5 domains · 3 tiers · 12 tipus de projecte' },
-    { id: 'mind',         icon: '🕸',  label: 'Mind-graph',      href: '/mind',            global: true,  category: 'learn',   hint: 'Mind-as-Graph total · panoràmica galàctica del KB' },
     { id: 'path',         icon: '🧠', label: 'Historial neural',href: '/path',            global: true,  category: 'learn',   hint: 'Path nodal cronològic · context bundles per a IA' },
-    { id: 'folders',      icon: '📁', label: 'Carpetes',        href: '/folders',         global: true,  category: 'learn',   hint: 'Carpetes intel·ligents · queries persistents' },
-    { id: 'tags',         icon: '🏷', label: 'Tags',            href: '/tags',            global: true,  category: 'learn',   hint: 'Folksonomia · cloud de tags' },
     { id: 'notes',        icon: '📝', label: 'Notes captures',  href: '/notes',           global: true,  category: 'learn',   hint: 'Captures FAB · evolve a projecte / WO / deliverable' },
 
     // ─── IDENTITY (avatar-menu a la dreta · NO és un grup principal) ─────
