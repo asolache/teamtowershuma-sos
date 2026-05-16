@@ -52,7 +52,13 @@ const TABLE = Object.freeze({
     'nav.swarm':          'Flux paral·lel',
     'nav.design':         'Disseny SOS',
 
-    // ─── Sections · groups · estructura informació ──────────────────────
+    // ─── Sections · groups · UX-NAV-V3 · 5 grups imperatius (PR-A) ───────
+    'group.create':       'Crear',
+    'group.work':         'Treballar',
+    'group.account':      'Comptabilitzar',
+    'group.connect':      'Connectar',
+    'group.learn':        'Aprendre',
+    // Legacy (v2 · 7 grups) · es mantenen per backwards-compat en vistes que els llegeixen
     'group.foundation':   'Fundació',
     'group.execution':    'Execució',
     'group.value':        'Valor',
