@@ -882,7 +882,7 @@
       "description": "Suite TDD per a cada vista V2 oficial garantint contractes mínims abans d'alfa privada · `dashboardV2.test.js` (hero · empty state · feed · projects grid) · `settingsV2.test.js` (5 tabs · API keys · theme · budget · permaweb · backup) · `projectHubV2.test.js` (7 zones · activity feed · IA suggestions) · `discoverUnified.test.js` (tabs · search · filtres) · `profileUnified.test.js` (public/private · ikigai · skills) · `routerRedirects.test.js` (done) · `migrationContract.test.js` (cap V1 sense banner). Mínim 30 asserts per vista. Objectiu · 0 regressions post-consolidació.",
       "priority": "critical",
       "complexity": "L",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
       "required_capabilities": [
         "code-write",
@@ -899,7 +899,12 @@
         "tdd",
         "pre-alpha",
         "quality-gate"
-      ]
+      ],
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1778930165814,
+      "completed_at": 1778932865814,
+      "cost_actual_eur": 4,
+      "deliverable_uri": "git:claude/tdd-v2-suite..v2SuiteContract"
     },
     {
       "id": "wo-quality-view-v2-integration-001",
