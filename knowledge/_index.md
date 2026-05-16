@@ -1,13 +1,15 @@
 ---
 id: _index
 type: index
-version: "v11.1"
-updated_at: "2025-04-10"
+version: "v11.2"
+updated_at: "2026-05-17"
 ---
 
 # Knowledge Base · SOS V11
 
 Base de conocimiento de TeamTowers SOS. Tres capas: pública (sectores + roles + visión), cliente (modelos VNA guardados), swarm (prompts + skills).
+
+> **🆕 v11.2** · afegit `_LOG.md` (audit trail IA-humà · WORKFLOW per a tota mutació de knowledge) · clients/_README.md (convenció paths client) · socs/lifecycle/ (4 SOCs · idea·MVP·validation·scale) · socs/sectors/ (21 SOCs · 1 per CNAE).
 
 ---
 
@@ -53,7 +55,65 @@ Ficheros disponibles. KnowledgeLoader los carga por id CNAE o alias.
 
 ---
 
-## SOCs · Standard Operating Concepts
+## 🆕 _LOG.md · workflow IA-humà (v11.2)
+
+**Cap mutació de knowledge/ sense entry al `_LOG.md`.** IA proposa →
+@alvaro aprova ('merge' o 'ok') → IA actualitza entry a `approved`.
+Vegeu `_LOG.md` per a l'historial complet.
+
+API · `js/core/knowledgeLogService.js` · parseLog · validateEntry ·
+buildEntry · formatEntry · getStats.
+
+---
+
+## 🆕 SOCs · ciclo de vida (lifecycle · v11.2)
+
+4 SOCs canónicos · 1 per fase del cicle de vida del projecte. Carregats
+automàticament per la IA al pas `personalize` del orchestrator segons
+`classification.lifecycle_stage`.
+
+| Fitxer | Fase | Outcomes |
+|--------|------|----------|
+| `socs/lifecycle/idea.md`      | Idea       | Founder articula problema + validator extern confirma interès |
+| `socs/lifecycle/mvp.md`       | MVP        | Producte mínim · 1 client real pagador · primera tx tangible |
+| `socs/lifecycle/validation.md`| Validation | 5-20 clients · PMF · mètriques Lean reals |
+| `socs/lifecycle/scale.md`     | Scale      | >20 clients · IA automatitza ≥50% WOs · cohort 108 activa |
+
+---
+
+## 🆕 SOCs · sectorials per CNAE (v11.2)
+
+21 SOCs seeds · 1 per cada sector CNAE (A-T · UV). Cada SOC té essència
+sectorial · principis guiadors · kinds canònics de rols. La IA carrega
+aquest SOC com a context quan crea un projecte d'aquest sector.
+
+| Fitxer | CNAE | Sector |
+|--------|------|--------|
+| `socs/sectors/A.md` | A | Agricultura, Ganadería, Silvicultura y Pesca |
+| `socs/sectors/B.md` | B | Industrias Extractivas |
+| `socs/sectors/C.md` | C | Industria Manufacturera |
+| `socs/sectors/D.md` | D | Suministro de Energía Eléctrica, Gas y Vapor |
+| `socs/sectors/E.md` | E | Suministro de Agua, Saneamiento y Gestión de Residuos |
+| `socs/sectors/F.md` | F | Construcción |
+| `socs/sectors/G.md` | G | Comercio al por Mayor y Menor |
+| `socs/sectors/H.md` | H | Transporte y Almacenamiento |
+| `socs/sectors/I.md` | I | Hostelería y Turismo |
+| `socs/sectors/J.md` | J | Información y Comunicaciones |
+| `socs/sectors/K.md` | K | Tech / Software / IA |
+| `socs/sectors/L.md` | L | Actividades Financieras y de Seguros |
+| `socs/sectors/M.md` | M | Actividades Inmobiliarias |
+| `socs/sectors/N.md` | N | Consultoría / Actividades Profesionales |
+| `socs/sectors/O.md` | O | Administración Pública y Defensa |
+| `socs/sectors/P.md` | P | Educación Reglada (K-12) |
+| `socs/sectors/Q.md` | Q | Educación Superior y Formación |
+| `socs/sectors/R.md` | R | Salud y Servicios Sociales |
+| `socs/sectors/S.md` | S | Arte, Deporte, Cultura y Servicios Personales |
+| `socs/sectors/T.md` | T | Actividades de los Hogares como Empleadores |
+| `socs/sectors/UV.md`| UV| Organismos Extraterritoriales e Internacionales |
+
+---
+
+## SOCs · Standard Operating Concepts (TeamTowers)
 
 Conceptos invariantes (qué + por qué) de servicios, rituales y artefactos
 de TeamTowers. Cada SOC es un nodo `type: soc` en KB. Ver `socs/_README.md`
