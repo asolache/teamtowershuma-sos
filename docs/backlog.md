@@ -178,9 +178,38 @@
 
 ### D · UX y robustez
 
+#### ✅ Hito · Sprint Creació Llegendari (16-17 mai 2026 · 13 PRs · #135-#147)
+
+Sessió marató · va portar la creació de projecte al nivell alfa-ready. Resultats:
+- **v99 · MANIFEST-DTD** · 94 asserts blindant manifest Agent SOS ↔ createProject
+- **v100-104 · AI-DRIVEN trilogia** · socMatcher + 3 task prompts + streaming + /create-live UI + wizard pre-form
+- **v105 · NAVBAR única V3** · 5 grups imperatius · bottom-nav deprecated · Cmd+K search
+- **v106 · /learn subhub** · 7 tabs absorbeixen sectors/mind/folders/tags
+- **v107 · CRITICAL FIXES** · A1 sessionStorage redirect · A2 pre-flight API key · B1 SOC fallback · C2 Cmd+K no acumulació
+- **v108 · brand-specific scope** · teamtowers-brand/merchandising fora del catàleg genèric
+- **v109 · prod bugs batch** · avatar dropdown · ESC search · navigateTo SPA · IA fallback log · sync draft · IA quality prompts
+- **v110 · LEGENDARY CREATION** · skeletons + celebració gold + jerarquia CTA + hero revamped
+- **v111 · NODE-VIEW MARKDOWN** · /n/{id} carrega knowledge/.md parsejat + GitHub link
+- **v112 · SECTOR ROLE NAMING** · 17 CNAE × 5 rols (CTO Founder · Cap d'Obra · Managing Partner...) zero cost IA
+- **v113 · IA DEFAULT ALL MODES** · light/standard/max sempre ai-driven · vna_zoom auto-mapping
+- **v114 · LEGENDARY ALL AMBITIONS** · banner + narrativa + budget + hint WOs adaptat per cada ambition
+- **v115 · IKIGAI FIX DEFINITIU + HUB legendary** · verify+retry+await render + zone 0 stats clau
+- **v116 · VNA PROMPTS QUALITY** · Verna Allee methodology explícita als prompts · sector_role_examples
+
+Bones pràctiques destil·lades · veure `knowledge/vision/best-practices-2026-05.md`.
+
+#### Pendents
+
 | ID | Visión | Notas |
 |---|---|---|
 | **wo-knowledge-index-scope-002** | **Revisar `knowledge/_index.md` · separar contenido brand-specific TeamTowers de universal** (S · 3€) | Mismo problema que con `teamtowers-brand.md` (resuelto en v102 con `scope: brand-specific`) aplica a SOPs y a otros bloques. NO PERDER ningún SOC/SOP — solo asociarlos al proyecto `teamtowers.eu` (brand_owner). Frontmatter `scope: brand-specific` + `brand_owner: teamtowers` a los SOPs operativos TT (fent-pinya, castellers-demo, la-colla operativa, merchandising, etc.). Update `socMatcher`/`sopMatcher` para filtrar. `_index.md` debe ser **guía completa de TODO knowledge que aporte valor a IA + usuarios** con tablas separadas Universal vs Brand-specific. Verificar también roles/clients/vision por si tienen el mismo issue. Tests: brand-specific NO aparece en proyectos genéricos · SÍ en proyectos TT auto-detected. |
+| **wo-mobile-mini-apps-PR-D** | **Mobile mini-app launcher** (L · 10€) · vista mobile separada (`@media max-width:768px`) amb bottom-nav de 5 mini-apps (📸 capturar · 🎯 check-in ikigai · 🐝 swarm · 🛒 mercat · 👤 identitat). Cada mini-app cobra crèdit per microacció (0.005-0.05€). Encaixa amb el ledger triple-entry. **Palanca de model de negoci recurrent**. |
+| **wo-hub-tabs-integration** | **Hub `/hub/{id}` mode tabs** (L · 8€) · igual que `/learn` · 7 tabs · overview (zone 0 actual) · mapa · sops · kanban · qualitat · ledger · lifecycle. Cada tab embed inline (no full separate view). Resol "DRY integrant altres vistes" feedback @alvaro. |
+| **wo-vna-prompts-evidence-loop** | **IA cita el sector role example al output** (S · 3€) · després de v116 · verificar que els SOPs/WOs generats realment usen el nomenclatura del sector_role_examples · si no · re-intent amb prompt reforçat. |
+| **wo-prompts-sector-deeper** | **Sub-sectors CNAE 2 dígits** (M · 5€) · J62 software vs J63 dades vs J60 broadcast tenen rols diferents · enriquir sectorRoleCatalog amb 2on nivell. |
+| **wo-quality-board-realtime** | **Quality board cross-projects** (M · 5€) · al hub orgwide veure tots els projectes amb rubric scores + tendència · prioritzar quins enriquir amb IA. |
+| **wo-design-tokens-refactor** | **PR-C postposat** (M · 7€) · escala typography centralitzada (`--text-xs`/`-sm`/`-md`...) + refactor SwarmFlowView + NeuralPathView + AccountingView (estils antics hardcoded). |
+| **wo-onboarding-momentum** | **Primer projecte amb tutorial inline** (M · 6€) · l'usuari nou veu tooltip a `/create-live` · "això és la IA seleccionant SOCs del knowledge real" · educa mentre crea. |
 | H1.6.1 | Enriquecer `proyecto-custom` y `charla-conferencia` con info real | Esperando input @alvaro |
 | H1.7.1 | Plantilla informe ejecutivo MD descargable post-La Colla | Aprovechar el caso IKEA como referencia |
 | H2.2 | Ficha detalle de taller con agenda Fent Pinya pre-cargada | UX |
