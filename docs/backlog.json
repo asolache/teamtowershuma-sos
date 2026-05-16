@@ -1306,16 +1306,29 @@
       "description": "Bug reportat per l'usuari · 'el ikigai no se guarda en el perfil'. Investigar el flow d'edició d'ikigai a /u/{handle} o /identity · verificar que `updateIkigai()` del `ikigaiService` arriba a `KB.upsert` del matriu_member · trobar el punt on es perd la persistència.\\n\\nCriteris:\\n- Test integration · editar ikigai · refresh · ikigai persisteix\\n- Capa de privacy · usuari controla quines dimensions són públiques\\n- Cross-device sync · si l'usuari té permaweb · l'ikigai s'inclou al public_registry_entry",
       "priority": "critical",
       "complexity": "S",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "test-run"],
+      "required_capabilities": [
+        "code-write",
+        "test-run"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/ikigaiPersistence.test.js",
         "expect": "≥10 asserts · save · reload · privacy · permaweb sync"
       },
       "estimated_cost_eur": 2,
-      "tags": ["batch-7-v2-evol", "bug", "pre-alpha", "user-360"]
+      "tags": [
+        "batch-7-v2-evol",
+        "bug",
+        "pre-alpha",
+        "user-360"
+      ],
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1778925066341,
+      "completed_at": 1778928666341,
+      "cost_actual_eur": 1.5,
+      "deliverable_uri": "git:claude/profile360-legendary..profile360"
     },
     {
       "id": "wo-profile-360-legendary-001",
@@ -1324,17 +1337,38 @@
       "description": "Visió de l'usuari · 'integrar los dos perfiles (IdentityView + ProfileView) en una pagina con arquitectura de la información legendaria · acceso a vista privada y pública · enfocado a mostrar habilidades · reputación · conocimientos · ikigai · proyectos en curso · WOs en curso · disponibilidad · productos · workshops ofertados / realizados / adquiridos · tender a crear una red legendaria descentralizada con factores disruptivos por integración de IA · permaweb · contabilidad de triple entrada'.\\n\\nArquitectura proposada · `/me` (privat) + `/u/{handle}` (públic) compartint shell:\\n\\n**Zona 1 · IDENTITY** (DID · ECDSA · wallets · keyfile · Wander · trust score)\\n**Zona 2 · IKIGAI 🌸** (4 dimensions · 5 zones · privacy per dimensió)\\n**Zona 3 · SKILLS 🤲** (skills declarades · skills attestades · level evidence)\\n**Zona 4 · KNOWLEDGE 🧠** (workshops realitzats · learn_role progress · sectors)\\n**Zona 5 · REPUTATION 🤝** (trust score · attestations rebudes/emeses · follow counts · history)\\n**Zona 6 · WORK · IN PROGRESS** (projectes en curs · WOs assignades · disponibilitat actual · castell_level a cada projecte)\\n**Zona 7 · OFERTES MERCAT 🛒** (productes oferts · workshops oferts · sops oferts · acquisitions · revenue ledger)\\n**Zona 8 · NETWORK INFLUENCE 🌐** (xarxa decentralitzada · permaweb publishes · cross-SOS reach · triple-entry accounting · proof of contribution)\\n\\nMode privat · totes les zones. Mode públic · respecta privacy filter (cada zona configurable a Settings). \\n\\nTriple-entry accounting · per cada transacció · entry al ledger propi + entry al ledger del peer + attestation pública al permaweb · disrupció vs single-entry / double-entry tradicional.",
       "priority": "critical",
       "complexity": "XL",
-      "status": "pending",
+      "status": "done",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "code-review", "test-run", "text-generate", "data-analysis"],
+      "required_capabilities": [
+        "code-write",
+        "code-review",
+        "test-run",
+        "text-generate",
+        "data-analysis"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/profile360.test.js",
         "expect": "≥45 asserts · 8 zones · public/private mode · privacy filter · triple-entry"
       },
       "estimated_cost_eur": 14,
-      "dependencies": ["wo-ikigai-persistence-fix-001", "wo-profile-unified-001"],
-      "tags": ["batch-7-v2-evol", "ux", "consolidation", "pre-alpha", "user-360", "legendary"]
+      "dependencies": [
+        "wo-ikigai-persistence-fix-001",
+        "wo-profile-unified-001"
+      ],
+      "tags": [
+        "batch-7-v2-evol",
+        "ux",
+        "consolidation",
+        "pre-alpha",
+        "user-360",
+        "legendary"
+      ],
+      "claimed_by": "agent-claude-code",
+      "claimed_at": 1778925066341,
+      "completed_at": 1778928666341,
+      "cost_actual_eur": 8,
+      "deliverable_uri": "git:claude/profile360-legendary..profile360"
     },
     {
       "id": "wo-triple-entry-accounting-001",
@@ -1345,14 +1379,24 @@
       "complexity": "L",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "test-run", "text-generate"],
+      "required_capabilities": [
+        "code-write",
+        "test-run",
+        "text-generate"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/tripleEntryAccounting.test.js",
         "expect": "≥30 asserts · build · verify · reconcile · cross-SOS"
       },
       "estimated_cost_eur": 9,
-      "tags": ["batch-8-disruption", "value", "permaweb", "pre-alpha", "factors-disruptius"]
+      "tags": [
+        "batch-8-disruption",
+        "value",
+        "permaweb",
+        "pre-alpha",
+        "factors-disruptius"
+      ]
     },
     {
       "id": "wo-decentralized-network-fabric-001",
@@ -1363,15 +1407,27 @@
       "complexity": "XL",
       "status": "pending",
       "assignee_kind": "ai-claude",
-      "required_capabilities": ["code-write", "test-run", "data-analysis"],
+      "required_capabilities": [
+        "code-write",
+        "test-run",
+        "data-analysis"
+      ],
       "deliverable_test": {
         "kind": "test-suite",
         "command": "node js/tests/decentralizedNetworkFabric.test.js",
         "expect": "≥40 asserts · discovery · DM federation · trust graph · resilience"
       },
       "estimated_cost_eur": 16,
-      "dependencies": ["wo-triple-entry-accounting-001"],
-      "tags": ["batch-8-disruption", "permaweb", "post-alpha", "factors-disruptius", "legendary"]
+      "dependencies": [
+        "wo-triple-entry-accounting-001"
+      ],
+      "tags": [
+        "batch-8-disruption",
+        "permaweb",
+        "post-alpha",
+        "factors-disruptius",
+        "legendary"
+      ]
     }
   ]
 }

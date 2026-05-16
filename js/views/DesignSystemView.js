@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T12:00 · v87 · Inbox sent-invites · /notes evolve view · post #121 legendary · estabilitzat';
+const BUILD_STAMP = '2026-05-16T12:30 · v88 · PROFILE-360 LEGENDARY · /me amb 8 zones · auto-create matriu_member · resol bug ikigai persistence';
 
 export default class DesignSystemView {
 

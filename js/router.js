@@ -35,6 +35,8 @@ const ROUTES = [
     { path: '/market',    view: () => import('./views/MarketView.js')   },
     // AUTH-001 · identidad operador
     { path: '/identity',  view: () => import('./views/IdentityView.js') },
+    // PROFILE-360-LEGENDARY · /me · perfil unificat 8 zones (privat)
+    { path: '/me',        view: () => import('./views/Profile360View.js') },
     // KM-001 · folders inteligentes
     { path: '/folders',   view: () => import('./views/FoldersView.js')  },
     // H8.1 · vista panorámica del Mind-as-Graph
@@ -139,7 +141,9 @@ async function router() {
     } else if (path.startsWith(MARKET_PATH_PREFIX)) {
         match = { path, view: () => import('./views/MarketDetailView.js') };
     } else if (path.startsWith(PROFILE_PATH_PREFIX)) {
-        match = { path, view: () => import('./views/ProfileView.js') };
+        // PROFILE-360-LEGENDARY · /u/{handle} consumeix Profile360View ·
+        // ProfileView legacy disponible a /u-legacy/{handle} per a back-compat.
+        match = { path, view: () => import('./views/Profile360View.js') };
     } else if (path.startsWith(PITCH_DOC_PATH_PREFIX)) {
         match = { path, view: () => import('./views/InvestorPitchView.js') };
     } else if (path.startsWith(HUB_V2_PATH_PREFIX)) {
