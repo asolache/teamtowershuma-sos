@@ -441,7 +441,26 @@ export default class ProjectCreationV2View {
         }
 
         // ── AI-DRIVEN streaming · redirigeix a /create-live amb payload ──
+        // FIX A2 · pre-flight check API key · si NO hi ha cap key configurada
+        // fallback automàtic a mode template + toast warning. Abans · pipeline
+        // emetia events però el projecte resultava buit sense feedback.
+        let effectiveGenMode = genMode;
         if (genMode === 'ai-driven') {
+            try {
+                const { hasAnyApiKey } = await import('../core/aiProviderService.js');
+                const ok = await hasAnyApiKey();
+                if (!ok) {
+                    toast({
+                        kind: 'warning',
+                        text: '⚠ Cap API key configurada · canvio a mode template (offline). Configura una clau a /settings per a IA real.',
+                        ttl: 6000,
+                    });
+                    effectiveGenMode = 'template';
+                }
+            } catch (_) { /* si la comprovació falla · seguim com ai-driven */ }
+        }
+
+        if (effectiveGenMode === 'ai-driven') {
             try {
                 sessionStorage.setItem('createLivePayload', JSON.stringify({
                     name, description, sector, ambition, templateId,

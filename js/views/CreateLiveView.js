@@ -63,8 +63,12 @@ export default class CreateLiveView {
             this._payload = raw ? JSON.parse(raw) : null;
         } catch (_) { this._payload = null; }
 
+        // FIX A1 · sessionStorage buit (refresh, deep-link) → redirect /create
+        // amb toast d'avís. Abans · pantalla buida encallada.
         if (!this._payload || !this._payload.name) {
+            try { toast({ kind: 'warning', text: 'Cal omplir el formulari primer · redirigint a /create', ttl: 3000 }); } catch (_) {}
             this._renderEmpty();
+            setTimeout(() => { window.location.href = '/create'; }, 1500);
             return;
         }
 

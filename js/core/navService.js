@@ -543,6 +543,8 @@ export function paintGlobalNav({
 
 // _bindGlobalSearch · enter → navega al destí més rellevant si match exact
 // per id o label. Si no, redirigeix a /learn?q=… (fallback al hub de cerca).
+// FIX C2 · el listener Cmd+K viu al document i s'acumula a cada navegació SPA.
+// Solució · referència global · removeEventListener abans d'afegir el nou.
 function _bindGlobalSearch(rootEl) {
     const input = (rootEl || document).querySelector('#sos-global-search');
     if (!input || input.dataset.bound === '1') return;
@@ -551,27 +553,29 @@ function _bindGlobalSearch(rootEl) {
         if (ev.key !== 'Enter') return;
         const q = String(input.value || '').trim().toLowerCase();
         if (!q) return;
-        // Match exact per id o label
         const match = NAV_DESTINATIONS.find(d =>
             d.id.toLowerCase() === q ||
             String(d.label).toLowerCase() === q ||
             String(d.label).toLowerCase().startsWith(q)
         );
-        if (match) {
-            window.location.href = match.href;
-            return;
-        }
-        // Fallback · /learn amb query (LearnView ja té cerca)
+        if (match) { window.location.href = match.href; return; }
         window.location.href = '/learn?q=' + encodeURIComponent(q);
     });
-    // Cmd+K / Ctrl+K focus
-    document.addEventListener('keydown', (ev) => {
-        if ((ev.metaKey || ev.ctrlKey) && (ev.key === 'k' || ev.key === 'K')) {
-            ev.preventDefault();
-            input.focus();
-            input.select();
+    // Cmd+K / Ctrl+K focus · ÚNIC handler global · removeEventListener abans
+    // d'afegir el nou per evitar acumulació a cada navegació SPA.
+    if (typeof window !== 'undefined') {
+        if (window._sosNavKbHandler) {
+            document.removeEventListener('keydown', window._sosNavKbHandler);
         }
-    }, { once: false });
+        window._sosNavKbHandler = (ev) => {
+            if ((ev.metaKey || ev.ctrlKey) && (ev.key === 'k' || ev.key === 'K')) {
+                ev.preventDefault();
+                const el = document.getElementById('sos-global-search');
+                if (el) { el.focus(); el.select(); }
+            }
+        };
+        document.addEventListener('keydown', window._sosNavKbHandler);
+    }
 }
 
 const GLOBAL_NAV_STYLE_ID = 'sos-global-nav-style';

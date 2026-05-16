@@ -393,3 +393,17 @@ export function makeJsonShapeEvaluator(requiredFields = []) {
 export function _resetApiKeyCache() {
     _apiKeyCache.clear();
 }
+
+// PR-E0 fix A2 · hasAnyApiKey · pure async · retorna true si almenys un dels
+// 5 providers té API key configurada. Per al pre-flight check del flux
+// ai-driven · si false · fallback automàtic a mode template.
+export async function hasAnyApiKey() {
+    const providers = ['anthropic', 'openai', 'gemini', 'deepseek', 'minimax'];
+    for (const p of providers) {
+        try {
+            const k = await _readApiKey(p);
+            if (k && String(k).length > 8) return true;
+        } catch (_) { /* segueix */ }
+    }
+    return false;
+}
