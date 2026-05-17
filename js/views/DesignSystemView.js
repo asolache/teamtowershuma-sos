@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-18T01:00 · v125 · UX audit (53 views · 5 patrons no-estàndard) + search PILL al navbar (definitiu · responsive) + sosTopbar helper canonical + cryptoTopupService backend (USDC/USDT/DAI/xDAI · ETH/WBTC/MATIC convertible) + Stripe Checkout custom amount · 114 asserts nous';
+const BUILD_STAMP = '2026-05-18T09:00 · v126 · BUG @alvaro · "equip de futbol" generava rols d\'Arts · FIX domainDetector (sports-team · arts-performance · coop-cares · edu-formation · 14+8+8+7 arquetip reals) + design-value-map-rich prompt smart sub-domini + expertChain wire-up · sobre v125 (search pill · sosTopbar · Stripe/crypto backend) · 47 asserts nous';
 
 export default class DesignSystemView {
 

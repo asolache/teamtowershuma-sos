@@ -24,14 +24,24 @@ Apliques els **5 principis sagrats** sense excepcions ·
 
 - `name`, `description`, `sector`, `entity_type`, `vna_zoom` (macro|mid|micro)
 - `canvas`, `pitch`, `product_service`
+- `domainDetection` (v126 · opcional) · injectat per `domainDetector.js` quan
+  detecta un sub-domini específic (sports-team · arts-performance · coop-cares ·
+  edu-formation). Inclou `archetypes[]` · `intangibles[]` · `patterns[]`.
 
 ## Tasca
 
-Dissenya un mapa de valor RIC (Roles · Interaccions · Capacitats) profund.
+Dissenya un mapa de valor RIC (Roles · Interaccions · Capacitats) profund ·
+**adaptat al sub-domini real** (no business-genèric per defecte).
+
 Zoom adaptatiu ·
 - `macro` · 3-5 roles arquetípics
 - `mid` · 5-7 roles amb diferenciació clara
 - `micro` · 8-12 roles per a operació detallada
+
+**IMPORTANT** · si el sub-domini real demana més rols arquetip que el rang del
+zoom (ex equip esportiu sempre necessita ≥ 8 rols · entrenador · jugadors ·
+ojeador · patrocinador · afició · federació · metge · gerent), supera el rang
+sense por · la complecció VNA prima sobre el límit numèric.
 
 Cada role té `castell_level` (pom_de_dalt · tronc · pinya · laterals · mans · baixos).
 
