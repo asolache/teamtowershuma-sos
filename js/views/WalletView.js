@@ -276,6 +276,20 @@ export default class WalletView {
                 <h2>🌐 Comptabilitat unificada · totes les meves transaccions</h2>
                 <div id="wAccGlobalBody" style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:1rem 1.2rem;color:var(--text-muted);font-size:0.85rem;">Carregant…</div>
             </div>
+
+            ${!isPersonal ? `
+            <!-- v124 · panel pacte vigent · bridge Wallet ↔ Pact (notari + slicing) -->
+            <div class="w-section">
+                <h2>📜 Pacte de socis vigent</h2>
+                <div id="wPactPanel" style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:1rem 1.2rem;color:var(--text-muted);font-size:0.85rem;">Comprovant…</div>
+            </div>
+
+            <!-- v124 · panel agreements legals · catàleg + generador IA -->
+            <div class="w-section">
+                <h2>📑 Generar acords i contractes</h2>
+                <p style="color:var(--text-muted);font-size:0.82rem;margin:0 0 12px 0;">Plantilles legals via IA · pacte de socis · NDA · service agreement · cohort · advisor · IP assignment · term sheet · etc. Cost ~0.001-0.012€ per doc.</p>
+                <div id="wLegalAgentsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;"></div>
+            </div>` : ''}
         `;
 
         // Bind presets
@@ -304,6 +318,132 @@ export default class WalletView {
         // WALLET-ACC-001 · render del panel "comptabilitat unificada" un cop
         // el DOM està reconstruït · es refresca automàticament a cada _render().
         this._renderUnifiedAccounting().catch(e => console.warn('[wallet] unified', e?.message));
+
+        // v124 · panels pacte + legal agents · només si projectId (no personal)
+        if (this.projectId) {
+            this._renderPactPanel().catch(e => console.warn('[wallet] pact panel', e?.message));
+            this._renderLegalAgentsGrid();
+        }
+    }
+
+    // v124 · _renderPactPanel · llegeix node pact del KB · resumeix status +
+    // socis + signatures + arweaveTxId si notaritzat. Si no existeix, mostra
+    // CTA per crear el pacte.
+    async _renderPactPanel() {
+        const el = document.getElementById('wPactPanel');
+        if (!el) return;
+        try {
+            const { KB } = await import('../core/kb.js');
+            const { pactSummary } = await import('../core/pactService.js');
+            const pactId = this.projectId + '::pact::sos-v1';
+            const pact = await KB.getNode(pactId);
+            if (!pact) {
+                el.innerHTML = `
+                    <p style="margin:0 0 10px 0;">Encara no hi ha pacte de socis per a aquest projecte. El pacte és el primer contracte del Mètode SOS · vincula la tarta de slicing-pie amb el ledger del wallet.</p>
+                    <a href="/pact?project=${encodeURIComponent(this.projectId)}" data-link class="w-btn w-btn-primary" style="text-decoration:none;">+ Crear pacte de socis</a>`;
+                return;
+            }
+            const summary = pactSummary(pact);
+            const arweaveTxId = pact.content?.arweaveTxId || null;
+            const statusColor = summary.status === 'signed' ? '#22c55e' : summary.status === 'active' ? '#c084fc' : '#fbbf24';
+            const notaryHtml = arweaveTxId
+                ? `<span style="color:#22c55e;font-family:var(--font-mono);">🌐 Notaritzat · <code>${this._esc(arweaveTxId.slice(0, 12))}…</code></span>`
+                : `<span style="color:var(--text-muted);">Sense notaritzar al permaweb</span>`;
+            el.innerHTML = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:12px;">
+                    <div style="background:var(--bg-elevated);border-left:3px solid ${statusColor};border-radius:6px;padding:8px 10px;">
+                        <div style="color:var(--text-muted);font-size:0.7rem;font-family:var(--font-mono);text-transform:uppercase;">Estat</div>
+                        <div style="color:var(--text-main);font-size:1.1rem;font-weight:700;text-transform:uppercase;">${this._esc(summary.status)}</div>
+                    </div>
+                    <div style="background:var(--bg-elevated);border-left:3px solid #c084fc;border-radius:6px;padding:8px 10px;">
+                        <div style="color:var(--text-muted);font-size:0.7rem;font-family:var(--font-mono);text-transform:uppercase;">Socis</div>
+                        <div style="color:var(--text-main);font-size:1.1rem;font-weight:700;">${summary.partiesCount}</div>
+                    </div>
+                    <div style="background:var(--bg-elevated);border-left:3px solid ${summary.signedAll ? '#22c55e' : '#fbbf24'};border-radius:6px;padding:8px 10px;">
+                        <div style="color:var(--text-muted);font-size:0.7rem;font-family:var(--font-mono);text-transform:uppercase;">Signat</div>
+                        <div style="color:var(--text-main);font-size:1.1rem;font-weight:700;">${summary.signaturesCount}/${summary.partiesCount}</div>
+                    </div>
+                    <div style="background:var(--bg-elevated);border-left:3px solid #fbbf24;border-radius:6px;padding:8px 10px;">
+                        <div style="color:var(--text-muted);font-size:0.7rem;font-family:var(--font-mono);text-transform:uppercase;">Vesting</div>
+                        <div style="color:var(--text-main);font-size:1.1rem;font-weight:700;">${summary.vestingMonths}m</div>
+                    </div>
+                </div>
+                <p style="margin:0 0 10px 0;font-size:0.8rem;">${notaryHtml} · slicing · <code>${this._esc(summary.participation)}</code> · decision · <code>${this._esc(summary.decisionMode)}</code> (quòrum ${summary.quorumPct}%)</p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <a href="/pact?project=${encodeURIComponent(this.projectId)}" data-link class="w-btn">📜 Editar pacte</a>
+                    <a href="/value-accounting?project=${encodeURIComponent(this.projectId)}" data-link class="w-btn">🥧 Veure tarta</a>
+                    ${!arweaveTxId && summary.signedAll ? `<button class="w-btn w-btn-primary" id="wNotarizePact" style="background:#06b6d4;border-color:#06b6d4;">🌐 Notaritzar al permaweb</button>` : ''}
+                </div>`;
+            // Notari handler
+            const notBtn = document.getElementById('wNotarizePact');
+            if (notBtn) {
+                notBtn.addEventListener('click', () => this._notarizePact(pact));
+            }
+        } catch (e) {
+            el.innerHTML = `<p style="color:var(--accent-red);">Error carregant pacte · ${this._esc(e?.message || e)}</p>`;
+        }
+    }
+
+    // v124 · _notarizePact · publishToPermaweb del pact node (ja firmat)
+    // i persisteix arweaveTxId al pact content. Usa el wallet del projecte
+    // per pagar la fee · refund automàtic si falla (publicRegistryService).
+    async _notarizePact(pact) {
+        const btn = document.getElementById('wNotarizePact');
+        if (btn) { btn.textContent = '⏳ Notaritzant…'; btn.disabled = true; }
+        try {
+            const { publishToPermaweb } = await import('../core/publicRegistryService.js');
+            const { KB } = await import('../core/kb.js');
+            const res = await publishToPermaweb({
+                entry: pact,
+                projectId: this.projectId,
+            });
+            if (res?.arweaveTxId) {
+                pact.content.arweaveTxId = res.arweaveTxId;
+                pact.content.publishedAt = res.publishedAt || new Date().toISOString();
+                await KB.upsert(pact);
+                alert('✓ Pacte notaritzat al permaweb\n\nTxId · ' + res.arweaveTxId);
+                await this._renderPactPanel();
+                this._render();   // refresca wallet (s'ha cobrat la fee)
+                return;
+            }
+            throw new Error('publish returned no txId');
+        } catch (e) {
+            const msg = e?.message || String(e);
+            alert('✘ No s\'ha pogut notaritzar\n\n' + msg + '\n\nRevisa el saldo i la connexió permaweb a /settings.');
+            if (btn) { btn.textContent = '🌐 Notaritzar al permaweb'; btn.disabled = false; }
+        }
+    }
+
+    // v124 · _renderLegalAgentsGrid · pinta el catàleg de legalAgentsCatalog
+    // com a cards · cada card té un CTA "Generar amb IA" (deferred · obre
+    // /agreements?type=X · pendent de implementar a v125).
+    _renderLegalAgentsGrid() {
+        const grid = document.getElementById('wLegalAgentsGrid');
+        if (!grid) return;
+        import('../core/legalAgentsCatalog.js').then(({ LEGAL_AGENTS_CATALOG, LEGAL_AGENT_CATEGORIES }) => {
+            const cardHtml = LEGAL_AGENTS_CATALOG.map(a => {
+                const catLabel = LEGAL_AGENT_CATEGORIES[a.category] || a.category;
+                const bindingColor = a.binding_level === 'high' ? '#ef4444' : a.binding_level === 'medium' ? '#fbbf24' : '#22c55e';
+                const notary = a.notarizationRecommended ? '🌐' : '';
+                const linked = a.linkedAccounting ? '🥧' : '';
+                return `
+                <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-left:3px solid ${bindingColor};border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-height:120px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                        <strong style="color:var(--text-main);font-size:0.88rem;line-height:1.2;">${this._esc(a.title)}</strong>
+                        <span style="font-size:0.72rem;color:var(--text-muted);">${notary}${linked}</span>
+                    </div>
+                    <div style="color:var(--text-muted);font-size:0.75rem;line-height:1.35;flex:1;">${this._esc(a.bestUseCase)}</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.72rem;color:var(--text-muted);font-family:var(--font-mono);">
+                        <span>${this._esc(a.category)} · ${a.binding_level}</span>
+                        <span>~${a.cost_estimate_eur.toFixed(3)}€</span>
+                    </div>
+                    <a href="/agreements?project=${encodeURIComponent(this.projectId)}&type=${encodeURIComponent(a.id)}" data-link class="w-btn" style="font-size:0.72rem;padding:4px 8px;text-align:center;">📝 Generar</a>
+                </div>`;
+            }).join('');
+            grid.innerHTML = cardHtml;
+        }).catch(e => {
+            grid.innerHTML = `<p style="color:var(--accent-red);">Catàleg agents · ${this._esc(e?.message || e)}</p>`;
+        });
     }
 
     async _doTopUp(amountEur, source, note) {

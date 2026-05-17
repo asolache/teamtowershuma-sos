@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-17T22:00 · v123 · BUG FIX import backup (kernel merge · projects ja visibles sense reload) + /learn?tab=mind hydrate KB real + /map flow animation prep (pulseStyle dot/deliverable/glow · _buildNodeMap resilient · pulseNode API) + bridge neural-path (sos:neural-step) · 58 asserts nous';
+const BUILD_STAMP = '2026-05-17T23:30 · v124 · UX wallet ↔ pact bridge (panel pacte vigent · grid agreements · notarització permaweb) + 10 agents legals (pact · NDA · service · incubator · cohort · advisor · equity · LOI · term-sheet · IP) + legalAgentsCatalog · 186 asserts nous';
 
 export default class DesignSystemView {
 
