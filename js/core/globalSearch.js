@@ -544,21 +544,17 @@ function _setActive(idx) {
 export function open()  { return _open(); }
 export function close() { _close(); }
 
-// injectGlobal · injecta trigger + keyboard listeners · cridat per router
+// injectGlobal · injecta keyboard listeners + CSS · cridat pel router
+// v125 · el trigger ja viu integrat dins la navbar (renderGlobalNavHtml ·
+// .sos-global-nav-search) · ja NO injectem el floating button position:fixed
+// que xocava amb la navbar. Si cap a un altre lloc cal trigger flotant,
+// reactivem aquest bloc · per ara · removed.
 export function injectGlobal() {
     if (typeof document === 'undefined') return;
     _ensureCss();
-    // Trigger visible només desktop
-    if (!document.getElementById(TRIGGER_ID)) {
-        const btn = document.createElement('button');
-        btn.id = TRIGGER_ID;
-        btn.className = 'sos-search-trigger';
-        btn.setAttribute('aria-label', 'Obrir cerca global · cmd+K');
-        btn.setAttribute('title', 'Cerca global (cmd/ctrl + K)');
-        btn.innerHTML = '🔍 Cerca <kbd>⌘K</kbd>';
-        btn.addEventListener('click', () => _open());
-        document.body.appendChild(btn);
-    }
+    // v125 · trigger floating removed · viu a navbar pill (#sos-global-nav-search-btn)
+    // Defensiu · si quedés algun trigger antic al DOM · neteja
+    document.getElementById(TRIGGER_ID)?.remove();
     // Keyboard listener · cmd-K / ctrl-K / "/"
     if (!window.__sosSearchKeyBound) {
         window.__sosSearchKeyBound = true;

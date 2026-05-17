@@ -300,7 +300,7 @@ export async function hasSessionBeenClaimed(sessionId, kb = KB) {
     } catch (_) { return false; }
 }
 
-export async function markSessionClaimed(sessionId, { amountEur, kb = KB } = {}) {
+export async function markSessionClaimed(sessionId, { amountEur, kb = KB, projectId = null } = {}) {
     if (!sessionId) return null;
     const now = Date.now();
     const node = {
@@ -309,6 +309,7 @@ export async function markSessionClaimed(sessionId, { amountEur, kb = KB } = {})
         content: {
             sessionId,
             amountEur: typeof amountEur === 'number' ? amountEur : null,
+            projectId: projectId || null,
             claimedAt: now,
         },
         keywords:  ['type:stripe-claim', 'session:' + sessionId.slice(0, 20)],
@@ -317,4 +318,72 @@ export async function markSessionClaimed(sessionId, { amountEur, kb = KB } = {})
     };
     try { await kb.upsert(node); } catch (_) {}
     return node;
+}
+
+// =============================================================================
+// v125 · STRIPE CHECKOUT (custom amount) · createCheckoutSession via edge fn
+//
+// El flow Payment Link només suporta amounts predefinits (10€·25€·50€·100€).
+// Per a amounts arbitraris (ex: 17.50€ · "topupea exactament el que em falta"),
+// usem Stripe Checkout Session amb amount dinàmic. Necessita una nova edge
+// function `/api/stripe-create-session` (no inclòs aquí · backend deploy).
+//
+// Setup edge function · req body { amountEur, projectId?, successUrl, cancelUrl }
+//   → crea Stripe session amb line_items[].price_data dinàmic
+//   → retorna { sessionId, url }
+//
+// Client · obre la URL · usuari paga · redirect a successUrl?session_id=cs_...
+// Mateix verify flow que Payment Link (verifyStripeSession + markSessionClaimed).
+// =============================================================================
+
+const STRIPE_CREATE_ENDPOINT = '/api/stripe-create-session';
+
+export async function createCheckoutSession({
+    amountEur,
+    projectId = null,
+    successPath = '/wallet',
+    cancelPath  = '/wallet',
+    endpoint    = STRIPE_CREATE_ENDPOINT,
+    fetchFn     = (typeof fetch !== 'undefined' ? fetch : null),
+} = {}) {
+    if (!Number.isFinite(amountEur) || amountEur < 1 || amountEur > 10000) {
+        throw new Error('createCheckoutSession requires amountEur ∈ [1, 10000]');
+    }
+    if (!fetchFn) throw new Error('createCheckoutSession requires fetch');
+    const origin = (typeof window !== 'undefined' && window.location?.origin) || '';
+    const successUrl = origin + successPath + (successPath.includes('?') ? '&' : '?') + 'session_id={CHECKOUT_SESSION_ID}';
+    const cancelUrl  = origin + cancelPath;
+    let res;
+    try {
+        res = await fetchFn(endpoint, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ amountEur, projectId, successUrl, cancelUrl }),
+        });
+    } catch (e) {
+        throw new Error('checkout-fetch-failed: ' + (e?.message || 'unknown'));
+    }
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (!res.ok) {
+        const detail = (data && (data.error || data.detail)) || ('HTTP ' + res.status);
+        throw new Error('checkout-create-failed: ' + detail);
+    }
+    if (!data || !data.sessionId || !data.url) {
+        throw new Error('checkout-malformed-response');
+    }
+    return data;   // { sessionId, url }
+}
+
+// listSessionClaims · llista totes les claims (per a auditoria · UI · /settings)
+export async function listSessionClaims({ kb = KB, projectId = null, sinceDays = 90 } = {}) {
+    if (!kb || typeof kb.query !== 'function') return [];
+    try {
+        const all = (await kb.query({ type: STRIPE_CLAIM_TYPE })) || [];
+        const cutoff = Date.now() - (sinceDays * 86_400_000);
+        return all
+            .filter(n => (n.content?.claimedAt || 0) >= cutoff)
+            .filter(n => !projectId || n.content?.projectId === projectId)
+            .sort((a, b) => (b.content?.claimedAt || 0) - (a.content?.claimedAt || 0));
+    } catch (_) { return []; }
 }

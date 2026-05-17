@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-17T23:30 · v124 · UX wallet ↔ pact bridge (panel pacte vigent · grid agreements · notarització permaweb) + 10 agents legals (pact · NDA · service · incubator · cohort · advisor · equity · LOI · term-sheet · IP) + legalAgentsCatalog · 186 asserts nous';
+const BUILD_STAMP = '2026-05-18T01:00 · v125 · UX audit (53 views · 5 patrons no-estàndard) + search PILL al navbar (definitiu · responsive) + sosTopbar helper canonical + cryptoTopupService backend (USDC/USDT/DAI/xDAI · ETH/WBTC/MATIC convertible) + Stripe Checkout custom amount · 114 asserts nous';
 
 export default class DesignSystemView {
 
