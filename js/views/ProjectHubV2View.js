@@ -305,12 +305,6 @@ export default class ProjectHubV2View {
         </style>
 
         <div class="hub-shell">
-            <div class="hub-topbar">
-                <a href="/dashboard" data-link class="hub-logo">🗼 Team<span>Towers</span></a>
-                <span style="color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Project Hub v2 · 5-click rule</span>
-                <span style="flex:1;"></span>
-                <a href="/project/${encodeURIComponent(project.id)}" data-link class="hub-back">← Hub clàssic</a>
-            </div>
 
             <div id="hubSubmenu" style="border-bottom:1px solid var(--border-default);">
                 ${renderSubmenuTabs({ tabs: HUB_TABS, dropdown: HUB_DROPDOWN, activeId: this._mode, urlParam: 'tab' })}

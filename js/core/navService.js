@@ -96,6 +96,7 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'settings',     icon: '⚙',  label: 'Settings',        href: '/settings',        global: true,  category: 'identity', hint: 'Claus API · IA · purga · preferències' },
     { id: 'design',       icon: '🎨', label: 'Design system',   href: '/design',          global: true,  category: 'identity', hint: 'Mockup deluxe · arquitectura informació · component library' },
     { id: 'projhubv3',    icon: '🧪', label: 'Project Hub v3 preview', href: '/project-hub-v3-preview', global: true, category: 'identity', hint: 'Preview UX · 5 subpestanyes + dropdown · v133' },
+    { id: 'team',         icon: '👥', label: 'Equip',           href: '/team',            global: true,  category: 'identity', hint: 'Vista global · totes les persones amb qui has col·laborat · RBAC + audit log · v140' },
 ]);
 
 // Devuelve la lista de links contextualizada al projectId activo.

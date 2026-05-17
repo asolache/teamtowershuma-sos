@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T12:00 · v137 · UX cleanup · subnav antic (sos-psub) ELIMINAT del router · CTA "Següent · gain pts" reubicat a la fila del breadcrumb · paintBreadcrumb calcula computeQualityScore+suggestNextDim per al projecte actiu · SOPs afegit al pilar Treballar (al costat de Map · Kanban · Quality · Sprint · Lifecycle) · 5/7 items post-alfa DONE · ALFA-READY';
+const BUILD_STAMP = '2026-05-20T14:00 · v140 · Vista GLOBAL /team · teamService (RBAC matcher amb suport .own + members CRUD + invitations + audit log type=team_audit) + TeamView (5 tabs · overview/projects/roles/permissions/audit · matriu rol×acció · agregat cross-projects) + topbar inutil ProjectHubV2View ELIMINADA (🗼 TeamTowers · 5-click rule · Hub clàssic ← treure soroll cognitiu) · navbar entry /team · ALFA-READY';
 
 export default class DesignSystemView {
 
