@@ -24,6 +24,8 @@ import { KB } from '../core/kb.js';
 import { renderViewTopbar, ensureTopbarStyle, projectContextLinks } from '../core/sosTopbar.js';
 import { getOrCreateWalletForProject, walletStats, personalWalletIdFor } from '../core/walletService.js';
 import { aggregateMovementsForOwner, loadAllAccountingNodes } from '../core/unifiedAccountingService.js';
+// v143 · migració al pattern canonical SubmenuTabs + context switcher dual personal/projecte
+import { renderSubmenuTabs, bindSubmenuTabs } from '../ui/SubmenuTabs.js';
 
 const VALID_TABS = Object.freeze(['saldo', 'transaccions', 'compres', 'tarta', 'projectes', 'topup']);
 
@@ -68,19 +70,36 @@ export default class WalletV2View {
 
     async afterRender() {
         ensureTopbarStyle();
-        // Bind tab switching
-        document.querySelectorAll('[data-w2-tab]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const tab = e.currentTarget.getAttribute('data-w2-tab');
-                if (VALID_TABS.includes(tab)) {
-                    this._activeTab = tab;
-                    this._updateUrl();
-                    this._renderActiveTab();
-                }
+        // v143 · bind canonical SubmenuTabs · re-render del cos quan canvia tab
+        const mount = document.getElementById('w2Submenu');
+        if (mount) {
+            try { this._cleanupTabs?.(); } catch (_) {}
+            this._cleanupTabs = bindSubmenuTabs(mount, (newTab) => {
+                if (!VALID_TABS.includes(newTab) || newTab === this._activeTab) return;
+                this._activeTab = newTab;
+                this._updateUrl();
+                this._renderActiveTab();
+            }, { urlParam: 'tab' });
+        }
+        // v143 · context switcher · canvi personal ↔ projecte sense recarregar
+        const ctxSel = document.getElementById('w2ContextSel');
+        if (ctxSel) {
+            ctxSel.addEventListener('change', (e) => {
+                const val = e.target.value;
+                this._projectId = val === '__personal__' ? null : val;
+                this._project = this._projectId
+                    ? (store.getState().projects || []).find(p => p.id === this._projectId) || null
+                    : null;
+                // Si el tab actual requereix projecte i ara estem en personal → fallback saldo
+                const meta = TAB_META[this._activeTab];
+                if (meta?.requiresProject && !this._projectId) this._activeTab = 'saldo';
+                this.render();
             });
-        });
+        }
         this._renderActiveTab();
     }
+
+    destroy() { try { this._cleanupTabs?.(); } catch (_) {} }
 
     async render() {
         const app = (typeof document !== 'undefined') ? document.getElementById('app') : null;
@@ -101,18 +120,40 @@ export default class WalletV2View {
     _renderShell() {
         const projName = this._project?.nombre || this._project?.name || this._projectId || 'Personal';
         const subtitle = this._projectId ? this._projectId : 'wallet personal';
-        const tabsHtml = VALID_TABS.map(tabId => {
-            const meta = TAB_META[tabId];
-            if (meta.requiresProject && !this._projectId) return '';   // skip Tarta si no hi ha projecte
-            const active = (this._activeTab === tabId) ? ' w2-tab-active' : '';
-            return `<button type="button" class="w2-tab${active}" data-w2-tab="${tabId}" title="${this._esc(meta.desc)}"><span>${meta.icon}</span><span class="w2-tab-label">${this._esc(meta.label)}</span></button>`;
-        }).join('');
+
+        // v143 · tabs canonical via SubmenuTabs · filtra Tarta si no hi ha projecte
+        const submenuTabs = VALID_TABS
+            .filter(tabId => !(TAB_META[tabId].requiresProject && !this._projectId))
+            .map(tabId => {
+                const meta = TAB_META[tabId];
+                return { id: tabId, label: meta.label, icon: meta.icon };
+            });
+        const submenuHtml = renderSubmenuTabs({ tabs: submenuTabs, activeId: this._activeTab, urlParam: 'tab' });
+
+        // v143 · context switcher · dropdown amb "Personal" + tots els teus projectes
+        const projects = (store.getState().projects || []);
+        const ctxOptions = [
+            `<option value="__personal__"${!this._projectId ? ' selected' : ''}>👤 Personal</option>`,
+            ...projects.map(p => {
+                const pid = p.id;
+                const label = (p.nombre || p.name || pid).slice(0, 40);
+                return `<option value="${this._esc(pid)}"${pid === this._projectId ? ' selected' : ''}>📁 ${this._esc(label)}</option>`;
+            }),
+        ].join('');
 
         const contextLinks = projectContextLinks({ projectId: this._projectId, current: 'wallet' });
 
         return `
         <style>
             .w2-shell { min-height: 100dvh; background: var(--bg-dark); color: var(--text-main); font-family: var(--font-base); display: flex; flex-direction: column; }
+            /* v143 · context switcher · barra dual personal/projecte */
+            .w2-ctx-bar { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--bg-panel); border-bottom: 1px solid var(--border-default); flex-wrap: wrap; }
+            .w2-ctx-label { font-size: 0.78rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+            .w2-ctx-select { background: var(--bg-elevated); color: var(--text-main); border: 1px solid var(--border-default); padding: 5px 28px 5px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 600; font-family: inherit; cursor: pointer; min-width: 200px; }
+            .w2-ctx-select:hover { border-color: var(--accent-indigo); }
+            .w2-ctx-select:focus { outline: 2px solid var(--accent-indigo); outline-offset: 1px; }
+            .w2-ctx-hint { font-size: 0.78rem; color: var(--text-muted); margin-left: auto; }
+            /* legacy w2-tab CSS · sense ús post-v143 · mantenim per backwards-compat extern */
             .w2-tabs { display: flex; gap: 4px; padding: 6px 12px; background: var(--bg-panel); border-bottom: 1px solid var(--border-default); overflow-x: auto; flex-wrap: nowrap; align-items: center; }
             .w2-tab { background: transparent; color: var(--text-secondary); border: 1px solid transparent; padding: 6px 12px; border-radius: 999px; font-size: 0.84rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-family: inherit; transition: all 120ms; }
             .w2-tab:hover { background: var(--glass-hover); color: var(--text-main); }
@@ -217,7 +258,16 @@ export default class WalletV2View {
                 icon: '💰', title: 'Wallet · ' + projName, subtitle,
                 contextLinks: contextLinks.map(l => ({ ...l })),
             })}
-            <nav class="w2-tabs" role="tablist" aria-label="Pestanyes del wallet">${tabsHtml}</nav>
+
+            <div class="w2-ctx-bar">
+                <label for="w2ContextSel" class="w2-ctx-label">📍 Context ·</label>
+                <select id="w2ContextSel" class="w2-ctx-select" aria-label="Context wallet">
+                    ${ctxOptions}
+                </select>
+                <span class="w2-ctx-hint">${this._projectId ? 'Wallet del projecte · ' + this._esc(projName) : 'Wallet personal'}</span>
+            </div>
+
+            <div id="w2Submenu">${submenuHtml}</div>
             <main class="w2-main" id="w2Main">
                 <div class="w2-loading">⏳ Carregant…</div>
             </main>
