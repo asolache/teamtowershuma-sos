@@ -741,19 +741,38 @@
     {
       "id": "wo-project-hub-subtabs",
       "project_id": "sos-dev-internal",
-      "title": "Evolució Project Hub · vista amb subpestanyes (Hub · Map · Kanban · Comptabilitat+Wallet) + dropdown extés",
-      "description": "Avui /project/:id és un hub monolític. Evolucionar a un layout amb\nsubmenú de subpestanyes integrades · pestanyes principals visibles\nsempre · dropdown amb seccions secundàries.\n\nPestanyes principals (visibles · 4) ·\n 1. Hub (millorat) · status del projecte · stats · activity stream\n 2. Map · ValueMapView integrat com a subview (no navegar fora)\n 3. Kanban · vista WOs/tasks tipo kanban (per role o fase)\n 4. Comptabilitat valor + Wallet · vista unificada saldo+ledger+contrib\n\nDropdown \"Més\" (extensible) ·\n · Pactes · vista pacts del projecte + signatura · DOC GENERATOR\n   (legal agents) viu aquí com a subsecció\n · Sprints · roadmap + iteració\n · KB · nodes/knowledge associats al projecte\n · Profile · qui hi participa + ikigai/skills\n · Settings · config projecte\n\nFilosofia · TOT contextual al projecte sense canviar de ruta · permet\nflow continu (mapa → kanban → wallet → pactes sense perdre context).\nAvui cal navegar fora del project hub per a wallet/pacts/legal-agents.",
+      "title": "Evolució Project Hub (vistes ASSOCIADES AL PROJECTE · NO persona) · subpestanyes (Hub · Map · Kanban · Comptabilitat+Wallet · Presentation) + dropdown extés",
+      "description": "Avui /project/:id és un hub monolític. Evolucionar a un layout amb\nsubmenú de subpestanyes INTEGRADES · pestanyes principals visibles\nsempre · dropdown amb seccions secundàries.\n\nSCOPE · aquesta WO afecta NOMÉS les vistes associades a un projecte ·\nNO toca vistes de persona/perfil (Profile · Ikigai · Skills propi ·\nWallet personal · Learn personal). Les vistes de persona són altres\nWOs separades.\n\nPestanyes principals (visibles · 5) ·\n 1. Hub (millorat) · status del projecte · stats · activity stream\n 2. Map · ValueMapView integrat com a subview (no navegar fora)\n 3. Kanban · vista WOs/tasks tipo kanban (per role o fase)\n 4. Comptabilitat valor + Wallet (del projecte · contribucions/ledger)\n 5. Presentation · pàgina de presentació EXISTENT redissenyada amb IA\n    (Arquitectura d'Informació) clara · seccions ·\n     · Hero · qui som · què fem (1 línia + descripció)\n     · Canvas · info estructurada del Project Canvas (segments · value\n       propositions · channels · revenue streams · resources · etc.)\n     · Pitch · narrativa del Pitch generat (problem · solution · why-now)\n     · Map preview · snapshot del mapa de valor (rols + transaccions)\n     · CTA · contacte · signa pacte · explora KB\n    IA-precisa · ordre fix · semàntica HTML · accessible · sharable URL.\n\nDropdown \"Més\" (extensible) ·\n · Pactes · vista pacts del projecte + signatura · DOC GENERATOR\n   (legal agents) viu aquí com a subsecció (no com a vista standalone)\n · Sprints · roadmap + iteració del projecte\n · KB · nodes/knowledge associats al projecte (no global)\n · Settings · config projecte (visibility · members · stripe link)\n\nFilosofia · TOT contextual al projecte sense canviar de ruta · permet\nflow continu (mapa → kanban → wallet → pactes → presentation sense\nperdre context). Avui cal navegar fora del project hub per a wallet/\npacts/legal-agents/presentation.\n\nPattern submenú · seguir el referent ja existent al Knowledge Hub\n(LearnView · .lv-tab · data-mode · this._mode state · ?tab=X URL\nparam) PER COHERÈNCIA UX. Vegi's wo-submenu-pattern-canonical per al\nrequisit transversal.",
       "priority": "high",
       "complexity": "L",
       "status": "backlog",
-      "estimated_cost_eur": 14,
+      "estimated_cost_eur": 16,
       "tags": [
         "sprint-v133",
         "ux",
         "project-hub",
         "navigation",
         "legal-agents",
-        "pacts"
+        "pacts",
+        "presentation",
+        "information-architecture"
+      ]
+    },
+    {
+      "id": "wo-submenu-pattern-canonical",
+      "project_id": "sos-dev-internal",
+      "title": "Pattern canonical de submenú UX (referent · LearnView .lv-tab) · auditar totes les vistes per coherència",
+      "description": "Avui tenim un únic submenú real implementat · LearnView (knowledge hub)\namb pattern · botons `.lv-tab` · attr `data-mode` · estat `this._mode`\n· URL param `?tab=X` · render condicional. Funciona bé.\n\nQuan introduïm submenús a altres vistes (començant per Project Hub\nv132h+ · wo-project-hub-subtabs) · TOTS han de seguir el mateix\npattern visual + interaction model per evitar inconsistència UX.\n\nTasques ·\n 1. Extreure el pattern de LearnView a un component compartit ·\n    `js/ui/SubmenuTabs.js` (o similar) · API ·\n      renderTabs({ tabs, activeId, onSelect, urlParam? })\n    Tabs · [{ id, label, icon, onClick, disabled? }]\n    Style · CSS variables compartides (color · spacing · active state)\n 2. Auditar totes les vistes existents · identificar candidates a\n    submenú (ProjectHub · Wallet · Profile · Skills · Sectors · etc.)\n 3. Migrar LearnView al component compartit (regression-safe · zero\n    canvi UX visible)\n 4. Aplicar component a Project Hub v133 (consumidor #2 · valida API)\n 5. Documentar el pattern a docs/ux/SUBMENU-PATTERN.md (quan usar-lo ·\n    quan NO · exemples bo/dolent)\n\nAcceptance ·\n · LearnView funciona idènticament després de la migració (regression\n   test verd)\n · Project Hub usa el mateix component (consistència visual\n   pixel-perfect)\n · CSS variables centralitzades · canvi de tema afecta tots els submenús\n\nAnti-pattern a evitar · cada vista inventant el seu propi submenú amb\nestils/comportaments lleugerament diferents (cost cognitiu acumulat).",
+      "priority": "high",
+      "complexity": "M",
+      "status": "backlog",
+      "estimated_cost_eur": 9,
+      "tags": [
+        "sprint-v133",
+        "ux",
+        "design-system",
+        "navigation",
+        "refactor"
       ]
     },
     {

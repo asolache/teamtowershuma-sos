@@ -1,26 +1,28 @@
 #!/usr/bin/env node
 // =============================================================================
-// TEAMTOWERS SOS V11 — v132f+g · BENCHMARK RUNNER CLI · VNA A/B (FULL vs SLIM)
+// TEAMTOWERS SOS V11 — v132f+g+h · BENCHMARK RUNNER CLI · VNA A/B (FULL vs SLIM)
 // Ruta · /scripts/run-vna-benchmark.mjs
 //
 // Executa els 20 casos canonical de `knowledge/benchmarks/vna-quality-cases.json`
 // amb LLM real i omple una taula markdown amb tokens · score · winner per
 // omplir el doc `docs/PROMPT-EFFICIENCY-LESSONS.md`.
 //
-// v132g · MULTI-PROVIDER · pots executar contra N providers en una sola tirada
-// (Anthropic + OpenAI + Gemini) i comparar quin dóna millor qualitat/cost.
+// v132g+h · MULTI-PROVIDER · 5 providers suportats · executa contra N en una
+// sola tirada i compara quin dóna millor qualitat/cost (cross-provider verdict).
+//
+// Providers · anthropic · openai · gemini · deepseek · minimax (v132h)
+// Env vars · ANTHROPIC_API_KEY · OPENAI_API_KEY · GEMINI_API_KEY (o GOOGLE_API_KEY)
+//           · DEEPSEEK_API_KEY · MINIMAX_API_KEY
 //
 // Ús ·
-//   ANTHROPIC_API_KEY=... node scripts/run-vna-benchmark.mjs                     # single provider (default anthropic)
+//   ANTHROPIC_API_KEY=... node scripts/run-vna-benchmark.mjs                                  # single (default anthropic)
 //   ANTHROPIC_API_KEY=... OPENAI_API_KEY=... node scripts/run-vna-benchmark.mjs --providers anthropic,openai
-//   ANTHROPIC_API_KEY=... OPENAI_API_KEY=... GEMINI_API_KEY=... node scripts/run-vna-benchmark.mjs --providers anthropic,openai,gemini
-//   node scripts/run-vna-benchmark.mjs --dry-run --providers anthropic,openai    # smoke test
-//   node scripts/run-vna-benchmark.mjs --provider openai                          # legacy single (alias de --providers openai)
-//   node scripts/run-vna-benchmark.mjs --limit 3                                  # 3 casos
-//   node scripts/run-vna-benchmark.mjs --model claude-sonnet-4-6                  # override model (afecta primer provider)
+//   <5 api keys>=... node scripts/run-vna-benchmark.mjs --providers anthropic,openai,gemini,deepseek,minimax
+//   node scripts/run-vna-benchmark.mjs --dry-run --providers anthropic,openai,deepseek      # smoke test
+//   node scripts/run-vna-benchmark.mjs --limit 3                                              # 3 casos
+//   node scripts/run-vna-benchmark.mjs --model claude-sonnet-4-6                              # override model
 //
-// Sortida · imprimeix resum + escriu a docs/benchmarks/results-<ts>.md amb
-// taula comparativa multi-provider (matriu N providers × 20 casos).
+// Sortida · imprimeix resum + escriu a docs/benchmarks/results-<ts>-multi.md.
 // =============================================================================
 
 import fs from 'node:fs';
@@ -44,7 +46,7 @@ function parseArgs(argv) {
         else if (a === '--out')       args.outDir   = argv[++i];
         else if (a === '--dry-run')   args.dryRun   = true;
         else if (a === '--help' || a === '-h') {
-            console.log('Usage · node scripts/run-vna-benchmark.mjs [--providers anthropic,openai,gemini] [--cases path] [--limit n] [--model id] [--dry-run]');
+            console.log('Usage · node scripts/run-vna-benchmark.mjs [--providers anthropic,openai,gemini,deepseek,minimax] [--cases path] [--limit n] [--model id] [--dry-run]');
             process.exit(0);
         }
     }
@@ -134,7 +136,59 @@ async function makeProvider(name, modelOverride) {
             }};
         };
     }
-    throw new Error('provider desconegut · ' + name);
+    if (name === 'deepseek') {
+        const key = process.env.DEEPSEEK_API_KEY;
+        if (!key) throw new Error('DEEPSEEK_API_KEY no configurada');
+        const model = modelOverride || 'deepseek-chat';
+        return async (_modelKey, opts) => {
+            const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+                body: JSON.stringify({
+                    model,
+                    max_tokens:  opts.maxOutputTokens || 1800,
+                    temperature: typeof opts.temperature === 'number' ? opts.temperature : 0.3,
+                    messages: [
+                        { role: 'system', content: opts.systemPrompt || '' },
+                        { role: 'user',   content: opts.userPrompt   || '' },
+                    ],
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error('deepseek ' + res.status + ' · ' + (data?.error?.message || res.statusText));
+            return {
+                text: data?.choices?.[0]?.message?.content || '',
+                usage: { inputTokens: data?.usage?.prompt_tokens || 0, outputTokens: data?.usage?.completion_tokens || 0 },
+            };
+        };
+    }
+    if (name === 'minimax') {
+        const key = process.env.MINIMAX_API_KEY;
+        if (!key) throw new Error('MINIMAX_API_KEY no configurada');
+        const model = modelOverride || 'MiniMax-Text-01';
+        return async (_modelKey, opts) => {
+            const res = await fetch('https://api.minimaxi.com/v1/text/chatcompletion_v2', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+                body: JSON.stringify({
+                    model,
+                    max_tokens:  opts.maxOutputTokens || 1800,
+                    temperature: typeof opts.temperature === 'number' ? opts.temperature : 0.3,
+                    messages: [
+                        { role: 'system', content: opts.systemPrompt || '' },
+                        { role: 'user',   content: opts.userPrompt   || '' },
+                    ],
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error('minimax ' + res.status + ' · ' + (data?.base_resp?.status_msg || data?.error?.message || res.statusText));
+            return {
+                text: data?.choices?.[0]?.message?.content || '',
+                usage: { inputTokens: data?.usage?.prompt_tokens || data?.usage?.total_tokens || 0, outputTokens: data?.usage?.completion_tokens || 0 },
+            };
+        };
+    }
+    throw new Error('provider desconegut · ' + name + ' · disponibles · anthropic · openai · gemini · deepseek · minimax');
 }
 
 // ── Render markdown summary · single provider (legacy compat) ────────────

@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-19T16:00 · v132b+c+d+e+f+g · DEEP ANALYSIS VNA + SYSTEM_BASE_SLIM 43% + WIRE-UP slim · MODE COMPLETAR · ESCALATION + vnaQuickSuggest unificat /map ↔ chain + PROMPT-EFFICIENCY-LESSONS doc + ValueMapView migrat (no-breaking) + Benchmark CLI runner + UI dropdown 20 casos + Run live A/B + MULTI-PROVIDER benchmark (anthropic+openai+gemini matriu N×20 · veredict cross-provider automàtic CONSENS/DIVERGÈNCIA/MIXT) + backlog WOs Project Hub subtabs (Hub·Map·Kanban·Comptabilitat+Wallet+dropdown Pactes/legal-agents) · 199+ asserts nous';
+const BUILD_STAMP = '2026-05-19T18:00 · v132b+c+d+e+f+g+h · DEEP ANALYSIS VNA + SYSTEM_BASE_SLIM + slim wire-up + vnaQuickSuggest + ValueMapView migrat + Benchmark CLI + UI dropdown + Run live A/B + MULTI-PROVIDER benchmark · 5 APIs (anthropic+openai+gemini+deepseek+minimax · v132h matriu N×20 · veredict cross-provider auto) + backlog WOs Project Hub subtabs (5 pestanyes · Hub·Map·Kanban·Comptab+Wallet·Presentation amb IA precisa Canvas+Pitch · scope projecte-not-persona · dropdown Pactes/legal-agents) + Submenu Pattern Canonical (refent LearnView .lv-tab · auditoria UX consistency cross-vistes) · 235+ asserts nous';
 
 export default class DesignSystemView {
 
