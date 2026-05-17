@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T06:00 · v135 · ALFA+ · Pre-thinking clarify (vnaClarify · clarification questions abans de generar mapa) + Multi-turn gap detection (vnaGapDetector · detecta gaps semàntics vs domain archetypes + sector expected_role_kinds + castell levels crítics + zero-transactions · runGapFillTurn 2a crida targeted · mergeGapFill dedupe) · resol bug "futbol sense scout" · 3/7 items post-alfa DONE · re-export via vnaQuickSuggest · 464+ asserts';
+const BUILD_STAMP = '2026-05-20T08:00 · v135+v136 · ALFA+ · 4/7 items post-alfa DONE · vnaClarify (pre-thinking) + vnaGapDetector (multi-turn gaps · resol futbol-sense-scout) + xapiService (Tin Can compatible · 10 verbs canonical adl.gov + SOS extension namespace · 4 helpers VNA quality tracking · recordMapGenerated amb score scaled 0-1 + duration ISO 8601 + extensions tokens/slim · listStatements filter agent/verb/object/since · summarizeStatements agg pure) · KB persistent type=xapi_statement · 523+ asserts';
 
 export default class DesignSystemView {
 

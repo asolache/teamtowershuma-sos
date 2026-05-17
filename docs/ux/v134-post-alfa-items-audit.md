@@ -12,7 +12,7 @@
 | 3 | **Embedding similarity** · fusionar rols similars | ❌ No | Només mencionat com a TODO a `contextPruner.js:272` · sense embedding service ni vector store |
 | 4 | **Real-time co-creation** · accept/reject per rol | ✅ Sí | `ValueMapView` `_aiProposals` sistema funcional · botons "✓ Aceptar / ✕" · CSS `.vmap-proposal-card.accepted/rejected` · v131+ |
 | 5 | **Cross-project pattern mining** | 🟡 Estàtic | 24 domain packs + 21 sectors CNAE canonical pre-curats · **no runtime mining** (no aprèn de projectes reals) |
-| 6 | **xAPI tracking quality** | 🟡 Espec | Spec a `docs/lms-api-spec-v0.1.md` (12 endpoints inclou xAPI Tin Can · `/v1/statements`) · **sense implementació JS** |
+| 6 | **xAPI tracking quality** | ✅ **Sí v136** | `js/core/xapiService.js` · Tin Can compatible (verbs canonical adl.gov + SOS extension namespace · activity types) · `recordStatement` + 4 helpers SOS (`recordMapGenerated/Accepted/ClarifyAnswered/GapFilled`) + `listStatements` filter + `summarizeStatements` agg · KB persistent type='xapi_statement' |
 | 7 | **Wiki community moderation** · arquetip publicable | ❌ No | `permaweb-skills-share` existeix per a skills · NO per a arquetip · `domainDetector` és source-of-truth tancat |
 
 ## Detall per item
@@ -135,16 +135,15 @@ versioning + voting + merge.
 | ✅ DONE v135 | #1 Pre-thinking clarify | Redueix ambigüitat de description abans de costar tokens |
 | ✅ DONE v135 | #2 Multi-turn gaps | Resol bug "futbol sense scout" amb 2a crida targeted |
 | ✅ DONE v131+ | #4 Co-creation | Operatiu · ValueMapView · iterar UX només si feedback |
-| 🟡 MITJ | #6 xAPI quality | Audit trail · evidència empírica de quality per benchmark |
+| ✅ DONE v136 | #6 xAPI quality tracking | Audit trail · evidència empírica de quality per benchmark |
 | 🟡 MITJ | #3 Embedding similarity | Resol duplicate roles (cas comú · 6 rols generats · 2 idèntics) |
 | 🟢 BAIX | #5 Pattern mining | Té estàtic ja · runtime és complexitat sense alfa-blocker |
 | 🟢 BAIX | #7 Wiki community | Post-tracció comunitat (no abans de tenir 50+ usuaris) |
 
-## Estat post-v135 · 3/7 items DONE · alfa-ready en VNA generation
+## Estat post-v136 · 4/7 items DONE · alfa-ready en VNA generation + audit trail
 
-Items que falten per a alfa+ · #3 (embedding dedup) · #6 (xAPI tracking) ·
-#5 (pattern mining) · #7 (wiki community). Cap és blocker · #3 i #6 són els
-més rendibles post-v135.
+Items que falten · #3 (embedding dedup · M+) · #5 (pattern mining runtime ·
+L) · #7 (wiki community moderation · post-tracció). Cap és alfa-blocker.
 
 ## Pròxims WOs proposats al backlog (si confirmes)
 
