@@ -19,6 +19,7 @@
 import { loadIndex, searchIndex, listByFolder, getRoadmap, listRoles, stats } from '../core/knowledgeIndexService.js';
 import { ROADMAPS_BY_ROLE } from '../core/knowledgeRoadmaps.js';
 import { store } from '../core/store.js';
+import { KB } from '../core/kb.js';
 
 const TPL_VERSION = 'learn-v3-subhub';
 
@@ -75,6 +76,9 @@ export default class LearnView {
     }
 
     async afterRender() {
+        // v123-fix · si entrem al tab mind, hidratar stats reals del KB (abans
+        // llegia store.nodes que mai no ha existit → sempre "Buit")
+        if (this._mode === 'mind') this._hydrateMindStats();
         document.querySelectorAll('[data-mode]').forEach(b =>
             b.addEventListener('click', (e) => this._setMode(e.currentTarget.dataset.mode)));
         document.querySelectorAll('[data-role]').forEach(b =>
@@ -334,35 +338,58 @@ export default class LearnView {
     }
 
     _renderMindTab() {
-        // Stats del KB · sense carregar tota la galàxia (delegat a /mind)
-        let kbStats = { total: 0, byType: {} };
-        try {
-            const allNodes = store.getState?.()?.nodes || {};
-            const ids = Object.keys(allNodes);
-            kbStats.total = ids.length;
-            for (const id of ids) {
-                const n = allNodes[id];
-                const t = n?.type || 'unknown';
-                kbStats.byType[t] = (kbStats.byType[t] || 0) + 1;
-            }
-        } catch (_) {}
+        // v123-fix · stats del KB reals (no de store.nodes que mai no ha existit) ·
+        // primer paint amb cache (this._mindStats) i hidratació async a afterRender.
+        const kbStats = this._mindStats || { total: 0, byType: {}, loading: true };
         const typeRows = Object.entries(kbStats.byType).sort((a, b) => b[1] - a[1]).slice(0, 12);
 
+        // Comptatge addicional · projectes del store + nodes vinculats
+        const stateProjects = (store.getState?.()?.projects || []).filter(p => !p.isArchived);
+
         return `
-        <div class="lv-card">
-            <h2>🕸 Mind-as-Graph · ${kbStats.total} nodes al KB local</h2>
+        <div class="lv-card" id="lvMindCard">
+            <h2>🕸 Mind-as-Graph · <span id="lvMindTotal">${kbStats.loading ? '…' : kbStats.total}</span> nodes al KB · ${stateProjects.length} projectes actius</h2>
             <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:14px;">Tot el coneixement del SOS és un graf · cada document · projecte · rol · transacció · SOP · WO és un node amb tags i relacions. Aquesta vista compacta mostra el comptatge per tipus; per a la vista galàctica D3 amb 3 layers d'edges · obre la vista completa.</p>
-            <div class="lv-folder-grid">
+            <div class="lv-folder-grid" id="lvMindGrid">
+                ${kbStats.loading ? `<div class="lv-folder-card"><h3>⏳ Carregant…</h3><div class="desc">Llegint nodes del KB local</div></div>` : ''}
                 ${typeRows.map(([type, n]) => `
                     <div class="lv-folder-card">
                         <h3>${TYPE_META[type]?.icon || '·'} ${this._esc(type)}</h3>
                         <div class="count" style="font-size:1.4rem;font-weight:700;color:${TYPE_META[type]?.color || '#94a3b8'};">${n}</div>
                         <div class="desc">node${n === 1 ? '' : 's'} d'aquest tipus</div>
                     </div>`).join('')}
-                ${kbStats.total === 0 ? `<div class="lv-folder-card"><h3>Buit</h3><div class="desc">Encara no hi ha nodes · crea un projecte primer.</div></div>` : ''}
+                ${!kbStats.loading && kbStats.total === 0 && stateProjects.length === 0 ? `<div class="lv-folder-card"><h3>Buit</h3><div class="desc">Encara no hi ha nodes · crea un projecte primer o importa un backup a /settings.</div></div>` : ''}
             </div>
             ${this._ctaFullView('/mind', 'Obre Mind-Graph galàctic')}
         </div>`;
+    }
+
+    // v123-new · hidratació async dels stats de mind · cridat des de afterRender
+    // quan _mode === 'mind' i no tenim cache encara. Actualitza el DOM in place
+    // (sense re-render complet) per evitar parpadeig.
+    async _hydrateMindStats() {
+        if (this._mindStats && !this._mindStats.loading) return;
+        try {
+            await KB.init?.();
+            const allNodes = (await KB.getAllNodes?.()) || [];
+            const stats = { total: allNodes.length, byType: {}, loading: false };
+            for (const n of allNodes) {
+                const t = n?.type || n?.kind || 'unknown';
+                stats.byType[t] = (stats.byType[t] || 0) + 1;
+            }
+            this._mindStats = stats;
+            // Refresh in-place if encara estem al tab mind
+            if (this._mode === 'mind') {
+                const card = document.getElementById('lvMindCard');
+                if (card) card.outerHTML = this._renderMindTab();
+            }
+        } catch (e) {
+            this._mindStats = { total: 0, byType: {}, loading: false, error: e?.message };
+            if (this._mode === 'mind') {
+                const card = document.getElementById('lvMindCard');
+                if (card) card.outerHTML = this._renderMindTab();
+            }
+        }
     }
 
     _renderFoldersTab() {

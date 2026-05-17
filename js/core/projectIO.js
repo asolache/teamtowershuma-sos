@@ -131,6 +131,13 @@ export async function verifySnapshot(snap) {
 // modes:
 //   merge   (default) — añade/actualiza nodos del snapshot sobre lo existente
 //   replace           — borra todo (excepto par de claves) y restaura snapshot
+//
+// v123-fix · IMPORT-BACKUP-BUG · @alvaro · els projectes no apareixien després
+// d'importar perquè la kernel state (que conté `projects[]`) NO s'aplica en
+// mode merge. Ara · ambdós modes apliquen també la kernel state (en merge ·
+// fent merge de projects[] + globalUsers[] per id · en replace · substitució
+// completa). A més · refresquem in-memory state i notifiquem listeners perquè
+// la UI re-renderitzi sense full reload.
 export async function importSnapshot(snap, { mode = 'merge' } = {}) {
     await verifySnapshot(snap);
     await KB.init();
@@ -147,10 +154,62 @@ export async function importSnapshot(snap, { mode = 'merge' } = {}) {
         await KB.saveNode(node);
         count++;
     }
-    if (mode === 'replace' && snap.kernel) {
-        await KB.saveNode({ id: 'global_kernel_state_v11', type: 'kernel', content: snap.kernel });
+
+    // Apply kernel state (projects + globalUsers + session)
+    let kernelApplied = false;
+    let projectsMerged = 0;
+    if (snap.kernel && typeof snap.kernel === 'object') {
+        if (mode === 'replace') {
+            // Reemplaça kernel sencer
+            await KB.saveNode({ id: 'global_kernel_state_v11', type: 'kernel', content: snap.kernel });
+            try { store.state = JSON.parse(JSON.stringify(snap.kernel)); } catch (_) {}
+            kernelApplied = true;
+            projectsMerged = (snap.kernel.projects || []).length;
+        } else {
+            // Merge · projects[] + globalUsers[] dedup per id · resta del kernel intacte
+            const current = store.getState() || {};
+            const mergedProjects = Array.isArray(current.projects) ? current.projects.slice() : [];
+            const projectIds = new Set(mergedProjects.map(p => p.id));
+            for (const p of (snap.kernel.projects || [])) {
+                if (!p || !p.id) continue;
+                if (projectIds.has(p.id)) {
+                    // Update in place · els camps importats prevalen
+                    const idx = mergedProjects.findIndex(x => x.id === p.id);
+                    if (idx >= 0) mergedProjects[idx] = { ...mergedProjects[idx], ...p };
+                } else {
+                    mergedProjects.push(p);
+                    projectIds.add(p.id);
+                    projectsMerged++;
+                }
+            }
+            const mergedUsers = Array.isArray(current.globalUsers) ? current.globalUsers.slice() : [];
+            const userIds = new Set(mergedUsers.map(u => u.id));
+            for (const u of (snap.kernel.globalUsers || [])) {
+                if (!u || !u.id || userIds.has(u.id)) continue;
+                mergedUsers.push(u);
+                userIds.add(u.id);
+            }
+            const nextState = {
+                ...current,
+                projects:    mergedProjects,
+                globalUsers: mergedUsers,
+                lastUpdated: Date.now(),
+                kbVersion:   (current.kbVersion || 0) + 1,
+            };
+            store.state = nextState;
+            await store.persistState();
+            kernelApplied = true;
+        }
     }
-    return { imported: count, mode };
+
+    // Notify subscribers so views re-render without page reload
+    try {
+        if (Array.isArray(store.listeners)) {
+            store.listeners.forEach(l => { try { l(store.state); } catch (_) {} });
+        }
+    } catch (_) {}
+
+    return { imported: count, projectsMerged, kernelApplied, mode };
 }
 
 // ─── Helpers de UI: download/upload ─────────────────────────────────────────

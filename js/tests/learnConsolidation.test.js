@@ -84,7 +84,7 @@ const vM = new LearnView();
 vM._mode = 'mind';
 const htmlM = await vM.getHtml();
 ok('C · "Mind-as-Graph" header', htmlM.includes('Mind-as-Graph'));
-ok('C · menciona "nodes al KB local"', htmlM.includes('nodes al KB local'));
+ok('C · menciona "nodes al KB"', htmlM.includes('nodes al KB'));
 ok('C · CTA "/mind"', htmlM.includes('/mind'));
 
 // ─── D · Folders tab · smart folders ───────────────────────────────────

@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-17T14:00 · v122 · runExpertChain INTEGRAT a CreateLiveView (generationMode=expert-chain) + AGENT.md pattern · 8 agents/*.md + loader + paritat CHAIN_PHASES/tier router · 99 asserts · BUG FIX breadcrumb search (conflicte ID amb globalSearch.js)';
+const BUILD_STAMP = '2026-05-17T22:00 · v123 · BUG FIX import backup (kernel merge · projects ja visibles sense reload) + /learn?tab=mind hydrate KB real + /map flow animation prep (pulseStyle dot/deliverable/glow · _buildNodeMap resilient · pulseNode API) + bridge neural-path (sos:neural-step) · 58 asserts nous';
 
 export default class DesignSystemView {
 
