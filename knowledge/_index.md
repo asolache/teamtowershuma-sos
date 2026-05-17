@@ -53,6 +53,7 @@ Ficheros disponibles. KnowledgeLoader los carga por id CNAE o alias.
 | `vision/communities-of-practice-model.md` | Stub Ola 3: CoPs por rol VNA agrupables por ámbito (sector / dominio / folksonomía). |
 | `vision/h110-sector-evolution-and-mind-graph.md` | Perfilado H1.10: clonación sector→cliente + evolución a SOPs/WOs + Mind-Graph total + skills asociadas a roles para CoPs. |
 | `vision/best-practices-2026-05.md` | **10 bones pràctiques** destil·lades del sprint marató creació (mai 2026 · 13 PRs · v99→v116). Information architecture · methodology-first prompts · knowledge-first defaults · pre-flight checks · streaming + skeletons · IA fallback chain · TDD string+state · CSS tokens · hub pattern · merge frequent. **Llegir abans d'iterar qualsevol part del SOS.** |
+| `vision/prompts-chain-plan.md` | **Pla canonical de la cadena de prompts IA** (v119+). 8 fases · define-product → ikigai → pitch → landing → design-value-map RIC (deep thinking) → SOCs derivats del mapa → SOPs amb skills → WOs. Cost estimat · cadena per ambition · vocabulary canonical (SOC vs SOP vs WO) · decisions de disseny · KISS/DRY/Antigravity al centre. **Llegir abans de tocar cap prompt.** |
 
 ---
 
