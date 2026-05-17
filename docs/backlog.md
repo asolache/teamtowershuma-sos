@@ -4709,3 +4709,70 @@ L'esquelet ja té el backend de xarxa social · només cal **explicit-lo** ·
 ---
 
 *Documento vivo · actualizat el 2026-05-15 amb el sprint analysis & design v2/v3 + UX hub + social.*
+
+---
+
+## v132 backlog (NEW · 2026-05-18 @alvaro · request post-v131c)
+
+### `wo-prompt-ab-test-vna` · A/B test prompt VNA · "menys context > més context?"
+- **Pregunta clau** · El botó "Sugerir con IA" a `/map?project=X` genera output molt bo · per què? Hipòtesi: el flow de creació actual potser dóna massa context i això satura el model.
+- **Doc plan complet** · `docs/backlog-v131c-ab-test-vna.md` (5 sub-items A → E)
+- **Entregables** · `promptABTestService.js` · panel A/B Lab a `/prompts-debug` · benchmark dataset 20 casos reals · `PROMPT-EFFICIENCY-LESSONS.md`
+- **Mètriques per validar hipòtesi** · win rate Variant A (llarg) vs B (curt) · cost/output token · diversitat rol kinds · % transaccions intangibles
+- **Status** · backlog · prioritat alta (impacte directe qualitat SOS)
+- **Effort** · L (~2 dies)
+- **Tags** · sprint-v132 · ia-quality · evidence-based
+
+### `wo-skills-marketplace-ui` · UI catàleg agregat /skills view (post-v131c)
+- **Backend ja existeix** · `skillsMarketplaceService.js` (v131c) amb agregació + cross-sector + matchCandidatesToWO + taxonomySummary
+- **Pendent UI** · panel "Marketplace · skills més demandades cross-sector · top per nivell" a /skills
+- **Effort** · M
+- **Tags** · sprint-v132 · skills · marketplace
+
+### `wo-sector-skill-levels-roles` · skill_levels per role (v131c només té taxonomy general)
+- **Status** · taxonomia general declarada per cada sector v131c (10 sectors restants) · però `skill_levels` per role concret només a K/L/M/N/Q/R (v131b)
+- **Pendent** · afegir block `skill_levels:` dins cada role als 10 sectors restants
+- **Effort** · M
+- **Tags** · sprint-v132 · sectors · skills
+
+### `wo-sector-quality-rubric-integration` · integrar rubric al flow creació
+- **Backend ja existeix** · `sectorQualityRubric.js` (v131c) amb evaluateProjectAgainstSector + summarizeRubricResult
+- **Pendent** · cridar al final del runExpertChain · mostrar score + recommendations al ResultBar del CreateLive
+- **Effort** · S
+- **Tags** · sprint-v132 · quality · sectors
+
+---
+
+*Backlog actualitzat 2026-05-18 amb v131c entregables + v132 plan.*
+
+---
+
+## v132 LMS + Sectors fusion · NOVA SÈRIE (request @alvaro 2026-05-18 post-v131c)
+
+> Doc complet de strategy + design · `docs/lms-sectors-fusion-v132.md`
+
+### `wo-research-lms` · PRIMER de la sèrie LMS
+- **Què** · esquelet research del LMS de SOS · base per a wo-lms-content-engine · wo-lms-api-market · wo-lms-permaweb-publishing
+- **Sub-tasques** · benchmark Moodle/OpenEdX/Canvas/LearnDash/Chamilo · LMS comercials moderns API capabilities · estratègia build vs buy · API spec v0.1 · auth (SBT) · monetització · schema dades LMS Content Node compatible Scorm + xAPI
+- **Entregable** · doc estratègic + diagrama arquitectural + API spec v0.1 + 3-5 user stories
+- **Effort** · L (2-3 dies research + 1 dia drafting)
+- **Tags** · sprint-v132 · lms · research · api-market · foundational
+
+### `wo-sectors-fusion` · unificar /sectors + /learn?tab=sectors + sector-agents
+- **Què** · fusionar les 3 vistes en una vista unificada potent · nou `SectorAgentExplorerView` (ruta `/sectors/agents/:id`) amb 7 tabs (Identity · Roles · Skills · SOPs · Patterns · Agent prompt · Used in)
+- **No perdre roles bilingüe** · readiness · CNAE seeds existents
+- **Effort** · XL (5-7 dies)
+- **Tags** · sprint-v134-135 · sectors · UX · fusion
+
+### `wo-dynamic-kb-index` · indexador automatitzat KB + GitHub + Permaweb
+- **Què** · auto-detecta novetats al repo GitHub (webhook) + KB local + permaweb · genera `knowledge/_index.json` · API endpoint `/api/kb-index/latest`
+- **Notificacions** · feed neural-path (visible a /path)
+- **Effort** · L (2-3 dies)
+- **Tags** · sprint-v133 · kb · automation · permaweb
+
+### Roadmap sequencial proposat
+- **v132** · wo-research-lms (foundational · sense codi · només strategy)
+- **v133** · wo-dynamic-kb-index (automatització · base per a LMS content discovery)
+- **v134-135** · wo-sectors-fusion (UX major redesign)
+- **v136+** · wo-lms-content-engine · wo-lms-api-market · wo-lms-permaweb-publishing (sèrie LMS execució real)
+

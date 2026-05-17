@@ -3,8 +3,45 @@ sector_id: B
 sector_name: "Industrias Extractivas"
 sector_name_en: "Mining & Quarrying"
 cnae: "05-09"
-version: "v11.1"
-tags: ["mineria", "extraccion", "canteras", "petroleo", "gas", "minerales", "industria-extractiva"]
+version: "v131c"
+cnae_official: "CNAE-2009 B · Industrias extractivas (extracción carbón · petróleo · gas · minerales · canteres)"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/B.md v131c"
+tags: ["mineria", "extraccion", "canteras", "petroleo", "gas", "minerales", "industria-extractiva", "seguretat-laboral", "ESG"]
+
+skill_level_taxonomy:
+  junior: "0-2 anys · operari · FP grau mig · supervisat"
+  mid: "3-7 anys · supervisor · enginyer tècnic ITGE"
+  senior: "8-15 anys · cap mina · pla labors · regulador"
+  principal: "15+ anys · director multi-explotació · ESG + comunitat"
+
+sops_canonical:
+  - id: sop-pla-labors-anual
+    title: "Pla labors anual aprovat"
+    castell_level: pom_de_dalt
+    description: "Estudi reserves · pla extracció · seguretat · ambiental · regulador."
+    steps_summary: "trimestres · regulat"
+  - id: sop-cicle-extraccio
+    title: "Cicle extracció diari"
+    castell_level: tronc
+    description: "Perforació · voladura · càrrega · transport · processament."
+    steps_summary: "diari · 4 stakeholders"
+  - id: sop-seguretat-prl
+    title: "Programa PRL extractiu"
+    castell_level: laterals
+    description: "EPIs · formació · simulacres · investigació incidents · ITSS."
+    steps_summary: "continu · regulador supervisa"
+  - id: sop-tancament-restauracio
+    title: "Tancament i restauració ambiental"
+    castell_level: baixos
+    description: "Pla restauració · biòlegs · validació administració."
+    steps_summary: "anys post · gate fi cicle"
+  - id: sop-comunitat-acceptacio
+    title: "Llicència social · comunitat veïna"
+    castell_level: mans
+    description: "Diàleg veïnat · compensacions · ESG report."
+    steps_summary: "continu · imatge sectorial"
 
 roles:
   - id: mine_director

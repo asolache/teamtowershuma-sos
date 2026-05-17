@@ -3,8 +3,45 @@ sector_id: H
 sector_name: "Transporte y Almacenamiento"
 sector_name_en: "Transport & Storage"
 cnae: "49-53"
-version: "v11.1"
-tags: ["transporte", "logistica", "almacen", "distribucion", "supply-chain", "last-mile"]
+version: "v131c"
+cnae_official: "CNAE-2009 H · Transporte y almacenamiento (terrestre · marítim · aeri · emmagatzematge · activitats postals)"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/H.md v131c"
+tags: ["transporte", "logistica", "almacen", "distribucion", "supply-chain", "last-mile", "freight", "3PL", "courier", "tachograph"]
+
+skill_level_taxonomy:
+  junior: "0-2 anys · conductor · operari magatzem · ADR/CAP iniciació"
+  mid: "3-7 anys · supervisor torn · planificador rutes · ADR complet"
+  senior: "8-15 anys · cap operació · supply chain manager · APICS"
+  principal: "15+ anys · director logística · estratègia multi-modal · directiva CSRD"
+
+sops_canonical:
+  - id: sop-route-planning-daily
+    title: "Planificació rutes diàries"
+    castell_level: tronc
+    description: "Recopilació comandes · agrupació geogràfica · assignació vehicle · finestres horàries · validació."
+    steps_summary: "diari · 2 stakeholders · TMS"
+  - id: sop-warehouse-receiving
+    title: "Recepció magatzem"
+    castell_level: pinya
+    description: "Descàrrega · validació albarà · qualitat · ubicació · sistema WMS · firma."
+    steps_summary: "per shipment · 3 stakeholders · ISO 9001"
+  - id: sop-last-mile-delivery
+    title: "Entrega last-mile"
+    castell_level: mans
+    description: "Ruta · entrega · firma client · cobrament reemborsament · incidències · cierre."
+    steps_summary: "diari · 1-2 stakeholders · NPS clau"
+  - id: sop-cold-chain-handling
+    title: "Gestió cadena de fred (perissable)"
+    castell_level: laterals
+    description: "Temperatura origen · monitoring durant transport · trazabilitat · alarmes · informe."
+    steps_summary: "continu · 3 stakeholders · regulat sanitat"
+  - id: sop-return-reverse-logistics
+    title: "Logística inversa · devolució"
+    castell_level: pinya
+    description: "Sol·licitud client · pickup · validació estat · classificació · reintegració/reciclatge."
+    steps_summary: "3-15 dies · 3 stakeholders · cost crític"
 
 roles:
   - id: logistics_director

@@ -3,8 +3,45 @@ sector_id: UV
 sector_name: "Organismos Extraterritoriales e Internacionales"
 sector_name_en: "Extraterritorial & International Organisations"
 cnae: "99"
-version: "v11.1"
-tags: ["organismos-internacionales", "ONG", "diplomacia", "cooperacion-internacional", "multilateral", "ayuda-humanitaria"]
+version: "v131c"
+cnae_official: "CNAE-2009 U · Actividades de organizaciones y organismos extraterritoriales (ONU · UE · OTAN · agències internacionals · ambaixades · cooperació multilateral)"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/UV.md v131c · noteu · CNAE oficial usa nomes lletra U · UV és convenció interna SOS"
+tags: ["organismos-internacionales", "ONG", "diplomacia", "cooperacion-internacional", "multilateral", "ayuda-humanitaria", "ONU", "UE", "OTAN", "ambaixada"]
+
+skill_level_taxonomy:
+  junior: "0-2 anys · trainee · UNV · stage · sense seniority"
+  mid: "3-7 anys · officer · cap missió petit · idiomes EN+FR/ES"
+  senior: "8-15 anys · senior officer · cap missió mitjà · diplomatic"
+  principal: "15+ anys · director general · ambaixador · USG (Under-Secretary General)"
+
+sops_canonical:
+  - id: sop-mission-deployment
+    title: "Desplegament missió internacional"
+    castell_level: pom_de_dalt
+    description: "Mandat · pressupost · equip · logística · arribada terreny · informació periòdica."
+    steps_summary: "setmanes-mesos · 10+ stakeholders · projecte estratègic"
+  - id: sop-fundraising-call
+    title: "Crida fundraising · convocatòria donants"
+    castell_level: mans
+    description: "Identificació necessitat · proposta · roadshow donants · compromisos · seguiment."
+    steps_summary: "1-6 mesos · 5+ stakeholders · vital sustainabilitat"
+  - id: sop-diplomatic-engagement
+    title: "Engagement diplomàtic país soci"
+    castell_level: pom_de_dalt
+    description: "Briefing · agenda · reunions · documents · acords · seguiment compromisos."
+    steps_summary: "setmanes-anys · 4 stakeholders · long-term"
+  - id: sop-humanitarian-response
+    title: "Resposta humanitària emergència"
+    castell_level: tronc
+    description: "Activació protocol · equip rapid deployment · suport · coordinació clusters · sortida."
+    steps_summary: "hores-mesos · 8+ stakeholders · vital"
+  - id: sop-policy-paper
+    title: "Elaboració policy paper / report institucional"
+    castell_level: laterals
+    description: "Recerca · drafting · review intern · validació diplomàtica · publicació · advocacy."
+    steps_summary: "1-6 mesos · 5 stakeholders · influència mig-llarg"
 
 roles:
   - id: programme_director

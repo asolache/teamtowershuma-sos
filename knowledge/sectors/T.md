@@ -3,8 +3,45 @@ sector_id: T
 sector_name: "Actividades de los Hogares como Empleadores"
 sector_name_en: "Households as Employers"
 cnae: "97-98"
-version: "v11.1"
-tags: ["hogar", "cuidados", "empleada-hogar", "cuidador", "dependencia", "conciliacion", "servicios-domésticos"]
+version: "v131c"
+cnae_official: "CNAE-2009 T · Activitats de les llars com a empleadores · producció de béns/serveis per a ús propi (servei domèstic · cures dependència · cuidador familiar contractat)"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/T.md v131c · cobreix llars empleadores + cooperatives cures"
+tags: ["hogar", "cuidados", "empleada-hogar", "cuidador", "dependencia", "conciliacion", "servicios-domésticos", "SED", "Sistema-Especial-Empleados-Hogar"]
+
+skill_level_taxonomy:
+  junior: "0-2 anys · primera experiència · sense titulació obligatòria"
+  mid: "3-7 anys · cartera estable · primer auxili · LSC bàsic"
+  senior: "8-15 anys · referent zona · TGS atenció persones · llocs complexos"
+  principal: "15+ anys · líder cooperativa cures · formador · advisor famílies"
+
+sops_canonical:
+  - id: sop-contractacio-llar
+    title: "Contractació SED · règim especial llar"
+    castell_level: laterals
+    description: "Recerca persona · entrevista · contracte · alta SS · primer mes prova."
+    steps_summary: "1-4 setmanes · 3 stakeholders · TGSS regulat"
+  - id: sop-rutina-diaria
+    title: "Rutina diària de cures"
+    castell_level: pinya
+    description: "Higiene · alimentació · mobilitat · medicació · companyia · comunicació família."
+    steps_summary: "diari 8-12h · 1 stakeholder + família · core servei"
+  - id: sop-escalat-incidencia
+    title: "Escalat incidència mèdica/social"
+    castell_level: laterals
+    description: "Detecció canvi · primer auxili · trucada família/061 · seguiment · informe."
+    steps_summary: "minuts-hores · 3 stakeholders · clau"
+  - id: sop-pia-dependencia
+    title: "Sol·licitud PIA · Pla Individual Atenció (Llei Dependència)"
+    castell_level: mans
+    description: "Sol·licitud · valoració · pla recomanat · resolució · ajuda econòmica/servei."
+    steps_summary: "6-18 mesos · 4 stakeholders · regulat IMSERSO/CCAA"
+  - id: sop-substitucio-vacances
+    title: "Substitució per vacances/baixa"
+    castell_level: mans
+    description: "Anticipació · cerca substituta · onboarding · supervisió primers dies · feedback família."
+    steps_summary: "1-3 setmanes preparació · 3 stakeholders"
 
 roles:
   - id: household_employer
