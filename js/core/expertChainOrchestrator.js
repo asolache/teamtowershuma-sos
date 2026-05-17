@@ -128,6 +128,24 @@ export async function runExpertChain({
     } else {
         emit('domain-detected', 'info', { domain: null, via: 'none', durationMs: detMs });
     }
+
+    // v131b · sector context · load knowledge/sectors/{LETTER}.md i injecta
+    // buildSectorContextBlock al prompt fase 5 (design-value-map-rich) ·
+    // complementa el domainDetection amb CNAE-2009 oficial + rols arquetip per
+    // nivell casteller del sector específic + SOPs canonical. Best-effort.
+    if (context.sector && typeof context.sector === 'string') {
+        try {
+            const { loadSectorAgent, buildSectorContextBlock } = await import('./sectorAgentLoader.js');
+            const agent = await loadSectorAgent(context.sector);
+            if (agent) {
+                const block = buildSectorContextBlock(agent);
+                if (block && block.length > 20) {
+                    context = { ...context, sectorContext: block, sectorAgent: { sectorId: agent.sectorId, rolesStatus: agent.rolesStatus, rolesInjectable: agent.rolesInjectable } };
+                    emit('sector-context', 'info', { sectorId: agent.sectorId, status: agent.rolesStatus, injectable: agent.rolesInjectable, blockLen: block.length });
+                }
+            }
+        } catch (_) { /* silent · sector .md no disponible o no canonical */ }
+    }
     // Telemetria · best-effort · no bloca
     try {
         const { recordDetection } = await import('./domainTelemetry.js');
@@ -234,6 +252,8 @@ function _buildPhaseContext(phase, baseCtx, out) {
             // pattern · evitem await dins context builder · injectem només
             // si el caller l'ha computat i passat via baseCtx.domainDetection
             if (baseCtx.domainDetection) c.domainDetection = baseCtx.domainDetection;
+            // v131b · sectorContext (string text del knowledge/sectors/X.md)
+            if (baseCtx.sectorContext) c.sectorContext = baseCtx.sectorContext;
         } catch (_) {}
     }
     // Fase 6 · socs reb el valueMap

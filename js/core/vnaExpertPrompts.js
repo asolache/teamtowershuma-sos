@@ -450,7 +450,7 @@ Retorna NOMÉS aquest JSON ·
 }
 Sense markdown · sense codeblocks.`,
 
-    'design-value-map-rich': ({ name, description, sector, entity_type, lifecycle_stage, vna_zoom, product_service, canvas, pitch, domainDetection = null }) => {
+    'design-value-map-rich': ({ name, description, sector, entity_type, lifecycle_stage, vna_zoom, product_service, canvas, pitch, domainDetection = null, sectorContext = null }) => {
         // v126 · sub-domain inference · si el caller passa domainDetection
         // (de domainDetector.detectDomain) → injectem els arquetip específics
         // del sub-domini (ex sports-team · 14 rols esportius reals) en
@@ -474,6 +474,16 @@ Patterns recíprocs comuns ·
 ${pats}
 `;
         }
+        // v131b · sectorContext · output de sectorAgentLoader.buildSectorContextBlock
+        // complementa (NO substitueix) el domainDetection · injecta CNAE-2009 oficial +
+        // rols arquetip per nivell casteller + SOPs canonical adaptats al sector.
+        let sectorBlock = '';
+        if (sectorContext && typeof sectorContext === 'string' && sectorContext.length > 20) {
+            sectorBlock = `
+CONTEXT SECTORIAL CNAE-2009 ESPANYA (knowledge/sectors/${sector || 'X'}.md · v131b canonical) ·
+${sectorContext}
+`;
+        }
         return `TASCA · DISSENY DE MAPA DE VALOR RIC · pensa profundament com a consultor VNA llegendari.
 
 CONTEXT (tot rellevant per al teu raonament Allee) ·
@@ -486,7 +496,7 @@ CONTEXT (tot rellevant per al teu raonament Allee) ·
 ${canvas ? '- Canvas vision · ' + canvas.vision : ''}
 ${pitch ? '- Pitch headline · ' + pitch.headline : ''}
 - Descripció · ${description || '(vaga)'}
-${domainBlock}
+${domainBlock}${sectorBlock}
 THINK STEP-BY-STEP (mentalment · NO mostris el procés · només l'output) ·
 0. ¿El projecte és business típic o té sub-domini específic? (sports/team · arts/performance · cooperativa cures · escola · religious · militant · etc.) — adapta els ARQUETIP al sub-domini real ${domainDetection ? '(JA detectat: ' + domainDetection.label + ')' : '(infereix · NO et quedis amb 5 rols genèrics si el context demana 10+ rols específics)'}.
 1. Quin és el network real al voltant del producte/servei?

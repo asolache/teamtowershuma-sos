@@ -4,286 +4,139 @@ sector_name: "Actividades Profesionales, Científicas y Técnicas"
 sector_name_en: "Professional, Scientific & Technical Activities"
 cnae: "69-75"
 cnae_official: "CNAE-2009 M · Actividades profesionales, científicas y técnicas (consultoría · abogados · arquitectos · ingenieros · I+D · publicidad · veterinaria)"
-version: "v131"
+version: "v131b"
 agent_type: sector-context
-roles_status: legacy-mismatch
-roles_status_note: "Aquest fitxer tenia continguts immobiliaris (sector L). v131 fixa el frontmatter a canonical CNAE M (professional/scientific/technical). El contingut de rols sota es migrarà a v131b · veure rols a knowledge/sectors/N.md actual."
-canonical_archetypes_source: "domainDetector.DOMAIN_PACKS · software-agency (J·M) · legal-advisory (M) · research-lab (M)"
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/M.md v131b · 8 rols per nivell casteller + skill_levels + 5 SOPs canonical · cobreix consultoria + legal + arquitectura + I+D"
 tags: ["consultoría", "abogados", "arquitectos", "ingenieros", "I+D", "publicidad", "veterinaria", "professional-services"]
 
+skill_level_taxonomy:
+  junior: "0-2 anys · supervisat · associate / consultant 1 / analista · titulació superior"
+  mid: "3-5 anys · autònom · senior consultant / asociado / project manager · post-grau / MBA"
+  senior: "6-10 anys · lidera projectes · principal / counsel / project director · referent extern"
+  principal: "10+ anys · partner / socio / managing director · construir el negoci · client lead"
+
 roles:
-  - id: promotor_developer
-    name: "Promotor Inmobiliario"
-    name_en: "Property Developer"
-    description: "Origina y lidera proyectos de desarrollo inmobiliario: suelo, financiación, proyecto, construcción y comercialización."
-    description_en: "Originates and leads property development projects: land, financing, design, construction and sales."
+  - id: managing_partner
+    name: "Managing Partner · Socio Director"
     castell_level: pom_de_dalt
-    fmv_usd_h: 95
-    typical_actor: "Empresario inmobiliario o director de promoción con visión de ciclo completo"
-    typical_actor_en: "Real estate entrepreneur or development director with full-cycle vision"
-    tags: ["promocion", "desarrollo", "suelo"]
+    fmv_usd_h: 300
+    typical_actor: "Soci de despatx · firma · estudi (consultoria · legal · arquitectura)"
+    description: "Visió firma · captació clients clau · contractació partners · governança · representació externa."
+    skill_levels:
+      principal: ["construcció firma · M&A entre firmes", "key client lead > €1M facturació/any", "board governance"]
 
-  - id: property_manager
-    name: "Gestor de Patrimonio / Property Manager"
-    name_en: "Property Manager"
-    description: "Gestiona activos inmobiliarios en alquiler: contratos, mantenimiento, relación con inquilinos y optimización de la rentabilidad."
-    description_en: "Manages rental real estate assets: contracts, maintenance, tenant relations and yield optimisation."
+  - id: senior_partner_specialist
+    name: "Partner Especialista (área pràctica)"
     castell_level: tronc
-    fmv_usd_h: 52
-    typical_actor: "Gestor de activos con conocimiento jurídico básico y habilidades de relación con inquilinos"
-    typical_actor_en: "Asset manager with basic legal knowledge and tenant relationship skills"
-    tags: ["gestion", "alquiler", "activos"]
+    fmv_usd_h: 220
+    typical_actor: "Partner d'una vertical (tax · M&A · litigation · digital strategy · urbanism)"
+    description: "Lidera vertical · captació projectes complexos · qualitat tècnica · mentoring senior team."
+    skill_levels:
+      senior: ["lidera projectes > €500k", "publicacions sectorials", "speaker conferences"]
+      principal: ["recognised expert (Chambers · Legal500)", "marca personal", "industry advisor"]
 
-  - id: real_estate_agent
-    name: "Agente Inmobiliario"
-    name_en: "Real Estate Agent"
-    description: "Intermedia en compraventa y alquiler de inmuebles. Gestiona la captación, visitas y negociación entre partes."
-    description_en: "Intermediates in property sales and rentals. Manages acquisition, viewings and negotiation between parties."
+  - id: senior_consultant_associate
+    name: "Senior Consultant · Asociado · Senior Engineer"
     castell_level: tronc
-    fmv_usd_h: 35
-    typical_actor: "Agente con conocimiento del mercado local, habilidades de negociación y certificación API"
-    typical_actor_en: "Agent with local market knowledge, negotiation skills and professional certification"
-    tags: ["agente", "intermediacion", "negociacion"]
+    fmv_usd_h: 130
+    typical_actor: "Senior 5-10 anys experiència · lidera workstreams"
+    description: "Lidera workstreams de projecte · mentora juniors · interface diari amb client mid-management."
+    skill_levels:
+      mid: ["lidera workstream 1-3 persones", "presentació al client final", "scope management"]
+      senior: ["lidera projecte multi-workstream", "negocia change requests", "P&L del projecte"]
 
-  - id: valuation_expert
-    name: "Tasador / Valorador"
-    name_en: "Valuation Expert / Appraiser"
-    description: "Determina el valor de mercado de activos inmobiliarios. Su informe es la base de operaciones financieras y transacciones."
-    description_en: "Determines the market value of real estate assets. Their report is the basis for financial transactions and deals."
-    castell_level: tronc
-    fmv_usd_h: 60
-    typical_actor: "Arquitecto técnico o titulado con habilitación como tasador homologado (ECO/805/2003)"
-    typical_actor_en: "Technical architect or qualified professional with certified appraiser accreditation"
-    tags: ["tasacion", "valoracion", "mercado"]
-
-  - id: technical_director
-    name: "Director Técnico / de Obra"
-    name_en: "Technical Director / Site Manager"
-    description: "Supervisa la construcción o rehabilitación del activo: calidades, plazos, coste y recepción técnica."
-    description_en: "Supervises the construction or refurbishment of the asset: quality, timelines, cost and technical handover."
-    castell_level: tronc
-    fmv_usd_h: 68
-    typical_actor: "Arquitecto o ingeniero de edificación con experiencia en dirección de obra"
-    typical_actor_en: "Architect or building engineer with site management experience"
-    tags: ["obra", "tecnico", "calidad"]
-
-  - id: commercial_sales
-    name: "Director Comercial de Ventas"
-    name_en: "Sales Director"
-    description: "Lidera la comercialización de la promoción o del portfolio de activos. Gestiona el equipo de ventas y los canales."
-    description_en: "Leads the commercialisation of the development or asset portfolio. Manages the sales team and channels."
-    castell_level: tronc
-    fmv_usd_h: 58
-    typical_actor: "Director de ventas inmobiliarias con experiencia en obra nueva o activos singulares"
-    typical_actor_en: "Real estate sales director with new build or special assets experience"
-    tags: ["ventas", "comercializacion", "portfolio"]
-
-  - id: legal_urban_planner
-    name: "Jurídico Urbanístico"
-    name_en: "Legal & Urban Planning Specialist"
-    description: "Gestiona licencias, permisos urbanísticos, due diligence jurídica y contratos. Convierte suelo en proyecto construible."
-    description_en: "Manages licences, planning permissions, legal due diligence and contracts. Converts land into buildable project."
-    castell_level: tronc
-    fmv_usd_h: 72
-    typical_actor: "Abogado urbanista o consultor de planeamiento con experiencia en gestión de suelo"
-    typical_actor_en: "Planning lawyer or consultant with land management experience"
-    tags: ["juridico", "urbanismo", "licencias"]
-
-  - id: proptech_analyst
-    name: "Analista Proptech / Datos de Mercado"
-    name_en: "Proptech / Market Data Analyst"
-    description: "Analiza datos de mercado inmobiliario, tendencias de precios y oportunidades de inversión mediante herramientas digitales."
-    description_en: "Analyses real estate market data, price trends and investment opportunities using digital tools."
+  - id: consultant_associate
+    name: "Consultant · Associate · Engineer"
     castell_level: pinya
-    fmv_usd_h: 42
-    typical_actor: "Analista de datos con conocimiento de herramientas proptech y mercado inmobiliario"
-    typical_actor_en: "Data analyst with proptech tools knowledge and real estate market understanding"
-    tags: ["datos", "mercado", "proptech"]
+    fmv_usd_h: 85
+    typical_actor: "Mid 2-5 anys · executa anàlisis i deliverables sota supervisió"
+    description: "Recerca · anàlisi quantitativa · model financer · drafts · execució amb supervisió mid-senior."
+    skill_levels:
+      junior: ["execució tasques amb molta supervisió", "Excel / SQL / Python bàsic", "drafts revisats x100%"]
+      mid: ["execució autònoma de workstreams petits", "presentació interna", "tools sectorials (Tableau · PowerBI · AutoCAD · Revit)"]
+      senior: ["mentora junior", "owns subworkstream", "primer contact amb mid-management client"]
 
-transactions:
-  - id: tx_m01
-    from: valuation_expert
-    to: promotor_developer
-    deliverable: "Informe de tasación del suelo o activo con valor de mercado y análisis residual"
-    deliverable_en: "Land or asset appraisal report with market value and residual analysis"
-    type: tangible
-    is_must: true
-    frequency: baja
-    health_hint: "Una tasación optimista de suelo es la semilla del mayor riesgo en promoción inmobiliaria"
+  - id: analyst_junior
+    name: "Analyst · Junior · Trainee"
+    castell_level: pinya
+    fmv_usd_h: 55
+    typical_actor: "0-2 anys · acabat de graduar · supervisió intensa"
+    description: "Recopila dades · suport recerca · format material · anàlisis bàsiques amb supervisió mid+."
+    skill_levels:
+      junior: ["Excel modeling", "fact gathering", "format slides", "supervisió ~80%"]
 
-  - id: tx_m02
-    from: legal_urban_planner
-    to: promotor_developer
-    deliverable: "Due diligence jurídico-urbanística: cargas, edificabilidad y riesgos del suelo"
-    deliverable_en: "Legal and planning due diligence: encumbrances, buildability and land risks"
-    type: intangible
-    is_must: true
-    frequency: baja
-    health_hint: "Comprar suelo sin due diligence completa es la decisión más cara del ciclo promotor"
+  - id: practice_qa_reviewer
+    name: "QA Reviewer · Practice Lead / Quality Officer"
+    castell_level: laterals
+    fmv_usd_h: 175
+    typical_actor: "Senior independent que revisa deliverables abans entrega client"
+    description: "Quality assurance final · cleanup risk · validació metodologia · second opinion."
+    skill_levels:
+      senior: ["practice lead area especialitzada", "mentora 10+ professionals", "publicacions internes (intellectual capital)"]
+      principal: ["chief knowledge officer", "quality framework firma", "interacció regulador"]
 
-  - id: tx_m03
-    from: technical_director
-    to: promotor_developer
-    deliverable: "Informe de avance de obra: coste ejecutado, desviaciones y riesgos técnicos"
-    deliverable_en: "Construction progress report: executed cost, deviations and technical risks"
-    type: tangible
-    is_must: true
-    frequency: alta
-    health_hint: "Las desviaciones de obra detectadas tarde se multiplican; el informe semanal es mínimo viable"
+  - id: business_development
+    name: "Business Development · Account Manager"
+    castell_level: mans
+    fmv_usd_h: 95
+    typical_actor: "BD professional o partner amb forta orientació comercial"
+    description: "Pipeline comercial · proposals · networking sectorial · relació compte clau · CRM."
+    skill_levels:
+      mid: ["proposals · RFPs", "qualifying leads", "CRM management"]
+      senior: ["key account ownership", "C-level relationships", "thought leadership"]
+      principal: ["chief revenue officer", "marketing strategy", "rebranding firma"]
 
-  - id: tx_m04
-    from: commercial_sales
-    to: promotor_developer
-    deliverable: "Ritmo de ventas, reservas y feedback de cliente sobre producto"
-    deliverable_en: "Sales pace, reservations and client product feedback"
-    type: intangible
-    is_must: true
-    frequency: media
-    health_hint: "Un promotor sin datos de ventas en tiempo real no puede ajustar producto ni precio hasta que es tarde"
+  - id: client_corporate
+    name: "Client Corporate · Stakeholder Final"
+    castell_level: baixos
+    fmv_usd_h: null
+    typical_actor: "C-level · director · GM del client que rep el servei"
+    description: "Paga honoraris · valida deliverables · pot recomanar o churn · NPS clau."
 
-  - id: tx_m05
-    from: proptech_analyst
-    to: promotor_developer
-    deliverable: "Análisis de mercado: absorción, precios competidores y perfil de demanda por zona"
-    deliverable_en: "Market analysis: absorption rate, competitor pricing and demand profile by area"
-    type: intangible
-    is_must: true
-    frequency: media
-    health_hint: "Lanzar precio sin análisis de mercado es apostar; con análisis es inversión"
-
-  - id: tx_m06
-    from: promotor_developer
-    to: technical_director
-    deliverable: "Presupuesto objetivo, plazos inamovibles y estándares de calidad del producto"
-    deliverable_en: "Target budget, fixed deadlines and product quality standards"
-    type: intangible
-    is_must: true
-    frequency: baja
-    health_hint: "El director técnico que no tiene límites claros optimiza calidad a costa de plazo y coste"
-
-  - id: tx_m07
-    from: real_estate_agent
-    to: commercial_sales
-    deliverable: "Pipeline de compradores cualificados y feedback sobre objeciones del mercado"
-    deliverable_en: "Qualified buyer pipeline and market objection feedback"
-    type: intangible
-    is_must: true
-    frequency: alta
-    health_hint: "Las objeciones del agente al cliente son el market research más barato y más ignorado"
-
-  - id: tx_m08
-    from: property_manager
-    to: promotor_developer
-    deliverable: "Experiencia de uso del activo: defectos postventa, demandas de inquilinos y costes de mantenimiento"
-    deliverable_en: "Asset use experience: post-sale defects, tenant demands and maintenance costs"
-    type: intangible
-    is_must: false
-    frequency: baja
-    health_hint: "El promotor que no aprende de la vida útil de sus activos repite los mismos errores de diseño"
-
-  - id: tx_m09
-    from: legal_urban_planner
-    to: technical_director
-    deliverable: "Licencia de obras concedida y condicionantes técnicos de la normativa urbanística"
-    deliverable_en: "Granted building permit and technical conditions from planning regulations"
-    type: tangible
-    is_must: true
-    frequency: baja
-    health_hint: "Comenzar obra sin licencia en firme es el riesgo legal más frecuente y más evitable"
-
-  - id: tx_m10
-    from: valuation_expert
-    to: property_manager
-    deliverable: "Valoración actualizada del portfolio para reporting a inversores o refinanciación"
-    deliverable_en: "Updated portfolio valuation for investor reporting or refinancing"
-    type: tangible
-    is_must: false
-    frequency: baja
-    health_hint: "Un portfolio sin valoración actualizada no puede refinanciarse ni atraer nuevos inversores"
-
-  - id: tx_m11
-    from: proptech_analyst
-    to: real_estate_agent
-    deliverable: "Datos de precio por metro cuadrado, tiempo en mercado y comparables recientes"
-    deliverable_en: "Price per square metre data, time on market and recent comparables"
-    type: intangible
-    is_must: false
-    frequency: media
-    health_hint: "El agente que trabaja sin datos de mercado sistematizados pierde credibilidad ante el comprador informado"
-
-  - id: tx_m12
-    from: commercial_sales
-    to: proptech_analyst
-    deliverable: "Datos de conversión por tipología, precio y zona para calibrar modelos de demanda"
-    deliverable_en: "Conversion data by unit type, price and area to calibrate demand models"
-    type: tangible
-    is_must: false
-    frequency: media
-    health_hint: "Los modelos de demanda construidos sin datos reales de conversión predicen el pasado, no el futuro"
-
-  - id: tx_m13
-    from: technical_director
-    to: commercial_sales
-    deliverable: "Fechas de entrega comprometidas y estado real de avance por fase"
-    deliverable_en: "Committed delivery dates and actual progress status by phase"
-    type: intangible
-    is_must: true
-    frequency: media
-    health_hint: "Vender sin fecha de entrega fiable genera litigios y daño reputacional en la siguiente promoción"
-
-  - id: tx_m14
-    from: property_manager
-    to: legal_urban_planner
-    deliverable: "Incidencias contractuales con inquilinos que requieren revisión jurídica"
-    deliverable_en: "Contractual incidents with tenants requiring legal review"
-    type: intangible
-    is_must: false
-    frequency: media
-    health_hint: "El conflicto con inquilino que no llega a juridico en tiempo puede convertirse en ocupación ilegal"
-
-  - id: tx_m15
-    from: promotor_developer
-    to: legal_urban_planner
-    deliverable: "Mandato para negociación con administración, propietarios de suelo o socios"
-    deliverable_en: "Mandate for negotiation with administration, landowners or partners"
-    type: intangible
-    is_must: true
-    frequency: baja
-    health_hint: "El jurídico que negocia sin mandato claro puede comprometer posiciones que el promotor no quería ceder"
-
-patterns:
-  - name: "El Ciclo de la Información Tardía"
-    description: "El promotor recibe los datos críticos (desviación de costes, caída del ritmo de ventas, problema urbanístico) cuando ya no hay margen de maniobra. Cada nodo de la red retiene información hasta que ya no puede ocultarla."
-    signal: "Desviaciones de coste o plazo detectadas en fases avanzadas de obra; ventas que frenan sin alerta previa"
-
-  - name: "Agente como Canal, no como Red"
-    description: "Los agentes inmobiliarios se gestionan como canal de ventas transaccional. No existe flujo de retorno de su conocimiento de mercado hacia el promotor o el analista de datos."
-    signal: "El promotor conoce su producto mejor que el mercado; precios lanzados que no absorbe el mercado en 6 meses"
-
-  - name: "Postventa Desconectada del Diseño"
-    description: "Los defectos que reporta el property manager o el inquilino no retroalimentan nunca al director técnico ni al promotor. Cada promoción repite los mismos errores constructivos."
-    signal: "Reclamaciones de postventa con tipologías de defecto idénticas en promociones sucesivas"
-
-  - name: "Due Diligence Comprimida"
-    description: "En mercados alcistas, la presión por cerrar operaciones rápido comprime la due diligence jurídico-urbanística. Se compra suelo con riesgos conocidos que luego se materializan en bloqueos."
-    signal: "Proyectos paralizados por problemas urbanísticos detectados después del cierre de la operación"
-
-  - name: "Proptech sin Decisión"
-    description: "La empresa tiene acceso a datos de mercado pero las decisiones de precio, producto y timing siguen tomándose por experiencia e intuición del promotor. El analista de datos produce informes que nadie usa."
-    signal: "Informes de mercado generados regularmente pero no referenciados en actas de comité de inversión"
-
+sops_canonical:
+  - id: sop-rfp-proposal
+    title: "RFP · Proposta comercial professional"
+    castell_level: mans
+    description: "Recepció RFP · qualifying · scoping intern · pricing · proposal · presentació · negociació SOW."
+    steps_summary: "2-4 setmanes · 4-6 stakeholders · gate comercial"
+  - id: sop-engagement-kickoff
+    title: "Kickoff projecte professional · primeres 2 setmanes"
+    castell_level: tronc
+    description: "Mobilització equip · onboarding client · stakeholder map · workplan · baseline."
+    steps_summary: "5-10 dies · 5-8 stakeholders · clau per success"
+  - id: sop-deliverable-review
+    title: "Cicle revisió i validació de deliverable"
+    castell_level: laterals
+    description: "Draft · revisió interna senior · QA reviewer · sanitisation · entrega · feedback client."
+    steps_summary: "2-5 dies cada deliverable · 3 stakeholders · iteratiu"
+  - id: sop-billing-monthly
+    title: "Facturació mensual hours-based o fixed-fee"
+    castell_level: mans
+    description: "Tracking hores · validation partner · invoice · ageing · cobrament · IVA + IRPF."
+    steps_summary: "mensual recurrent · 2 stakeholders + finance"
+  - id: sop-engagement-closure
+    title: "Tancament projecte · lessons learned + cross-sell"
+    castell_level: pom_de_dalt
+    description: "Final deliverable · NPS survey · debrief intern · proposta seguiment · retencií knowledge."
+    steps_summary: "1-2 setmanes · 4 stakeholders · base per a recurrence"
 ---
 
-## Actividades Inmobiliarias — Contexto VNA
+## Contexto narrativo del sector
 
-El sector inmobiliario (CNAE 68) opera en **ciclos largos con decisiones de alta irreversibilidad**: comprar suelo, obtener una licencia o construir un edificio son compromisos de capital que no se pueden deshacer en semanas. Esto hace que la calidad de los flujos de información en las fases tempranas sea crítica — los errores de información en la fase de análisis se pagan en la fase de venta.
+El sector M agrupa serveis intel·lectuals d'alt valor afegit · consultoria estratègica i operativa (Big 4 · MBB · boutiques) · serveis legals (despatxos · notari) · arquitectura i enginyeria · I+D · publicitat · veterinària. Model de negoci dominat per **billable hours · fixed-fee · success fee** · alta dependència del talent senior i de la reputació.
 
-### Dinámicas de Red de Valor
+## Patrons de valor típics
 
-La red de valor inmobiliaria tiene una característica única: **el producto tarda entre 3 y 5 años en materializarse** desde que se origina la idea. En ese tiempo, la red de nodos (promotor, técnico, jurídico, comercial, agente) debe mantener flujos de información coherentes a través de cambios de mercado, regulatorios y de demanda. La VNA hace visible cuándo estos flujos se rompen antes de que el daño sea irreparable.
+- **Cicle partner↔client** · captació ⇄ proposal ⇄ engagement ⇄ delivery ⇄ recurrence
+- **Pipeline analyst→associate→senior→partner** · 8-12 anys · up-or-out tradicional
+- **Reciprocitat firma↔mercat** · publicacions/thought leadership ⇄ brand ⇄ pipeline
+- **Cicle QA↔delivery** · draft ⇄ revisió ⇄ sanitisation ⇄ entrega
+- **Mecanisme cross-sell** · 1 servei ⇄ relació ⇄ 2-N serveis sobre el mateix compte
 
-El nodo del **agente inmobiliario** acumula conocimiento de mercado de altísimo valor — qué busca el comprador hoy, qué objeciones tiene, qué compara — pero raramente existe un flujo formal hacia el promotor o hacia el analista de datos. Este conocimiento se pierde con cada operación.
+## Intangibles clau
 
-### Bilingüe / Bilingual
-
-Real estate VNA maps reveal a structural information asymmetry: developers have deep knowledge of their product but limited real-time knowledge of buyer behaviour and market shifts. The agent and the property manager hold this knowledge but have no formalised channel to feed it back. When this reverse flow is established, projects are adapted faster to demand, reducing time-to-sell by 20-30% in soft markets.
+- Reputació firma (Chambers · Legal500 · MBB · Best Lawyers)
+- Network senior partners (relacions C-level)
+- Cultura · "client first · firm always" · "no surprises"
+- Capital intel·lectual (metodologia pròpia · publicacions · IP)

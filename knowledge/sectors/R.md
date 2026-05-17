@@ -4,233 +4,153 @@ sector_name: "Actividades Artísticas, Recreativas y de Entretenimiento"
 sector_name_en: "Arts, Entertainment & Recreation"
 cnae: "90-93"
 cnae_official: "CNAE-2009 R · Actividades artísticas, recreativas y de entretenimiento (arts escèniques · creació literària · biblioteques · museus · patrimoni · joc d'atzar · esports · entreteniment recreatiu)"
-version: "v131"
+version: "v131b"
 agent_type: sector-context
-roles_status: legacy-mismatch
-roles_status_note: "Aquest fitxer tenia continguts sanitari (sector Q). v131 fixa el frontmatter a canonical CNAE R (arts/esports/entreteniment). El contingut de rols sota es migrarà a v131b · veure parts dels rols a knowledge/sectors/S.md actual (que tenia arts/esports/cultura barrejats)."
-canonical_archetypes_source: "domainDetector.DOMAIN_PACKS · sports-team (R·S) · arts-performance (R) · art-collective (R·S)"
-tags: ["arts-escenicas", "musica", "teatre", "dansa", "museos", "patrimonio", "biblioteca", "esports", "club-deportivo", "lliga-esportiva", "joc-atzar", "entreteniment-recreatiu"]
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/R.md v131b · 9 rols per nivell casteller + skill_levels + 5 SOPs canonical · cobreix arts + esports + cultura + entreteniment"
+tags: ["arts-escenicas", "música", "teatre", "dansa", "museus", "patrimoni", "biblioteca", "esports", "club-deportivo", "lliga-esportiva", "joc-atzar", "entreteniment-recreatiu", "festival", "promotor-musical"]
+
+skill_level_taxonomy:
+  junior: "0-2 anys · debut professional · supervisat · sense reconeixement extern"
+  mid: "3-7 anys · cartera estable · gira/lliga regional · primera visibilitat"
+  senior: "8-15 anys · headliner · primera división · referent del subsector"
+  principal: "15+ anys · llegenda · membre comitè/jurat institucional · marca pròpia"
 
 roles:
-  - id: paciente-receptor
-    name: Paciente / Receptor de cuidado
-    description: El actor central del ecosistema sanitario. Su estado de salud es tanto el input (problema) como el output (resultado) del sistema. Su participación activa en el proceso determina en gran parte el resultado.
+  - id: artistic_sporting_director
+    name: "Director Artístic · Director Esportiu"
     castell_level: pom_de_dalt
-    fmv_usd_h: null
-    typical_actor: "paciente, usuario de servicios sociales, persona en cuidado"
-    tags: [paciente, usuario, cuidado, salud, resultado clínico]
+    fmv_usd_h: 180
+    typical_actor: "Director companyia · festival · museu · club esportiu · lliga"
+    description: "Visió artística/esportiva · contractació talent · línia editorial · representació institucional."
+    skill_levels:
+      principal: ["lidera companyia/club amb pressupost > €5M", "membre jurats nacionals", "innovació programàtica"]
 
-  - id: diagnosticador
-    name: Diagnosticador
-    description: Evalúa el estado del paciente y determina qué necesita. La calidad de este rol determina toda la cadena de valor posterior. Un diagnóstico errado multiplica el coste y el daño.
+  - id: head_coach_artistic_director
+    name: "Primer Entrenador · Director d'Escena"
     castell_level: tronc
-    fmv_usd_h: null
-    typical_actor: "médico, especialista, psicólogo clínico, trabajador social evaluador"
-    tags: [diagnóstico, evaluación, especialista, medicina]
+    fmv_usd_h: 140
+    typical_actor: "Entrenador club professional · director d'orquestra · director d'escena teatre"
+    description: "Lidera execució dia a dia · plantilla/elenc · estratègia tàctica/escènica setmanal."
+    skill_levels:
+      mid: ["lidera equip 15-25 persones", "preparació partit/funció", "comunicació amb DT/director artistic"]
+      senior: ["títols professionals · UEFA Pro · NBA Coach Cert", "gestió mediàtica", "transferència knowledge"]
+      principal: ["llegenda esportiva/artística", "mentor altres entrenadors", "auditor mètode"]
 
-  - id: proveedor-tratamiento
-    name: Proveedor de tratamiento
-    description: Ejecuta la intervención terapéutica o de cuidado. Convierte protocolo clínico en acción concreta sobre el paciente. La continuidad y calidad de este rol determina el resultado.
-    castell_level: tronc
-    fmv_usd_h: null
-    typical_actor: "médico, enfermero, terapeuta, cuidador, farmacéutico"
-    tags: [tratamiento, terapia, cuidado, protocolo, enfermería]
-
-  - id: coordinador-ruta-clinica
-    name: Coordinador de ruta clínica
-    description: Garantiza que el paciente recorre el sistema de forma eficiente y sin pérdidas de información entre actores. El rol que convierte episodios aislados en atención continua.
-    castell_level: tronc
-    fmv_usd_h: null
-    typical_actor: "gestor de casos, coordinador de cuidados, enfermero gestor, médico de familia"
-    tags: [coordinación, continuidad, gestión de casos, ruta asistencial]
-
-  - id: proveedor-recursos-clinicos
-    name: Proveedor de recursos clínicos
-    description: Suministra los materiales, tecnología y medicamentos que hacen posible el tratamiento. La disponibilidad y calidad de estos recursos determina las opciones terapéuticas.
+  - id: performer_athlete
+    name: "Jugador/a · Intèrpret · Artista"
     castell_level: pinya
-    fmv_usd_h: null
-    typical_actor: "farmacéutica, proveedor de material sanitario, laboratorio, tecnología médica"
-    tags: [farmacia, material sanitario, laboratorio, equipamiento]
+    fmv_usd_h: 95
+    typical_actor: "Jugador primera plantilla · solista · actriu · ballarina · cantant"
+    description: "Producció central · entrena/assaja · executa partit/funció · projecció pública."
+    skill_levels:
+      junior: ["acabat de promoure · cantera · debut", "rutina entreno/assaig diari", "primer contacte mèdia"]
+      mid: ["titular regular · 5-15 partits/funcions/temporada", "specialització rol", "fan base local"]
+      senior: ["estrella d'equip/companyia", "transfer market · primer reclam", "marca personal"]
+      principal: ["llegenda viva", "Hall of Fame / Premio Nacional", "advisor sectorial"]
 
-  - id: guardian-calidad-etica
-    name: Guardián de calidad y ética
-    description: Garantiza que la práctica clínica cumple estándares de calidad, seguridad y ética. Protege al paciente y al sistema de errores y malas prácticas.
-    castell_level: tronc
-    fmv_usd_h: null
-    typical_actor: "comité de ética, dirección médica, auditor clínico, inspección sanitaria"
-    tags: [calidad, ética, protocolos, seguridad del paciente, auditoría]
+  - id: youth_academy_apprentice
+    name: "Jugador/a Cantera · Aprenent (formació)"
+    castell_level: pinya
+    fmv_usd_h: 35
+    typical_actor: "Jove en formació · cantera · escola companyia"
+    description: "Formació esportiva/artística · acadèmica · progressió cap a primera línia."
+    skill_levels:
+      junior: ["entrenament/assaig diari", "competició local", "formació académica paral·lela"]
+      mid: ["promoció B-team", "primer contracte professional", "psicòleg + nutricionista"]
 
-  - id: financiador-sistema
-    name: Financiador del sistema
-    description: Financia el acceso al cuidado, ya sea mediante sistema público, seguro privado o pago directo. Sus reglas determinan qué tratamientos son accesibles y para quién.
+  - id: technical_staff_medical
+    name: "Staff Tècnic · Servei Mèdic / Stage Manager"
+    castell_level: laterals
+    fmv_usd_h: 75
+    typical_actor: "Fisio · metge esportiu · stage manager · regidor"
+    description: "Suport tècnic · prevenció lesions · readaptació · logística escènica · backstage."
+    skill_levels:
+      junior: ["suport entreno/assaig", "logística material"]
+      mid: ["responsable disciplina específica", "rehabilitació jugadors clau", "stage management funcions"]
+      senior: ["cap de servei mèdic/tècnic", "presa decisions in-game", "lidera 3-8 tècnics"]
+
+  - id: scout_dramaturg
+    name: "Ojeador · Dramaturg · Comissari (curador)"
+    castell_level: laterals
+    fmv_usd_h: 90
+    typical_actor: "Scout xarxa internacional · dramaturg · curator museu · selector festival"
+    description: "Detecció talent · selecció repertori · narrativa exposició · scout rivals."
+    skill_levels:
+      mid: ["informes individuals", "cartera 50-200 referències"]
+      senior: ["recommanació fitxatges €1M+", "cap de programa", "thought leader segment"]
+
+  - id: federation_referee
+    name: "Federació · Lliga · Àrbitre · Regulador"
+    castell_level: laterals
+    fmv_usd_h: 120
+    typical_actor: "Federació esportiva · lliga · OAM · òrgan disciplinari · regulador joc d'atzar"
+    description: "Marc reglament · calendari · sancions · validació compliance · supervisió circuit."
+    skill_levels:
+      principal: ["membre comitè FIFA/UEFA/COI", "regulació estatal", "comitès deontologia"]
+
+  - id: comms_press_booking
+    name: "Comunicació · Premsa · Booking"
+    castell_level: mans
+    fmv_usd_h: 60
+    typical_actor: "Cap premsa · responsable xarxes · booking agent · community manager"
+    description: "Rodes premsa · gestió crisi · xarxes socials · contractació gires · branding."
+    skill_levels:
+      junior: ["redacció notes premsa", "publicació xarxes"]
+      mid: ["estratègia content", "rodes premsa club / artista mid-tier"]
+      senior: ["responsable brand · marca pròpia · xarxes 100k+ followers", "negociació exclusives"]
+
+  - id: fanbase_audience_sponsor
+    name: "Afició · Públic · Patrocinador"
+    castell_level: baixos
+    fmv_usd_h: null
+    typical_actor: "Soci · subscriptor · patrocinador (sponsor)"
+    description: "Base econòmica i emocional · taquilla · botiga · ingressos drets · sentiment de pertinença."
+
+sops_canonical:
+  - id: sop-season-planning
+    title: "Planificació temporada esportiva/artística"
     castell_level: pom_de_dalt
-    fmv_usd_h: null
-    typical_actor: "sistema público de salud, mutua, seguro médico privado, paciente pagador"
-    tags: [financiación, seguro, sistema público, reembolso]
-
-  - id: generador-conocimiento-clinico
-    name: Generador de conocimiento clínico
-    description: Investiga, genera evidencia y traduce el avance científico en práctica clínica. El rol que asegura que el sistema mejora con el tiempo.
+    description: "Calendari · plantilla/elenc · pressupost · objectius esportius/artístics · sponsors."
+    steps_summary: "1-3 mesos · 8-12 stakeholders · gate anual"
+  - id: sop-match-show-cycle
+    title: "Cicle complet partit / funció"
     castell_level: tronc
-    fmv_usd_h: null
-    typical_actor: "investigador clínico, universidad, centro de I+D, unidad de innovación"
-    tags: [investigación, evidencia clínica, I+D, innovación, protocolos]
-
-  - id: cuidador-informal
-    name: Cuidador informal
-    description: Familiar o persona cercana que provee cuidado no profesional pero crítico para la recuperación y bienestar del paciente. Un actor invisible en los sistemas formales pero que sostiene el 60-70% del cuidado real.
-    castell_level: pinya
-    fmv_usd_h: null
-    typical_actor: "familiar cuidador, red de apoyo, voluntario, vecino"
-    tags: [cuidado informal, familia, red de apoyo, bienestar]
-
-transactions:
-  - id: tx-episodio-clinico
-    from: paciente-receptor
-    to: diagnosticador
-    deliverable: "Consulta, síntomas, historial, demanda de atención"
-    type: tangible
-    is_must: true
-    frequency: alta
-    health_hint: "La accesibilidad al sistema determina si este flujo ocurre a tiempo o cuando ya es tarde."
-
-  - id: tx-diagnostico-clinico
-    from: diagnosticador
-    to: proveedor-tratamiento
-    deliverable: "Diagnóstico, plan terapéutico, prescripción"
-    type: tangible
-    is_must: true
-    frequency: alta
-    health_hint: "Un diagnóstico tardío o incorrecto multiplica el coste del tratamiento y empeora el pronóstico."
-
-  - id: tx-tratamiento
-    from: proveedor-tratamiento
-    to: paciente-receptor
-    deliverable: "Intervención terapéutica, medicación, cuidado continuado"
-    type: tangible
-    is_must: true
-    frequency: alta
-    health_hint: "La continuidad del tratamiento es crítica. Abandono temprano = resultado pobre y reingreso."
-
-  - id: tx-recursos-terapeuticos
-    from: proveedor-recursos-clinicos
-    to: proveedor-tratamiento
-    deliverable: "Medicamentos, material sanitario, tecnología diagnóstica"
-    type: tangible
-    is_must: true
-    frequency: alta
-    health_hint: "La rotura de stock de material crítico compromete directamente la atención al paciente."
-
-  - id: tx-financiacion-atencion
-    from: financiador-sistema
-    to: coordinador-ruta-clinica
-    deliverable: "Cobertura del episodio, autorización de tratamiento, reembolso"
-    type: tangible
-    is_must: true
-    frequency: alta
-    health_hint: "Las demoras en autorización crean gaps en la ruta clínica que deterioran el resultado."
-
-  - id: tx-pago-prestacion
-    from: paciente-receptor
-    to: financiador-sistema
-    deliverable: "Copago, prima de seguro, pago directo"
-    type: tangible
-    is_must: true
-    frequency: media
-    health_hint: "Barreras económicas al acceso son el mayor factor de inequidad en salud."
-
-  - id: tx-continuidad-informacion
-    from: diagnosticador
-    to: coordinador-ruta-clinica
-    deliverable: "Historia clínica compartida, derivación, informe de alta"
-    type: tangible
-    is_must: true
-    frequency: alta
-    health_hint: "La pérdida de información entre episodios es la causa más frecuente de errores clínicos."
-
-  - id: tx-evidencia-clinica
-    from: generador-conocimiento-clinico
-    to: diagnosticador
-    deliverable: "Protocolos clínicos actualizados, guías de práctica, nuevos tratamientos"
-    type: intangible
-    is_must: false
-    frequency: media
-    health_hint: "Sin actualización continua basada en evidencia, la práctica clínica se estanca."
-
-  - id: tx-cuidado-informal
-    from: cuidador-informal
-    to: paciente-receptor
-    deliverable: "Apoyo emocional, cuidado en domicilio, acompañamiento"
-    type: intangible
-    is_must: false
-    frequency: alta
-    health_hint: "El cuidador informal es el actor más crítico y más invisible. Su agotamiento colapsa la red."
-
-  - id: tx-datos-clinicos
-    from: proveedor-tratamiento
-    to: generador-conocimiento-clinico
-    deliverable: "Datos clínicos anonimizados, resultados de tratamiento, casos"
-    type: intangible
-    is_must: false
-    frequency: media
-    health_hint: "Sin datos reales de práctica clínica, la investigación pierde conexión con la realidad."
-
-  - id: tx-feedback-paciente
-    from: paciente-receptor
-    to: coordinador-ruta-clinica
-    deliverable: "Experiencia vivida, satisfacción, adherencia al tratamiento"
-    type: intangible
-    is_must: false
-    frequency: media
-    health_hint: "La experiencia del paciente es el indicador de calidad más ignorado. PRMs y encuestas reales."
-
-  - id: tx-apoyo-cuidador
-    from: coordinador-ruta-clinica
-    to: cuidador-informal
-    deliverable: "Formación, apoyo psicológico, recursos para el cuidador"
-    type: intangible
-    is_must: false
-    frequency: baja
-    health_hint: "El síndrome del cuidador es una crisis silenciosa. Cuando el cuidador cae, el paciente también."
-
-patterns:
-  - name: "Silos clínicos"
-    description: "Cada especialidad opera de forma independiente sin compartir información. El paciente repite su historia en cada episodio. El coordinador de ruta clínica no recibe información para hacer su trabajo."
-    signal: "tx-continuidad-informacion con frecuencia baja. Múltiples diagnósticos sin conexión entre sí."
-
-  - name: "Cuidador invisible"
-    description: "El cuidador informal aporta un volumen enorme de cuidado pero no recibe apoyo del sistema. Cuando llega al agotamiento, la red de cuidado colapsa."
-    signal: "tx-cuidado-informal muy alta, tx-apoyo-cuidador ausente."
-
-  - name: "Investigación desconectada"
-    description: "El generador de conocimiento clínico no recibe datos reales de práctica clínica. Investiga sobre cohortes controladas que no representan la casuística real."
-    signal: "tx-datos-clinicos baja frecuencia. Brecha academia-práctica."
-
-  - name: "Barrera financiera"
-    description: "Las autorizaciones del financiador crean demoras en la ruta clínica. El tratamiento óptimo no es el tratamiento cubierto."
-    signal: "tx-financiacion-atencion con health scores bajos o frecuencia irregular."
+    description: "Convocatòria · pre-event · execució · post-anàlisi · roda premsa · planificació següent."
+    steps_summary: "3-7 dies · 6-10 stakeholders · cicle setmanal"
+  - id: sop-transfer-signing
+    title: "Fitxatge / Contractació talent"
+    castell_level: laterals
+    description: "Scouting · negociació representant · validació mèdica · contracte · presentació pública."
+    steps_summary: "1-6 mesos · 5-8 stakeholders · finestres mercat"
+  - id: sop-injury-rehab
+    title: "Lesió i readaptació esportiu"
+    castell_level: laterals
+    description: "Diagnòstic · pla rehabilitació · seguiment fisio · alta funcional · reintegració."
+    steps_summary: "setmanes-mesos · 3-5 stakeholders · key per a temporada"
+  - id: sop-touring-production
+    title: "Gira artística / temporada producció"
+    castell_level: tronc
+    description: "Booking sales · logística · tècnics gira · funcions · post-mortem · liquidació."
+    steps_summary: "mesos · 8-15 stakeholders · projecte autocontingut"
 ---
 
 ## Contexto narrativo del sector
 
-El sector sanitario es el más crítico en términos de consecuencias de un mapa VNA deficiente: cuando los flujos de valor están rotos en salud, las personas sufren consecuencias directas en su bienestar. Al mismo tiempo, es uno de los sectores donde el VNA puede generar mayor impacto porque los intangibles (confianza, comunicación, continuidad de información) son determinantes para el resultado clínico.
+Sector R combina arts escèniques (teatre · dansa · música) · museus i patrimoni · biblioteques · esports professionals i recreatius · joc d'atzar. Models molt diversos · des de cooperatives artístiques (subvenció + autofinançament) fins clubs esportius professionals (drets TV · sponsors · taquilla) fins a institucions públiques (museus · biblioteques).
 
-### Dinámica central del VNA en salud
+## Patrons de valor típics
 
-El sistema sanitario es una red de redes. Cada episodio clínico activa una subred específica de actores. La coordinación entre subredes es el mayor reto del sector.
+- **Cicle entrenador↔jugador/director↔intèrpret** · instrucció ⇄ rendiment ⇄ feedback
+- **Reciprocitat club/companyia↔afició/públic** · esforç ⇄ suport econòmic + emocional
+- **Pipeline cantera→primer equip→venda/transferència** · multianyal
+- **Cicle sponsor↔projecte** · finançament ⇄ visibilitat de marca
+- **Patró federació↔competició/circuit** · regla ⇄ calendari ⇄ títols
 
-La paradoja central: el paciente es el actor más importante del ecosistema pero el menos empoderado. El VNA hace visible cuándo el sistema está optimizando sus propios procesos en lugar de optimizar el resultado para el paciente.
+## Intangibles clau
 
-### Aplicación VNA en automatización con IA sanitaria
-
-Las transacciones tangibles repetibles (triaje inicial, clasificación de imágenes, alertas de interacciones farmacológicas) son candidatas a automatización. Las transacciones intangibles (diagnóstico con incertidumbre alta, comunicación de pronóstico, acompañamiento emocional) requieren presencia humana. El VNA es el mapa que permite tomar esta decisión de forma explícita y ética.
-
-### Indicadores de salud del sector R
-
-| Indicador | Red saludable | Señal de alerta |
-|---|---|---|
-| Reingresos en 30 días | Bajo | Alto indica fallo en coordinación de ruta o en cuidado post-alta |
-| Tiempo diagnóstico-tratamiento | Corto | Largo indica silos o barreras de autorización |
-| Adherencia al tratamiento | Alta | Baja indica fallo en comunicación o en apoyo al paciente |
-| Burnout del cuidador informal | Bajo | Alto indica ausencia de soporte al cuidador |
-| Datos clínicos hacia investigación | Flujo activo | Ausente indica brecha academia-práctica |
+- Identitat de club/companyia (escut · valors · història)
+- Confiança vestuari/elenc (cohesió crítica per resultats)
+- Reputació esportiva/artística (Hall of Fame · premis)
+- Sentit de pertinença (afició · subscripció vitalícia)
+- Cultura formativa (model de joc/style transmès cantera→primer equip)
