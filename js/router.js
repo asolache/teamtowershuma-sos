@@ -110,6 +110,8 @@ const ROUTES = [
     { path: '/design',       view: () => import('./views/DesignSystemView.js') },
     // v133 · preview · Project Hub V3 amb 5 subpestanyes (Hub·Map·Kanban·Wallet·Presentation + dropdown Més)
     { path: '/project-hub-v3-preview', view: () => import('./views/ProjectHubV3PreviewView.js') },
+    // v140 · vista GLOBAL Equip · RBAC + audit log cross-projects (wo-team-permissions-view)
+    { path: '/team', view: () => import('./views/TeamView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
