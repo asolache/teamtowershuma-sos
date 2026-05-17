@@ -18,6 +18,7 @@
 //   /settings-v2  → /settings (canònic · V2 ja viu a /settings post-Fase B)
 //   /dashboard    → /home (canònic · DashboardV2 absorbeix V1 post-Fase C)
 //   /wallet       → /wallet/v2 (v143 · WalletV2 amb tabs canonical · /wallet legacy mort)
+//   /accounting   → /accounting/v2 (v144 · AccountingV2 alineat WalletV2 · legacy mort)
 // v140 · /team RECUPERAT del legacy redirect · TeamView nova vista global RBAC
 export const LEGACY_REDIRECTS = Object.freeze({
     '/paper':        '/home',
@@ -26,6 +27,7 @@ export const LEGACY_REDIRECTS = Object.freeze({
     '/settings-v2':  '/settings',
     '/dashboard':    '/home',
     '/wallet':       '/wallet/v2',
+    '/accounting':   '/accounting/v2',
 });
 
 // Helper · retorna el destí canònic d'una path · null si no és legacy.

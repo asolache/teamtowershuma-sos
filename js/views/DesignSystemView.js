@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T18:00 · v143 · WalletV2 redesign · /wallet → /wallet/v2 redirect canonical · WalletV2View migrat a SubmenuTabs canonical (mateix pattern que LearnView · TeamView · ProjectHubV2) + context switcher Personal/Projecte dropdown sense recarregar · ProjectHubV2 wallet link actualitzat · /team RECUPERAT del legacy redirect mort que matava TeamView v140';
+const BUILD_STAMP = '2026-05-20T20:00 · v144 · AccountingV2View redesign · 5 tabs canonical (📊Resum · 📋Entrades · 📈P&L · 🥧Categories · 📄Export) · context switcher Personal/Projecte (mateix pattern WalletV2) · KPIs Actius/Passius/Equity/P&L · barres breakdown per compte · CSV download · /accounting → /accounting/v2 redirect · reutilitza computeBalanceSheet+computePLForPeriod+computeBalanceByAccount · tanca wo-accounting-v2-redesign';
 
 export default class DesignSystemView {
 
