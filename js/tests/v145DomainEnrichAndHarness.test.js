@@ -42,12 +42,25 @@ for (const id of PILOTS) {
             t.from && t.to && t.deliverable && t.type && t.frequency && t.trigger));
 }
 
-// ─── B · NO totes les packs (24 totals) tenen ja els nous camps · pilot only ──
-console.log('\n— B · packs no-pilot · sense camps nous (pilot scope confirmat)');
+// ─── B · TOTS els 24 packs enriquits (post-v145b) ──────────────────────
+console.log('\n— B · 24/24 packs amb deliverables_tangible + transactions_canonical');
 const allPackIds = Object.keys(DOMAIN_PACKS);
-ok('B · ≥ 20 packs totals existeixen (pilots NO únics)',  allPackIds.length >= 20);
+ok('B · 24 packs totals',                                  allPackIds.length === 24);
 const enrichedCount = allPackIds.filter(k => DOMAIN_PACKS[k].deliverables_tangible).length;
-ok('B · 4 packs enriquits (pilots)',                       enrichedCount === 4);
+ok('B · 24/24 enriquits amb deliverables_tangible',        enrichedCount === 24);
+const txCount = allPackIds.filter(k => DOMAIN_PACKS[k].transactions_canonical).length;
+ok('B · 24/24 enriquits amb transactions_canonical',       txCount === 24);
+// Validate shape per cada pack
+let shapeOk = 0;
+for (const id of allPackIds) {
+    const p = DOMAIN_PACKS[id];
+    if (Array.isArray(p.deliverables_tangible) && p.deliverables_tangible.length >= 5 &&
+        Array.isArray(p.transactions_canonical) && p.transactions_canonical.length >= 5 &&
+        p.transactions_canonical.every(t => t.from && t.to && t.deliverable && t.type && t.frequency && t.trigger)) {
+        shapeOk++;
+    }
+}
+ok('B · 24/24 packs · shape vàlid (≥5 deliv · ≥5 txs · tots camps)', shapeOk === 24);
 
 // ─── C · buildPrompt · injecció dels nous blocs al domain block ───────
 console.log('\n— C · buildPrompt · injecció domain pack enriched');
@@ -70,19 +83,19 @@ console.log('\n— C · buildPrompt · injecció domain pack enriched');
         prompt.user.includes('scout → sporting-director'));
 }
 
-// ─── D · sense pack enriched · prompt no inclou blocs nous ────────────
-console.log('\n— D · pack legacy · sense blocs nous');
+// ─── D · legal-advisory ara TAMBÉ enriquit (post-v145b) ────────────────
+console.log('\n— D · pack v145b · legal-advisory enriquit');
 {
-    const pack = DOMAIN_PACKS['legal-advisory'];   // no enriquit
+    const pack = DOMAIN_PACKS['legal-advisory'];
     const ctx = {
         name: 'Despatx', description: 'Advocats', sector: 'M', vna_zoom: 'mid',
         domainDetection: { ...pack, domain: 'legal-advisory', confidence: 0.9 },
     };
     const prompt = buildPrompt({ taskKind: 'design-value-map-rich', context: ctx });
-    ok('D · pack legacy · NO inclou "Entregables TANGIBLES canonical"',
-        !prompt.user.includes('Entregables TANGIBLES canonical'));
-    ok('D · pack legacy · NO inclou "Transactions canonical"',
-        !prompt.user.includes('Transactions canonical'));
+    ok('D · pack v145b · inclou "Entregables TANGIBLES canonical"',
+        prompt.user.includes('Entregables TANGIBLES canonical'));
+    ok('D · pack v145b · inclou exemple · "Dictamen jurídic"',
+        prompt.user.includes('Dictamen jurídic'));
 }
 
 // ─── E · runQualityHarness · validacions input ─────────────────────────

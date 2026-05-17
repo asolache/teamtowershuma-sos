@@ -987,7 +987,7 @@ work_orders:
       nom específic (no genèric).
     priority: high
     complexity: M
-    status: backlog
+    status: done   # v145b · 24/24 packs enriquits via scripts/enrich-domain-packs-v145b.mjs · validació LLM live pendent (a executar amb baseline harness)
     estimated_cost_eur: 12.00
     tags: ["sprint-v146-v150", "domain", "vna", "quality", "incremental"]
 

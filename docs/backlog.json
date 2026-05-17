@@ -905,7 +905,7 @@
       "description": "v145 ha enriquit 4 packs pilot (sports-team · arts-performance ·\ncoop-cares · software-agency) amb deliverables_tangible (5-8 cada) +\ntransactions_canonical (5-8 cada) · per evitar que el LLM inventi\nnoms genèrics (\"Acta\" · \"Comunicació\").\n\nPendents 20 packs · religious-community · political-movement ·\nart-collective · worker-coop · research-lab · food-coop ·\nhealth-clinic · hotel-hospitality · construction · coworking ·\necommerce · community-media · housing-coop · energy-coop ·\nlegal-advisory · artisan-craft · public-admin · ngo-humanitarian ·\nmaker-space · edu-formation.\n\nCada pack · 6-8 deliverables_tangible (noms específics del sector) +\n5-8 transactions_canonical { from, to, deliverable, type, frequency,\ntrigger }. El prompt vnaExpertPrompts._buildDomainBlock ja injecta\naquests blocs si presents.\n\nValidació · cada pack enriquit s'ha de córrer per harness amb LLM\nreal i comprovar que · (a) avgScore ≥ 75 · (b) cap regression (cost,\nqualitat) vs baseline · (c) deliverables/transactions output tenen\nnom específic (no genèric).",
       "priority": "high",
       "complexity": "M",
-      "status": "backlog",
+      "status": "done",
       "estimated_cost_eur": 12,
       "tags": [
         "sprint-v146-v150",
