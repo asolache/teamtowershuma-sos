@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-17T07:00 · v119 · PROMPTS EXPERT REWRITE · SYSTEM_BASE KISS DRY Antigravity + 5 prompts nous (product · value-map RIC · SOCs derivats · SOPs+skills · landing) + cadena 8 fases doc · 53 asserts';
+const BUILD_STAMP = '2026-05-17T07:30 · v120 · NAVBAR FIX (search→breadcrumb · pills Messages+Wallet) + Skills al hub /learn + AGENT.md/MCP doc + 8 WOs sprint v120 · 40 asserts (sobre v119 prompts expert)';
 
 export default class DesignSystemView {
 

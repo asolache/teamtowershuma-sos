@@ -27,7 +27,7 @@ const TPL_VERSION = 'learn-v3-subhub';
 //   sectors · mind · folders · tags    (absorbits a aquest hub · PR-B)
 // Cada mode és un subhub · els 4 nous tenen "Obre vista completa →" link
 // que porta a la vista standalone existent (compatibilitat 100%).
-const VALID_MODES = Object.freeze(['roadmaps', 'carpetas', 'search', 'sectors', 'mind', 'folders', 'tags']);
+const VALID_MODES = Object.freeze(['roadmaps', 'carpetas', 'search', 'sectors', 'mind', 'folders', 'tags', 'skills']);
 
 const FOLDER_META = Object.freeze({
     vision:   { icon: '🧭', label: 'Visió',         desc: 'Documents fundacionals · principis VNA · arquitectura · cadena canònica' },
@@ -204,6 +204,7 @@ export default class LearnView {
                     <button class="lv-tab ${this._mode === 'mind'     ? 'active' : ''}" data-mode="mind">🕸 Mind</button>
                     <button class="lv-tab ${this._mode === 'folders'  ? 'active' : ''}" data-mode="folders">📁 Carpetes</button>
                     <button class="lv-tab ${this._mode === 'tags'     ? 'active' : ''}" data-mode="tags">🏷 Tags</button>
+                    <button class="lv-tab ${this._mode === 'skills'   ? 'active' : ''}" data-mode="skills">🤲 Skills</button>
                 </div>
 
                 ${this._mode === 'roadmaps' ? this._renderRoadmaps()
@@ -212,6 +213,7 @@ export default class LearnView {
                  : this._mode === 'mind'     ? this._renderMindTab()
                  : this._mode === 'folders'  ? this._renderFoldersTab()
                  : this._mode === 'tags'     ? this._renderTagsTab()
+                 : this._mode === 'skills'   ? this._renderSkillsTab()
                  : this._renderSearch()}
             </div>
         </div>`;
@@ -385,6 +387,61 @@ export default class LearnView {
                 </div>
             ` : `<div style="padding:1.5rem;text-align:center;color:var(--text-muted);">Encara no hi ha carpetes intel·ligents. Crea'n al vista completa.</div>`}
             ${this._ctaFullView('/folders', 'Obre gestor de carpetes')}
+        </div>`;
+    }
+
+    _renderSkillsTab() {
+        // Stats del KB · skills declared + learned
+        let mySkills = [];
+        let allRoles = [];
+        try {
+            const allNodes = store.getState?.()?.nodes || {};
+            allRoles = Object.values(allNodes).filter(n => n?.type === 'role');
+            const members = Object.values(allNodes).filter(n => n?.type === 'matriu_member');
+            for (const m of members) {
+                const s = m?.content?.skillsDeclared || [];
+                for (const sk of s) mySkills.push(sk);
+            }
+        } catch (_) {}
+        const uniqueRoles = [...new Set(allRoles.map(r => r?.content?.kind).filter(Boolean))];
+
+        return `
+        <div class="lv-card">
+            <h2>🤲 Skills · capacitats al SOS · ${mySkills.length} declarades</h2>
+            <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:14px;">
+              Les skills (capacitats) són el vincle entre persones · WOs · learning paths · marketplace. SOS organitza 90 skills canòniques (5 dominis × 3 tiers × 12 project types).
+              <br/><strong>Properes iteracions</strong> · plantilles offline · entrenament LLM local · permaweb-shared skills per a swarm matchmaking distribuït.
+            </p>
+            <div class="lv-folder-grid">
+                <div class="lv-folder-card">
+                    <h3>📋 Catàleg complet</h3>
+                    <div class="desc">90 skills · 5 dominis · 3 tiers · 12 tipus projecte</div>
+                    <div style="margin-top:6px;"><a href="/skills" data-link style="color:var(--accent-indigo);font-size:0.78rem;text-decoration:none;">Obre catàleg complet →</a></div>
+                </div>
+                <div class="lv-folder-card">
+                    <h3>🌟 Les meves skills</h3>
+                    <div class="count" style="font-size:1.4rem;font-weight:700;color:#22c55e;">${mySkills.length}</div>
+                    <div class="desc">declarades al teu perfil</div>
+                    <div style="margin-top:6px;"><a href="/me" data-link style="color:var(--accent-indigo);font-size:0.78rem;text-decoration:none;">Editar al Profile 360 →</a></div>
+                </div>
+                <div class="lv-folder-card">
+                    <h3>🎭 Rols al SOS</h3>
+                    <div class="count" style="font-size:1.4rem;font-weight:700;color:#a855f7;">${uniqueRoles.length}</div>
+                    <div class="desc">kinds canònics actius al KB</div>
+                </div>
+                <div class="lv-folder-card" style="background:rgba(168,85,247,0.08);border-color:rgba(168,85,247,0.3);">
+                    <h3>🚀 Properes feaures</h3>
+                    <div class="desc">
+                      <ul style="margin:6px 0;padding-left:1rem;font-size:0.78rem;line-height:1.5;">
+                        <li>📦 Plantilles skills per usuari offline</li>
+                        <li>🧠 Entrenament LLM local amb skills declarades</li>
+                        <li>🌐 Permaweb-shared skills · swarm matchmaking</li>
+                        <li>🎯 Skills assignades a WOs/SOPs (v119 ja les genera)</li>
+                      </ul>
+                    </div>
+                    <div style="margin-top:4px;"><a href="/learn?q=skills" data-link style="color:var(--accent-indigo);font-size:0.75rem;text-decoration:none;">Veure pla backlog →</a></div>
+                </div>
+            </div>
         </div>`;
     }
 
