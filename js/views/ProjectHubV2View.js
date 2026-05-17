@@ -69,7 +69,7 @@ const HUB_PILLAR_LINKS = Object.freeze({
     ],
     comptabilitzar: [
         { id: 'wallet',     href: '/wallet/v2',        label: 'Wallet',       icon: '💼', kind: 'wallet' },
-        { id: 'accounting', href: '/accounting',       label: 'Comptes',      icon: '📒', kind: 'accounting' },
+        { id: 'accounting', href: '/accounting/v2',    label: 'Comptes',      icon: '📒', kind: 'accounting' },
         { id: 'value',      href: '/value-accounting', label: 'Pastís valor', icon: '🥧', kind: 'value' },
         { id: 'invoices',   href: '/invoices',         label: 'Factures',     icon: '🧾', kind: 'invoices' },
         { id: 'tokenomics', href: '/tokenomics',       label: 'Tokenomics',   icon: '🪙', kind: 'tokenomics' },

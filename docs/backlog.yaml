@@ -878,9 +878,9 @@ work_orders:
       Subtab dins de project hub · /project/:id?tab=comptabilitzar&sub=accounting.
     priority: medium
     complexity: M
-    status: backlog
+    status: done   # v144 · AccountingV2View 5 tabs canonical + context switcher + redirect /accounting → /accounting/v2
     estimated_cost_eur: 8.00
-    tags: ["sprint-v138", "ux", "accounting", "project-hub", "comptabilitzar"]
+    tags: ["sprint-v144", "ux", "accounting", "project-hub", "comptabilitzar", "done-v144"]
 
   - id: "wo-wallet-project-v2-redesign"
     project_id: "sos-dev-internal"

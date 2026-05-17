@@ -834,14 +834,15 @@
       "description": "AccountingView avui és textual · double-entry ledger pur · poc visual.\nRedisseny v2 alineat amb WalletV2 (referent UX dins el pilar) ·\n · KPI cards (Actius · Passius · Equity · P&L mes)\n · Llista compacta últimes N entrades amb categories visuals colored\n · Filter per membre / categoria / període\n · Export CSV\n · Charts (línies P&L · pie categories)\n\nSubtab dins de project hub · /project/:id?tab=comptabilitzar&sub=accounting.",
       "priority": "medium",
       "complexity": "M",
-      "status": "backlog",
+      "status": "done",
       "estimated_cost_eur": 8,
       "tags": [
-        "sprint-v138",
+        "sprint-v144",
         "ux",
         "accounting",
         "project-hub",
-        "comptabilitzar"
+        "comptabilitzar",
+        "done-v144"
       ]
     },
     {
