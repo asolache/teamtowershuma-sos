@@ -50,37 +50,40 @@ const HUB_DROPDOWN = Object.freeze([
     { id: 'settings', label: 'Settings projecte',     icon: '⚙' },
 ]);
 
-// Mapping pilar → vistes globals · click obre amb ?project=X context preservant la barra de hub
+// v141+v142 · Mapping pilar → vistes globals · cada link té id (per al sub-submenu l2)
+// + href (per a "Obre vista completa") + kind (per al render in-tab preview lleuger)
 const HUB_PILLAR_LINKS = Object.freeze({
     crear: [
-        { href: '/canvas',       label: 'Canvas',       icon: '🎨' },
-        { href: '/pitch',        label: 'Pitch',        icon: '📣' },
-        { href: '/pact',         label: 'Pacte',        icon: '🤝' },
-        { href: '/presentation', label: 'Presentation', icon: '🎤' },
+        { id: 'canvas',       href: '/canvas',       label: 'Canvas',       icon: '🎨', kind: 'canvas' },
+        { id: 'pitch',        href: '/pitch',        label: 'Pitch',        icon: '📣', kind: 'pitch' },
+        { id: 'pact',         href: '/pact',         label: 'Pacte',        icon: '🤝', kind: 'pact' },
+        { id: 'presentation', href: '/presentation', label: 'Presentation', icon: '🎤', kind: 'presentation' },
     ],
     treballar: [
-        { href: '/map',       label: 'Map',       icon: '🗺' },
-        { href: '/kanban',    label: 'Kanban',    icon: '📋' },
-        { href: '/sops',      label: 'SOPs',      icon: '📜' },
-        { href: '/quality',   label: 'Qualitat',  icon: '🎯' },
-        { href: '/sprint',    label: 'Sprint',    icon: '🐝' },
-        { href: '/lifecycle', label: 'Lifecycle', icon: '🌀' },
+        { id: 'map',       href: '/map',       label: 'Map',       icon: '🗺', kind: 'map' },
+        { id: 'kanban',    href: '/kanban',    label: 'Kanban',    icon: '📋', kind: 'kanban' },
+        { id: 'sops',      href: '/sops',      label: 'SOPs',      icon: '📜', kind: 'sops' },
+        { id: 'quality',   href: '/quality',   label: 'Qualitat',  icon: '🎯', kind: 'quality' },
+        { id: 'sprint',    href: '/sprint',    label: 'Sprint',    icon: '🐝', kind: 'sprint' },
+        { id: 'lifecycle', href: '/lifecycle', label: 'Lifecycle', icon: '🌀', kind: 'lifecycle' },
     ],
     comptabilitzar: [
-        { href: '/wallet',           label: 'Wallet',       icon: '💼' },
-        { href: '/accounting',       label: 'Comptes',      icon: '📒' },
-        { href: '/value-accounting', label: 'Pastís valor', icon: '🥧' },
-        { href: '/invoices',         label: 'Factures',     icon: '🧾' },
-        { href: '/tokenomics',       label: 'Tokenomics',   icon: '🪙' },
+        { id: 'wallet',     href: '/wallet',           label: 'Wallet',       icon: '💼', kind: 'wallet' },
+        { id: 'accounting', href: '/accounting',       label: 'Comptes',      icon: '📒', kind: 'accounting' },
+        { id: 'value',      href: '/value-accounting', label: 'Pastís valor', icon: '🥧', kind: 'value' },
+        { id: 'invoices',   href: '/invoices',         label: 'Factures',     icon: '🧾', kind: 'invoices' },
+        { id: 'tokenomics', href: '/tokenomics',       label: 'Tokenomics',   icon: '🪙', kind: 'tokenomics' },
     ],
     connectar: [
-        { href: '/proposals',    label: 'Propostes',      icon: '📝' },
-        { href: '/market',       label: 'Mercat',         icon: '🛒' },
-        { href: '/registry',     label: 'Registry públic',icon: '📡' },
+        { id: 'proposals', href: '/proposals', label: 'Propostes',       icon: '📝', kind: 'proposals' },
+        { id: 'market',    href: '/market',    label: 'Mercat',          icon: '🛒', kind: 'market' },
+        { id: 'registry',  href: '/registry',  label: 'Registry públic', icon: '📡', kind: 'registry' },
     ],
     equip: [
-        // Placeholder · vista global pendent (wo-team-permissions-view · v140)
-        { href: '/me',           label: 'Profile (provisional)', icon: '🧬' },
+        { id: 'members',     href: '/team?tab=projects',    label: 'Membres',      icon: '🧬', kind: 'team-members' },
+        { id: 'roles',       href: '/team?tab=roles',       label: 'Rols',         icon: '🤲', kind: 'team-roles' },
+        { id: 'permissions', href: '/team?tab=permissions', label: 'Permisos',     icon: '🔐', kind: 'team-permissions' },
+        { id: 'invites',     href: '/team?tab=projects',    label: 'Convidacions', icon: '✉',  kind: 'team-invites' },
     ],
 });
 
@@ -103,7 +106,12 @@ export default class ProjectHubV2View {
         // v136 · IA-aligned tab routing
         const urlTab = getActiveTabFromUrl('tab', 'hub');
         this._mode = VALID_TAB_IDS.has(urlTab) ? urlTab : 'hub';
+        // v142 · sub-tab routing dins pilars
+        const urlSub = getActiveTabFromUrl('sub', null);
+        const validSubs = HUB_PILLAR_LINKS[this._mode] || [];
+        this._sub = (urlSub && validSubs.find(s => s.id === urlSub)) ? urlSub : (validSubs[0]?.id || null);
         this._cleanupTabs = null;
+        this._cleanupSubTabs = null;
     }
 
     // Router pattern · getHtml + afterRender
@@ -193,12 +201,29 @@ export default class ProjectHubV2View {
             this._cleanupTabs = bindSubmenuTabs(mount, (newId) => {
                 if (!VALID_TAB_IDS.has(newId) || newId === this._mode) return;
                 this._mode = newId;
+                // Reset sub-tab al primer del nou pilar
+                const subs = HUB_PILLAR_LINKS[this._mode] || [];
+                this._sub = subs[0]?.id || null;
                 this.render();
             }, { urlParam: 'tab' });
         }
+        // v142 · bind sub-submenu (l2) si estem dins d'un pilar
+        const subMount = document.getElementById('hubSubSubmenu');
+        if (subMount) {
+            try { this._cleanupSubTabs?.(); } catch (_) {}
+            this._cleanupSubTabs = bindSubmenuTabs(subMount, (newSub) => {
+                if (newSub === this._sub) return;
+                this._sub = newSub;
+                this._renderSubBody();
+            }, { urlParam: 'sub' });
+            this._renderSubBody();
+        }
     }
 
-    destroy() { try { this._cleanupTabs?.(); } catch (_) {} }
+    destroy() {
+        try { this._cleanupTabs?.(); }    catch (_) {}
+        try { this._cleanupSubTabs?.(); } catch (_) {}
+    }
 
     async render() {
         const app = (typeof document !== 'undefined') ? document.getElementById('app') : null;
@@ -335,7 +360,7 @@ export default class ProjectHubV2View {
             ${this._zone8_AdvancedTools({ project })}`;
     }
 
-    // v136 · Pillar tab content · grid de cards · cada card linka a la vista global amb ?project=X
+    // v142 · Pillar tab content · sub-submenu l2 + in-tab content lleuger per sub
     _renderPillarContent(pilarId, project) {
         const links = HUB_PILLAR_LINKS[pilarId] || [];
         const pilarMeta = HUB_TABS.find(t => t.id === pilarId) || HUB_DROPDOWN.find(t => t.id === pilarId);
@@ -344,34 +369,144 @@ export default class ProjectHubV2View {
         if (links.length === 0) {
             return `<div class="hub-zone" style="text-align:center;padding:2rem;">
                 <h2 style="margin:0 0 8px;">${this._esc(pilarLabel)}</h2>
-                <p style="color:var(--text-muted);margin:0;">Aquest pilar encara no té vistes assignades · prova el preview a
-                <a href="/project-hub-v3-preview?tab=${this._esc(pilarId)}" data-link style="color:var(--accent-indigo);">/project-hub-v3-preview</a>.</p>
+                <p style="color:var(--text-muted);margin:0;">Aquest pilar encara no té vistes assignades.</p>
             </div>`;
         }
 
-        const cards = links.map(l => {
-            const href = l.href + (l.href.includes('?') ? '&' : '?') + 'project=' + encodeURIComponent(project.id);
-            return `<a href="${this._esc(href)}" data-link class="hub-pillar-card">
-                <div class="hub-pillar-card-icon">${this._esc(l.icon || '·')}</div>
-                <div class="hub-pillar-card-label">${this._esc(l.label)}</div>
-            </a>`;
-        }).join('');
+        // Validate _sub · si no és vàlid per a aquest pilar, agafa el primer
+        if (!links.find(l => l.id === this._sub)) this._sub = links[0].id;
+
+        const subSubmenu = renderSubmenuTabs({
+            tabs: links.map(l => ({ id: l.id, label: l.label, icon: l.icon })),
+            activeId: this._sub,
+            urlParam: 'sub',
+            variant: 'l2',
+        });
 
         return `
-            <div class="hub-zone">
-                <div class="hub-zone-head">
-                    <h2>${this._esc(pilarLabel)} <span style="color:var(--text-muted);font-weight:400;font-size:0.8rem;">· ${links.length} vistes</span></h2>
+            <div class="hub-zone" style="padding:0;overflow:hidden;">
+                <div class="hub-zone-head" style="padding:12px 16px;margin:0;border-bottom:1px solid var(--border-default);">
+                    <h2 style="margin:0;">${this._esc(pilarLabel)} <span style="color:var(--text-muted);font-weight:400;font-size:0.8rem;">· ${links.length} vistes</span></h2>
                 </div>
-                <div class="hub-pillar-grid">${cards}</div>
-                <p style="color:var(--text-muted);font-size:0.78rem;margin:14px 0 0;">Aquestes vistes existeixen globalment · es carreguen amb el context del projecte actiu via <code>?project=${this._esc(project.id)}</code>. La integració in-tab és part del WO <code>wo-project-hub-ia-aligned</code> (v136+).</p>
-            </div>
-            <style>
-                .hub-pillar-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
-                .hub-pillar-card { background:var(--bg-elevated); border:1px solid var(--border-default); border-radius:8px; padding:14px; text-align:center; text-decoration:none; color:var(--text-main); transition:transform 0.15s ease, border-color 0.15s ease; display:flex; flex-direction:column; align-items:center; gap:6px; }
-                .hub-pillar-card:hover { transform:translateY(-2px); border-color:var(--accent-indigo); }
-                .hub-pillar-card-icon { font-size:1.6rem; }
-                .hub-pillar-card-label { font-size:0.85rem; font-weight:600; }
-            </style>`;
+                <div id="hubSubSubmenu">${subSubmenu}</div>
+                <div id="hubSubBody" style="padding:18px;min-height:240px;">
+                    <div style="color:var(--text-muted);text-align:center;padding:1rem;">Carregant…</div>
+                </div>
+            </div>`;
+    }
+
+    // v142 · render del sub-body (preview lleuger + link a vista completa)
+    _renderSubBody() {
+        const body = document.getElementById('hubSubBody');
+        if (!body) return;
+        const links = HUB_PILLAR_LINKS[this._mode] || [];
+        const sub = links.find(l => l.id === this._sub);
+        if (!sub) { body.innerHTML = ''; return; }
+        const fullHref = sub.href + (sub.href.includes('?') ? '&' : '?') + 'project=' + encodeURIComponent(this._project.id);
+        body.innerHTML = this._renderSubInTab(sub, fullHref) +
+            `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-default);text-align:right;">
+                <a href="${this._esc(fullHref)}" data-link style="color:var(--accent-indigo);text-decoration:none;font-weight:600;font-size:0.85rem;">Obre vista completa →</a>
+            </div>`;
+    }
+
+    // v142 · preview lleuger per kind · cada un fa una crida lleugera al model de domini
+    _renderSubInTab(sub, fullHref) {
+        const p = this._project;
+        const k = sub.kind;
+        // Helpers per renderitzar previews
+        const kpi = (label, value, color) => `<div style="background:var(--bg-elevated);border-radius:8px;padding:10px 12px;flex:1;min-width:120px;">
+            <div style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.04em;">${this._esc(label)}</div>
+            <div style="font-size:1.2rem;font-weight:700;margin-top:2px;${color ? 'color:' + color + ';' : ''}">${this._esc(value)}</div>
+        </div>`;
+        const head = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+            <span style="font-size:1.4rem;">${this._esc(sub.icon)}</span>
+            <h3 style="margin:0;font-size:1.05rem;">${this._esc(sub.label)}</h3>
+        </div>`;
+
+        if (k === 'canvas') {
+            const has = !!(p.canvas || p.canvasData);
+            return head + `<div style="display:flex;flex-wrap:wrap;gap:10px;">
+                ${kpi('Status', has ? 'Definit' : 'Pendent', has ? 'var(--accent-green)' : 'var(--accent-orange)')}
+                ${kpi('Stakeholders', (p.stakeholders || []).length || '—')}
+                ${kpi('Valor proposta', has ? '✓' : '—')}
+            </div><p style="color:var(--text-muted);font-size:0.85rem;margin:12px 0 0;">Visió · missió · valors · stakeholders · north-star del projecte.</p>`;
+        }
+        if (k === 'pitch') {
+            const has = !!(p.pitch || p.pitchData);
+            return head + `<div style="display:flex;flex-wrap:wrap;gap:10px;">
+                ${kpi('Status', has ? 'Generat' : 'Pendent', has ? 'var(--accent-green)' : 'var(--accent-orange)')}
+                ${kpi('Seccions', has ? '6' : '0')}
+            </div><p style="color:var(--text-muted);font-size:0.85rem;margin:12px 0 0;">One-pager públic shareable amb OG meta · 6 seccions narratives.</p>`;
+        }
+        if (k === 'pact') {
+            return head + `<div style="display:flex;flex-wrap:wrap;gap:10px;">
+                ${kpi('Signatures', (p.pact?.signatures || []).length || '0')}
+                ${kpi('Status', p.pact ? 'Actiu' : 'Pendent', p.pact ? 'var(--accent-green)' : 'var(--accent-orange)')}
+            </div><p style="color:var(--text-muted);font-size:0.85rem;margin:12px 0 0;">Pacte de socis dinàmic · ECDSA signatures · primer contracte SOS.</p>`;
+        }
+        if (k === 'presentation') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Landing read-only del projecte · imprimible · roles + transactions + SOPs. Veure preview viu a <a href="/project-hub-v3-preview?tab=crear&sub=presentation" data-link style="color:var(--accent-indigo);">/project-hub-v3-preview</a>.</p>`;
+        }
+        if (k === 'map') {
+            const roles = (p.roles || []).length;
+            const tx    = (p.transactions || []).length;
+            return head + `<div style="display:flex;flex-wrap:wrap;gap:10px;">
+                ${kpi('Rols', roles)}
+                ${kpi('Transaccions', tx)}
+                ${kpi('Castell', roles >= 6 ? '6 nivells' : roles + '/6', roles >= 6 ? 'var(--accent-green)' : 'var(--accent-orange)')}
+            </div><p style="color:var(--text-muted);font-size:0.85rem;margin:12px 0 0;">Mapa de valor VNA · rols · transactions · entregables.</p>`;
+        }
+        if (k === 'kanban') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Work orders backlog → in-progress → done. Filtres per role o fase.</p>`;
+        }
+        if (k === 'sops') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Procediments del projecte · publicables al mercat. SOPs canonical alineats al sector + procesos.</p>`;
+        }
+        if (k === 'quality') {
+            const score = p.rubricScore || p.score || null;
+            return head + `<div style="display:flex;flex-wrap:wrap;gap:10px;">
+                ${kpi('Score global', score != null ? score + '/100' : '—', score >= 70 ? 'var(--accent-green)' : 'var(--accent-orange)')}
+                ${kpi('Rubric', '12-criteris')}
+                ${kpi('Integritat', '7-regles')}
+            </div><p style="color:var(--text-muted);font-size:0.85rem;margin:12px 0 0;">Audit rubric 12-criteris + integritat 7-regles · score live.</p>`;
+        }
+        if (k === 'sprint') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Sprint orchestrator · backlog estructurat + IA runs autonomous TDD.</p>`;
+        }
+        if (k === 'lifecycle') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Dashboard amb 10 fases · status % · next-best-action.</p>`;
+        }
+        if (k === 'wallet') {
+            return head + `<div style="display:flex;flex-wrap:wrap;gap:10px;">
+                ${kpi('Saldo', p.balanceEur != null ? '€ ' + p.balanceEur : '—')}
+                ${kpi('Flow mes', '—')}
+            </div><p style="color:var(--text-muted);font-size:0.85rem;margin:12px 0 0;">Saldo prepago del projecte · moviments del ledger · transferència entre projectes.</p>`;
+        }
+        if (k === 'accounting') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Ledger double-entry · balance sheet · P&L per període. Redisseny v2 pendent (wo-accounting-v2-redesign).</p>`;
+        }
+        if (k === 'value') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Slicing Pie + FairShares · pastís del projecte · equity dinàmic amb multiplicadors Moyer.</p>`;
+        }
+        if (k === 'invoices') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">CRUD invoices · IVA · auto-ledger entry quan paid · print PDF.</p>`;
+        }
+        if (k === 'tokenomics') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Disseny del token · 6 grups + vesting + quality score live (només projectes amb token config).</p>`;
+        }
+        if (k === 'proposals') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">IA brief + skill matching + PDF · win rate tracker (filtrat per projecte).</p>`;
+        }
+        if (k === 'market') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Aquest projecte publicat al mercat · productes/serveis/sops oferits + traction.</p>`;
+        }
+        if (k === 'registry') {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Permaweb public registry · projecte signat amb attestation.</p>`;
+        }
+        if (k && k.startsWith('team-')) {
+            return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Equip del projecte · membres · rols (founder · ops · contributor · viewer) · permisos fine-grained (matriu RBAC) · convidacions amb expiry 7d. Audit log cross-projects via /team.</p>`;
+        }
+        return head + `<p style="color:var(--text-muted);font-size:0.9rem;">Sub-vista · ${this._esc(sub.label)}.</p>`;
     }
 
     _zone0_Legendary({ project, todayWos, bs, sessionEur }) {

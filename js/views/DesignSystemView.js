@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T14:00 · v140 · Vista GLOBAL /team · teamService (RBAC matcher amb suport .own + members CRUD + invitations + audit log type=team_audit) + TeamView (5 tabs · overview/projects/roles/permissions/audit · matriu rol×acció · agregat cross-projects) + topbar inutil ProjectHubV2View ELIMINADA (🗼 TeamTowers · 5-click rule · Hub clàssic ← treure soroll cognitiu) · navbar entry /team · ALFA-READY';
+const BUILD_STAMP = '2026-05-20T16:00 · v141+v142 · SubmenuTabs v2 (variant l2 · 2-nivells sub-submenu compacte · CSS smaller padding + accent-purple border) + Project Hub IA-aligned · render IN-TAB per cada pilar · l2 submenu navegable + preview lleuger amb KPIs per kind (canvas · pitch · pact · map · kanban · quality · wallet · accounting · value-pie · team-*) + link "Obre vista completa →" · URL sync ?tab=X&sub=Y profund · tanca wo-project-hub-ia-aligned + wo-submenu-tabs-v2-sublevel';
 
 export default class DesignSystemView {
 

@@ -88,8 +88,8 @@ ok('D · ocult slot només si tot està buit (items≤1 && !phase && !nextSugges
 // ─── E · ProjectHubV2View · SOPs al pilar Treballar ────────────────────
 console.log('\n— E · ProjectHubV2View · SOPs');
 const v2Src = fs.readFileSync(path.join(ROOT, 'js/views/ProjectHubV2View.js'), 'utf8');
-ok('E · pillar treballar · SOPs link',              /treballar:[\s\S]+?\{ href: '\/sops'/.test(v2Src));
-ok('E · label "SOPs" amb icon 📜',                  /'\/sops'[\s\S]+?label: 'SOPs'[\s\S]+?icon: '📜'/.test(v2Src));
+ok('E · pillar treballar · SOPs link',              /treballar:[\s\S]+?href: '\/sops'/.test(v2Src));
+ok('E · label "SOPs" amb icon 📜',                  /href: '\/sops'[\s\S]+?label: 'SOPs'[\s\S]+?icon: '📜'/.test(v2Src));
 
 console.log('\n' + pass + ' pass · ' + fail + ' fail');
 process.exit(fail > 0 ? 1 : 0);

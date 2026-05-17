@@ -24,7 +24,7 @@ console.log('=== v132j · SubmenuTabs · pattern canonical · TDD ===\n');
 
 // ─── A · API surface ──────────────────────────────────────────────────
 console.log('— A · API surface');
-ok('A · SUBMENU_VERSION = v132j',                typeof SUBMENU_VERSION === 'string' && SUBMENU_VERSION === 'v132j');
+ok('A · SUBMENU_VERSION definit · string',       typeof SUBMENU_VERSION === 'string' && SUBMENU_VERSION.startsWith('v'));
 ok('A · renderSubmenuTabs és funció',            typeof renderSubmenuTabs === 'function');
 ok('A · bindSubmenuTabs és funció',              typeof bindSubmenuTabs === 'function');
 ok('A · getActiveTabFromUrl és funció',          typeof getActiveTabFromUrl === 'function');
