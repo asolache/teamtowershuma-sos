@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-19T00:00 · v132 · ROADMAP ESTRATÈGIC A ALFA · 6 fases · 18 sprints · v132→v150 · 10 setmanes · 30+ WOs prioritzats (Estabilització · Quality UX · Comercial · LMS · Comunitat · Launch) · 4 decisions @alvaro · KPIs globals · pla post-alfa v151-200+ · doc estratègic complet a docs/strategic-roadmap-to-alpha-v132.md';
+const BUILD_STAMP = '2026-05-19T02:00 · v132a · ARXIVAR projecte restaurat (UI perduda a v2) · botons Archive/Unarchive a /projects · NO trenca contabilitat (ledger append-only immutable) · doc canonical Slicing Pie Mike Moyer · LMS build-vs-OpenEdX educatiu @alvaro · 3 decisions resoltes (whitelist alfa · pricing @alvaro pocket-money amb multiplier alfa · LMS build hybrid scorm-again) · 42 asserts nous';
 
 export default class DesignSystemView {
 
