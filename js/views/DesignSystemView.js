@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-18T09:00 · v126 · BUG @alvaro · "equip de futbol" generava rols d\'Arts · FIX domainDetector (sports-team · arts-performance · coop-cares · edu-formation · 14+8+8+7 arquetip reals) + design-value-map-rich prompt smart sub-domini + expertChain wire-up · sobre v125 (search pill · sosTopbar · Stripe/crypto backend) · 47 asserts nous';
+const BUILD_STAMP = '2026-05-18T11:00 · v127 · VNA QUALITY NIQUELAT · 6 packs nous (religious · political · art · worker-coop · research · maker · 10 packs total) · LLM fallback one-shot (~0.0005€) · multi-domain combine · /prompts-debug panel amb override manual + alternatives · domainTelemetry (% cobertura · costos · top dominis) · 102 asserts nous';
 
 export default class DesignSystemView {
 

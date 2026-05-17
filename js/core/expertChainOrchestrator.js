@@ -118,11 +118,27 @@ export async function runExpertChain({
     // v126 · domain detection abans del loop · injectada a context per a la
     // fase 5 (design-value-map-rich) · evita rols genèrics no adequats al
     // sub-domini real (ex futbol · teatre · cures · escola)
+    // v127 · telemetria via domainTelemetry · enriquim emit + persist event
+    const detT0 = Date.now();
     const domainDetection = detectDomain({ name: context.name, description: context.description, sector: context.sector });
+    const detMs = Date.now() - detT0;
     if (domainDetection) {
-        emit('domain-detected', 'info', { domain: domainDetection.domain, confidence: domainDetection.confidence, label: domainDetection.label });
-        context = { ...context, domainDetection };
+        emit('domain-detected', 'info', { domain: domainDetection.domain, confidence: domainDetection.confidence, label: domainDetection.label, via: 'keywords', durationMs: detMs });
+        context = { ...context, domainDetection: { ...domainDetection, via: 'keywords' } };
+    } else {
+        emit('domain-detected', 'info', { domain: null, via: 'none', durationMs: detMs });
     }
+    // Telemetria · best-effort · no bloca
+    try {
+        const { recordDetection } = await import('./domainTelemetry.js');
+        await recordDetection({
+            projectId: context.projectId || context.name || 'unknown-' + Date.now(),
+            name:      context.name,
+            sector:    context.sector,
+            detection: domainDetection ? { ...domainDetection, via: 'keywords' } : null,
+            durationMs: detMs,
+        });
+    } catch (_) { /* silent · telemetry mai trenca app */ }
 
     const out = {
         ok: true, costTotal: 0,
