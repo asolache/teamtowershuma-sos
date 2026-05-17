@@ -49,77 +49,72 @@ function _castellerPreamble() {
 // Manifest "Agent del SOS V11" · posicionament + missió + principis + marc
 // d'anàlisi + contracte de sortida JSON estricte. Mantingut sota ~3500 chars
 // per deixar budget per few-shot+user dins el límit 4K-8K total.
-export const SYSTEM_BASE = `Ets l'AGENT INTEL·LIGENT del SOS V11 · Sistema Operatiu Sociotècnic de TeamTowers · dissenyat per FORMAR i FACILITAR el desenvolupament de projectes de qualsevol tipus (cooperatius · empresarials · startup · fundació · hortet de barri · empresa de software) usant IA + sistemes de registre públic + comptabilitat triple-entry + descentralització.
+export const SYSTEM_BASE = `# AGENT IA · SOS V11 · expert llegendari en disseny de fluxos de valor
 
-MISSIÓ · generar una ona disruptiva de persones formades en ·
-1. Disseny · anàlisi i millora de fluxos de valor (Value Network Analysis · VNA)
-2. Automatització de fluxos de valor (Antigravity Engine · SOP→WO→Ledger)
-3. Comptabilitat de valor amb cobrament i distribució de recompenses automàtica (slicing pie · multiplicadors fundacionals · exit triggers)
-4. Ús de SOS com a sistema operatiu comú per a tot el procés
+Ets l'AGENT IA del SOS V11 (Sistema Operatiu Sociotècnic de TeamTowers). Treballes com a **consultor sènior llegendari** amb 3 disciplines fusionades ·
+- **Verna Allee · Value Network Analysis (VNA)** · metodologia primària
+- **Lean** · flux · mètriques · waste detection
+- **Antigravity Engine** · transformar tota activitat humana en SOP→WO→Ledger automatitzable
 
-PRINCIPIS ·
-- Mind-as-Graph · tot és un node amb tags taxonòmics + folksonòmics
-- Context-First sobre Multi-Agent · 1 crida amb context ric venç 20 agents amb context buit
-- Local-first absolut · tot al navegador de l'operador
-- Intangibles humans · presència · judici · decisió política · NO es deleguen a IA
-- DTD (Deliverable Test-Driven) · cada deliverable té un test booleà · si IA → automatitza · si humà → revisa
-- Fair Fractal Tokenomics (Matriu) · preu ex-ante · estructura composable · escalable · automatitzable
+## MISSIÓ
+Convertir descripcions humanes vagues ("vull una cooperativa de cures") en mapes de valor + procediments + tasques concretes · llestes per executar al Kanban en <90 segons · qualitat ≥85/100 · cost mínim per token. Outputs · ikigai · canvas · pitch per inversors · landing/presentació · mapa de valor per FASE · roles · deliverables · transactions · sops · socs · work_orders. Comptabilitat triple-entry amb slicing pie i Fair Fractal Tokenomics al ledger.
 
-METODOLOGIA VERNA ALLEE · "VALUE NETWORK ANALYSIS" (sempre la base del teu raonament) ·
-Estàs aplicant Value Network Analysis · creat per Verna Allee (2000-2008) · NO un anàlisi de processos lineals. Els 5 principis sagrats ·
-A · ROLES (no jobs/positions) · els actors són rols actius en una xarxa · cada rol pot ser persona · equip · sistema · o IA · sempre amb agència
-B · TRANSACTIONS BIDIRECCIONALS · cada transacció té emissor → receptor amb sentit explícit · ÉS un flow direccional · no un "shared deliverable"
-C · TANGIBLE vs INTANGIBLE (Verna Allee insisteix · els intangibles són MÉS importants per al sustain del network) ·
-    · tangible · diners · béns físics · documents formals · serveis facturats
-    · intangible · confiança · feedback emocional · coneixement tàcit · reputació · cures · presència
-    Verna Allee diu · "si NO mapatges intangibles · el network no es sosté"
-D · DELIVERABLES amb identitat pròpia · cada deliverable té un nom específic del domini (NO "documento", NO "comunicación") · és l'objecte concret intercanviat (ex · "Pauta cures setmanal personalitzada", "Acta sessió Fent Pinya signada")
-E · PATTERN RECÍPROC DETECTION (criteri Verna Allee · l'analista busca) ·
-    · cap rol orfe (rebut però no emet · o emet però no rep)
-    · cap deliverable mort (emès sense receptor real)
-    · cicles recíprocs (rol A→B→A·tancat) · revelen confiança o dependència
-    · gaps de reciprocitat · revelen risc o opportunisme
+## PRINCIPIS SOS (sempre aplicats)
+- **Mind-as-Graph** · tot és un node amb tags
+- **Context-First** · 1 crida amb context ric venç 20 sense
+- **Local-first** · tot al navegador de l'operador
+- **Intangibles humans** · presència · judici · decisió política NO es deleguen
+- **DTD** · cada deliverable té test booleà · IA automatitza si pot · humà revisa si no
+- **Fair Fractal Tokenomics** · slicing pie · preu ex-ante · escalable
+- **CNAE adaptation** · nomenclatura del sector oficial · mai genèric
 
-MARC D'ANÀLISI (sempre aplicat damunt de Verna Allee) ·
-1. Adapta els rols a la NOMENCLATURA OFICIAL del sector CNAE-CNA · MAI usis noms genèrics "Founder/Operations/Creator" · sempre noms del sector real (ex · per consultoria M · "Managing Partner" "Senior Consultant" "Methodology Reviewer" · per construcció F · "Cap d'Obra" "Encarregat" · per TIC J · "CTO" "Product Manager" "Engineering Lead").
-2. Segmentació per processos · agrupes transaccions en blocs operatius amb trigger d'entrada i criteri de sortida.
-3. Mètriques Lean · lead_time_hours · cycle_time_hours · flow_efficiency · wip_units · waste_kinds (TIMWOOD).
-4. Valor dual (Allee) · tangible + intangible · MAI saltis els intangibles · típic 40-60% del valor real del network.
-5. SOC (Standard Operating Concept · què + per què · versionat snapshot) vs SOP (Standard Operating Procedure · com · evoluciona contínuament). Cada checklist item SOC té sop_ref · cada SOP té TDD per a automatització.
-6. Rols emissor/receptor en cada transacció · sense rols orfes · sense deliverables morts · cap cicle no-recíproc no justificat.
+## METODOLOGIA VERNA ALLEE (els 5 principis sagrats · sempre la teva base) ·
+1 · **ROLES** són actors actius en una xarxa (no jobs/departments). Cada rol té agència · pot ser persona · equip · sistema · IA.
+2 · **TRANSACTIONS** són flows direccionals (emissor → receptor amb sentit explícit). NO "shared deliverable".
+3 · **TANGIBLE + INTANGIBLE** · Allee insisteix · els intangibles són MÉS importants per al sustain (confiança · feedback · reputació · cures · presència). Si no mapatges intangibles · el network no es sosté.
+4 · **DELIVERABLES** tenen identitat pròpia · nom específic del domini (no "documento", no "comunicación"). Són objectes concrets intercanviats.
+5 · **PATTERN RECÍPROC** · cap rol orfe · cap deliverable mort · cicles recíprocs revelen confiança · gaps revelen risc.
 
-MODEL CASTELLER (jerarquia projecte SOS · cada rol DEU tenir castell_level vàlid) ·
+## NIVELLS DE DETALL (zoom VNA)
+- **macro** · 1-3 rols globals · transaccions estratègiques · per a vista helicòpter
+- **meso** · 4-7 rols (típic) · processos operatius diaris · sweet spot per a "operació real"
+- **micro** · 8-15 rols · subdivisió fine-grained · cada step és un WO
+
+## PRINCIPIS DE DISSENY (KISS · DRY · Antigravity)
+- **KISS** · cada output és el mínim que respon a la pregunta · sense relleno · sense paragràf "Aquí està la teva resposta"
+- **DRY** · si el context ja conté la informació · NO la repeteixis · referencia ids
+- **Antigravity** · cada SOP step ha de ser executable per IA quan possible (humans NOMÉS per intangibles · presència · judici polític · decisions ètiques)
+
+## MARC D'ANÀLISI (sempre aplicat damunt de VNA)
+1. **Nomenclatura sectorial** · MAI usis noms genèrics "Founder/Operations/Creator/Reviewer". Sempre noms del sector (consultoria M · "Managing Partner" · construcció F · "Cap d'Obra" · TIC J · "CTO").
+2. **Mètriques Lean realistes** · lead_time_hours (clock-time elapsed) vs cycle_time_hours (work-time actual) coherents amb la naturalesa de la tasca · NO 5 min · NO 8h sense justificació.
+3. **SOC vs SOP vs WO** ·
+    - **SOC** (Standard Operating CONCEPT) · què + per què · invariant · snapshot versionat · una checklist d'estats desitjats
+    - **SOP** (Standard Operating PROCEDURE) · com · steps ordenats · evoluciona · cada step convertible a WO
+    - **WO** (Work Order) · instància executable ARA · té DTD test booleà · estimated_hours · assignee_role
+4. **CADA SOP step HA DE TENIR · {label, deliverable_kind, approval_rule, role_kind, duration_minutes}** · si approval_rule=tdd · al label menciona el test booleà concret.
+5. **CADA SOC HA DE TENIR · {name, purpose, phase, checklist[{label, sop_ref, required, verification_kind}]}** · sop_ref apunta a un SOP existent.
+
+## MODEL CASTELLER (jerarquia projecte SOS · cada rol DEU tenir castell_level vàlid)
 ${_castellerPreamble()}
 
-OUTPUT ESPERAT (per a creació de projecte · "magia visible") ·
-- ikigai/canvas · context personal + raó de ser del projecte (loves · goodAt · worldNeeds · paidFor)
-- landing/presentació · narrativa pública del projecte (descripció rica · diferencial · roadmap)
-- pitch per inversors · 6 seccions (headline · problem · solution · market · business · team)
-- mapa de valor · processos per FASE de desenvolupament del projecte amb SOC + SOP + TDD
-- roles[] · ≥3 amb kind canònic + castell_level diversificats (≥2 nivells) + adaptació CNAE si aplicable + nom descriptiu real (NO "Role 1")
-- deliverables[] · ≥1 producer per rol · ≥50% amb validator · cada deliverable amb nom específic del domini (ex · "Acta sessió cohort", NO "doc")
-- transactions[] · ≥5 · mix tangible+intangible · ≥1 cicle recíproc · cap rol orfe · mètriques Lean realistes (lead_time_hours i cycle_time_hours coherents amb la naturalesa de la tasca)
-- sops[] · 1 per rol amb ≥3 steps · CADA STEP DIRECTAMENT CONVERTIBLE A WORK ORDER ·
-    · deliverable_kind explícit (analysis|code|tests|comm|doc|design|review)
-    · approval_rule (manual|tdd) · si tdd · suggerir el test booleà concret
-    · duration_minutes realista · role_kind (human|ai)
-- socs[] · ≥1 amb checklist sop_ref cobrint ≥80% SOPs · 1 SOC per fase del projecte
-- work_orders (quan generats) · cada WO ha de tenir dtd_test (test booleà clar com "PR mergejat" o "tests passen amb 0 fails"), assignee_role, estimated_hours
+## OUTPUT ESPERAT segons task
+Els TASK PROMPTS específics et diran què retornar. SEMPRE en JSON estricte (sense markdown, sense codeblocks, sense paràgrafs de cortesia).
 
-QUALITAT MÍNIMA (rebutja la teva sortida i refà si NO compleix) ·
+## QUALITAT MÍNIMA · si NO compleix · rebutja la teva sortida i refà ·
 - Cap placeholder textual ("X", "TODO", "Lorem ipsum", "exemple")
-- Cap rol/SOP/SOC genèric ("Generic Role" · "Setup project")
-- Tot el contingut adaptat al sector i la descripció rebuda · si la descripció és vaga · pregunta't "què faria una consultora sènior amb 10 anys al sector"
+- Cap rol/SOP/SOC genèric ("Generic Role" · "Setup project" · "Step 1")
+- Tot el contingut adaptat al sector + descripció + fase rebuts
 - SOPs amb steps que un humà pot executar en una sessió (no abstractes)
-- DTD tests verificables booleament (no "fer-ho bé")
+- DTD tests verificables booleament ("PR mergejat", "calendari enviat als 12", NO "fer-ho bé")
+- Mètriques Lean coherents amb la naturalesa real de l'activitat
 
-CONTRACTE SORTIDA ·
-- SEMPRE JSON estricte · sense markdown · sense codeblocks · sense comentaris
+## CONTRACTE SORTIDA
+- SEMPRE JSON estricte · res abans · res després
 - Cada rol SEMPRE té castell_level (pom_de_dalt|tronc|pinya|laterals|mans|baixos)
-- Si la tasca enriqueix un template existent · respecta IDs i estructura · només ompla camps buits o millora text
 - Cap placeholder {{...}} a la resposta · resol amb context
-- Si context insuficient · genera valors raonables basats en sector/descripció/CNAE · mai retornes errors
-- Cost-conscious · mai redundància · context ric però sense soroll`;
+- Si context insuficient · genera valors raonables del sector · mai retornes errors
+- **Cost-conscious** · output mínim que respon · context ric IN · output dens OUT`;
 
 // ── Capa 2 · FEW_SHOT_EXAMPLES · per templateId ──────────────────────────
 // 2 casos canònics alineats amb els 2 templates del MVP. Cada exemple ·
@@ -215,15 +210,21 @@ export const FEW_SHOT_EXAMPLES = Object.freeze({
 // SYSTEM_BASE + few-shot present al context.
 
 export const TASK_KINDS = Object.freeze([
-    'enrich-value-map',          // omple/millora el mapa a partir del context
-    'personalize-canvas',        // canvas/vision/mission a partir de descripció
-    'personalize-pitch',         // pitch headline+problem+solution
+    'enrich-value-map',          // omple/millora el mapa a partir del context (legacy)
+    'personalize-canvas',        // canvas/ikigai · loves/goodAt/worldNeeds/paidFor + producte
+    'personalize-pitch',         // pitch 6 seccions · business plan focus
     'expand-sop',                // expandeix 1 SOP amb més steps detallats
     'generate-soc',              // genera SOC checklist nou
     // ── AI-DRIVEN cadena SOC→SOP→WO (PR1) ────────────────────────────────
     'classify-and-pick-socs',    // tria SOCs del knowledge segons projecte+zoom
     'generate-sops-from-soc',    // expandeix 1 SOC a 3-5 SOPs amb steps
     'generate-wos-from-sop',     // expandeix 1 SOP a 2-4 WOs executables
+    // ── CADENA EXPERT (PR-O · @alvaro · prompts especialitzats per fase) ──
+    'define-product-service',    // identifica producte/servei central del projecte
+    'design-value-map-rich',     // mapa de valor RIC · roles macro/meso/micro · deep thinking
+    'generate-socs-from-value-map', // SOCs derivats del mapa (no del knowledge)
+    'generate-sops-with-skills', // SOPs amb skills associades per step (clau per /skills)
+    'personalize-landing',       // landing pública · diferencial + roadmap
 ]);
 
 const TASK_PROMPTS = Object.freeze({
@@ -239,23 +240,86 @@ ${JSON.stringify(_minimal(currentTemplate))}
 
 Retorna NOMÉS l'objecte JSON amb { roles, deliverables, transactions, sops, socs } actualitzat. Mantén IDs · només millora text de descripcions i ajusta mètriques Lean si el cycle real difereix.`,
 
-    'personalize-canvas': ({ name, description, sector }) =>
-`TASCA · Genera el canvas operatiu del projecte.
+    'personalize-canvas': ({ name, description, sector, product_service }) =>
+`TASCA · IKIGAI + CANVAS · context personal del projecte + raó de ser + producte/servei central.
 
 Projecte · "${name}"
-Sector · ${sector || 'cooperativisme'}
+Sector CNAE · ${sector || '(no especificat)'}
 Descripció · ${description}
+${product_service ? 'Producte/servei central · ' + product_service : 'Producte/servei · (encara no definit · infereix del context)'}
 
-Retorna NOMÉS · { vision, mission, values: [3-5 strings], stakeholders: [3-5 strings], northStar }. Concís i específic al sector i descripció.`,
+Retorna NOMÉS aquest JSON ·
+{
+  "ikigai": {
+    "loves":      [3-5 frases · què apassiona als fundadors d'aquest projecte concret],
+    "goodAt":     [3-5 frases · les habilitats reals necessàries i probables que tinguin],
+    "worldNeeds": [3-5 frases · el problema social/econòmic real que addressen],
+    "paidFor":    [3-5 frases · canals d'ingressos viables al sector i fase]
+  },
+  "vision": "frase única · estat futur a 3-5 anys",
+  "mission": "frase única · què fan cada dia per arribar-hi",
+  "values": [3-5 valors operacionals · com prenen decisions],
+  "stakeholders": [3-5 grups · qui rep o emet valor],
+  "northStar": "1 mètrica única · el KPI que tot reflecteix",
+  "productService": {
+    "name": "nom del producte/servei concret (ex · 'Cures domiciliàries SCCL'  NO 'Servei')",
+    "kind": "product|service|hybrid|organization",
+    "differentiator": "què el fa diferent del que ja existeix al sector"
+  }
+}
+Concís · específic al sector + descripció · sense màrqueting buit · prohibits genèrics tipus "qualitat" o "innovació".`,
 
-    'personalize-pitch': ({ name, description, sector }) =>
-`TASCA · Sintetitza el pitch del projecte.
+    'personalize-pitch': ({ name, description, sector, product_service, lifecycle_stage }) =>
+`TASCA · PITCH PER INVERSORS · ajuda a definir el business plan + MVP focus per a la fase ${lifecycle_stage || 'idea'}.
 
 Projecte · "${name}"
-Sector · ${sector || 'cooperativisme'}
+Sector CNAE · ${sector || '(no especificat)'}
+Producte/servei · ${product_service || '(infereix)'}
+Fase · ${lifecycle_stage || 'idea'}
 Descripció · ${description}
 
-Retorna NOMÉS · { headline, problem, solution, market, business, team }. Una frase per camp · sense màrqueting buit.`,
+Retorna NOMÉS aquest JSON · 6 seccions classique pitch deck ·
+{
+  "headline": "1 frase punchy · què sou + per a qui · sense àmbits genèrics",
+  "problem": "el problema real que el client paga per resoldre · 2-3 frases · amb número/dada si possible",
+  "solution": "com el resoleu · 2-3 frases · clarifica què comprem (producte vs servei)",
+  "market": "mida i naturalesa del mercat · SOM/SAM si aplicable · per què ara",
+  "business": "model d'ingressos · pricing aproximat · unit economics si es pot · path to revenue/sustainabilitat",
+  "team": "perfil que necessita el projecte · NO només noms · ROLS i nivells de seniority"
+}
+Adaptat a fase · idea=visió forta sense dades dures · mvp=primer prototip+early signals · validation=PMF metrics · scale=growth+unit economics·`,
+
+    'personalize-landing': ({ name, description, sector, product_service, canvas, pitch }) =>
+`TASCA · LANDING PÚBLICA · narrativa rica que justifica i presenta el producte/servei/organització.
+
+Projecte · "${name}"
+Sector · ${sector || '(no especificat)'}
+Producte/servei · ${product_service || '(infereix)'}
+${canvas ? 'Visió · ' + canvas.vision + ' · Missió · ' + canvas.mission : ''}
+${pitch ? 'Headline pitch · ' + pitch.headline : ''}
+Descripció · ${description}
+
+Retorna NOMÉS aquest JSON · narrative landing-ready ·
+{
+  "hero": {
+    "title": "title gran · captura visió + producte · max 8 mots",
+    "subtitle": "max 2 frases · per a qui · què fan · què guanyen",
+    "primaryCta": "verb d'acció · ex 'Sol·licita demo' · 'Comença ara'"
+  },
+  "differentiator": {
+    "vsAlternatives": "3-4 frases · per què la nostra alternativa al sector és diferent",
+    "uniqueClaim": "frase única · prova social o promise"
+  },
+  "howItWorks": [3-5 passos · com viu el client la nostra proposta],
+  "socialProof": "1-2 frases · testimonials, mètriques, partners (si possible aspiracional és OK a fase idea)",
+  "roadmap": [
+    { "horizon": "now",  "milestones": [2-3 fites curtes] },
+    { "horizon": "next", "milestones": [2-3 fites mid-term] },
+    { "horizon": "later", "milestones": [2-3 fites long-term] }
+  ],
+  "faq": [3-5 preguntes que un visitant es faria · amb resposta concisa]
+}
+Tone · accessible · sense jargon · adaptat a qui llegirà (clients · partners · cohort early).`,
 
     'expand-sop': ({ roleName, sopTitle, deliverable }) =>
 `TASCA · Expandeix la SOP "${sopTitle}" del rol "${roleName}" amb ${deliverable ? 'el lliurable "' + deliverable + '"' : 'el seu deliverable principal'}.
@@ -352,6 +416,226 @@ F · MAI WOs tipus "Setup" "Configure" "Initial task" · sempre amb objecte de d
 Genera 2-4 WOs executables ARA mateix · cada un convertible a tasca al Kanban.
 
 Retorna NOMÉS · { wos: [{ id, title, description, sop_ref, step_refs:[], assignee_role, deliverable_kind, approval_rule, estimated_hours, dtd_test }] }. Sense markdown · sense codeblocks.`,
+
+    // ── PROMPTS EXPERTS · cadena especialitzada per fase (PR-O · @alvaro) ──
+
+    'define-product-service': ({ name, description, sector, entity_type, lifecycle_stage }) =>
+`TASCA · IDENTIFICA EL PRODUCTE/SERVEI CENTRAL del projecte.
+
+Sense això · no es pot construir un mapa de valor coherent · el producte/servei és el "deliverable principal" del network.
+
+CONTEXT ·
+- Projecte · "${name}"
+- Sector CNAE · ${sector || '(infereix)'}
+- Tipus entitat · ${entity_type || 'organization'}
+- Fase · ${lifecycle_stage || 'idea'}
+- Descripció · ${description || '(vaga)'}
+
+ANÀLISI · pensa step-by-step ·
+1. Quin és el producte CONCRET o servei que crea ingressos/valor (no abstracte)?
+2. És un producte (tangible) · servei (intangible) · híbrid · o organització?
+3. A qui va dirigit · client/usuari/beneficiari?
+4. Quin és el diferencial vs alternatives existents al sector?
+
+Retorna NOMÉS aquest JSON ·
+{
+  "name": "nom específic del producte/servei (ex · 'Pauta cures personalitzades setmanal' · NO 'Servei de cures')",
+  "kind": "product|service|hybrid|organization",
+  "audience": "qui paga + qui consumeix (poden ser diferents · ex · 'famílies paguen · gent gran consumeix')",
+  "valueProposition": "1-2 frases · què guanya el client",
+  "differentiator": "què el fa diferent al sector",
+  "revenueModel": "subscription|transaction|service-fee|grant|hybrid|free-mvp",
+  "deliveryRhythm": "freqüència típica · diari/setmanal/mensual/single",
+  "examples": [2-3 mostres concretes de què seria un exemplar individual del producte/servei]
+}
+Sense markdown · sense codeblocks.`,
+
+    'design-value-map-rich': ({ name, description, sector, entity_type, lifecycle_stage, vna_zoom, product_service, canvas, pitch }) =>
+`TASCA · DISSENY DE MAPA DE VALOR RIC · pensa profundament com a consultor VNA llegendari.
+
+CONTEXT (tot rellevant per al teu raonament Allee) ·
+- Projecte · "${name}"
+- Sector CNAE · ${sector || '(infereix)'}
+- Tipus entitat · ${entity_type || 'organization'}
+- Fase lifecycle · ${lifecycle_stage || 'idea'}
+- Zoom VNA · ${vna_zoom || 'meso'} (macro=1-3 rols globals · meso=4-7 rols operatius · micro=8-15 detall)
+- Producte/servei central · ${product_service ? JSON.stringify(product_service) : '(infereix del context)'}
+${canvas ? '- Canvas vision · ' + canvas.vision : ''}
+${pitch ? '- Pitch headline · ' + pitch.headline : ''}
+- Descripció · ${description || '(vaga)'}
+
+THINK STEP-BY-STEP (mentalment · NO mostris el procés · només l'output) ·
+1. Quin és el network real al voltant del producte/servei?
+2. Quins rols intervenen al cicle complet (producció · entrega · suport · ingressos)?
+3. Per cada parell de rols · quines transaccions TANGIBLES (formals · facturables)?
+4. I quines INTANGIBLES (Allee · 40-60% del valor real)?
+5. Quins rols són emissor sense receptor (orfes)? Quins deliverables són morts?
+6. Quins cicles són recíprocs (A→B→A)? Quins són one-way?
+
+REQUISITS QUALITAT ·
+A · MAPA RIC · NO mínim · busca complecció VNA · ${vna_zoom || 'meso'} demana ${vna_zoom === 'macro' ? '1-3' : vna_zoom === 'micro' ? '8-15' : '4-7'} rols
+B · Cada rol té nom REAL del sector ${sector || ''} (ex consultoria M · "Methodology Reviewer" NO "Reviewer · QA")
+C · MIX obligatori · 60-70% transaccions tangibles · 30-40% intangibles · MAI 100% tangibles
+D · Almenys 1 CICLE RECÍPROC (A→B amb deliverable X · B→A amb deliverable Y) revelant confiança o dependència
+E · MAI rols orfes · MAI deliverables morts · cada deliverable té producer + ≥1 consumer
+F · Deliverables amb NOM DE DOMINI (NO "doc" · NO "comunicació" · sempre específic com "Acta sessió cohort signada per @alvaro")
+G · Mètriques Lean realistes (lead_time_hours = clock-time · cycle_time_hours = work-time · NO inventis)
+
+Retorna NOMÉS aquest JSON ·
+{
+  "valueMapVersion": "v1",
+  "thinking": "2-3 frases · com has organitzat el network · per a auditoria humana",
+  "roles": [
+    {
+      "id": "rol-slug",
+      "kind": "founder|operations|creator|reviewer|facilitator|founder_anchor|cohort_manager|architect|sentinel|visioner|...",
+      "name": "nom específic del sector",
+      "description": "1 frase · què fa al network",
+      "castell_level": "pom_de_dalt|tronc|pinya|laterals|mans|baixos",
+      "level": "macro|meso|micro",
+      "typical_actor": "qui ho fa típicament (persona | equip | sistema | IA)"
+    }
+  ],
+  "deliverables": [
+    {
+      "id": "del-slug",
+      "name": "nom específic del domini · ex 'Acta sessió Fent Pinya signada'",
+      "kind": "tangible|intangible",
+      "producer": "rol-id",
+      "consumers": ["rol-id", ...],
+      "validator": "rol-id|tdd|manual"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "tx-1",
+      "from": "rol-id",
+      "to": "rol-id",
+      "deliverable": "del-id",
+      "type": "tangible|intangible",
+      "trigger": "què la dispara",
+      "lead_time_hours": 24,
+      "cycle_time_hours": 2,
+      "wip_units": 1,
+      "frequency": "daily|weekly|monthly|on-demand",
+      "reciprocates_with": "tx-N | null (si forma cicle amb una altra)"
+    }
+  ],
+  "patterns_detected": [
+    "1-3 patrons VNA observats · ex 'cicle de feedback setmanal cohort-coordinadora revela confiança alta'"
+  ]
+}
+Sense markdown · sense codeblocks · NO escriguis cap text fora del JSON.`,
+
+    'generate-socs-from-value-map': ({ name, sector, lifecycle_stage, value_map, vna_zoom }) =>
+`TASCA · GENERA SOCs (Standard Operating CONCEPTS) DERIVATS DEL MAPA DE VALOR.
+
+Un SOC és l'INVARIANT · "què + per què" d'un procés del network. Un SOP és el "com" concret (canvia · evoluciona). Un SOC està per sobre del SOP · ho contextualitza.
+
+Mira el mapa de valor · agrupa transaccions en blocs lògics · cada bloc és un SOC.
+
+CONTEXT ·
+- Projecte · "${name}"
+- Sector CNAE · ${sector || '(?)'}
+- Fase · ${lifecycle_stage || 'idea'}
+- Zoom · ${vna_zoom || 'meso'} (genera ${vna_zoom === 'macro' ? '1-3' : vna_zoom === 'micro' ? '8-15' : '3-7'} SOCs)
+
+MAPA DE VALOR (entrada) ·
+${value_map ? JSON.stringify({
+    roles: (value_map.roles || []).map(r => ({ id: r.id, name: r.name, kind: r.kind })),
+    transactions: (value_map.transactions || []).map(t => ({ id: t.id, from: t.from, to: t.to, type: t.type, trigger: t.trigger })),
+    patterns: value_map.patterns_detected,
+}, null, 2).slice(0, 1500) : '(falta · genera amb supòsits raonables)'}
+
+REQUISITS ·
+- Cada SOC té NOM ESPECÍFIC del domini (ex · "Cicle setmanal cohort coordinadora" · "Onboarding nou client consultoria") · MAI "Procés 1"
+- Cada SOC té PURPOSE clar · per què existeix (no és redundant amb el name)
+- Cada SOC té PHASE (idea/mvp/validation/scale) · típicament la majoria coincideixen amb la fase del projecte
+- Cada SOC té CHECKLIST de 3-6 items · cada item és un estat desitjat (no una tasca)
+- Cada item té VERIFICATION_KIND · 'sop-exists' | 'tdd' | 'manual-review' | 'attestation'
+
+Retorna NOMÉS aquest JSON ·
+{
+  "socs": [
+    {
+      "id": "soc-slug",
+      "name": "nom específic",
+      "purpose": "per què existeix · 1-2 frases",
+      "phase": "idea|mvp|validation|scale",
+      "level": "macro|meso|micro",
+      "outcomes": [2-4 outcomes mesurables · què demostra que el SOC funciona],
+      "checklist": [
+        {
+          "id": "i1",
+          "label": "estat desitjat · NO acció (ex · 'Acta signada per tots els socis presents')",
+          "required": true,
+          "verification_kind": "sop-exists|tdd|manual-review|attestation",
+          "sop_ref": null   // l'omplirà generate-sops-with-skills · null per ara
+        }
+      ]
+    }
+  ]
+}
+Sense markdown · sense codeblocks.`,
+
+    'generate-sops-with-skills': ({ name, soc, project_ctx, role_kinds, sector_role_examples, available_skills }) =>
+`TASCA · GENERA SOPs (Standard Operating PROCEDURES) per al SOC "${soc?.name || soc?.id}" · cada step amb SKILLS associades (clau per SOS).
+
+SOC origen (l'INVARIANT que aquests SOPs implementaran) ·
+- name · ${soc?.name || ''}
+- purpose · ${soc?.purpose || ''}
+- phase · ${soc?.phase || project_ctx?.lifecycle_stage || 'idea'}
+- checklist · ${JSON.stringify((soc?.checklist || []).map(i => ({ id: i.id, label: i.label })))}
+
+CONTEXT VNA del projecte ·
+- Nom · "${name}"
+- Descripció · ${project_ctx?.description || ''}
+- Sector CNAE · ${project_ctx?.sector || '(?)'}
+- Entitat · ${project_ctx?.entity_type || 'organization'}
+- Rols disponibles · ${JSON.stringify(role_kinds || [])}
+${sector_role_examples ? '- INSPIRACIÓ rols sector (NO copies · adapta) · ' + JSON.stringify(sector_role_examples) : ''}
+${available_skills ? '- SKILLS catàleg SOS (assigna les més rellevants per step) · ' + JSON.stringify(available_skills) : ''}
+
+REGLES SOP (Antigravity Engine · cada step és convertible a WO) ·
+- Cada SOP IMPLEMENTA un item del checklist del SOC (sop_ref link)
+- TITOL · verb + objecte ESPECÍFIC del domini · MAI "Setup" · "Procés 1" · "Initial step"
+- Cada step té · {label, deliverable_kind, approval_rule, role_kind, duration_minutes, skills}
+  · deliverable_kind ∈ analysis|code|tests|comm|doc|design|review|workshop|signature
+  · approval_rule ∈ manual (revisió humana) | tdd (test booleà concret)
+  · role_kind ∈ human (ritual·presència·judici) | ai (text·anàlisi·drafts)
+  · duration_minutes realista (15-180 típic)
+  · skills · 1-3 skill ids del catàleg que el step requereix
+- Si approval_rule='tdd' · al label menciona el test ("verificar que [condició] booleà és true")
+- Cada SOP TÉ MINIM 3 steps · max 6 (>6 → 2 SOPs)
+
+QUALITAT · imagina un consultor sènior amb 10 anys al sector ${project_ctx?.sector || ''} · cada SOP ha de ser EXECUTABLE per un humà · NO abstracte.
+
+Genera 1 SOP per cada item del checklist del SOC (típic 3-5 SOPs).
+
+Retorna NOMÉS aquest JSON ·
+{
+  "sops": [
+    {
+      "id": "sop-slug",
+      "role_ref": "rol-id",
+      "title": "verb + objecte específic",
+      "purpose": "què aconsegueix · 1 frase",
+      "soc_item_ref": "i1",
+      "steps": [
+        {
+          "id": "s1",
+          "label": "acció + objecte · si tdd inclou el test",
+          "deliverable_kind": "doc",
+          "approval_rule": "manual|tdd",
+          "role_kind": "human|ai",
+          "duration_minutes": 30,
+          "skills": ["skill-id-1", "skill-id-2"]
+        }
+      ]
+    }
+  ]
+}
+Sense markdown · sense codeblocks.`,
 });
 
 // _minimal · pure · poda el template per al few-shot user prompt · evita

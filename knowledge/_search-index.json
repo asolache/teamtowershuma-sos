@@ -1,7 +1,7 @@
 {
   "version": "v1.0",
-  "generated": "2026-05-16T23:06:19.689Z",
-  "totalFiles": 70,
+  "generated": "2026-05-17T01:11:56.714Z",
+  "totalFiles": 71,
   "items": [
     {
       "id": "clients-colla-castellera-vna-model",
@@ -1768,6 +1768,37 @@
       "sector_id": null,
       "sector_name": null,
       "scope": null,
+      "brand_owner": null
+    },
+    {
+      "id": "prompts-chain-plan",
+      "path": "knowledge/vision/prompts-chain-plan.md",
+      "relpath": "vision/prompts-chain-plan.md",
+      "folder": "vision",
+      "type": "vision",
+      "title": "prompts-chain-plan",
+      "version": "v1",
+      "status": "live",
+      "purpose": "Pla canonical de la cadena de prompts IA del SOS V11 · ordre · responsabilitats · context · outputs · cost · per a anar de la fase idea al MVP automatitzat al Kanban en <90 segons · alfa-ready.",
+      "keywords": [
+        "prompts",
+        "ia",
+        "vna",
+        "verna-allee",
+        "automation",
+        "kanban",
+        "antigravity",
+        "kiss",
+        "dry"
+      ],
+      "excerpt": "Cadena de prompts SOS V11 · pla expert > Context · sessió 2026-05-17 (v118+v119) · @alvaro · \"ahora esta fase de los prompts y llegar a la eficiencia top es mi maxima prioridad · si hacemos magia aqui lo siguiente es mas facil\". > > Objectiu · transf…",
+      "size": 9634,
+      "phase": null,
+      "sector_cnae": null,
+      "sos_context": "critical",
+      "sector_id": null,
+      "sector_name": null,
+      "scope": "universal",
       "brand_owner": null
     },
     {

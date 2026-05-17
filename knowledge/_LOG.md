@@ -120,4 +120,21 @@ sos_context: critical
 
 ---
 
+## 2026-05-17 · vision/prompts-chain-plan.md (NOU · pla expert)
+
+- author: "@alvaro + claude · sprint vna-prompts-expert"
+- action: add
+- description: "Pla canonical de la cadena de prompts IA SOS V11. 8 fases (define-product → ikigai → pitch → landing → design-value-map RIC → SOCs derivats del mapa → SOPs amb skills → WOs). Cost estimat per ambition. Vocabulary canonical (SOC vs SOP vs WO). KISS/DRY/Antigravity al centre. Acompanya el rewrite del SYSTEM_BASE + 4 task prompts nous + 3 enriquits."
+- changes:
+    - knowledge/vision/prompts-chain-plan.md (nou · v1)
+    - knowledge/_index.md (entrada nova a vision)
+    - knowledge/_search-index.json (regenerat · 70 → 71 fitxers)
+    - js/core/vnaExpertPrompts.js · SYSTEM_BASE re-escrit (KISS DRY Antigravity) + 5 TASK_KINDS nous (define-product-service · design-value-map-rich · generate-socs-from-value-map · generate-sops-with-skills · personalize-landing) + personalize-canvas/pitch enriquits
+    - js/tests/promptsExpertRewrite.test.js (nou · 53 asserts)
+- status: approved (self-merge · documentació + prompts)
+- pr: claude/prompts-expert-rewrite
+- next: orchestrator que encadeni els 8 passos · prompt router per tier · skills catalog link
+
+---
+
 *Final del LOG · pròximes contribucions s'afegeixen append-only sota.*

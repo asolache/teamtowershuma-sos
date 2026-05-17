@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-17T06:30 · v118 · CNAE PICKER + PROMPTS DEBUG · 21 CNAE select al /create + /prompts-debug vista transparència IA · 58 asserts';
+const BUILD_STAMP = '2026-05-17T07:00 · v119 · PROMPTS EXPERT REWRITE · SYSTEM_BASE KISS DRY Antigravity + 5 prompts nous (product · value-map RIC · SOCs derivats · SOPs+skills · landing) + cadena 8 fases doc · 53 asserts';
 
 export default class DesignSystemView {
 
