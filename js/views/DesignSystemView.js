@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T00:00 · v132b...v133 · VNA DEEP ANALYSIS + SLIM + vnaQuickSuggest + ValueMapView migrat + Benchmark 5 APIs + Submenu Pattern Canonical (SubmenuTabs.js + keyboard ← → Home/End + demo viu /design) + LearnView MIGRAT regression-safe + Project Hub V3 PREVIEW route /project-hub-v3-preview (5 tabs · dropdown Més · Presentation tab amb IA completa · cas Forn Vall) · 359+ asserts nous · MERGEABLE per testing';
+const BUILD_STAMP = '2026-05-20T04:00 · v134 · Project Hub IA aligned als 5 pilars del menú (🏠Hub·🎨Crear·🔨Treballar·💶Comptabilitzar·🔗Connectar·👥Equip · 2-nivells subsubmenu + Quality integrat + Wallet/Accounting v2 redisseny + Team/Permissions NOVA vista doble GLOBAL+per-project · matriu RBAC fine-grained) · 5 noves WOs backlog · doc IA-alignment + preview viu actualitzat · 411+ asserts totals';
 
 export default class DesignSystemView {
 
