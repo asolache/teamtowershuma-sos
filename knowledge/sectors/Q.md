@@ -1,10 +1,15 @@
 ---
 sector_id: Q
-sector_name: "Educación"
-cnae: Q
-sector_name_en: "Education"
-version: "v11.1"
-tags: [educación, universidad, formación, edtech, reskilling, postgrado, escuela, colegios]
+sector_name: "Actividades Sanitarias y de Servicios Sociales"
+sector_name_en: "Human Health & Social Work Activities"
+cnae: "86-88"
+cnae_official: "CNAE-2009 Q · Actividades sanitarias y de servicios sociales (hospitales · medicina general · especialistas · servicios sociales con/sin alojamiento · residencias · atención a domicilio · cures)"
+version: "v131"
+agent_type: sector-context
+roles_status: legacy-mismatch
+roles_status_note: "Aquest fitxer tenia continguts d'educació (sector P · que ja existeix). v131 fixa el frontmatter a canonical CNAE Q (sanitari/social). El contingut de rols sota es migrarà a v131b · veure rols a knowledge/sectors/R.md actual (que tenia el contingut sanitari)."
+canonical_archetypes_source: "domainDetector.DOMAIN_PACKS · health-clinic (Q) · coop-cares (Q·T)"
+tags: ["sanidad", "hospital", "clínica", "medicina", "enfermería", "servicios-sociales", "residencia", "SAD", "atencion-domiciliaria", "salud-mental", "cures"]
 
 roles:
   - id: proveedor-conocimiento-academico

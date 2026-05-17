@@ -1,10 +1,15 @@
 ---
 sector_id: L
-sector_name: "Actividades Financieras y de Seguros"
-sector_name_en: "Financial & Insurance Activities"
-cnae: "64-66"
-version: "v11.1"
-tags: ["finanzas", "banca", "seguros", "fintech", "inversion", "riesgo", "credito"]
+sector_name: "Actividades Inmobiliarias"
+sector_name_en: "Real Estate Activities"
+cnae: "68"
+cnae_official: "CNAE-2009 L · Actividades inmobiliarias (compra-venta, alquiler, gestión, tasación, intermediación)"
+version: "v131"
+agent_type: sector-context
+roles_status: legacy-mismatch
+roles_status_note: "Aquest fitxer tenia continguts financers (sector K). v131 fixa el frontmatter a canonical CNAE L (immobiliari). El contingut de rols sota es migrarà a v131b."
+canonical_archetypes_source: "Per a immobiliari · veure rols a knowledge/sectors/M.md actual (que tenia el contingut correcte d'immobiliari)"
+tags: ["inmobiliario", "real-estate", "promotor", "property-management", "alquiler", "tasacion", "proptech", "REIT"]
 
 roles:
   - id: cfo_finance_director

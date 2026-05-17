@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-18T17:00 · v130 · WALLET V2 BINGO · les 6 pestanyes IMPLEMENTADES · Top-up amb 3 sub-tabs (Stripe Checkout custom + Crypto stables USDC/USDT/DAI/xDAI + Crypto convertible ETH/WBTC/MATIC amb quote viva) · Compres amb provider breakdown + historial cronològic · Tarta amb summary KPIs + link vista completa · 39 asserts nous';
+const BUILD_STAMP = '2026-05-18T19:00 · v131 · SECTOR CNAE AUDIT + sectorAgentLoader · fix 6 mappings crítics (K Financieras 64-66 · L Inmobiliarias 68 · M Profesionales 69-75 · N Administrativas 77-82 · Q Sanitarias 86-88 · R Arts/Esports 90-93) + S scope reduït · P scope expandit · loader anti-contaminació (no injecta rols legacy-mismatch) · 70 asserts nous';
 
 export default class DesignSystemView {
 

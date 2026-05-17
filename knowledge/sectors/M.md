@@ -1,10 +1,15 @@
 ---
 sector_id: M
-sector_name: "Actividades Inmobiliarias"
-sector_name_en: "Real Estate Activities"
-cnae: "68"
-version: "v11.1"
-tags: ["inmobiliaria", "promotora", "gestion-patrimonial", "alquiler", "tasacion", "proptech"]
+sector_name: "Actividades Profesionales, Científicas y Técnicas"
+sector_name_en: "Professional, Scientific & Technical Activities"
+cnae: "69-75"
+cnae_official: "CNAE-2009 M · Actividades profesionales, científicas y técnicas (consultoría · abogados · arquitectos · ingenieros · I+D · publicidad · veterinaria)"
+version: "v131"
+agent_type: sector-context
+roles_status: legacy-mismatch
+roles_status_note: "Aquest fitxer tenia continguts immobiliaris (sector L). v131 fixa el frontmatter a canonical CNAE M (professional/scientific/technical). El contingut de rols sota es migrarà a v131b · veure rols a knowledge/sectors/N.md actual."
+canonical_archetypes_source: "domainDetector.DOMAIN_PACKS · software-agency (J·M) · legal-advisory (M) · research-lab (M)"
+tags: ["consultoría", "abogados", "arquitectos", "ingenieros", "I+D", "publicidad", "veterinaria", "professional-services"]
 
 roles:
   - id: promotor_developer
