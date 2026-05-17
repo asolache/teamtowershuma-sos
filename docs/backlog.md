@@ -4776,3 +4776,86 @@ L'esquelet ja té el backend de xarxa social · només cal **explicit-lo** ·
 - **v134-135** · wo-sectors-fusion (UX major redesign)
 - **v136+** · wo-lms-content-engine · wo-lms-api-market · wo-lms-permaweb-publishing (sèrie LMS execució real)
 
+
+---
+
+## 🎯 ROADMAP ESTRATÈGIC A ALFA (v132 → v150 · 10 setmanes)
+
+> Plan complet · `docs/strategic-roadmap-to-alpha-v132.md`
+
+### 6 fases · 18 sprints · ~10 setmanes
+
+| Fase | Sprints | Setmanes | Focus | Mètrica fi |
+|---|---|---:|---|---|
+| 1 · Estabilització | v132-134 | 1.5 | Zero bugs · backends reals (Stripe + crypto) | Zero WARN/ERROR · onboarding ≥70% |
+| 2 · Quality UX | v135-137 | 2.0 | Sectors fusion · sosTopbar · mobile · components canonical | Lighthouse ≥90 a top-4 vistes |
+| 3 · Comercial | v138-140 | 1.5 | Self-serve · pricing actiu · trial · billing portal | 5 testers paguen sense humà |
+| 4 · LMS + Knowledge | v141-145 | 2.5 | LMS engine + content + API public | 3 cohorts usen LMS · API consumida x2 partners |
+| 5 · Comunitat | v146-148 | 1.5 | Cohort 0 · trust public · referrals | 50 perfils signats · 30 attestations · 5 referrals |
+| 6 · Launch | v149-150 | 1.0 | Docs + i18n + alpha launch + comms | GA actiu · 500+ visitants/dia |
+
+### 18 WOs amb prioritat estratègica
+
+**Fase 1 · Estabilització** ·
+- `wo-research-lms` · L · v132 (foundational doc)
+- `wo-prompt-ab-test-vna` · L · v132 (evidence-based prompt tuning)
+- `wo-import-backup-projects-fix-v2` · S · v132 (E2E tests)
+- `wo-dynamic-kb-index` · L · v133 (auto-indexer)
+- `wo-stripe-edge-deploy` · M · v133 (backend deploy)
+- `wo-crypto-rpc-verify` · M · v134 (real RPC verify)
+- `wo-onboarding-flow-v1` · L · v134 (tutorial primer projecte)
+
+**Fase 2 · Quality UX** ·
+- `wo-sectors-fusion` · XL · v135 (vista nova SectorAgentExplorer)
+- `wo-sostopbar-migration` · XL · v136 (migrar 14 vistes)
+- `wo-mobile-audit` · L · v136 (53 vistes a 360px)
+- `wo-sosempty-state` · M · v137 (component canonical)
+- `wo-sosloading` · M · v137 (component canonical)
+- `wo-skills-marketplace-ui` · M · v137 (UI panel cross-sector)
+
+**Fase 3 · Comercial actiu** ·
+- `wo-landing-page-public` · L · v138
+- `wo-pricing-page-activa` · M · v138
+- `wo-plan-enforcer-soft` · M · v139
+- `wo-sosbutton-tokens` · S · v139
+- `wo-trial-flow` · M · v140
+- `wo-billing-portal` · M · v140
+
+**Fase 4 · LMS + Knowledge** ·
+- `wo-lms-content-engine` · XL · v141
+- `wo-sector-skill-levels-roles` · M · v141
+- `wo-lms-content-bootstrap` · XL · v142 (5 cursos seed)
+- `wo-lms-api-market` · L · v143
+- `wo-knowledge-permaweb-publish` · M · v144
+- `wo-sector-quality-rubric-integration` · S · v145
+
+**Fase 5 · Comunitat + Trust** ·
+- `wo-cohort-0-onboarding` · L · v146
+- `wo-attestation-public-feed` · M · v146
+- `wo-trust-score-public` · M · v147
+- `wo-feedback-loop` · M · v147
+- `wo-referral-program` · M · v148
+
+**Fase 6 · Docs + Launch** ·
+- `wo-docs-site-public` · L · v149
+- `wo-i18n-completion` · L · v149
+- `wo-alpha-launch-checklist` · M · v150
+- `wo-alpha-launch-comms` · M · v150
+
+### Decisions per resoldre amb @alvaro
+
+1. Alfa pública oberta o whitelist primer? → recomanat **whitelist cohort 0 + 50 invitats** primer
+2. Pricing real des v138 o gratuit fins v150? → recomanat **pricing visible v138 amb trial 14d**
+3. LMS build vs OpenEdX integration? → recomanat **build minimal core + Scorm/xAPI players**
+4. Comunicació pre-alpha · quan comencem? → recomanat **changelog public des v132 · newsletter mensual des v138**
+
+### Pla post-alfa (≥ v151)
+
+- v151-160 · beta amb permaweb federat real entre instàncies SOS
+- v161-180 · Matriu integration · 6 vectors complets · DAO multisig
+- v181-200 · marketplace skills i agreements amb royalties
+- v200+ · GA · 1.0 release · roadmap públic
+
+---
+
+*ROADMAP ESTRATÈGIC pujat al backlog 2026-05-18 · 18 sprints · 10 setmanes a alfa pública.*

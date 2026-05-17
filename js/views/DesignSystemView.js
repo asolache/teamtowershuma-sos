@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-18T22:30 · v131c · 10 sectors restants canonical (A·B·C·D·E·H·I·O·T·UV) amb skill_level_taxonomy + 5 sops_canonical · skillsMarketplaceService (match WO + cross-sector taxonomy) · sectorQualityRubric (score 0-100 vs canonical SOPs) · backlog v132 (wo-research-lms primer de la sèrie · wo-sectors-fusion · wo-dynamic-kb-index · wo-prompt-ab-test-vna) · 100 asserts nous';
+const BUILD_STAMP = '2026-05-19T00:00 · v132 · ROADMAP ESTRATÈGIC A ALFA · 6 fases · 18 sprints · v132→v150 · 10 setmanes · 30+ WOs prioritzats (Estabilització · Quality UX · Comercial · LMS · Comunitat · Launch) · 4 decisions @alvaro · KPIs globals · pla post-alfa v151-200+ · doc estratègic complet a docs/strategic-roadmap-to-alpha-v132.md';
 
 export default class DesignSystemView {
 
