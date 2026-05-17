@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T08:00 · v135+v136 · ALFA+ · 4/7 items post-alfa DONE · vnaClarify (pre-thinking) + vnaGapDetector (multi-turn gaps · resol futbol-sense-scout) + xapiService (Tin Can compatible · 10 verbs canonical adl.gov + SOS extension namespace · 4 helpers VNA quality tracking · recordMapGenerated amb score scaled 0-1 + duration ISO 8601 + extensions tokens/slim · listStatements filter agent/verb/object/since · summarizeStatements agg pure) · KB persistent type=xapi_statement · 523+ asserts';
+const BUILD_STAMP = '2026-05-20T10:00 · v135+v136 · ALFA-READY · 5/7 items post-alfa DONE · vnaClarify (pre-thinking) + vnaGapDetector (multi-turn gaps) + xapiService (Tin Can) + roleDedup (embedding similarity · cosine + transitive merge + OpenAI/Mock embedders) + ProjectHubV2View MIGRAT amb 6 tabs IA-aligned + dropdown · ara /project/{id} té els pilars al menú principal (Crear · Treballar · Comptabilitzar · Connectar · Equip) cada un grid links amb ?project=X · 641+ asserts · ALFA-READY VNA generation';
 
 export default class DesignSystemView {
 

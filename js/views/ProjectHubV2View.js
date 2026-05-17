@@ -29,8 +29,61 @@ import { computeProcessStats } from '../core/processService.js';
 import { budgetStatus, getSpend } from '../core/aiBudgetService.js';
 import { getSessionTotalEur, formatCostEur } from '../core/aiCostTracker.js';
 import { auditOrg } from '../core/tddFrameworkService.js';
+// v134/v136 · SubmenuTabs canonical + IA-aligned 6 tabs + dropdown
+import { renderSubmenuTabs, bindSubmenuTabs, getActiveTabFromUrl } from '../ui/SubmenuTabs.js';
 
-const TPL_VERSION = 'hub-v2-v1.0';
+const TPL_VERSION = 'hub-v2-v1.1-canonical-tabs';
+
+// v134 IA aligned · 6 tabs als 5 pilars del menú principal + Equip
+const HUB_TABS = Object.freeze([
+    { id: 'hub',           label: 'Hub',           icon: '🏠' },
+    { id: 'crear',         label: 'Crear',         icon: '🎨' },
+    { id: 'treballar',     label: 'Treballar',     icon: '🔨' },
+    { id: 'comptabilitzar',label: 'Comptabilitzar',icon: '💶' },
+    { id: 'connectar',     label: 'Connectar',     icon: '🔗' },
+    { id: 'equip',         label: 'Equip',         icon: '👥' },
+]);
+const HUB_DROPDOWN = Object.freeze([
+    { id: 'aprendre', label: 'Aprendre (KB projecte)', icon: '🧠' },
+    { id: 'sprints',  label: 'Sprints management',    icon: '🚀' },
+    { id: 'lifecycle',label: 'Lifecycle dashboard',   icon: '🌀' },
+    { id: 'settings', label: 'Settings projecte',     icon: '⚙' },
+]);
+
+// Mapping pilar → vistes globals · click obre amb ?project=X context preservant la barra de hub
+const HUB_PILLAR_LINKS = Object.freeze({
+    crear: [
+        { href: '/canvas',       label: 'Canvas',       icon: '🎨' },
+        { href: '/pitch',        label: 'Pitch',        icon: '📣' },
+        { href: '/pact',         label: 'Pacte',        icon: '🤝' },
+        { href: '/presentation', label: 'Presentation', icon: '🎤' },
+    ],
+    treballar: [
+        { href: '/map',       label: 'Map',       icon: '🗺' },
+        { href: '/kanban',    label: 'Kanban',    icon: '📋' },
+        { href: '/quality',   label: 'Qualitat',  icon: '🎯' },
+        { href: '/sprint',    label: 'Sprint',    icon: '🐝' },
+        { href: '/lifecycle', label: 'Lifecycle', icon: '🌀' },
+    ],
+    comptabilitzar: [
+        { href: '/wallet',           label: 'Wallet',       icon: '💼' },
+        { href: '/accounting',       label: 'Comptes',      icon: '📒' },
+        { href: '/value-accounting', label: 'Pastís valor', icon: '🥧' },
+        { href: '/invoices',         label: 'Factures',     icon: '🧾' },
+        { href: '/tokenomics',       label: 'Tokenomics',   icon: '🪙' },
+    ],
+    connectar: [
+        { href: '/proposals',    label: 'Propostes',      icon: '📝' },
+        { href: '/market',       label: 'Mercat',         icon: '🛒' },
+        { href: '/registry',     label: 'Registry públic',icon: '📡' },
+    ],
+    equip: [
+        // Placeholder · vista global pendent (wo-team-permissions-view · v140)
+        { href: '/me',           label: 'Profile (provisional)', icon: '🧬' },
+    ],
+});
+
+const VALID_TAB_IDS = new Set([...HUB_TABS, ...HUB_DROPDOWN].map(t => t.id));
 
 export default class ProjectHubV2View {
 
@@ -46,6 +99,10 @@ export default class ProjectHubV2View {
             : null;
         this._project = null;
         this._notFoundHtml = null;
+        // v136 · IA-aligned tab routing
+        const urlTab = getActiveTabFromUrl('tab', 'hub');
+        this._mode = VALID_TAB_IDS.has(urlTab) ? urlTab : 'hub';
+        this._cleanupTabs = null;
     }
 
     // Router pattern · getHtml + afterRender
@@ -128,7 +185,19 @@ export default class ProjectHubV2View {
 
     async afterRender() {
         if (this._project) this._bind();
+        // v136 · bind canonical submenu · re-render quan canvia tab
+        const mount = document.getElementById('hubSubmenu');
+        if (mount) {
+            try { this._cleanupTabs?.(); } catch (_) {}
+            this._cleanupTabs = bindSubmenuTabs(mount, (newId) => {
+                if (!VALID_TAB_IDS.has(newId) || newId === this._mode) return;
+                this._mode = newId;
+                this.render();
+            }, { urlParam: 'tab' });
+        }
     }
+
+    destroy() { try { this._cleanupTabs?.(); } catch (_) {} }
 
     async render() {
         const app = (typeof document !== 'undefined') ? document.getElementById('app') : null;
@@ -242,16 +311,14 @@ export default class ProjectHubV2View {
                 <a href="/project/${encodeURIComponent(project.id)}" data-link class="hub-back">← Hub clàssic</a>
             </div>
 
+            <div id="hubSubmenu" style="border-bottom:1px solid var(--border-default);">
+                ${renderSubmenuTabs({ tabs: HUB_TABS, dropdown: HUB_DROPDOWN, activeId: this._mode, urlParam: 'tab' })}
+            </div>
+
             <div class="hub-main">
-                ${this._zone0_Legendary({ project, todayWos, bs, sessionEur })}
-                ${this._zone1_OrgBar({ project, org, orgAudit })}
-                ${this._zone2_Today({ todayWos, cashBalance })}
-                ${this._zone3_Processes({ processes })}
-                ${this._zone4_Suggestions({ suggestions })}
-                ${this._zone5_Activity({ feed })}
-                ${this._zone6_Actions({ project, bs, sessionEur })}
-                ${this._zone7_Knowledge({ project })}
-                ${this._zone8_AdvancedTools({ project })}
+                ${this._mode === 'hub'
+                    ? this._renderHubContent({ project, todayWos, bs, sessionEur, suggestions, feed, org, orgAudit, processes, cashBalance })
+                    : this._renderPillarContent(this._mode, project)}
             </div>
         </div>`;
     }
@@ -259,6 +326,59 @@ export default class ProjectHubV2View {
     // ZONE 0 · LEGENDARY HERO · stats clau visibles d'un cop d'ull
     // Quality score · canvas vision preview · WO progress · cost IA · num rols
     // 5 cards en 1 fila amb les claus del projecte
+    // v136 · Hub tab content · embolcalla les 8 zones existents (7-zones + legendary)
+    _renderHubContent({ project, todayWos, bs, sessionEur, suggestions, feed, org, orgAudit, processes, cashBalance }) {
+        return `
+            ${this._zone0_Legendary({ project, todayWos, bs, sessionEur })}
+            ${this._zone1_OrgBar({ project, org, orgAudit })}
+            ${this._zone2_Today({ todayWos, cashBalance })}
+            ${this._zone3_Processes({ processes })}
+            ${this._zone4_Suggestions({ suggestions })}
+            ${this._zone5_Activity({ feed })}
+            ${this._zone6_Actions({ project, bs, sessionEur })}
+            ${this._zone7_Knowledge({ project })}
+            ${this._zone8_AdvancedTools({ project })}`;
+    }
+
+    // v136 · Pillar tab content · grid de cards · cada card linka a la vista global amb ?project=X
+    _renderPillarContent(pilarId, project) {
+        const links = HUB_PILLAR_LINKS[pilarId] || [];
+        const pilarMeta = HUB_TABS.find(t => t.id === pilarId) || HUB_DROPDOWN.find(t => t.id === pilarId);
+        const pilarLabel = pilarMeta ? (pilarMeta.icon + ' ' + pilarMeta.label) : pilarId;
+
+        if (links.length === 0) {
+            return `<div class="hub-zone" style="text-align:center;padding:2rem;">
+                <h2 style="margin:0 0 8px;">${this._esc(pilarLabel)}</h2>
+                <p style="color:var(--text-muted);margin:0;">Aquest pilar encara no té vistes assignades · prova el preview a
+                <a href="/project-hub-v3-preview?tab=${this._esc(pilarId)}" data-link style="color:var(--accent-indigo);">/project-hub-v3-preview</a>.</p>
+            </div>`;
+        }
+
+        const cards = links.map(l => {
+            const href = l.href + (l.href.includes('?') ? '&' : '?') + 'project=' + encodeURIComponent(project.id);
+            return `<a href="${this._esc(href)}" data-link class="hub-pillar-card">
+                <div class="hub-pillar-card-icon">${this._esc(l.icon || '·')}</div>
+                <div class="hub-pillar-card-label">${this._esc(l.label)}</div>
+            </a>`;
+        }).join('');
+
+        return `
+            <div class="hub-zone">
+                <div class="hub-zone-head">
+                    <h2>${this._esc(pilarLabel)} <span style="color:var(--text-muted);font-weight:400;font-size:0.8rem;">· ${links.length} vistes</span></h2>
+                </div>
+                <div class="hub-pillar-grid">${cards}</div>
+                <p style="color:var(--text-muted);font-size:0.78rem;margin:14px 0 0;">Aquestes vistes existeixen globalment · es carreguen amb el context del projecte actiu via <code>?project=${this._esc(project.id)}</code>. La integració in-tab és part del WO <code>wo-project-hub-ia-aligned</code> (v136+).</p>
+            </div>
+            <style>
+                .hub-pillar-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
+                .hub-pillar-card { background:var(--bg-elevated); border:1px solid var(--border-default); border-radius:8px; padding:14px; text-align:center; text-decoration:none; color:var(--text-main); transition:transform 0.15s ease, border-color 0.15s ease; display:flex; flex-direction:column; align-items:center; gap:6px; }
+                .hub-pillar-card:hover { transform:translateY(-2px); border-color:var(--accent-indigo); }
+                .hub-pillar-card-icon { font-size:1.6rem; }
+                .hub-pillar-card-label { font-size:0.85rem; font-weight:600; }
+            </style>`;
+    }
+
     _zone0_Legendary({ project, todayWos, bs, sessionEur }) {
         const score   = project.rubricScore ?? project.score ?? null;
         const status  = project.rubricStatus ?? project.status ?? (score >= 85 ? 'gold' : score >= 70 ? 'silver' : score >= 50 ? 'bronze' : 'red');
