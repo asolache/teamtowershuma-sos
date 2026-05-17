@@ -7,8 +7,8 @@
 
 | # | Item | Status | Evidència codebase |
 |---|---|---|---|
-| 1 | **Pre-thinking phase** · clarification questions | ❌ No | Sense funció dedicada · només `iaContextService` (context gathering passiu) |
-| 2 | **Multi-turn conversational** · 2a crida si gaps | 🟡 Parcial | Escalation per **qualitat** sí (v132c · rubric < 70 → reintenta FULL) · per **gaps** no |
+| 1 | **Pre-thinking phase** · clarification questions | ✅ **Sí v135** | `js/core/vnaClarify.js` · async `vnaClarify({context,provider})` retorna {questions:[]} + helper `enrichContextWithAnswers` |
+| 2 | **Multi-turn conversational** · 2a crida si gaps | ✅ **Sí v135** | `js/core/vnaGapDetector.js` · `detectGaps()` pure + `runGapFillTurn()` 2a crida targeted + `mergeGapFill()` dedupe |
 | 3 | **Embedding similarity** · fusionar rols similars | ❌ No | Només mencionat com a TODO a `contextPruner.js:272` · sense embedding service ni vector store |
 | 4 | **Real-time co-creation** · accept/reject per rol | ✅ Sí | `ValueMapView` `_aiProposals` sistema funcional · botons "✓ Aceptar / ✕" · CSS `.vmap-proposal-card.accepted/rejected` · v131+ |
 | 5 | **Cross-project pattern mining** | 🟡 Estàtic | 24 domain packs + 21 sectors CNAE canonical pre-curats · **no runtime mining** (no aprèn de projectes reals) |
@@ -132,13 +132,19 @@ versioning + voting + merge.
 
 | Prioritat | Item | Quina millora real porta |
 |---|---|---|
-| 🔥 ALTA | #2 Multi-turn gaps | Resol bug "futbol sense scout" amb 2a crida targeted |
-| 🔥 ALTA | #1 Pre-thinking clarify | Redueix ambigüitat de description abans de costar tokens |
+| ✅ DONE v135 | #1 Pre-thinking clarify | Redueix ambigüitat de description abans de costar tokens |
+| ✅ DONE v135 | #2 Multi-turn gaps | Resol bug "futbol sense scout" amb 2a crida targeted |
+| ✅ DONE v131+ | #4 Co-creation | Operatiu · ValueMapView · iterar UX només si feedback |
 | 🟡 MITJ | #6 xAPI quality | Audit trail · evidència empírica de quality per benchmark |
 | 🟡 MITJ | #3 Embedding similarity | Resol duplicate roles (cas comú · 6 rols generats · 2 idèntics) |
 | 🟢 BAIX | #5 Pattern mining | Té estàtic ja · runtime és complexitat sense alfa-blocker |
 | 🟢 BAIX | #7 Wiki community | Post-tracció comunitat (no abans de tenir 50+ usuaris) |
-| ✅ DONE | #4 Co-creation | Operatiu · ValueMapView · iterar UX només si feedback |
+
+## Estat post-v135 · 3/7 items DONE · alfa-ready en VNA generation
+
+Items que falten per a alfa+ · #3 (embedding dedup) · #6 (xAPI tracking) ·
+#5 (pattern mining) · #7 (wiki community). Cap és blocker · #3 i #6 són els
+més rendibles post-v135.
 
 ## Pròxims WOs proposats al backlog (si confirmes)
 

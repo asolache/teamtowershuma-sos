@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T04:00 · v134 · Project Hub IA aligned als 5 pilars del menú (🏠Hub·🎨Crear·🔨Treballar·💶Comptabilitzar·🔗Connectar·👥Equip · 2-nivells subsubmenu + Quality integrat + Wallet/Accounting v2 redisseny + Team/Permissions NOVA vista doble GLOBAL+per-project · matriu RBAC fine-grained) · 5 noves WOs backlog · doc IA-alignment + preview viu actualitzat · 411+ asserts totals';
+const BUILD_STAMP = '2026-05-20T06:00 · v135 · ALFA+ · Pre-thinking clarify (vnaClarify · clarification questions abans de generar mapa) + Multi-turn gap detection (vnaGapDetector · detecta gaps semàntics vs domain archetypes + sector expected_role_kinds + castell levels crítics + zero-transactions · runGapFillTurn 2a crida targeted · mergeGapFill dedupe) · resol bug "futbol sense scout" · 3/7 items post-alfa DONE · re-export via vnaQuickSuggest · 464+ asserts';
 
 export default class DesignSystemView {
 
