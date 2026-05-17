@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-19T10:00 · v132b+c+d · DEEP ANALYSIS VNA + SYSTEM_BASE_SLIM 43% + WIRE-UP slim · MODE COMPLETAR · ESCALATION · BENCHMARK 20 casos · A/B Lab UI + vnaQuickSuggest (single-call wrapper unificat /map ↔ chain · escalation slim→FULL si score<60 · mode completar via existingMap · determineMode helper) + PROMPT-EFFICIENCY-LESSONS doc template (5 hipòtesi · 9 mètriques · 20 casos taula) · 106 asserts nous';
+const BUILD_STAMP = '2026-05-19T12:00 · v132b+c+d+e · DEEP ANALYSIS VNA + SYSTEM_BASE_SLIM 43% + WIRE-UP slim · MODE COMPLETAR · ESCALATION · BENCHMARK 20 casos · A/B Lab UI + vnaQuickSuggest (single-call wrapper unificat /map ↔ chain · escalation slim→FULL si score<60 · mode completar via existingMap · determineMode helper) + PROMPT-EFFICIENCY-LESSONS doc + ValueMapView migrat a quickSuggestMap (no-breaking · feature flag ?vmap_ui=legacy · adapter Orchestrator→provider · existingMap injectat · escalation UI) · 133+ asserts nous';
 
 export default class DesignSystemView {
 

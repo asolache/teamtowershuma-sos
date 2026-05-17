@@ -2557,6 +2557,115 @@ export default class ValueMapView {
         status.style.color   = 'var(--text-muted)';
         status.textContent   = t('ai.enriching');
 
+        // v132e · feature flag · ?vmap_ui=legacy força el path antic
+        // Default · usa el nou quickSuggestMap (Gap 3 resolt · /map ↔ chain unificat)
+        const useLegacy = (typeof window !== 'undefined') &&
+            new URLSearchParams(window.location.search).get('vmap_ui') === 'legacy';
+
+        try {
+            if (useLegacy) {
+                await this._runAISuggestionLegacy({ freeText, hasRoles, btn, spinner, status });
+            } else {
+                await this._runAISuggestionQuickSuggest({ freeText, hasRoles, btn, spinner, status });
+            }
+        } catch (err) {
+            console.error('[ValueMapView] IA error:', err);
+            status.textContent = '❌ Error: ' + (err?.message || String(err));
+            status.style.color = 'var(--accent-red)';
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            document.getElementById('vmapAIBtnText').textContent = '✦ Reintentar';
+            btn.addEventListener('click', () => this._runAISuggestion(), { once: true });
+        }
+    }
+
+    // v132e · path NOU · usa quickSuggestMap (vnaQuickSuggest.js · v132d)
+    // Backend unificat · 1 sol prompt · escalation automàtic si score < 60
+    async _runAISuggestionQuickSuggest({ freeText, hasRoles, btn, spinner, status }) {
+        status.textContent = t('ai.calling');
+        const { quickSuggestMap } = await import('../core/vnaQuickSuggest.js');
+
+        // Adapter · Orchestrator.callLLM → generateWithProvider({system, user, ...})
+        const provider = async (_modelKey, opts) => {
+            const result = await Orchestrator.callLLM({
+                preferredEngine: 'anthropic',
+                systemPrompt:    opts.systemPrompt,
+                userPrompt:      opts.userPrompt,
+                responseFormat:  'json_object',
+                temperature:     opts.temperature ?? 0.3,
+            });
+            // Adapt return shape · quickSuggestMap espera { text, usage }
+            const text = typeof result?.content === 'string'
+                ? result.content
+                : JSON.stringify(result?.content || {});
+            return { text, usage: result?.usage || null };
+        };
+
+        // Build description amb projectMeta (preservar comportament v131 ·
+        // injectem subtype hint + lifecycle del store)
+        let description = freeText;
+        try {
+            if (this._state.projectId) {
+                const { store } = await import('../core/store.js');
+                const project = (store.getState().projects || []).find(p => p?.id === this._state.projectId);
+                if (project) {
+                    const parts = [];
+                    if (project.description) parts.push(project.description.slice(0, 240));
+                    if (project.purpose)     parts.push(project.purpose.slice(0, 240));
+                    if (project.sectorId && project.subtypeId) {
+                        const { getSubtypeById } = await import('../core/sectorSubtypes.js');
+                        const sub = getSubtypeById(project.sectorId, project.subtypeId);
+                        if (sub?.iaContextHint) parts.push('Operativa típica del subtipus · ' + sub.iaContextHint);
+                    }
+                    if (parts.length) description = (freeText ? freeText + ' · ' : '') + parts.join(' · ');
+                }
+            }
+        } catch (_) { /* degrade silenciós */ }
+
+        status.textContent = t('ai.processing');
+
+        const r = await quickSuggestMap({
+            context: {
+                name:        this._state.projectId || 'mapa-actual',
+                description: description || '(sense descripció · usa el sector i existingMap)',
+                sector:      this._state.currentSector || null,
+                vna_zoom:    this._state.vna_zoom || 'mid',
+            },
+            existingMap: hasRoles ? {
+                roles:        this._state.roles,
+                transactions: this._state.transactions,
+            } : null,
+            slim: true,                  // default v132e · saving ~40% tokens
+            qualityThreshold: 60,        // escalation a FULL si pobre
+            generateWithProvider: provider,
+            onProgress: (p) => {
+                if (p.step === 'escalating') status.textContent = '⚡ Escalant a prompt complet (qualitat baixa)…';
+                if (p.step === 'done')       status.textContent = t('ai.done') || '✓ Llest';
+            },
+        });
+
+        if (!r.ok || !r.map || (r.map.roles.length === 0 && r.map.transactions.length === 0)) {
+            status.textContent = t('ai.no.results');
+            status.style.color = 'var(--accent-orange)';
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            document.getElementById('vmapAIBtnText').textContent = '✦ Generar mapa de valor';
+            return;
+        }
+
+        this._aiProposals = { roles: r.map.roles, transactions: r.map.transactions };
+        this._renderProposals(r.map.roles, r.map.transactions);
+        document.getElementById('vmapAIPhase1').style.display = 'none';
+        document.getElementById('vmapAIPhase2').style.display = 'block';
+
+        // v132e · UI hint si escalat
+        if (r.escalatedToFull) {
+            try { console.info('[vmap·v132e] output escalat a FULL prompt · score final', r.score?.score); } catch (_) {}
+        }
+    }
+
+    // v132e · path LEGACY preservat · ?vmap_ui=legacy força · KISS · sense regressions
+    async _runAISuggestionLegacy({ freeText, hasRoles, btn, spinner, status }) {
         try {
             // Context-First: enriquecer con sector + subtype + projectType + roles existentes
             // VALUEMAP-AI-CTX-001 · injectem projectType + subtypeId del store
