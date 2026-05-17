@@ -28,12 +28,12 @@ ok('A · navbar TÉ pill Wallet',           navHtml.includes('sos-global-nav-wal
 ok('A · pill wallet enllaça a /wallet',   navHtml.includes('href="/wallet"'));
 ok('A · pill wallet té sos-global-wallet-balance id', navHtml.includes('id="sos-global-wallet-balance"'));
 
-// ─── B · Breadcrumb · té search a la dreta ──────────────────────────
-console.log('\n— B · Breadcrumb conté search Cmd+K');
+// ─── B · Breadcrumb · search ELIMINAT (v121-fix · conflicte ID amb palette) ─
+console.log('\n— B · Breadcrumb sense search · palette viu a globalSearch.js');
 const bcHtml = renderBreadcrumbHtml({ items: [{ label: 'Home', href: '/' }] });
-ok('B · breadcrumb conté sos-global-search',  bcHtml.includes('id="sos-global-search"'));
-ok('B · breadcrumb conté sos-bc-search-wrap', bcHtml.includes('sos-bc-search-wrap'));
-ok('B · sos-bc-trail separat de search',      bcHtml.includes('sos-bc-trail'));
+ok('B · breadcrumb NO té sos-global-search input', !bcHtml.includes('id="sos-global-search"'));
+ok('B · breadcrumb NO té sos-bc-search-wrap',      !bcHtml.includes('sos-bc-search-wrap'));
+ok('B · sos-bc-trail present per a crumbs',        bcHtml.includes('sos-bc-trail'));
 
 // ─── C · Skills a /learn?tab=skills ──────────────────────────────────
 console.log('\n— C · Skills al hub /learn');
@@ -59,7 +59,7 @@ ok('D · skills label diferenciat (Catàleg)', skillsEntry?.label.includes('Cat�
 console.log('\n— E · CSS mobile · pill labels ocultes');
 const navSrc = fs.readFileSync(new URL('../core/navService.js', import.meta.url), 'utf8');
 ok('E · @media 720px oculta pill-label', navSrc.includes('sos-global-nav-pill-label') && navSrc.includes('display: none') && navSrc.includes('720px'));
-ok('E · breadcrumb search input width mobile', navSrc.includes('sos-bc-search-wrap input { width: 150px'));
+ok('E · breadcrumb search wrapper ELIMINAT (v121-fix)', !navSrc.includes('sos-bc-search-wrap input'));
 
 // ─── F · Docs AGENTS-pattern.md present ──────────────────────────────
 console.log('\n— F · Docs AGENT.md + MCP pattern');

@@ -381,9 +381,11 @@ export function renderBreadcrumbHtml({ items = [], phase = null, className = 'so
         const m = PHASE_META[phase];
         phaseHtml = `<span class="sos-bc-phase" style="background:${m.color}22;color:${m.color};border-color:${m.color}55;" title="${_esc(m.hint)}">${m.icon} ${_esc(m.label)}</span>`;
     }
-    // Cmd+K search · viu al breadcrumb · estalvia espai al navbar
-    const searchHtml = `<div class="sos-bc-search-wrap"><input type="search" id="sos-global-search" placeholder="🔍 Cerca · Cmd+K" aria-label="Cerca ràpida" autocomplete="off"/></div>`;
-    return `<nav class="${className}" aria-label="Breadcrumb"><div class="sos-bc-trail">${crumbs}${phaseHtml}</div>${searchHtml}</nav>`;
+    // v121-fix · search ELIMINAT del breadcrumb · conflicte d'ID amb la palette
+    // real de Cmd+K (globalSearch.js, SEARCH_ID = 'sos-global-search'). Dos
+    // elements amb mateix ID al DOM trencaven la palette. El trigger viu a
+    // globalSearch.js (botó flotant + listener Cmd+K).
+    return `<nav class="${className}" aria-label="Breadcrumb"><div class="sos-bc-trail">${crumbs}${phaseHtml}</div></nav>`;
 }
 
 // CSS único inyectado una vez · idempotente. Llamado desde el router.
@@ -421,19 +423,7 @@ const BREADCRUMB_CSS = `
     font-weight: 700;
     text-transform: uppercase;
 }
-/* Cmd+K search · viu aquí des de v120 · estalvia espai al navbar */
-.sos-bc-search-wrap { margin-left: auto; }
-.sos-bc-search-wrap input {
-    background: rgba(255,255,255,0.04); border: 1px solid var(--border-default);
-    border-radius: 6px; padding: 4px 10px; color: var(--text-main);
-    font-size: 0.78rem; font-family: var(--font-base);
-    width: 220px; transition: all 120ms;
-}
-.sos-bc-search-wrap input::placeholder { color: var(--text-muted); }
-.sos-bc-search-wrap input:focus {
-    outline: none; border-color: var(--accent-indigo);
-    background: rgba(99,102,241,0.05); width: 300px;
-}
+/* v121-fix · CSS .sos-bc-search-wrap eliminat · el search viu a globalSearch.js */
 @media (max-width: 720px) {
     .sos-breadcrumb { padding: 6px 1rem; }
     .sos-breadcrumb .sos-bc-phase { margin-left: 4px; }
@@ -479,8 +469,7 @@ export async function paintBreadcrumb({
     }
     targetEl.style.display = '';
     targetEl.innerHTML = renderBreadcrumbHtml({ items, phase });
-    // Cmd+K search ara viu al breadcrumb · re-bind handlers (v120)
-    _bindGlobalSearch(targetEl);
+    // v121-fix · el binding Cmd+K viu només a globalSearch.js
 }
 
 // ─── UX-AUDIT-001 sprint H+ pass 5 · Global Nav al top ────────────────────
@@ -557,52 +546,7 @@ export function paintGlobalNav({
     el.innerHTML = `<nav class="sos-global-nav" aria-label="Global navigation">${renderGlobalNavHtml({ pathname, projectId })}</nav>`;
     // Re-bind dropdown handlers · nous botons emesos
     bindNavGroupDropdowns(el);
-    // PR-A · cerca incremental complementària (sense palette completa)
-    _bindGlobalSearch(el);
-}
-
-// _bindGlobalSearch · enter → navega al destí més rellevant si match exact
-// per id o label. Si no, redirigeix a /learn?q=… (fallback al hub de cerca).
-// FIX C2 · el listener Cmd+K viu al document i s'acumula a cada navegació SPA.
-// Solució · referència global · removeEventListener abans d'afegir el nou.
-function _bindGlobalSearch(rootEl) {
-    const input = (rootEl || document).querySelector('#sos-global-search');
-    if (!input || input.dataset.bound === '1') return;
-    input.dataset.bound = '1';
-    input.addEventListener('keydown', (ev) => {
-        // ESC · neteja + blur · UX patró Linear/Raycast
-        if (ev.key === 'Escape') {
-            ev.preventDefault();
-            input.value = '';
-            input.blur();
-            return;
-        }
-        if (ev.key !== 'Enter') return;
-        const q = String(input.value || '').trim().toLowerCase();
-        if (!q) return;
-        const match = NAV_DESTINATIONS.find(d =>
-            d.id.toLowerCase() === q ||
-            String(d.label).toLowerCase() === q ||
-            String(d.label).toLowerCase().startsWith(q)
-        );
-        if (match) { window.location.href = match.href; return; }
-        window.location.href = '/learn?q=' + encodeURIComponent(q);
-    });
-    // Cmd+K / Ctrl+K focus · ÚNIC handler global · removeEventListener abans
-    // d'afegir el nou per evitar acumulació a cada navegació SPA.
-    if (typeof window !== 'undefined') {
-        if (window._sosNavKbHandler) {
-            document.removeEventListener('keydown', window._sosNavKbHandler);
-        }
-        window._sosNavKbHandler = (ev) => {
-            if ((ev.metaKey || ev.ctrlKey) && (ev.key === 'k' || ev.key === 'K')) {
-                ev.preventDefault();
-                const el = document.getElementById('sos-global-search');
-                if (el) { el.focus(); el.select(); }
-            }
-        };
-        document.addEventListener('keydown', window._sosNavKbHandler);
-    }
+    // v121-fix · Cmd+K palette viu a globalSearch.js, no aquí
 }
 
 const GLOBAL_NAV_STYLE_ID = 'sos-global-nav-style';
@@ -746,8 +690,6 @@ const GLOBAL_NAV_CSS = `
     .sos-global-nav-logo { font-size: var(--text-xs); }
     .sos-global-nav-project-pill { max-width: 140px; font-size: 0.72rem; }
     .sos-global-nav-pill-label { display: none; }   /* mobile · només icones */
-    .sos-bc-search-wrap input { width: 150px; }
-    .sos-bc-search-wrap input:focus { width: 180px; }
     .sos-global-nav-home span,
     .sos-global-nav-logo span { display: none; }
 }
