@@ -48,6 +48,30 @@ export default class ProjectsView {
                 this._filter.status = b.dataset.filterStatus;
                 this._refresh();
             }));
+        // v132a · archive / unarchive · NO trenca contabilitat (ledger immutable)
+        this._bindArchiveActions();
+    }
+
+    _bindArchiveActions() {
+        document.querySelectorAll('[data-archive]').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const pid = btn.getAttribute('data-archive');
+                if (!confirm('Arxivar aquest projecte?\n\nEl projecte deixarà d\'aparèixer a les llistes i cerques. La comptabilitat de valor (ledger · tarta · receipts) es preserva intacta · sempre podràs desarxivar.')) return;
+                const { store } = await import('../core/store.js');
+                await store.dispatch({ type: 'ARCHIVE_PROJECT', payload: { projectId: pid } });
+                this._refresh();
+            });
+        });
+        document.querySelectorAll('[data-unarchive]').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const pid = btn.getAttribute('data-unarchive');
+                const { store } = await import('../core/store.js');
+                await store.dispatch({ type: 'UNARCHIVE_PROJECT', payload: { projectId: pid } });
+                this._refresh();
+            });
+        });
     }
 
     async render() {
@@ -68,6 +92,8 @@ export default class ProjectsView {
         list.innerHTML = filtered.length === 0
             ? `<div class="proj-empty">Cap projecte amb aquests filtres.</div>`
             : filtered.map(p => this._renderCard(p)).join('');
+        // v132a · rebind archive actions post-render
+        this._bindArchiveActions();
     }
 
     _applyFilter(projects) {
@@ -116,6 +142,15 @@ export default class ProjectsView {
             .proj-pill.active { background:rgba(34,197,94,0.18); color:#22c55e; }
             .proj-pill.demo { background:rgba(250,204,21,0.18); color:#facc15; }
             .proj-pill.arch { background:rgba(148,163,184,0.18); color:#94a3b8; }
+            /* v132a · archive/unarchive actions */
+            .proj-card-wrap { position:relative; }
+            .proj-card-archived { opacity:0.65; }
+            .proj-card-actions { position:absolute; top:8px; right:8px; display:flex; gap:4px; opacity:0; transition:opacity 0.15s; }
+            .proj-card-wrap:hover .proj-card-actions, .proj-card-actions:focus-within { opacity:1; }
+            .proj-action-btn { background:var(--bg-elevated); color:var(--text-secondary); border:1px solid var(--border-default); padding:3px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer; font-family:var(--font-base); transition:all 0.12s; }
+            .proj-action-btn:hover { color:var(--text-main); border-color:var(--accent-indigo); }
+            .proj-action-archive:hover { background:rgba(148,163,184,0.18); }
+            .proj-action-unarchive:hover { background:rgba(34,197,94,0.15); color:#22c55e; }
             .proj-desc { font-size:0.78rem; color:var(--text-muted); line-height:1.4; }
             .proj-empty { padding:2rem; text-align:center; color:var(--text-secondary); background:var(--bg-panel); border:1px dashed var(--border-default); border-radius:8px; font-style:italic; }
         </style>
@@ -157,15 +192,22 @@ export default class ProjectsView {
         const isArch = !!p.isArchived;
         const sector = p.sector_id || null;
         const desc = (p.description || p.purpose || '').slice(0, 100);
+        // v132a · accions arxivar / desarxivar · NO trenca ledger (immutable)
+        const archAction = isArch
+            ? `<button type="button" class="proj-action-btn proj-action-unarchive" data-unarchive="${this._esc(p.id)}" title="Desarxivar · torna a aparèixer a les llistes">↺ Desarxivar</button>`
+            : (isDemo ? '' : `<button type="button" class="proj-action-btn proj-action-archive" data-archive="${this._esc(p.id)}" title="Arxivar · amaga de llistes · contabilitat intacta">📦 Arxivar</button>`);
         return `
-        <a href="/hub/${encodeURIComponent(p.id)}" data-link class="proj-card">
-            <div class="proj-name">${this._esc(name)}</div>
-            <div class="proj-meta">
-                <span class="proj-pill ${isArch ? 'arch' : isDemo ? 'demo' : 'active'}">${isArch ? 'arxivat' : isDemo ? 'demo' : 'actiu'}</span>
-                ${sector ? `<span class="proj-pill">${this._esc(sector)}</span>` : ''}
-            </div>
-            ${desc ? `<div class="proj-desc">${this._esc(desc)}${desc.length >= 100 ? '…' : ''}</div>` : ''}
-        </a>`;
+        <div class="proj-card-wrap">
+            <a href="/hub/${encodeURIComponent(p.id)}" data-link class="proj-card${isArch ? ' proj-card-archived' : ''}">
+                <div class="proj-name">${this._esc(name)}</div>
+                <div class="proj-meta">
+                    <span class="proj-pill ${isArch ? 'arch' : isDemo ? 'demo' : 'active'}">${isArch ? 'arxivat' : isDemo ? 'demo' : 'actiu'}</span>
+                    ${sector ? `<span class="proj-pill">${this._esc(sector)}</span>` : ''}
+                </div>
+                ${desc ? `<div class="proj-desc">${this._esc(desc)}${desc.length >= 100 ? '…' : ''}</div>` : ''}
+            </a>
+            ${archAction ? `<div class="proj-card-actions">${archAction}</div>` : ''}
+        </div>`;
     }
 
     _esc(s) {
