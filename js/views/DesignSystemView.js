@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-19T14:00 · v132b+c+d+e+f · DEEP ANALYSIS VNA + SYSTEM_BASE_SLIM 43% + WIRE-UP slim · MODE COMPLETAR · ESCALATION · BENCHMARK 20 casos · A/B Lab UI + vnaQuickSuggest (single-call wrapper unificat /map ↔ chain) + PROMPT-EFFICIENCY-LESSONS doc + ValueMapView migrat a quickSuggestMap (no-breaking · feature flag ?vmap_ui=legacy) + Benchmark CLI runner (scripts/run-vna-benchmark.mjs · dry-run + Anthropic/OpenAI) + UI dropdown 20 casos benchmark al /prompts-debug + Run live A/B (LLM real) · 164+ asserts nous';
+const BUILD_STAMP = '2026-05-19T16:00 · v132b+c+d+e+f+g · DEEP ANALYSIS VNA + SYSTEM_BASE_SLIM 43% + WIRE-UP slim · MODE COMPLETAR · ESCALATION + vnaQuickSuggest unificat /map ↔ chain + PROMPT-EFFICIENCY-LESSONS doc + ValueMapView migrat (no-breaking) + Benchmark CLI runner + UI dropdown 20 casos + Run live A/B + MULTI-PROVIDER benchmark (anthropic+openai+gemini matriu N×20 · veredict cross-provider automàtic CONSENS/DIVERGÈNCIA/MIXT) + backlog WOs Project Hub subtabs (Hub·Map·Kanban·Comptabilitat+Wallet+dropdown Pactes/legal-agents) · 199+ asserts nous';
 
 export default class DesignSystemView {
 

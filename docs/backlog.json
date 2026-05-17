@@ -1,6 +1,6 @@
 {
   "version": "v1.0",
-  "last_update": "2026-05-15T22:30",
+  "last_update": "2026-05-15",
   "project_id": "sos-dev-internal",
   "agents": [
     {
@@ -579,9 +579,9 @@
       ]
     },
     {
-      "id": "wo-ia-hierarchical-002",
+      "id": "wo-ia-hierarchical-001",
       "project_id": "sos-dev-internal",
-      "title": "IA-HIERARCHICAL-PROMPT-002 · SOC-first generation (impl + budget)",
+      "title": "IA-HIERARCHICAL-PROMPT-001 · SOC-first generation",
       "description": "iaHierarchicalService.js · generateSocOutline (cheap · 500 tokens) ·\ngenerateSopForItem (per item · 300-800 tokens) · generateSopBatch\n(estalvi extra 30%) · estimateHierarchicalSavings helper. Cache hit\nvia aiCacheService. Budget tracked via aiBudgetService.",
       "priority": "critical",
       "complexity": "M",
@@ -611,1048 +611,166 @@
       ]
     },
     {
-      "id": "wo-v2-majestic-001",
+      "id": "wo-agent-md-pattern",
       "project_id": "sos-dev-internal",
-      "title": "V2-MAJESTIC-001 · DashboardV2/HubV2/SettingsV2 ser la vista oficial · UX legendària",
-      "description": "Acabar la migració de vistes V2 a primer pla · removeu/redireccioneu vistes legacy de l'arrel (/dashboard, /settings) al seu equivalent V2. UX polish · animacions · skeleton states · empty states accionables · skip-link · breadcrumbs coherents.",
+      "title": "Refactor TASK_PROMPTS → fitxers agents/*.md (AGENT.md convention + MCP)",
+      "description": "Cada task = 1 fitxer .md amb frontmatter YAML (model · tools ·\noutput_schema) + body markdown (system + user templates). Compatible\namb qualsevol IA (passa el .md com a system prompt). Anthropic MCP\nper a tools agnostic. Resol \"somos agnosticos de IA\". Permet editar\nprompts sense tocar codi JS. Plan · 1) docs/AGENTS-pattern.md ·\n2) carpeta agents/ amb 13 fitxers · 3) parser agents/{task}.md →\nstruct · 4) vnaExpertPrompts.js delega a agents · 5) /prompts-debug\nllegeix .md.",
       "priority": "high",
       "complexity": "L",
-      "status": "pending",
-      "required_capabilities": [
-        "code-write",
-        "code-review",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "manual-check",
-        "command": "node js/tests/dashboardV2.test.js && node js/tests/hubV2.test.js",
-        "expect": "V2 routes són la primera opció · legacy disponible amb deprecation banner"
-      },
-      "estimated_cost_eur": 6,
+      "status": "backlog",
+      "estimated_cost_eur": 12,
       "tags": [
-        "batch-5-majestic",
-        "v2",
-        "ux"
+        "sprint-v120",
+        "ia-agnostic",
+        "mcp",
+        "agent-md"
       ]
     },
     {
-      "id": "wo-tdd-ia-project-flow-001",
+      "id": "wo-skills-ecosystem",
       "project_id": "sos-dev-internal",
-      "title": "TDD-IA-FLOW-001 · cobrir tot el flux de creació de projecte IA amb tests + bucle de millora",
-      "description": "Auditar `/create` end-to-end: prompts → SOPs → WOs → kanban → primer hit de valor. Escriure tests TDD per cada etapa (existeixen unitaris dispersos · falta integration). Detectar trencaments pre-alfa · loop de millora setmanal · cost per token mesurat per etapa.",
-      "priority": "critical",
+      "title": "Skills page redisseny + ecosistema complet",
+      "description": "/skills nova UI integrada · skills assignades a WOs (ja generades\nv119) · plantilles offline (CSV/MD descarregables) · entrenament\nLLM local SOS · permaweb-shared skills (broadcast skill profile\nsignat ECDSA per a swarm matchmaking distribuit). Activa \"skills\nmarket\" wave 3.",
+      "priority": "high",
       "complexity": "L",
-      "status": "pending",
-      "required_capabilities": [
-        "code-write",
-        "test-run",
-        "text-generate"
+      "status": "backlog",
+      "estimated_cost_eur": 15,
+      "dependencies": [
+        "wo-llm-local-train",
+        "wo-permaweb-skills-share"
       ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/iaProjectFlowIntegration.test.js",
-        "expect": "≥30 asserts · happy path + edge cases (timeout, JSON invalid)"
-      },
+      "tags": [
+        "sprint-v120",
+        "skills",
+        "ecosystem"
+      ]
+    },
+    {
+      "id": "wo-llm-local-train",
+      "project_id": "sos-dev-internal",
+      "title": "LLM local SOS entrenat amb skills + history",
+      "description": "Usuari Power amb GPU fa fine-tune d'un open-weight (llama, qwen)\namb · skills declarades, history WOs executades, deliverables.\nResultat · agent personal que coneix el seu estil. Sync Permaweb\nopcional per a versió pública.",
+      "priority": "medium",
+      "complexity": "XL",
+      "status": "backlog",
+      "estimated_cost_eur": 30,
+      "tags": [
+        "sprint-v120",
+        "llm-local",
+        "training",
+        "open-weight"
+      ]
+    },
+    {
+      "id": "wo-permaweb-skills-share",
+      "project_id": "sos-dev-internal",
+      "title": "Skills compartides via Permaweb · swarm distribuit",
+      "description": "Publica un \"skill profile\" signat ECDSA al permaweb · qualsevol\nSOS pot descobrir-te + invitar-te a un WO. Base swarm distribuit.",
+      "priority": "medium",
+      "complexity": "M",
+      "status": "backlog",
       "estimated_cost_eur": 8,
       "tags": [
-        "batch-5-majestic",
-        "ia",
-        "tdd",
-        "critical-path"
+        "sprint-v120",
+        "permaweb",
+        "skills",
+        "swarm"
       ]
     },
     {
-      "id": "wo-matriu-108-scale-001",
+      "id": "wo-wallet-redesign",
       "project_id": "sos-dev-internal",
-      "title": "MATRIU-108 · escalat alpha · primera matriu de la història de SOS amb 108 operadors",
-      "description": "Preparar la infra (sync scheduler · permaweb federation · DM throughput · presence heartbeat) per 108 usuaris simultanis. Objectiu fundacional: constituir la primera matriu cooperativa. Definir mètrica de salut · alertes · runbook de incidents.",
+      "title": "Wallet UI redisseny + balance live al navbar",
+      "description": "Nova vista /wallet · saldo balance live (KB query + cache 30s) ·\nhistory transactions · top-up flows · split saldo personal vs\nproject · transferència entre projects. Navbar pill mostra balance\nnumèric real (no només \"Saldo\" text).",
       "priority": "high",
-      "complexity": "XL",
-      "status": "pending",
-      "required_capabilities": [
-        "code-write",
-        "data-analysis",
-        "bash-execute"
-      ],
-      "deliverable_test": {
-        "kind": "manual-check",
-        "command": "node scripts/simulate-108-users.js",
-        "expect": "108 users · sync OK · cap perdua · p95 < 500ms"
-      },
-      "estimated_cost_eur": 14,
+      "complexity": "M",
+      "status": "backlog",
+      "estimated_cost_eur": 7,
       "tags": [
-        "batch-5-majestic",
-        "alpha",
-        "fundacional"
-      ]
-    },
-    {
-      "id": "wo-sprint-kanban-merge-001",
-      "project_id": "sos-dev-internal",
-      "title": "SPRINT+KANBAN MERGE · /sprint i /kanban fusionades · enjambre optimitzat amb tota la KB",
-      "description": "Fusionar /sprint i el kanban en una sola superfície d'enjambre. UX unificada · IA fa servir el nou context builder + tota la KB acumulada per assignar WOs òptimes (cost · qualitat · trust · history). Una sola vista per orquestrar tot l'enjambre.",
-      "priority": "high",
-      "complexity": "L",
-      "status": "pending",
-      "required_capabilities": [
-        "code-write",
-        "code-review",
-        "test-run",
-        "text-generate"
-      ],
-      "deliverable_test": {
-        "kind": "multi",
-        "command": "node js/tests/sprintKanbanMerged.test.js",
-        "expect": "ruta única `/sprint` cobreix kanban · WO claim flow · swarm matching"
-      },
-      "estimated_cost_eur": 9,
-      "dependencies": [
-        "wo-kanban-ai-context-001"
-      ],
-      "tags": [
-        "batch-5-majestic",
-        "swarm",
+        "sprint-v120",
+        "wallet",
         "ux"
       ]
     },
     {
-      "id": "wo-kanban-ai-context-001",
+      "id": "wo-orchestrator-expert-chain",
       "project_id": "sos-dev-internal",
-      "title": "KANBAN-AI-CONTEXT · IA del kanban usa el nou sistema de contextos · DRY + KISS",
-      "description": "Revisar el model del kanban perquè la IA aprofiti el context builder enriquit (KB · neural path · trust · backlog history). Audit DRY/KISS · eliminar duplicació entre KanbanView · woContextBuilder · sprintOrchestrator. Objectiu: cost/qualitat èpic amb mínim codi.",
-      "priority": "high",
+      "title": "Orchestrator coherent cadena 8 fases prompts",
+      "description": "Avui ai-driven salta directament a SOC→SOP→WO. Ha d'executar prèviament ·\ndefine-product-service → personalize-canvas (IKIGAI) → personalize-pitch\n→ personalize-landing → design-value-map-rich → generate-socs-from-value-map\n→ generate-sops-with-skills → generate-wos-from-sop. Doc canonical a\nknowledge/vision/prompts-chain-plan.md.",
+      "priority": "critical",
       "complexity": "M",
-      "status": "pending",
-      "required_capabilities": [
-        "code-write",
-        "code-review",
-        "test-run",
-        "text-generate"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/kanbanAiContext.test.js",
-        "expect": "kanban-IA invoca woContextBuilder · cost mesurat · qualitat ≥ baseline"
-      },
-      "estimated_cost_eur": 4,
+      "status": "backlog",
+      "estimated_cost_eur": 8,
+      "dependencies": [],
       "tags": [
-        "batch-5-majestic",
-        "ia",
-        "dry-kiss"
+        "sprint-v120",
+        "orchestrator",
+        "prompts-chain"
       ]
     },
     {
-      "id": "wo-kanban-real-users-001",
+      "id": "wo-prompt-router-by-tier",
       "project_id": "sos-dev-internal",
-      "title": "KANBAN-ASSIGNEE-001 · usuaris reals al kanban · fora hardcoded",
-      "description": "Substituir el placeholder `@alvaro` per autocomplete real (KB user_identity + matriu seats). Implementat parcialment a v80 · falta cobrir l'edit modal i la columna ASSIGNEE.",
+      "title": "Router IA per cost · mapeig TASK_KIND → model tier",
+      "description": "Router que mapeja cada TASK_KIND al model tier òptim ·\ndesign-value-map-rich → reasoner (opus, r1) ·\npersonalize-* → mid (sonnet, deepseek-v3) ·\nlanding/canvas text → small (haiku, flash). Estalvi 30-50%.",
       "priority": "medium",
       "complexity": "S",
-      "status": "in-progress",
-      "assignee_kind": "ai-claude",
-      "claimed_by": "agent-claude-code",
-      "required_capabilities": [
-        "code-write"
-      ],
-      "deliverable_test": {
-        "kind": "manual-check",
-        "command": "node js/tests/kanbanAssignee.test.js",
-        "expect": "cap placeholder hardcoded · select pobla amb identities reals"
-      },
-      "estimated_cost_eur": 1.5,
+      "status": "backlog",
+      "estimated_cost_eur": 4,
       "tags": [
-        "batch-5-majestic",
-        "ux",
-        "quick-win"
+        "sprint-v120",
+        "cost-optim",
+        "router"
       ]
     },
     {
-      "id": "wo-node-share-json-001",
+      "id": "wo-prompt-eval-loop",
       "project_id": "sos-dev-internal",
-      "title": "SHARE-JSON-001 · export/import JSON de nodes (project · WO · qualsevol) via DM",
-      "description": "Servei nodeShareService.js (v80) · UI: botó \"📤 Exportar JSON\" al hub i al kanban · auto-detecció en DMs (detectSharePackage) + CTA \"📥 Importar al meu SOS\". Permet compartir projectes i WOs entre operadors sense permaweb.",
-      "priority": "high",
+      "title": "Evaluador automàtic post-IA · re-intent si rejected",
+      "description": "Cada output IA passa per un evaluator (rubric-based score booleà) ·\nsi rejected · re-prompt amb \"intenta de nou · va fallar X\". Resol\nregressions silents.",
+      "priority": "medium",
       "complexity": "M",
-      "status": "in-progress",
-      "assignee_kind": "ai-claude",
-      "claimed_by": "agent-claude-code",
-      "required_capabilities": [
-        "code-write",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/nodeShareService.test.js",
-        "expect": "≥30 asserts · roundtrip · DM detect · rebase mode"
-      },
-      "estimated_cost_eur": 3,
+      "status": "backlog",
+      "estimated_cost_eur": 6,
       "tags": [
-        "batch-5-majestic",
-        "interop",
-        "dm"
-      ]
-    },
-    {
-      "id": "wo-identity-keyfile-inline-001",
-      "project_id": "sos-dev-internal",
-      "title": "KEYFILE-INLINE-001 · loader JSON Arweave directament a /identity (iPad-ready)",
-      "description": "El botó \"connectar permaweb\" portava a wander.app a iPad. Ara /identity inclou loader keyfile JSON inline · paral·lel a Wander · mateix flow que /settings però sense haver de canviar de pàgina.",
-      "priority": "high",
-      "complexity": "S",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "claimed_by": "agent-claude-code",
-      "completed_at": 1747432200000,
-      "required_capabilities": [
-        "code-write"
-      ],
-      "deliverable_test": {
-        "kind": "manual-check",
-        "expect": "iPad · /identity · loader funcional · status visible · Turbo balance"
-      },
-      "estimated_cost_eur": 0.6,
-      "cost_actual_eur": 0.4,
-      "tags": [
-        "batch-5-majestic",
-        "ipad",
-        "ux",
-        "v80"
-      ]
-    },
-    {
-      "id": "wo-market-opportunities-merge-001",
-      "project_id": "sos-dev-internal",
-      "title": "MARKET+OPPORTUNITIES MERGE · una sola superfície de descobriment amb tota la info",
-      "description": "Fusionar MarketView (/market · 632 LOC · productes locals + savings) i OpportunitiesView (/opportunities + /discover · 784 LOC · permaweb index 5 tabs · profiles · projects · workorders · workshops · etc) en una sola superfície `/discover` amb tots els items de valor descobribles · tabs unificats (Profils · Projectes · Workorders · Productes · Workshops · Ofertes). Eliminar /market route · redirect 301 → /discover?tab=market. Veure `docs/STUDY-v2-evolution-plan-2026-05-16.md` §3 (vistes a consolidar). Manté MarketDetailView com a /market/{id} fins fer detall unificat /discover/{itemId}.",
-      "priority": "high",
-      "complexity": "L",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "code-review",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/discoverUnified.test.js",
-        "expect": "≥30 asserts · 6 tabs · filtres compartits · search global · fallback sync permaweb"
-      },
-      "estimated_cost_eur": 8,
-      "tags": [
-        "batch-7-v2-evol",
-        "ux",
-        "consolidation",
-        "pre-alpha"
-      ]
-    },
-    {
-      "id": "wo-profile-unified-001",
-      "project_id": "sos-dev-internal",
-      "title": "PROFILE UNIFIED · evolució perfil usuari · accés total (ikigai · skills · projects · trust · wallets · attestations)",
-      "description": "Evolucionar IdentityView (/identity · 626 LOC · DID + wallets + permaweb publish) i ProfileView (/u/{handle} · 699 LOC · perfil públic amb ikigai + skills + trust + market offerings) cap a una arquitectura unificada amb 2 modes:\\n\\n1. **/me** (privat · l'usuari propi) · tabs · 🪪 Identity (DID · wallets · keyfile · Wander) · 🌸 Ikigai (4 dimensions · centre · zones) · 🤲 Skills (skills + ofertes a market) · 🚀 Projects (els meus projectes amb roles assignats) · 🤝 Trust (attestations rebudes + emeses · follow stats) · 🎓 Aprenentatge (workshops apuntats · learn_role progress) · ⚙ Backup (export JSON identity)\\n2. **/u/{handle}** (públic · perfil d'altres) · mateixos tabs però read-only · respecta privacy settings\\n\\nReutilitza `ikigaiService` · `profileService` · `skillTaxonomy` · `walletService`. Substitueix /identity per redirect a /me. Manté /u/{handle} per a perfils públics. Compatible amb publishProfileToPermaweb.",
-      "priority": "high",
-      "complexity": "L",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "code-review",
-        "test-run",
-        "text-generate"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/profileUnified.test.js",
-        "expect": "≥35 asserts · 7 tabs · public/private mode · ikigai integration · privacy filter"
-      },
-      "estimated_cost_eur": 10,
-      "tags": [
-        "batch-7-v2-evol",
-        "ux",
-        "consolidation",
-        "pre-alpha",
-        "user-360"
-      ]
-    },
-    {
-      "id": "wo-tdd-v2-suite-001",
-      "project_id": "sos-dev-internal",
-      "title": "TDD-V2-SUITE · cobertura TDD completa de les vistes V2 oficials abans d'alfa",
-      "description": "Suite TDD per a cada vista V2 oficial garantint contractes mínims abans d'alfa privada · `dashboardV2.test.js` (hero · empty state · feed · projects grid) · `settingsV2.test.js` (5 tabs · API keys · theme · budget · permaweb · backup) · `projectHubV2.test.js` (7 zones · activity feed · IA suggestions) · `discoverUnified.test.js` (tabs · search · filtres) · `profileUnified.test.js` (public/private · ikigai · skills) · `routerRedirects.test.js` (done) · `migrationContract.test.js` (cap V1 sense banner). Mínim 30 asserts per vista. Objectiu · 0 regressions post-consolidació.",
-      "priority": "critical",
-      "complexity": "L",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "for f in js/tests/{dashboardV2,settingsV2,projectHubV2,discoverUnified,profileUnified,routerRedirects,migrationContract}.test.js; do node $f; done",
-        "expect": "≥210 asserts (30/suite × 7 suites) · 0 fails"
-      },
-      "estimated_cost_eur": 10,
-      "tags": [
-        "batch-7-v2-evol",
-        "tdd",
-        "pre-alpha",
-        "quality-gate"
-      ],
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1778930165814,
-      "completed_at": 1778932865814,
-      "cost_actual_eur": 4,
-      "deliverable_uri": "git:claude/tdd-v2-suite..v2SuiteContract"
-    },
-    {
-      "id": "wo-quality-view-v2-integration-001",
-      "project_id": "sos-dev-internal",
-      "title": "QUALITY-V2 · ProjectQualityView usa els nous models V2 (rubric + integrity)",
-      "description": "Migrar `ProjectQualityView` (/quality) per usar els nous models V2:\\n- `valueFlowRubricService` (12 criteris · pesos 100) en lloc del legacy `projectQualityService` (5 dims hardcoded)\\n- `valueFlowIntegrityService` (7 regles R1-R7) per a errors cross-layer\\n- Mostra status `gold/silver/bronze/red` amb badge canonical\\n- Per cada criteri fallit · mostra el `fix` del rubric + CTA cap a la vista on resoldre-ho\\n- 'Evolucionar manualment' o 'Evolucionar amb IA' (CTA crida orchestrator.personalize amb context exacte)\\n- Diff visual abans/després quan IA millora el mapa\\n- Auditoria del rubric per cada projecte · score 100/100 = pot publicar al permaweb amb confiança\\n\\nResol la pregunta de l'usuari · 'estic al 100%?' amb una resposta mesurable i auditable contra el nou estàndard rubric+integrity.",
-      "priority": "critical",
-      "complexity": "M",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "code-review",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/qualityViewV2.test.js",
-        "expect": "≥25 asserts · rubric integration · integrity issues display · evolve CTAs · diff view"
-      },
-      "estimated_cost_eur": 5,
-      "dependencies": [
-        "wo-value-flow-rubric-001",
-        "wo-value-flow-integrity-001"
-      ],
-      "tags": [
-        "batch-7-v2-evol",
-        "ux",
+        "sprint-v120",
         "quality",
-        "pre-alpha"
-      ],
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1778930492689,
-      "completed_at": 1778932292689,
-      "cost_actual_eur": 2.5,
-      "deliverable_uri": "git:claude/ikigai-real-fix..qualityV2"
-    },
-    {
-      "id": "wo-creation-completeness-guarantee-001",
-      "project_id": "sos-dev-internal",
-      "title": "CREATION-COMPLETENESS · garantir que la creació de projecte sempre dóna mapa complet (humà o IA evolucionable)",
-      "description": "Tests TDD que verifiquen que el flux `projectCreationOrchestrator` sempre retorna un projecte amb mapa de valor COMPLET segons el rubric V2 · cap missing critical · evolucionable des de `/quality` tant manualment (UI inline edit) com via IA (orchestrator.personalize amb context).\\n\\nCriteris d'acceptació:\\n- `createProject({ ambition })` sempre retorna `result.score ≥ 70` per a light · ≥80 standard · ≥85 max\\n- `result.integrity.errorCount === 0` per qualsevol ambition\\n- Cada criteri rubric pendent té un `fix` actionable (UI inline edit o IA personalize)\\n- Test integration · creació + evolució humana → score puja\\n- Test integration · creació + evolució IA → score puja · cost mesurat · cap regressió\\n\\nObjectiu · l'usuari pot confiar que cada projecte creat és complet i pot millorar-lo de forma dirigida.",
-      "priority": "critical",
-      "complexity": "M",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "test-run",
-        "text-generate"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/creationCompletenessGuarantee.test.js",
-        "expect": "≥25 asserts · score thresholds per ambition · integrity 0 errors · evolve workflow"
-      },
-      "estimated_cost_eur": 4,
-      "dependencies": [
-        "wo-project-creation-legendary-001",
-        "wo-value-flow-rubric-001"
-      ],
-      "tags": [
-        "batch-7-v2-evol",
-        "tdd",
-        "pre-alpha",
-        "quality-gate"
-      ],
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1778930736511,
-      "completed_at": 1778932536511,
-      "cost_actual_eur": 2,
-      "deliverable_uri": "git:claude/creation-completeness-tdd..creationCompleteness"
-    },
-    {
-      "id": "wo-roles-casteller-categorization-001",
-      "project_id": "sos-dev-internal",
-      "title": "ROLES-CASTELLER · IA categoritza rols segons el model casteller existent",
-      "description": "Estendre els prompts de `vnaExpertPrompts` perquè la IA assigni `castell_level` als rols generats segons el model jeràrquic casteller existent (`pom_de_dalt` · `tronc` · `pinya` · `laterals` · `mans` · `baixos`).\\n\\n- Capa 1 (SYSTEM_BASE) afegeix definició dels 6 nivells casteller amb exemple semàntic per cada un\\n- Capa 2 (few-shot) tots els exemples ja tenen castell_level vàlid (verificable amb test)\\n- Capa 3 (task prompts) demana explícitament la categorització\\n- `valueFlowRubric` C2 (castell levels diversificats) penalitza si la IA no diversifica\\n- Tests · IA mockejada amb 4 casos · cada un retorna mix de castell_levels · cap rol sense level\\n\\nResol la queixa · 'la IA genera rols sense estructura casteller'. Cada rol té lloc clar al castell del projecte.",
-      "priority": "high",
-      "complexity": "S",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "text-generate",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/rolesCastellerCategorization.test.js",
-        "expect": "≥15 asserts · prompts contenen 6 levels · few-shot diversificats · rubric C2 valida"
-      },
-      "estimated_cost_eur": 2,
-      "dependencies": [
-        "wo-vna-expert-prompts-001"
-      ],
-      "tags": [
-        "batch-7-v2-evol",
-        "ia",
-        "casteller-model",
-        "pre-alpha"
-      ],
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1778939139688,
-      "completed_at": 1778940339688,
-      "cost_actual_eur": 1.5,
-      "deliverable_uri": "git:claude/roles-casteller-categorization"
-    },
-    {
-      "id": "wo-value-flow-soc-sequencing-001",
-      "project_id": "sos-dev-internal",
-      "title": "VALUE-FLOW-SOC-SEQ · IA seqüencia value flows entre rols com a SOCs",
-      "description": "Estendre el flow de creació perquè agrupi value flows (transactions) entre rols en SOCs (processos d'operació) coherents · cada SOC té trigger d'entrada · seqüència de transactions · criteri de sortida · checklist sop_refs.\\n\\nImplementació · al pas `personalize` del orchestrator · després de generar roles+deliverables+transactions · agrupar transactions per criteri (frequency · rol pinya central · cicle recíproc) i materialitzar com a SOC nodes amb checklist. La IA usa context `valueFlowIntegrityService` per validar coherència cross-layer (R3 · R4 · R7).\\n\\nCriteris d'acceptació:\\n- Cada projecte té ≥1 SOC amb ≥3 items checklist apuntant a sop_ref existents\\n- `valueFlowRubric` C11 (SOC coverage ≥80%) passa al 100% post-personalize\\n- Test integration · 4 fixtures · cada un genera SOCs coherents amb les transactions\\n\\nResol la queixa · 'els fluxos no estan ordenats com a processos'. Els SOCs són la unitat de comprensió operativa.",
-      "priority": "high",
-      "complexity": "M",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "text-generate",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/valueFlowSocSequencing.test.js",
-        "expect": "≥20 asserts · SOC generation · checklist coverage · integrity R3+R7"
-      },
-      "estimated_cost_eur": 4,
-      "dependencies": [
-        "wo-vna-expert-prompts-001",
-        "wo-value-flow-integrity-001"
-      ],
-      "tags": [
-        "batch-7-v2-evol",
-        "ia",
-        "value-map",
-        "soc",
-        "pre-alpha"
-      ],
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1778939369617,
-      "completed_at": 1778940869617,
-      "cost_actual_eur": 2.5,
-      "deliverable_uri": "git:claude/value-flow-soc-sequencing"
-    },
-    {
-      "id": "wo-ia-context-audit-001",
-      "project_id": "sos-dev-internal",
-      "title": "IA-CONTEXT-AUDIT · auditoria de tokens · cap waste · context exacte",
-      "description": "Auditar TOTS els llocs on l'app envia context a IA · vnaExpertPrompts · iaRouterService · woContextBuilder · projectClassifierService · roleSopGenerator · socDualPurposeService · etc. Per cada lloc · mesurar:\\n- Mida del prompt (tokens approxTokens via prompts.length/4)\\n- Token budget per ambition (light <500 · standard <1500 · max <2500)\\n- Cache hit rate via aiCacheService\\n- Cost real / cost estimat ratio (alerta si >1.5)\\n- Detecció de prompts duplicats (mateix hash · es pot fusionar?)\\n\\nDeliverable · `js/core/iaContextAuditor.js` · `audit({ source, prompt, response, cost })` registra al KB · `getStats()` retorna estadístiques per font. Vista `/audit-ia` (admin) o tab a SettingsV2 que mostra:\\n- Top 10 fonts amb més cost setmanal\\n- Token waste (prompts >budget) amb suggeriment\\n- Cache miss rate per font\\n\\nObjectiu · cap token malgastat · cada crida IA té rationale + budget + cache strategy auditables.",
-      "priority": "high",
-      "complexity": "M",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "test-run",
-        "data-analysis"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/iaContextAudit.test.js",
-        "expect": "≥20 asserts · audit logging · stats per source · budget guards · cache rate"
-      },
-      "estimated_cost_eur": 4,
-      "tags": [
-        "batch-7-v2-evol",
-        "ia",
-        "cost-control",
-        "pre-alpha",
-        "observability"
-      ],
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1778939502147,
-      "completed_at": 1778941002147,
-      "cost_actual_eur": 2,
-      "deliverable_uri": "git:claude/ia-context-audit"
-    },
-    {
-      "id": "wo-project-creation-legendary-001",
-      "project_id": "sos-dev-internal",
-      "title": "PROJECT-CREATION-LEGENDARY-001 · consolidar V2 + MAX en un sol /create amb qualitat mesurable",
-      "description": "Fusionar `ProjectCreationV2View` (cervell IA) i `maxProjectBootstrap` (cos operacional) en un únic flow amb pipeline classify → seed (template del catàleg) → personalize (IA segons ambition) → validate (rubric) → persist. MVP amb 2 templates (founder-coop-tradicional + default-balanced). Score real demostrat · 100/100 (gold) per als 2 templates sense IA · delta +46 punts respecte MAX baseline (54). Veure `docs/STUDY-project-creation-2026-05-15.md` i `docs/STUDY-value-flow-audit-2026-05-15.md`.",
-      "priority": "critical",
-      "complexity": "L",
-      "status": "in-progress",
-      "assignee_kind": "ai-claude",
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1747497600000,
-      "required_capabilities": [
-        "code-write",
-        "code-review",
-        "test-run",
-        "text-generate"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/projectCreationLegendary.test.js",
-        "expect": "72 pass · 0 fail (objectiu ≥60)"
-      },
-      "estimated_cost_eur": 11,
-      "cost_actual_eur": 4.2,
-      "deliverable_uri": "git:claude/project-creation-legendary..orchestrator+rubric+catalog+tests",
-      "tags": [
-        "batch-5-majestic",
-        "ia",
-        "consolidation",
-        "pre-alpha"
+        "eval-loop"
       ]
     },
     {
-      "id": "wo-value-flow-rubric-001",
+      "id": "wo-project-hub-subtabs",
       "project_id": "sos-dev-internal",
-      "title": "VALUE-FLOW-RUBRIC-001 · rubric auditable · 12 criteris · pure predicates",
-      "description": "`valueFlowRubricService.js` · 12 criteris registrables · pesos sumen 100 · status gold≥85 silver≥70 bronze≥50. Adapters `fromProject` i `fromValueFlow` · enrich roles per fusionar info dels role nodes amb vna_roles. Baseline mesurat · MAX = 54/100 (4 forats: C4 validators · C10 SOP steps · C11 SOC coverage · C12 Lean). Script `scripts/baseline-value-flow-rubric.mjs`.",
-      "priority": "critical",
-      "complexity": "S",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1747494000000,
-      "completed_at": 1747495200000,
-      "required_capabilities": [
-        "code-write",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/valueFlowRubric.test.js",
-        "expect": "102 pass · 0 fail"
-      },
-      "estimated_cost_eur": 2,
-      "cost_actual_eur": 1.6,
-      "deliverable_uri": "git:claude/project-creation-legendary..valueFlowRubric",
-      "tags": [
-        "batch-5-majestic",
-        "value-map",
-        "pre-alpha",
-        "prereq-legendary"
-      ]
-    },
-    {
-      "id": "wo-vna-expert-prompts-001",
-      "project_id": "sos-dev-internal",
-      "title": "VNA-EXPERT-PROMPTS-001 · IA posicionada com a experta VSM + few-shot",
-      "description": "`vnaExpertPrompts.js` · 3 capes · SYSTEM_BASE (consultor sènior VSM/VNA · marc 5 punts · contracte JSON estricte · ~290 tokens) · FEW_SHOT_EXAMPLES alineats amb els 2 templates MVP (founder + default · cada exemple amb roles + transactions Lean + sops + socs canònic) · TASK_PROMPTS (5 task kinds · enrich-value-map · personalize-canvas · personalize-pitch · expand-sop · generate-soc). Budget token <2500 demostrat (worst case 1849). Helper flattenPrompt per providers legacy.",
-      "priority": "critical",
-      "complexity": "M",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1747497600000,
-      "completed_at": 1747499000000,
-      "required_capabilities": [
-        "code-write",
-        "text-generate",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/vnaExpertPrompts.test.js",
-        "expect": "63 pass · 0 fail"
-      },
-      "estimated_cost_eur": 3,
-      "cost_actual_eur": 1.8,
-      "deliverable_uri": "git:claude/project-creation-legendary..vnaExpertPrompts",
-      "dependencies": [
-        "wo-value-flow-rubric-001"
-      ],
-      "tags": [
-        "batch-5-majestic",
-        "ia",
-        "value-map",
-        "pre-alpha",
-        "prereq-legendary"
-      ]
-    },
-    {
-      "id": "wo-value-flow-integrity-001",
-      "project_id": "sos-dev-internal",
-      "title": "VALUE-FLOW-INTEGRITY-001 · cross-layer validator (SOC · SOP · valueFlow · processes)",
-      "description": "`valueFlowIntegrityService.js` · 7 regles R1-R7 amb severity (R1 sop step deliverable_kind · R2 sop role_ref existeix · R3 soc sop_ref existeix · R4 tx process_ref · R5 process tx members · R6 process roles participen · R7 cicles dins boundary). Cada issue amb human_message + auto_fix_hint. Integrat al step `validate` del orchestrator (errorCount > 0 trenca ok). Templates del catàleg passen amb 0 errors. Helpers compatibles amb id/roleSlug i content.checklist.",
-      "priority": "critical",
-      "complexity": "M",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1747499000000,
-      "completed_at": 1747500500000,
-      "required_capabilities": [
-        "code-write",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/valueFlowIntegrityService.test.js",
-        "expect": "48 pass · 0 fail"
-      },
-      "estimated_cost_eur": 3,
-      "cost_actual_eur": 2.1,
-      "deliverable_uri": "git:claude/project-creation-legendary..valueFlowIntegrityService+orchestrator-wired",
-      "dependencies": [
-        "wo-value-flow-rubric-001"
-      ],
-      "tags": [
-        "batch-5-majestic",
-        "value-map",
-        "pre-alpha",
-        "prereq-legendary"
-      ]
-    },
-    {
-      "id": "wo-value-stream-service-001",
-      "project_id": "sos-dev-internal",
-      "title": "VALUE-STREAM-001 · mètriques Lean (lead/cycle/WIP · bottleneck · waste) · post-alfa",
-      "description": "`valueStreamService.js` pure · `buildValueStream` calcula leadTime · cycleTime · flowEfficiency · WIP per procés · `detectBottlenecks` · `suggestImprovements` (regles TIMWOOD). Permet VSM Lean complet. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §4.2.",
-      "priority": "high",
-      "complexity": "M",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "test-run",
-        "data-analysis"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/valueStreamService.test.js",
-        "expect": "≥25 asserts · bottleneck · waste · flow efficiency · suggestions"
-      },
-      "estimated_cost_eur": 4,
-      "dependencies": [
-        "wo-value-flow-integrity-001"
-      ],
-      "tags": [
-        "batch-6-post-alpha",
-        "value-map",
-        "lean"
-      ]
-    },
-    {
-      "id": "wo-vna-schema-enriched-001",
-      "project_id": "sos-dev-internal",
-      "title": "VNA-SCHEMA-ENRICHED-001 · nodes `process` · `value_offer` · transaction Lean fields",
-      "description": "Schema additiu backwards-compat · transaction afegeix `process_ref` · `lead_time_hours` · `cycle_time_hours` · `wip_units` · `flow_efficiency` · `waste_kinds[]` · `health_signal`. Nous nodes `process` (1a classe · agrupació de transaccions amb trigger/exit) i `value_offer` (oferta pública pendent d'acceptar). Migració idempotent. Veure `docs/STUDY-value-flow-audit-2026-05-15.md` §4.1.",
+      "title": "Evolució Project Hub · vista amb subpestanyes (Hub · Map · Kanban · Comptabilitat+Wallet) + dropdown extés",
+      "description": "Avui /project/:id és un hub monolític. Evolucionar a un layout amb\nsubmenú de subpestanyes integrades · pestanyes principals visibles\nsempre · dropdown amb seccions secundàries.\n\nPestanyes principals (visibles · 4) ·\n 1. Hub (millorat) · status del projecte · stats · activity stream\n 2. Map · ValueMapView integrat com a subview (no navegar fora)\n 3. Kanban · vista WOs/tasks tipo kanban (per role o fase)\n 4. Comptabilitat valor + Wallet · vista unificada saldo+ledger+contrib\n\nDropdown \"Més\" (extensible) ·\n · Pactes · vista pacts del projecte + signatura · DOC GENERATOR\n   (legal agents) viu aquí com a subsecció\n · Sprints · roadmap + iteració\n · KB · nodes/knowledge associats al projecte\n · Profile · qui hi participa + ikigai/skills\n · Settings · config projecte\n\nFilosofia · TOT contextual al projecte sense canviar de ruta · permet\nflow continu (mapa → kanban → wallet → pactes sense perdre context).\nAvui cal navegar fora del project hub per a wallet/pacts/legal-agents.",
       "priority": "high",
       "complexity": "L",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/vnaSchemaEnriched.test.js",
-        "expect": "schema validats · migració idempotent · backwards-compat"
-      },
-      "estimated_cost_eur": 5,
-      "dependencies": [
-        "wo-value-stream-service-001"
-      ],
-      "tags": [
-        "batch-6-post-alpha",
-        "value-map",
-        "schema"
-      ]
-    },
-    {
-      "id": "wo-value-accounting-reconcile-001",
-      "project_id": "sos-dev-internal",
-      "title": "VALUE-ACCOUNTING-RECONCILE-001 · reconciliació pie ↔ transactions · zero double-spend",
-      "description": "Test i utilitat que verifica per cada `proposalDeliverable` resolt l'existència de `transaction` corresponent (from · to · deliverable iguals). Suma `share%` del pie sempre ≤100%. Reporta inconsistències a la UI.",
-      "priority": "medium",
-      "complexity": "S",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "test-run",
-        "data-analysis"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/valueAccountingReconcile.test.js",
-        "expect": "≥10 asserts · proposal↔transaction match · pie ≤100%"
-      },
-      "estimated_cost_eur": 2,
-      "dependencies": [
-        "wo-vna-schema-enriched-001"
-      ],
-      "tags": [
-        "batch-6-post-alpha",
-        "value-map",
-        "accounting"
-      ]
-    },
-    {
-      "id": "wo-value-map-ui-lean-001",
-      "project_id": "sos-dev-internal",
-      "title": "VALUE-MAP-UI-LEAN-001 · ValueMapView · regions de procés · badges Lean",
-      "description": "Estendre `ValueMapView` D3 amb regions visuals per `process` (clusters amb halo · etiquetes lead/cycle/efficiency) · badges per transaction segons `health_signal` (verd/ambar/vermell) · panel lateral de bottlenecks i waste. Només visualització · data layer ja existeix.",
-      "priority": "medium",
-      "complexity": "M",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "code-review"
-      ],
-      "deliverable_test": {
-        "kind": "manual-check",
-        "expect": "regions visibles · badges Lean · panel bottleneck/waste"
-      },
-      "estimated_cost_eur": 3,
-      "dependencies": [
-        "wo-vna-schema-enriched-001"
-      ],
-      "tags": [
-        "batch-6-post-alpha",
-        "value-map",
-        "ui"
-      ]
-    },
-    {
-      "id": "wo-ikigai-persistence-fix-001",
-      "project_id": "sos-dev-internal",
-      "title": "IKIGAI-PERSISTENCE · l'ikigai no es guarda al perfil · fix bug",
-      "description": "Bug reportat per l'usuari · 'el ikigai no se guarda en el perfil'. Investigar el flow d'edició d'ikigai a /u/{handle} o /identity · verificar que `updateIkigai()` del `ikigaiService` arriba a `KB.upsert` del matriu_member · trobar el punt on es perd la persistència.\\n\\nCriteris:\\n- Test integration · editar ikigai · refresh · ikigai persisteix\\n- Capa de privacy · usuari controla quines dimensions són públiques\\n- Cross-device sync · si l'usuari té permaweb · l'ikigai s'inclou al public_registry_entry",
-      "priority": "critical",
-      "complexity": "S",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/ikigaiPersistence.test.js",
-        "expect": "≥10 asserts · save · reload · privacy · permaweb sync"
-      },
-      "estimated_cost_eur": 2,
-      "tags": [
-        "batch-7-v2-evol",
-        "bug",
-        "pre-alpha",
-        "user-360"
-      ],
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1778925066341,
-      "completed_at": 1778928666341,
-      "cost_actual_eur": 1.5,
-      "deliverable_uri": "git:claude/profile360-legendary..profile360"
-    },
-    {
-      "id": "wo-profile-360-legendary-001",
-      "project_id": "sos-dev-internal",
-      "title": "PROFILE-360 · perfil usuari legendari · arquitectura informació pública+privada unificada",
-      "description": "Visió de l'usuari · 'integrar los dos perfiles (IdentityView + ProfileView) en una pagina con arquitectura de la información legendaria · acceso a vista privada y pública · enfocado a mostrar habilidades · reputación · conocimientos · ikigai · proyectos en curso · WOs en curso · disponibilidad · productos · workshops ofertados / realizados / adquiridos · tender a crear una red legendaria descentralizada con factores disruptivos por integración de IA · permaweb · contabilidad de triple entrada'.\\n\\nArquitectura proposada · `/me` (privat) + `/u/{handle}` (públic) compartint shell:\\n\\n**Zona 1 · IDENTITY** (DID · ECDSA · wallets · keyfile · Wander · trust score)\\n**Zona 2 · IKIGAI 🌸** (4 dimensions · 5 zones · privacy per dimensió)\\n**Zona 3 · SKILLS 🤲** (skills declarades · skills attestades · level evidence)\\n**Zona 4 · KNOWLEDGE 🧠** (workshops realitzats · learn_role progress · sectors)\\n**Zona 5 · REPUTATION 🤝** (trust score · attestations rebudes/emeses · follow counts · history)\\n**Zona 6 · WORK · IN PROGRESS** (projectes en curs · WOs assignades · disponibilitat actual · castell_level a cada projecte)\\n**Zona 7 · OFERTES MERCAT 🛒** (productes oferts · workshops oferts · sops oferts · acquisitions · revenue ledger)\\n**Zona 8 · NETWORK INFLUENCE 🌐** (xarxa decentralitzada · permaweb publishes · cross-SOS reach · triple-entry accounting · proof of contribution)\\n\\nMode privat · totes les zones. Mode públic · respecta privacy filter (cada zona configurable a Settings). \\n\\nTriple-entry accounting · per cada transacció · entry al ledger propi + entry al ledger del peer + attestation pública al permaweb · disrupció vs single-entry / double-entry tradicional.",
-      "priority": "critical",
-      "complexity": "XL",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "code-review",
-        "test-run",
-        "text-generate",
-        "data-analysis"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/profile360.test.js",
-        "expect": "≥45 asserts · 8 zones · public/private mode · privacy filter · triple-entry"
-      },
+      "status": "backlog",
       "estimated_cost_eur": 14,
-      "dependencies": [
-        "wo-ikigai-persistence-fix-001",
-        "wo-profile-unified-001"
-      ],
       "tags": [
-        "batch-7-v2-evol",
+        "sprint-v133",
         "ux",
-        "consolidation",
-        "pre-alpha",
-        "user-360",
-        "legendary"
-      ],
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1778925066341,
-      "completed_at": 1778928666341,
-      "cost_actual_eur": 8,
-      "deliverable_uri": "git:claude/profile360-legendary..profile360"
-    },
-    {
-      "id": "wo-triple-entry-accounting-001",
-      "project_id": "sos-dev-internal",
-      "title": "TRIPLE-ENTRY · contabilitat de triple entrada · disrupció vs double-entry tradicional",
-      "description": "Implementar el sistema de contabilitat de triple entrada que diferenciarà SOS de qualsevol coop tradicional:\\n\\n**Triple entry components:**\\n1. **Ledger propi** · entry signada per l'usuari local\\n2. **Ledger del peer** · entry equivalent signada pel peer\\n3. **Attestation permaweb** · public proof signat ECDSA · transparent · cross-SOS verificable\\n\\nQuan A paga a B per un workshop · es generen 3 entries en lloc de 2:\\n- A · debit wallet · credit workshop\\n- B · debit workshop deliverable · credit wallet\\n- Permaweb · attestation pública de la transacció (cap valor sensible · només hashes + signatures)\\n\\n**Servei** · `js/core/tripleEntryService.js` · funcions pure:\\n- `buildTripleEntry({ from, to, amount, deliverable })`\\n- `verifyTripleEntry(entry)` · verifica les 3 signatures\\n- `reconcileFromPermaweb({ peerDid })` · cross-check\\n\\n**Impacte:**\\n- Disrupció · cap empresa tradicional ho fa\\n- Trust score · attestations triple-entry valen ×3 (vs single-entry)\\n- Auditoria · qualsevol membre cross-SOS pot verificar transaccions sense accés al KB privat",
-      "priority": "high",
-      "complexity": "L",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "test-run",
-        "text-generate"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/tripleEntryAccounting.test.js",
-        "expect": "≥30 asserts · build · verify · reconcile · cross-SOS"
-      },
-      "estimated_cost_eur": 9,
-      "tags": [
-        "batch-8-disruption",
-        "value",
-        "permaweb",
-        "pre-alpha",
-        "factors-disruptius"
+        "project-hub",
+        "navigation",
+        "legal-agents",
+        "pacts"
       ]
     },
     {
-      "id": "wo-decentralized-network-fabric-001",
+      "id": "wo-benchmark-multi-api-compare",
       "project_id": "sos-dev-internal",
-      "title": "DECENTRALIZED-NETWORK-FABRIC · xarxa legendària descentralitzada · permaweb federation",
-      "description": "Capa de xarxa descentralitzada que connecta SOS instàncies locals via permaweb · cap servidor central · cap autoritat.\\n\\n**Components:**\\n1. **Discovery** · cada SOS publica un `instance_announcement` al permaweb amb DID + skills + ofertes (ja parcialment a publicRegistryService)\\n2. **DM federation** · DMs cross-SOS van via permaweb · public_key del peer per xifrar · cap server intermediari\\n3. **Trust graph cross-SOS** · attestations agregades de tot el permaweb · trust score global\\n4. **Reputation arweave-rooted** · cada attestation té txId i timestamp Arweave · no falsificable\\n5. **Workshop / market discovery** · query permaweb per ofertes properes (sector · ikigai · skills)\\n6. **Resilience** · si la teva instància cau · les teves ofertes segueixen visibles al permaweb · qualsevol pot agafar-les\\n\\n**Factors disruptius:**\\n- Cap fee · cap intermediari (vs Stripe / Patreon / Substack)\\n- Cap censorship · permaweb permanent\\n- IA categoritza ofertes per ikigai/skills (matching legendari)\\n- Triple-entry accounting verificable",
-      "priority": "high",
-      "complexity": "XL",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "test-run",
-        "data-analysis"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/decentralizedNetworkFabric.test.js",
-        "expect": "≥40 asserts · discovery · DM federation · trust graph · resilience"
-      },
-      "estimated_cost_eur": 16,
-      "dependencies": [
-        "wo-triple-entry-accounting-001"
-      ],
-      "tags": [
-        "batch-8-disruption",
-        "permaweb",
-        "post-alpha",
-        "factors-disruptius",
-        "legendary"
-      ]
-    },
-    {
-      "id": "wo-ia-cost-to-ledger-001",
-      "project_id": "sos-dev-internal",
-      "title": "IA-COST-LEDGER · cada crida IA va al ledger SOS del projecte/persona · cost tracking automàtic",
-      "description": "Extendre `iaContextAuditor.audit()` perquè a més del ledger en memòria també escrigui un `ledger_entry` al KB · `to: projectId | userHandle` · `category: 'ia-cost'` · `amount: costActualEur`. Resultat · cada cost IA va a la contabilitat SOS associada · visible a /wallet i /accounting per projecte. Resol feedback usuari · 'todos los gastos vayan a la contabilidad SOS asociada a persona o proyecto'.",
-      "priority": "high",
-      "complexity": "S",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/iaCostToLedger.test.js",
-        "expect": "≥15 asserts · ledger entry creat · linked a projectId/userHandle · category ia-cost"
-      },
-      "estimated_cost_eur": 2,
-      "tags": [
-        "batch-9-magic",
-        "ia",
-        "value",
-        "observability"
-      ]
-    },
-    {
-      "id": "wo-cnae-role-adaptation-001",
-      "project_id": "sos-dev-internal",
-      "title": "CNAE-ROLES · IA adapta noms de rols a nomenclatura oficial CNAE quan sector conegut",
-      "description": "Al pas `personalize` del orchestrator · si el projecte té sector conegut amb codi CNAE · usar nomenclatura sectorial oficial per a roles. Ex · sector agricultura → CNAE 01 → roles 'agrònom' · 'tècnic agrari' enlloc de generic 'creator'. Reutilitzar `cnaeSeed.js` i `sectorSubtypes.js` existents. Veure `docs/AUDIT-magic-creation-2026-05-16.md` §3.2.",
-      "priority": "medium",
-      "complexity": "M",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "text-generate",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/cnaeRoleAdaptation.test.js",
-        "expect": "≥20 asserts · 5 sectors CNAE mapejats · roles adaptats · fallback default"
-      },
-      "estimated_cost_eur": 3,
-      "tags": [
-        "batch-9-magic",
-        "ia",
-        "sector"
-      ]
-    },
-    {
-      "id": "wo-sop-tdd-automation-001",
-      "project_id": "sos-dev-internal",
-      "title": "SOP-TDD · cada step amb tdd_test booleà · SOPs automatitzables identificables",
-      "description": "Estendre el schema de SOP · cada step afegeix `tdd_test` (booleà · si retorna true · step automatitzable per IA). Si tots els steps d'una SOP tenen tdd_test=true · la SOP es pot executar com a WO autònom (Antigravity engine ready). Templates al catàleg han d'afegir tdd_test segons step.deliverable_kind (ex · 'tests', 'code', 'sync' → automatitzable · 'manual review', 'decision' → no). Veure `docs/AUDIT-magic-creation-2026-05-16.md` §3.4.",
+      "title": "Benchmark multi-API · executar 20 casos contra N providers + taula comparativa",
+      "description": "v132f té el CLI però només contra UN provider per execució. Extendre a\nmode multi-provider · executar els 20 casos contra Anthropic + OpenAI +\nGemini + DeepSeek + MiniMax (els que tinguin API key) i produir una\ntaula comparativa amb ·\n · winner per cas (FULL vs SLIM)\n · winner per provider (qui dóna més qualitat per cas)\n · cost real (€) per provider (estimateCostUsd via aiRouterService)\n · win rate B per provider (algun té millor SLIM que altres?)\n · veredict H1 per provider (slim·default sí per anthropic · no per X?)\n\nImplementació ·\n · CLI · --providers anthropic,openai,gemini (csv) · paral·lel per cas\n · UI · /prompts-debug · permet escollir múltiples providers (multi-select)\n · Output md · matriu N providers × 20 casos · resum agregat per provider\n · Score normalitzat (rubric igual per tots · només input/output canvia)\n\nDecisió-key · si algun provider té win rate B significativament diferent\n→ el default slim podria ser per-provider, no global.",
       "priority": "high",
       "complexity": "M",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/sopTddAutomation.test.js",
-        "expect": "≥18 asserts · schema · templates updated · automatable SOPs identificades"
-      },
-      "estimated_cost_eur": 4,
-      "tags": [
-        "batch-9-magic",
-        "automation",
-        "antigravity"
-      ]
-    },
-    {
-      "id": "wo-audit-ia-view-001",
-      "project_id": "sos-dev-internal",
-      "title": "AUDIT-IA-VIEW · vista /audit-ia · veure què fa la IA en temps real",
-      "description": "Vista `/audit-ia` o tab a SettingsV2 que llegeix `iaContextAuditor.getStats()` + `listRecent()` · mostra · top 10 sources amb més cost setmanal · cache miss rate · duplicats · llistat última 50 crides amb timestamp · prompt size · cost. Permet expandir cada crida per veure el prompt + resposta (debug mode opcional). Resol feedback · 'poder ver siempre que está haciendo las IAs'.",
-      "priority": "high",
-      "complexity": "M",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "code-review",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "manual-check",
-        "expect": "/audit-ia visible · top sources · cache rate · duplicates · recent calls"
-      },
-      "estimated_cost_eur": 4,
-      "dependencies": [
-        "wo-ia-context-audit-001"
-      ],
-      "tags": [
-        "batch-9-magic",
-        "ia",
-        "observability",
-        "ux"
-      ]
-    },
-    {
-      "id": "wo-phase-aware-value-map-001",
-      "project_id": "sos-dev-internal",
-      "title": "PHASE-VALUE-MAP · mapa de valor adaptat per fase del cicle (idea · MVP · validation · scale)",
-      "description": "Al template + orchestrator · cada projecte té un mapa de valor per FASE del cicle de vida. Fase 'idea' · roles light (founder + validator) · 1-2 transactions. Fase 'MVP' · afegeix maker + reviewer + transactions tangibles. Fase 'scale' · afegeix cohort manager + facilitator + transactions Lean completes. El lifecycle_stage del classify determina quina fase aplicar inicialment.",
-      "priority": "medium",
-      "complexity": "L",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "text-generate",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/phaseAwareValueMap.test.js",
-        "expect": "≥25 asserts · 4 fases · roles+tx escalats · rubric ≥85 per cada fase"
-      },
-      "estimated_cost_eur": 6,
-      "tags": [
-        "batch-9-magic",
-        "value-map",
-        "lifecycle"
-      ]
-    },
-    {
-      "id": "wo-personalize-rich-output-001",
-      "project_id": "sos-dev-internal",
-      "title": "PERSONALIZE-RICH · IA enriqueix canvas + pitch + landing amb >300 paraules cadascú",
-      "description": "Al pas `personalize` del orchestrator · quan ambition>=standard · IA genera content ric: canvas amb vision/mission/values/roadmap >300 paraules · pitch storytelling >300 paraules · landing/presentation_narrative_v1 >500 paraules amb diferencial vs competència · TAM/SAM/SOM. Usa el manifest IA + few-shot examples ric. Resol feedback · 'que el output parezca magia'.",
-      "priority": "high",
-      "complexity": "L",
-      "status": "pending",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "text-generate",
-        "test-run"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/personalizeRichOutput.test.js",
-        "expect": "≥20 asserts · canvas/pitch/landing length checks · qualitat post-IA"
-      },
-      "estimated_cost_eur": 5,
-      "dependencies": [
-        "wo-ia-cost-to-ledger-001"
-      ],
-      "tags": [
-        "batch-9-magic",
-        "ia",
-        "output-quality"
-      ]
-    },
-    {
-      "id": "wo-learn-knowledge-hub-001",
-      "project_id": "sos-dev-internal",
-      "title": "LEARN-HUB · /learn unificat amb tot el contingut de knowledge/ + roadmaps de lectura per rol",
-      "description": "Convertir la pàgina `/learn` en el HUB unificat de documentació SOS · llegint tot el contingut de `knowledge/` (vision · socs · sops · sectors · clients · LOG). Estructura dual:\\n\\n**Mode CARPETAS** (browse) · navegació jeràrquica · vision / · socs/lifecycle · socs/sectors · socs/teamtowers · clients/ · sops/ · skills/. Cada fitxer és un node clicable amb el seu contingut markdown renderitzat.\\n\\n**Mode KNOWLEDGE BASE** (search-first) · cercador full-text + filtres per tipus (vision · soc · sop · client) · sector · castell_level · phase.\\n\\n**Mode ROADMAPS DE LECTURA per ROL** · per a cada rol canònic (visioner · architect · cohort_manager · sentinel · curator · connector · founder_anchor · operations · creator · reviewer) · un roadmap ordenat de lectures · 'Para entender el rol de Cap de Colla · llegeix [1] sop-to-wo-model · [2] vna-principles · [3] soc-fent-pinya · ...'. Si l'usuari acaba el roadmap · es marca com a 'level: practitioner' a les seves skills.\\n\\nReutilitza · `KnowledgeLoader` (existent) · `profile360Service` (per a tracking progress) · `skillTaxonomy` (per a level promotion). Vista nova o estesa de LearnView.js (existent · cal revisar abans).\\n\\nFeedback usuari · 'Quiero los contenidos de /knowledge como parte de la documentacion de sos en el area Aprende. En aprende deberiamos juntar todo el conocimiento de sos y de su contenido. Documentacion skills procesos bla bla bla todo deberia estar ordenado como carpetas pero tambien como base de conocimientos con roadmaps de lectura por rol'.",
-      "priority": "high",
-      "complexity": "L",
-      "status": "done",
-      "assignee_kind": "ai-claude",
-      "required_capabilities": [
-        "code-write",
-        "code-review",
-        "test-run",
-        "text-generate"
-      ],
-      "deliverable_test": {
-        "kind": "test-suite",
-        "command": "node js/tests/learnKnowledgeHub.test.js",
-        "expect": "≥30 asserts · 3 modes (browse · search · roadmaps) · indexa tot knowledge/ · ≥6 roadmaps per rol canònic"
-      },
+      "status": "backlog",
       "estimated_cost_eur": 8,
       "tags": [
-        "batch-9-magic",
-        "knowledge",
-        "ux",
-        "learn",
-        "documentation"
-      ],
-      "claimed_by": "agent-claude-code",
-      "claimed_at": 1778948553774,
-      "completed_at": 1778950953774,
-      "cost_actual_eur": 5,
-      "deliverable_uri": "git:claude/learn-knowledge-hub"
+        "sprint-v132g",
+        "benchmark",
+        "multi-provider",
+        "prompt-efficiency"
+      ]
     }
   ]
 }
