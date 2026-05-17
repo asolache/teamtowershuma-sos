@@ -89,11 +89,13 @@ const subtabs = (bjson.work_orders || []).find(w => w.id === 'wo-project-hub-sub
 ok('E · subtabs WO json · tags incluen "presentation"',    subtabs?.tags?.includes('presentation'));
 ok('E · subtabs WO json · tags incluen "information-architecture"', subtabs?.tags?.includes('information-architecture'));
 
-// ─── F · LearnView existeix com a referent (validació real) ───────────
-console.log('\n— F · LearnView pattern existeix (referent vàlid)');
+// ─── F · LearnView · pattern existeix (avui MIGRAT al component canonical v133) ───
+console.log('\n— F · LearnView · referent · ara migrat a SubmenuTabs.js');
 const learn = fs.readFileSync(path.join(ROOT, 'js/views/LearnView.js'), 'utf8');
-ok('F · LearnView usa .lv-tab',                    learn.includes('class="lv-tab'));
-ok('F · LearnView usa data-mode',                  learn.includes('data-mode='));
+ok('F · LearnView usa SubmenuTabs canonical (post v133)',
+                                                    learn.includes("from '../ui/SubmenuTabs.js'"));
+ok('F · LearnView preserva backwards-compat [data-mode] handler',
+                                                    learn.includes("querySelectorAll('[data-mode]')"));
 ok('F · LearnView usa this._mode state',           learn.includes('this._mode'));
 ok('F · LearnView accepta ?tab=X URL param',       learn.includes("p.get('tab')") || learn.includes('"tab"') || learn.includes("'tab'"));
 

@@ -108,6 +108,8 @@ const ROUTES = [
     { path: '/improve',      view: () => import('./views/ImprovementLoopView.js') },
     // DESIGN-SYSTEM sprint A · /design · mockup deluxe + arquitectura informació + components
     { path: '/design',       view: () => import('./views/DesignSystemView.js') },
+    // v133 · preview · Project Hub V3 amb 5 subpestanyes (Hub·Map·Kanban·Wallet·Presentation + dropdown Més)
+    { path: '/project-hub-v3-preview', view: () => import('./views/ProjectHubV3PreviewView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 

@@ -11,6 +11,7 @@
 import { label, labelN, applyToNavDestinations, listLabels, TOKENS } from '../core/sosCopy.js';
 import { attachAIFormFeedback, renderInlineFeedbackHtml } from '../core/aiFormFeedback.js';
 import { formatActivityEvent } from '../core/aiActivityFeedback.js';
+import { renderSubmenuTabs, bindSubmenuTabs } from '../ui/SubmenuTabs.js';
 
 // MENU_PROPOSAL · arquitectura d'informació v2 · agrupació clara per
 // "viatge del fundador" (Foundation → Execution → Value → Commercial)
@@ -31,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-19T22:00 · v132b+c+d+e+f+g+h+i+j · VNA DEEP ANALYSIS + SLIM + vnaQuickSuggest + ValueMapView migrat + Benchmark CLI 5 APIs + Project Hub subtabs backlog + Submenu Pattern Canonical (audit 5 vistes + mockup HTML validat + js/ui/SubmenuTabs.js component pur · render+bind+URL sync+a11y+CSS canonical · 50 asserts) · ready per migracions v133+ · 318+ asserts nous';
+const BUILD_STAMP = '2026-05-20T00:00 · v132b...v133 · VNA DEEP ANALYSIS + SLIM + vnaQuickSuggest + ValueMapView migrat + Benchmark 5 APIs + Submenu Pattern Canonical (SubmenuTabs.js + keyboard ← → Home/End + demo viu /design) + LearnView MIGRAT regression-safe + Project Hub V3 PREVIEW route /project-hub-v3-preview (5 tabs · dropdown Més · Presentation tab amb IA completa · cas Forn Vall) · 359+ asserts nous · MERGEABLE per testing';
 
 export default class DesignSystemView {
 
@@ -63,6 +64,32 @@ export default class DesignSystemView {
             fb.setError(label('err.ai_failed'));
         });
         document.getElementById('dsBtnClear')?.addEventListener('click', () => fb.clear());
+
+        // v132k · Demo viu SubmenuTabs · clica tabs · dropdown · arrow keys
+        const live = document.getElementById('dsSubmenuLive');
+        const output = document.getElementById('dsSubmenuOutput');
+        if (live) {
+            live.innerHTML = renderSubmenuTabs({
+                tabs: [
+                    { id: 'hub',          label: 'Hub',           icon: '🏠' },
+                    { id: 'map',          label: 'Map',           icon: '🗺' },
+                    { id: 'kanban',       label: 'Kanban',        icon: '📋' },
+                    { id: 'wallet',       label: 'Comptabilitat', icon: '💰' },
+                    { id: 'presentation', label: 'Presentation',  icon: '🎯' },
+                ],
+                dropdown: [
+                    { id: 'pacts',    label: 'Pactes (+ Legal agents)', icon: '📜' },
+                    { id: 'sprints',  label: 'Sprints',                 icon: '🚀' },
+                    { id: 'kb',       label: 'KB del projecte',         icon: '🧠' },
+                    { id: 'settings', label: 'Settings',                icon: '⚙' },
+                ],
+                activeId: 'hub',
+                urlParam: 'demoTab',
+            });
+            bindSubmenuTabs(live, (newId, prevId) => {
+                if (output) output.textContent = '→ activat · ' + newId + ' (prev · ' + (prevId || 'cap') + ') · URL ?demoTab=' + newId;
+            }, { urlParam: 'demoTab' });
+        }
     }
 
     _htmlMain() {
@@ -295,6 +322,13 @@ export default class DesignSystemView {
                         <span class="ds-stat-chip" style="background:${TOKENS.colors.success}20;color:${TOKENS.colors.success};border-color:${TOKENS.colors.success}50;">total · ${totalLabels}</span>
                     </div>
                     <p style="margin-top:0.8rem;">Quan calgui nou copy · afegir clau <code>category.subkey</code> a <code>sosCopy.js</code> · les views consumeixen via <code>label('category.subkey')</code>.</p>
+                </div>
+
+                <div class="ds-section" id="dsSubmenuDemo">
+                    <h2>🧭 SubmenuTabs · pattern canonical (v132j+k)</h2>
+                    <p>Component compartit · <code>js/ui/SubmenuTabs.js</code> · validat al mockup v132i. Klicka les tabs · obre el dropdown · prova ← → al teclat (focus a la barra).</p>
+                    <div id="dsSubmenuLive" style="margin:1rem 0;border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden;background:var(--bg-panel);"></div>
+                    <div id="dsSubmenuOutput" style="font-family:var(--font-mono);font-size:0.82rem;color:var(--text-muted);padding:8px 12px;background:var(--bg-elevated);border-radius:var(--radius-sm);">cap canvi encara · clica una tab</div>
                 </div>
 
                 <div class="ds-section">

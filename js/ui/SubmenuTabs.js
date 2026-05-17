@@ -236,35 +236,38 @@ export function bindSubmenuTabs(container, onSelect, options = {}) {
     const onTabClick = (e) => {
         const btn = e.target.closest('[data-submenu-tab]');
         if (!btn || btn.hasAttribute('disabled')) return;
-        const newId = btn.getAttribute('data-submenu-tab');
-        const prev = root.querySelector('.sos-submenu-tab.is-active');
-        const prevId = prev?.getAttribute('data-submenu-tab') || null;
-        if (newId === prevId) return;
-        // Update UI · active state
-        root.querySelectorAll('.sos-submenu-tab.is-active').forEach(el => {
-            el.classList.remove('is-active');
-            el.removeAttribute('aria-current');
-        });
-        root.querySelectorAll('.sos-submenu-dropdown-item.is-active').forEach(el => {
-            el.classList.remove('is-active');
-        });
-        const tabBtn = root.querySelector('.sos-submenu-tab[data-submenu-tab="' + CSS.escape(newId) + '"]');
-        if (tabBtn) {
-            tabBtn.classList.add('is-active');
-            tabBtn.setAttribute('aria-current', 'page');
-        } else {
-            // Dropdown item · marca actiu però NO afegim tab al main bar
-            btn.classList.add('is-active');
-        }
-        // URL sync
-        if (syncUrl) setActiveTabInUrl(urlParam, newId);
-        // Close dropdown si era una item del dropdown
-        _closeDropdown(root);
-        // Callback
-        try { onSelect?.(newId, prevId); } catch (_) {}
+        _activateTab(root, btn.getAttribute('data-submenu-tab'), { urlParam, syncUrl, onSelect });
     };
     root.addEventListener('click', onTabClick);
     cleanupFns.push(() => root.removeEventListener('click', onTabClick));
+
+    // Keyboard arrow nav (v132k) · ← → mou activeTab entre tabs principals ·
+    // Home/End salten a primera/última · Enter/Space ja és default
+    const onArrowKeys = (e) => {
+        if (!root.contains(document.activeElement)) return;
+        const isLeft  = e.key === 'ArrowLeft';
+        const isRight = e.key === 'ArrowRight';
+        const isHome  = e.key === 'Home';
+        const isEnd   = e.key === 'End';
+        if (!isLeft && !isRight && !isHome && !isEnd) return;
+        const mainTabs = Array.from(root.querySelectorAll('.sos-submenu-tab:not([disabled])'));
+        if (mainTabs.length === 0) return;
+        const current = root.querySelector('.sos-submenu-tab.is-active');
+        let idx = current ? mainTabs.indexOf(current) : 0;
+        if (idx < 0) idx = 0;
+        let next = idx;
+        if (isLeft)  next = (idx - 1 + mainTabs.length) % mainTabs.length;
+        if (isRight) next = (idx + 1) % mainTabs.length;
+        if (isHome)  next = 0;
+        if (isEnd)   next = mainTabs.length - 1;
+        if (next === idx) return;
+        e.preventDefault();
+        const newId = mainTabs[next].getAttribute('data-submenu-tab');
+        _activateTab(root, newId, { urlParam, syncUrl, onSelect });
+        mainTabs[next].focus();
+    };
+    document.addEventListener('keydown', onArrowKeys);
+    cleanupFns.push(() => document.removeEventListener('keydown', onArrowKeys));
 
     // Dropdown toggle
     const ddBtn = root.querySelector('[data-submenu-dropdown-btn]');
@@ -292,6 +295,32 @@ export function bindSubmenuTabs(container, onSelect, options = {}) {
     }
 
     return () => { cleanupFns.forEach(fn => { try { fn(); } catch (_) {} }); };
+}
+
+function _activateTab(root, newId, { urlParam = 'tab', syncUrl = true, onSelect } = {}) {
+    if (!newId) return;
+    const prev = root.querySelector('.sos-submenu-tab.is-active');
+    const prevId = prev?.getAttribute('data-submenu-tab') || null;
+    if (newId === prevId) return;
+    root.querySelectorAll('.sos-submenu-tab.is-active').forEach(el => {
+        el.classList.remove('is-active');
+        el.removeAttribute('aria-current');
+    });
+    root.querySelectorAll('.sos-submenu-dropdown-item.is-active').forEach(el => {
+        el.classList.remove('is-active');
+    });
+    const escapeId = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(newId) : newId;
+    const tabBtn = root.querySelector('.sos-submenu-tab[data-submenu-tab="' + escapeId + '"]');
+    if (tabBtn) {
+        tabBtn.classList.add('is-active');
+        tabBtn.setAttribute('aria-current', 'page');
+    } else {
+        const ddItem = root.querySelector('.sos-submenu-dropdown-item[data-submenu-tab="' + escapeId + '"]');
+        if (ddItem) ddItem.classList.add('is-active');
+    }
+    if (syncUrl) setActiveTabInUrl(urlParam, newId);
+    _closeDropdown(root);
+    try { onSelect?.(newId, prevId); } catch (_) {}
 }
 
 function _closeDropdown(root) {

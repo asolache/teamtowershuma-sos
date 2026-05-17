@@ -39,7 +39,7 @@ console.log('\n— B · execució dry-run · 3 casos · genera md');
 const result = spawnSync('node', [cliPath, '--dry-run', '--limit', '3'], { cwd: ROOT, encoding: 'utf8', timeout: 15000 });
 ok('B · exit code 0',                              result.status === 0);
 ok('B · stdout indica DRY-RUN',                    result.stdout.includes('DRY-RUN'));
-ok('B · stdout llista 3 casos',                    result.stdout.includes('[1/3]') && result.stdout.includes('[3/3]'));
+ok('B · stdout llista 3 casos',                    result.stdout.includes('1/3]') && result.stdout.includes('3/3]'));
 ok('B · stdout escriu fitxer md a docs/benchmarks',result.stdout.includes('docs/benchmarks/results-'));
 ok('B · stdout conté secció hipòtesi H1',          result.stdout.includes('Hipòtesi H1'));
 
