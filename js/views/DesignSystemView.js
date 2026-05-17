@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T16:00 · v141+v142 · SubmenuTabs v2 (variant l2 · 2-nivells sub-submenu compacte · CSS smaller padding + accent-purple border) + Project Hub IA-aligned · render IN-TAB per cada pilar · l2 submenu navegable + preview lleuger amb KPIs per kind (canvas · pitch · pact · map · kanban · quality · wallet · accounting · value-pie · team-*) + link "Obre vista completa →" · URL sync ?tab=X&sub=Y profund · tanca wo-project-hub-ia-aligned + wo-submenu-tabs-v2-sublevel';
+const BUILD_STAMP = '2026-05-20T18:00 · v143 · WalletV2 redesign · /wallet → /wallet/v2 redirect canonical · WalletV2View migrat a SubmenuTabs canonical (mateix pattern que LearnView · TeamView · ProjectHubV2) + context switcher Personal/Projecte dropdown sense recarregar · ProjectHubV2 wallet link actualitzat · /team RECUPERAT del legacy redirect mort que matava TeamView v140';
 
 export default class DesignSystemView {
 

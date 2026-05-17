@@ -13,17 +13,19 @@
 
 // V2-EVOL Fase F · rutes legacy redirigides a destins coherents · cap entrada
 // ambígua al fallback genèric HomeView.
-//   /team /paper /focus → /home (cap rationale específic · tornar a Home)
-//   /lms                → /learn (LMS = Learning Management = LearnView ja existeix)
-//   /settings-v2        → /settings (canònic · V2 ja viu a /settings post-Fase B)
-//   /dashboard          → /home (canònic · DashboardV2 absorbeix V1 post-Fase C)
+//   /paper /focus → /home (cap rationale específic · tornar a Home)
+//   /lms          → /learn (LMS = Learning Management = LearnView ja existeix)
+//   /settings-v2  → /settings (canònic · V2 ja viu a /settings post-Fase B)
+//   /dashboard    → /home (canònic · DashboardV2 absorbeix V1 post-Fase C)
+//   /wallet       → /wallet/v2 (v143 · WalletV2 amb tabs canonical · /wallet legacy mort)
+// v140 · /team RECUPERAT del legacy redirect · TeamView nova vista global RBAC
 export const LEGACY_REDIRECTS = Object.freeze({
-    '/team':         '/home',
     '/paper':        '/home',
     '/lms':          '/learn',
     '/focus':        '/home',
     '/settings-v2':  '/settings',
     '/dashboard':    '/home',
+    '/wallet':       '/wallet/v2',
 });
 
 // Helper · retorna el destí canònic d'una path · null si no és legacy.
