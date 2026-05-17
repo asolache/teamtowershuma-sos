@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-18T15:00 · v129 · WALLET V2 CONTENT REAL (Saldo amb KPIs + graf 30d · Transaccions amb filtres + paginació + CSV · Projectes multi-wallet grid) + /ledger alias semàntic + DOMAIN PACKS 10→24 (food-coop · health · hotel · construction · software · coworking · ecommerce · media · housing · energy · legal · artisan · public · NGO) · cobertura tots sectors CNAE · 94 asserts nous';
+const BUILD_STAMP = '2026-05-18T17:00 · v130 · WALLET V2 BINGO · les 6 pestanyes IMPLEMENTADES · Top-up amb 3 sub-tabs (Stripe Checkout custom + Crypto stables USDC/USDT/DAI/xDAI + Crypto convertible ETH/WBTC/MATIC amb quote viva) · Compres amb provider breakdown + historial cronològic · Tarta amb summary KPIs + link vista completa · 39 asserts nous';
 
 export default class DesignSystemView {
 

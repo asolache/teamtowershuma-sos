@@ -178,12 +178,38 @@ export default class WalletV2View {
             .w2-runway-bad { background: rgba(239,68,68,0.18); color: #fca5a5; }
             .w2-proj-actions { display: flex; gap: 6px; margin-top: 6px; }
             .w2-proj-error { color: var(--accent-red); font-size: 0.78rem; }
+            /* v130 · Top-up sub-tabs + presets + token cards */
+            .w2-sub-tabs { display: flex; gap: 4px; padding: 4px; background: var(--bg-elevated); border-radius: var(--radius-md); overflow-x: auto; flex-wrap: wrap; }
+            .w2-sub { background: transparent; border: 1px solid transparent; padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; color: var(--text-secondary); font-family: inherit; font-size: 0.84rem; font-weight: 600; transition: all 120ms; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+            .w2-sub:hover { color: var(--text-main); }
+            .w2-sub-active { background: var(--bg-panel); color: var(--text-main); border-color: var(--border-default); }
+            .w2-presets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+            .w2-preset { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 12px; cursor: pointer; text-align: center; transition: all 120ms; font-family: inherit; }
+            .w2-preset:hover { background: rgba(34,197,94,0.10); border-color: #22c55e; transform: translateY(-1px); }
+            .w2-preset-amt { font-size: 1.3rem; font-weight: 700; color: #22c55e; font-family: var(--font-mono); }
+            .w2-preset-label { color: var(--text-muted); font-size: 0.72rem; margin-top: 3px; }
+            .w2-tokens-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+            .w2-token-card { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 12px; cursor: pointer; transition: all 120ms; text-align: left; font-family: inherit; display: flex; flex-direction: column; gap: 4px; }
+            .w2-token-card:hover { background: rgba(34,197,94,0.10); border-color: #22c55e; }
+            .w2-token-conv:hover { background: rgba(250,204,21,0.10); border-color: #fbbf24; }
+            .w2-token-symbol { font-size: 1.1rem; font-weight: 700; font-family: var(--font-mono); color: var(--text-main); }
+            .w2-token-chain { font-size: 0.78rem; color: var(--accent-indigo); font-weight: 600; }
+            .w2-token-desc { font-size: 0.74rem; color: var(--text-muted); margin-top: 2px; }
+            .w2-token-gas { font-size: 0.72rem; color: var(--text-secondary); font-family: var(--font-mono); margin-top: auto; }
+            /* v130 · Compres list + provider grid */
+            .w2-prov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+            .w2-prov-card { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 10px 12px; }
+            .w2-purchase-list { display: flex; flex-direction: column; gap: 6px; }
+            .w2-purchase-row { background: var(--bg-panel); border: 1px solid var(--border-default); border-radius: var(--radius-sm); padding: 10px 12px; transition: background 120ms; }
+            .w2-purchase-row:hover { background: var(--glass-hover); }
             @media (max-width: 720px) {
                 .w2-main { padding: 1rem 0.8rem; }
                 .w2-tab-label { display: none; }
                 .w2-tab { padding: 6px 9px; }
                 .w2-tx-filters label { flex: 1; min-width: 110px; }
                 .w2-tx-desc { max-width: 160px; }
+                .w2-presets-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+                .w2-tokens-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
             }
         </style>
         <div class="w2-shell">
@@ -517,38 +543,150 @@ export default class WalletV2View {
         }
     }
 
-    _renderTabCompres(main) {
-        main.innerHTML = `
-            <div class="w2-panel">
-                <div class="w2-placeholder">
-                    <div style="font-size: 2.4rem;">🛒</div>
-                    <h2>Pestanya Compres · sprint v131</h2>
-                    <p>Sub-vista de transaccions filtrada a topups. Stripe · session id + factura PDF. Crypto · txHash + blockchain explorer link. Total YTD + stats per provider.</p>
-                </div>
-            </div>`;
+    // v130 · Compres · sub-vista de Transaccions filtrada a topups (Stripe + crypto)
+    async _renderTabCompres(main) {
+        main.innerHTML = `<div class="w2-loading">⏳ Carregant compres…</div>`;
+        try {
+            if (!this._aggregation) await this._loadAggregation();
+            const topups = this._aggregation.movements.filter(m => m.kind === 'topup' && m.amountEur > 0);
+            const projects = (store.getState()?.projects || []);
+
+            // Provider breakdown · Stripe · Crypto · Manual
+            const byProvider = { stripe: { count: 0, total: 0 }, crypto: { count: 0, total: 0 }, manual: { count: 0, total: 0 }, other: { count: 0, total: 0 } };
+            for (const m of topups) {
+                const src = String(m.source || '').toLowerCase();
+                const bucket = src.includes('stripe') ? 'stripe'
+                            : src.includes('crypto') ? 'crypto'
+                            : src.includes('manual') || src === 'preset' ? 'manual'
+                            : 'other';
+                byProvider[bucket].count++;
+                byProvider[bucket].total += m.amountEur;
+            }
+
+            const totalCount = topups.length;
+            const totalEur   = topups.reduce((s, m) => s + m.amountEur, 0);
+
+            // Cards per provider
+            const providerCards = [
+                { id: 'stripe', icon: '💳', label: 'Stripe',  color: '#635bff' },
+                { id: 'crypto', icon: '₿',  label: 'Crypto',  color: '#f7931a' },
+                { id: 'manual', icon: '✎',  label: 'Manual',  color: '#fbbf24' },
+                { id: 'other',  icon: '⋯', label: 'Altres',   color: '#94a3b8' },
+            ].filter(p => byProvider[p.id].count > 0).map(p => `
+                <div class="w2-prov-card" style="border-left:3px solid ${p.color};">
+                    <div style="display:flex;align-items:center;gap:6px;color:${p.color};font-weight:700;">${p.icon} ${this._esc(p.label)}</div>
+                    <div style="font-size:1.3rem;font-weight:700;font-family:var(--font-mono);margin-top:6px;">${byProvider[p.id].total.toFixed(2)} €</div>
+                    <div style="color:var(--text-muted);font-size:0.72rem;">${byProvider[p.id].count} compr${byProvider[p.id].count === 1 ? 'a' : 'es'}</div>
+                </div>`).join('');
+
+            // Llista cronològica
+            const projMap = new Map(projects.map(p => [p.id, p.nombre || p.name || p.id]));
+            const listHtml = topups.length ? topups.slice(0, 100).map(m => {
+                const date = new Date(m.ts || 0).toLocaleString('ca-ES', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const projName = m.projectId
+                    ? (String(m.projectId).startsWith('__personal_') ? '👤 Personal' : (projMap.get(m.projectId) || m.projectId.slice(0, 12)))
+                    : '—';
+                const src = m.source || 'manual';
+                const isStripe = String(src).includes('stripe');
+                const isCrypto = String(src).includes('crypto');
+                const icon = isStripe ? '💳' : isCrypto ? '₿' : '✎';
+                const refTxt = m.ref ? `<div style="color:var(--text-muted);font-size:0.72rem;font-family:var(--font-mono);">${this._esc(m.ref.slice(0, 32))}</div>` : '';
+                return `
+                    <div class="w2-purchase-row">
+                        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+                            <span style="font-size:1.4rem;">${icon}</span>
+                            <div style="flex:1;min-width:0;">
+                                <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                                    <strong>${this._esc(src)}</strong>
+                                    <span style="color:#22c55e;font-family:var(--font-mono);font-weight:700;">+${m.amountEur.toFixed(2)} €</span>
+                                </div>
+                                <div style="display:flex;gap:10px;color:var(--text-muted);font-size:0.74rem;margin-top:2px;flex-wrap:wrap;">
+                                    <span>${this._esc(date)}</span>
+                                    <span>${this._esc(projName)}</span>
+                                </div>
+                                ${refTxt}
+                                ${m.note ? `<div style="color:var(--text-muted);font-size:0.78rem;margin-top:2px;">${this._esc(m.note.slice(0, 120))}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('') : `<div style="padding:20px;text-align:center;color:var(--text-muted);">Cap recàrrega encara. Ves a la pestanya Top-up per a fer-ne una.</div>`;
+
+            main.innerHTML = `
+                <section class="w2-panel">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+                        <div>
+                            <h3 style="margin:0;font-size:1.05rem;">🛒 Historial de compres · ${totalCount}</h3>
+                            <div style="color:var(--text-muted);font-size:0.78rem;margin-top:4px;">Total acumulat de recàrregues al teu wallet</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Total recarregat</div>
+                            <div style="font-size:1.6rem;font-weight:700;font-family:var(--font-mono);color:#22c55e;">${totalEur.toFixed(2)} €</div>
+                        </div>
+                    </div>
+                    ${providerCards ? `<div class="w2-prov-grid">${providerCards}</div>` : ''}
+                    <div class="w2-purchase-list" style="margin-top:14px;">${listHtml}</div>
+                </section>`;
+        } catch (e) {
+            main.innerHTML = `<div class="w2-panel"><p style="color:var(--accent-red);">Error · ${this._esc(e?.message || e)}</p></div>`;
+        }
     }
 
-    _renderTabTarta(main) {
+    // v130 · Tarta · embed sintètic + link a vista completa
+    async _renderTabTarta(main) {
         if (!this._projectId) {
             main.innerHTML = `
-                <div class="w2-panel">
+                <section class="w2-panel">
                     <div class="w2-placeholder">
                         <div style="font-size: 2.4rem;">🥧</div>
                         <h2>La Tarta requereix un projecte actiu</h2>
                         <p>Selecciona un projecte des de la pestanya <strong>Projectes</strong> · la Tarta mostra el slicing pie del projecte triat.</p>
                     </div>
-                </div>`;
+                </section>`;
             return;
         }
-        main.innerHTML = `
-            <div class="w2-panel">
-                <div class="w2-placeholder">
-                    <div style="font-size: 2.4rem;">🥧</div>
-                    <h2>Pestanya Tarta · sprint v131</h2>
-                    <p>Embed inline de <code>/value-accounting?project=${this._esc(this._projectId)}</code> · header contextual · link a vista completa.</p>
-                    <p><a href="/value-accounting?project=${encodeURIComponent(this._projectId)}" data-link style="color: var(--accent-purple);">🥧 Obrir vista completa →</a></p>
-                </div>
-            </div>`;
+        main.innerHTML = `<div class="w2-loading">⏳ Carregant tarta…</div>`;
+        try {
+            const { calculateProjectPie, summarizeProjectPie, extractContributionsFromKb, pieTargetsForProject } = await import('../core/valueAccountingService.js');
+            // Reusem el mateix pattern que ValueAccountingView · KISS · DRY
+            let summary = null;
+            try {
+                const allNodes = await KB.getAllNodes();
+                const contributions = extractContributionsFromKb({ kbNodes: allNodes, projectId: this._projectId });
+                const mapNode = allNodes.find(n => n.id === this._projectId + '::value-party-map' && n.type === 'value_party_map');
+                const partyTypeMap = mapNode?.content?.map || {};
+                const targetsNode = allNodes.find(n => n.id === this._projectId + '::value-pie-targets' && n.type === 'value_pie_targets');
+                const projectTypeId = this._project?.matriuProjectType || null;
+                const pieTargets = targetsNode?.content?.targets || pieTargetsForProject({ projectTypeId });
+                const pie = calculateProjectPie({ contributions, partyTypeMap, pieTargets });
+                summary = summarizeProjectPie(pie);
+            } catch (e) { /* fallback al placeholder */ }
+
+            main.innerHTML = `
+                <section class="w2-panel">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+                        <div>
+                            <h3 style="margin:0;font-size:1.05rem;">🥧 Tarta · slicing pie del projecte</h3>
+                            <div style="color:var(--text-muted);font-size:0.78rem;margin-top:4px;">Cada hora invertida · cada euro reinvertit = slices. Valor estratègic vs cash flow.</div>
+                        </div>
+                        <a href="/value-accounting?project=${encodeURIComponent(this._projectId)}" data-link class="w2-cta">🥧 Obrir vista completa →</a>
+                    </div>
+                    ${summary ? `
+                        <div class="w2-kpi-grid" style="margin-top:0;">
+                            <div class="w2-kpi" style="--w2-c:#c084fc;"><div class="w2-kpi-label">Membres</div><div class="w2-kpi-value">${summary.totalParties}</div></div>
+                            <div class="w2-kpi" style="--w2-c:#a855f7;"><div class="w2-kpi-label">Slices total</div><div class="w2-kpi-value">${(summary.totalSlices || 0).toLocaleString('ca-ES')}</div></div>
+                            <div class="w2-kpi" style="--w2-c:${(summary.allocatedPct || 0) >= 95 ? '#22c55e' : '#fbbf24'};"><div class="w2-kpi-label">Assignat</div><div class="w2-kpi-value">${summary.allocatedPct || 0}%</div></div>
+                            <div class="w2-kpi" style="--w2-c:${(summary.unallocatedPct || 0) === 0 ? '#22c55e' : '#fca5a5'};"><div class="w2-kpi-label">Sense assignar</div><div class="w2-kpi-value">${summary.unallocatedPct || 0}%</div></div>
+                        </div>
+                        <p style="margin-top:14px;font-size:0.85rem;color:var(--text-secondary);">
+                            La vista completa (link superior dret) mostra la tarta D3 interactiva · pies amb targets editables · membership i drag-edit dels percentatges.
+                        </p>` : `
+                        <div class="w2-placeholder">
+                            <p>No s'ha pogut carregar la tarta. Possible · projecte sense pacte de socis encara. <a href="/pact?project=${encodeURIComponent(this._projectId)}" data-link style="color:var(--accent-purple);">+ Crear pacte primer</a></p>
+                        </div>`}
+                </section>`;
+        } catch (e) {
+            main.innerHTML = `<div class="w2-panel"><p style="color:var(--accent-red);">Error · ${this._esc(e?.message || e)}</p></div>`;
+        }
     }
 
     // v129 · Projectes · grid multi-wallet · saldo + runway per cada projecte
@@ -630,16 +768,329 @@ export default class WalletV2View {
         }
     }
 
-    _renderTabTopup(main) {
+    // v130 · Top-up · 3 sub-pestanyes · Stripe custom · Crypto stables · Crypto convertible
+    async _renderTabTopup(main) {
+        const sub = this._topupSub || 'stripe';
+        const subTabs = [
+            { id: 'stripe',      icon: '💳', label: 'Stripe',      desc: 'Custom amount via Checkout' },
+            { id: 'crypto-stable', icon: '₿', label: 'Stables',    desc: 'USDC · USDT · DAI · xDAI · gas baix' },
+            { id: 'crypto-conv', icon: '🪙', label: 'Convertible', desc: 'ETH · WBTC · MATIC · auto-quote' },
+        ];
+        const subTabsHtml = subTabs.map(t => {
+            const active = (sub === t.id) ? ' w2-sub-active' : '';
+            return `<button type="button" class="w2-sub${active}" data-w2-sub="${t.id}" title="${this._esc(t.desc)}"><span>${t.icon}</span><span>${this._esc(t.label)}</span></button>`;
+        }).join('');
+
+        const projHint = this._projectId
+            ? `Recàrrega al wallet del projecte <code>${this._esc(this._projectId)}</code>`
+            : `Recàrrega al teu wallet personal · transferible després a projectes`;
+
+        let body = '';
+        if (sub === 'stripe')             body = this._renderTopupStripe();
+        else if (sub === 'crypto-stable') body = this._renderTopupCryptoStable();
+        else                              body = this._renderTopupCryptoConvertible();
+
         main.innerHTML = `
-            <div class="w2-panel">
-                <div class="w2-placeholder">
-                    <div style="font-size: 2.4rem;">⚙</div>
-                    <h2>Pestanya Top-up · sprint v130</h2>
-                    <p>3 sub-pestanyes · <strong>💳 Stripe</strong> (presets + custom amount via <code>createCheckoutSession</code>) · <strong>₿ Crypto stables</strong> (USDC · USDT · DAI · xDAI · deposit intent + QR + watch) · <strong>🪙 Crypto convertible</strong> (ETH · WBTC · MATIC amb quote i gas warning).</p>
-                    <p>Backend ja disponible · <code>stripeService</code> + <code>cryptoTopupService</code> de v125.</p>
+            <section class="w2-panel">
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+                    <div>
+                        <h3 style="margin:0;font-size:1.05rem;">⚙ Recarregar saldo</h3>
+                        <div style="color:var(--text-muted);font-size:0.78rem;margin-top:4px;">${projHint}</div>
+                    </div>
                 </div>
-            </div>`;
+                <nav class="w2-sub-tabs">${subTabsHtml}</nav>
+                <div id="w2TopupBody" style="margin-top:16px;">${body}</div>
+            </section>`;
+        // Bind sub-tab switching
+        main.querySelectorAll('[data-w2-sub]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this._topupSub = e.currentTarget.getAttribute('data-w2-sub');
+                this._renderActiveTab();
+            });
+        });
+        // Bind sub-content handlers
+        this._bindTopupHandlers(main);
+    }
+
+    _renderTopupStripe() {
+        const presets = [10, 25, 50, 100, 250, 500];
+        const presetsHtml = presets.map(amt => `
+            <button class="w2-preset" data-stripe-preset="${amt}">
+                <div class="w2-preset-amt">+${amt} €</div>
+                <div class="w2-preset-label">Custom Checkout</div>
+            </button>`).join('');
+
+        return `
+            <div style="margin-bottom:12px;padding:10px 14px;background:rgba(99,102,241,0.08);border-left:3px solid var(--accent-indigo);border-radius:6px;font-size:0.85rem;">
+                💳 <strong>Stripe Checkout</strong> · pagament amb targeta · processat per Stripe · saldo apareix al wallet quan Stripe confirma el pagament. Comissió ~1.5% + 0.25€ · cap fee del SOS.
+            </div>
+            <div class="w2-presets-grid">${presetsHtml}</div>
+            <div style="margin-top:14px;padding:14px 16px;border:1px solid var(--border-default);border-radius:var(--radius-md);background:var(--bg-elevated);">
+                <label style="display:block;font-size:0.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Amount custom · entre 1€ i 10000€</label>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <input id="w2StripeCustom" type="number" min="1" max="10000" step="0.01" placeholder="Ex · 17.50" style="background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-default);padding:8px 12px;border-radius:6px;font-size:1.0rem;font-family:var(--font-mono);width:160px;">
+                    <button class="w2-cta-primary" id="w2StripeCustomBtn">💳 Anar a Stripe Checkout</button>
+                </div>
+                <div id="w2StripeStatus" style="margin-top:10px;font-size:0.82rem;display:none;"></div>
+            </div>
+            <p style="color:var(--text-muted);font-size:0.78rem;margin-top:10px;">
+                🔒 No emmagatzemem dades de targeta · tot va directe a Stripe via Checkout Session. <a href="/settings" data-link style="color:var(--accent-indigo);">Configurar Payment Links presets a /settings</a>
+            </p>`;
+    }
+
+    _renderTopupCryptoStable() {
+        const stableTokens = [
+            { id: 'USDC-Polygon', symbol: 'USDC', chain: 'Polygon', gas: '~0.05$', desc: '1:1 USD · gas baix' },
+            { id: 'USDT-Polygon', symbol: 'USDT', chain: 'Polygon', gas: '~0.05$', desc: '1:1 USD · gas baix' },
+            { id: 'DAI-Polygon',  symbol: 'DAI',  chain: 'Polygon', gas: '~0.05$', desc: '1:1 USD · MakerDAO' },
+            { id: 'USDC-Gnosis',  symbol: 'USDC', chain: 'Gnosis',  gas: '~0.001$',desc: 'cooperative-friendly · gas mínim' },
+            { id: 'XDAI-Gnosis',  symbol: 'xDAI', chain: 'Gnosis',  gas: '~0.001$',desc: 'native Gnosis · 1:1 USD' },
+        ];
+        const tokensHtml = stableTokens.map(t => `
+            <button class="w2-token-card" data-crypto-token="${t.id}">
+                <div class="w2-token-symbol">${this._esc(t.symbol)}</div>
+                <div class="w2-token-chain">${this._esc(t.chain)}</div>
+                <div class="w2-token-desc">${this._esc(t.desc)}</div>
+                <div class="w2-token-gas">⛽ ${this._esc(t.gas)}</div>
+            </button>`).join('');
+
+        return `
+            <div style="margin-bottom:12px;padding:10px 14px;background:rgba(34,197,94,0.08);border-left:3px solid #22c55e;border-radius:6px;font-size:0.85rem;">
+                ₿ <strong>Stablecoins</strong> · USDC/USDT/DAI mantenen valor 1:1 amb USD · sense volatilitat · gas baix (~0.05€ a Polygon · ~0.001€ a Gnosis). Recomanat per a recàrrega cripto.
+            </div>
+            <div class="w2-tokens-grid">${tokensHtml}</div>
+            <div id="w2CryptoIntent" style="margin-top:16px;display:none;"></div>`;
+    }
+
+    _renderTopupCryptoConvertible() {
+        const convTokens = [
+            { id: 'ETH-Mainnet',   symbol: 'ETH',   chain: 'Ethereum', gas: '~3.50$', desc: 'gas alt · swap a USDC abans recomanat' },
+            { id: 'WBTC-Polygon',  symbol: 'WBTC',  chain: 'Polygon',  gas: '~0.05$', desc: 'Bitcoin wrapped · quote viva' },
+            { id: 'MATIC-Polygon', symbol: 'MATIC', chain: 'Polygon',  gas: '~0.02$', desc: 'native Polygon · sense swap necessari' },
+        ];
+        const tokensHtml = convTokens.map(t => `
+            <button class="w2-token-card w2-token-conv" data-crypto-token="${t.id}">
+                <div class="w2-token-symbol">${this._esc(t.symbol)}</div>
+                <div class="w2-token-chain">${this._esc(t.chain)}</div>
+                <div class="w2-token-desc">${this._esc(t.desc)}</div>
+                <div class="w2-token-gas">⛽ ${this._esc(t.gas)}</div>
+            </button>`).join('');
+
+        return `
+            <div style="margin-bottom:12px;padding:10px 14px;background:rgba(250,204,21,0.08);border-left:3px solid #fbbf24;border-radius:6px;font-size:0.85rem;">
+                🪙 <strong>Convertible · NO-STABLE</strong> · ETH/WBTC/MATIC tenen volatilitat. SOS fa quote en EUR al moment del deposit · si el preu canvia entre quote i confirmació · ajustem segons valor real al txHash. <strong>Recomanació</strong> · convertir a USDC al teu wallet abans del deposit per evitar slippage.
+            </div>
+            <div class="w2-tokens-grid">${tokensHtml}</div>
+            <div id="w2CryptoIntent" style="margin-top:16px;display:none;"></div>`;
+    }
+
+    _bindTopupHandlers(main) {
+        // Stripe · presets
+        main.querySelectorAll('[data-stripe-preset]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const amt = parseFloat(e.currentTarget.getAttribute('data-stripe-preset'));
+                this._stripeCheckout(amt);
+            });
+        });
+        // Stripe · custom
+        main.querySelector('#w2StripeCustomBtn')?.addEventListener('click', () => {
+            const inp = main.querySelector('#w2StripeCustom');
+            const amt = parseFloat(inp?.value);
+            if (!Number.isFinite(amt) || amt < 1 || amt > 10000) {
+                this._setStripeStatus('Amount invàlid · ha de ser entre 1€ i 10000€', 'err');
+                return;
+            }
+            this._stripeCheckout(amt);
+        });
+        // Crypto · token cards
+        main.querySelectorAll('[data-crypto-token]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tokenId = e.currentTarget.getAttribute('data-crypto-token');
+                this._cryptoFlow(tokenId);
+            });
+        });
+    }
+
+    async _stripeCheckout(amountEur) {
+        this._setStripeStatus('⏳ Creant Stripe Checkout Session…', 'warn');
+        try {
+            const { createCheckoutSession } = await import('../core/stripeService.js');
+            const res = await createCheckoutSession({
+                amountEur,
+                projectId: this._projectId,
+                successPath: '/wallet/v2?tab=saldo' + (this._projectId ? '&project=' + encodeURIComponent(this._projectId) : ''),
+                cancelPath:  '/wallet/v2?tab=topup'  + (this._projectId ? '&project=' + encodeURIComponent(this._projectId) : ''),
+            });
+            if (res?.url) {
+                this._setStripeStatus('✓ Sessió creada · obrint Stripe en una nova pestanya…', 'ok');
+                if (typeof window !== 'undefined') window.open(res.url, '_blank', 'noopener,noreferrer');
+            } else {
+                throw new Error('Stripe no ha tornat URL');
+            }
+        } catch (e) {
+            const msg = e?.message || String(e);
+            this._setStripeStatus('✘ ' + msg, 'err');
+            // Si l'edge function no existeix encara (test env / no deploy backend), oferir Payment Links
+            if (msg.includes('checkout-create-failed') || msg.includes('checkout-fetch-failed') || msg.includes('404')) {
+                this._setStripeStatus(`⚠ Backend Stripe Custom Session NO desplegat encara (edge function · /api/stripe-create-session). Mentrestant · usa Payment Links predefinits a <a href="/wallet?project=${encodeURIComponent(this._projectId || '')}" data-link style="color:var(--accent-indigo);">/wallet legacy</a>.`, 'warn');
+            }
+        }
+    }
+
+    _setStripeStatus(text, kind = 'ok') {
+        const el = document.getElementById('w2StripeStatus');
+        if (!el) return;
+        el.style.display = 'block';
+        el.innerHTML = text;
+        el.style.color = kind === 'ok' ? '#22c55e' : kind === 'warn' ? '#fbbf24' : '#ef4444';
+    }
+
+    async _cryptoFlow(tokenId) {
+        const intentBox = document.getElementById('w2CryptoIntent');
+        if (!intentBox) return;
+        intentBox.style.display = 'block';
+        intentBox.innerHTML = `<div style="padding:12px;color:var(--text-muted);">⏳ Carregant info del token…</div>`;
+        try {
+            const { getToken, quoteToEur } = await import('../core/cryptoTopupService.js');
+            const tok = getToken(tokenId);
+            if (!tok) throw new Error('Token desconegut · ' + tokenId);
+            // Quote per a 1 unit del token (preview · l'usuari triarà amount)
+            const quote = await quoteToEur({ tokenId, amountToken: 1 });
+
+            const handle = this._ownerHandle();
+            const walletTarget = this._projectId || ('__personal_' + handle.replace(/^@/, '') + '__');
+
+            intentBox.innerHTML = `
+                <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+                        <div>
+                            <h4 style="margin:0;font-size:1.0rem;">${this._esc(tok.symbol)} · ${this._esc(tok.chain)}</h4>
+                            <div style="color:var(--text-muted);font-size:0.78rem;margin-top:2px;">Contract · <code>${this._esc((tok.contract || '').slice(0, 14))}…</code></div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Preu actual</div>
+                            <div style="font-size:1.2rem;font-weight:700;font-family:var(--font-mono);color:#22c55e;">${quote.priceUsd.toFixed(2)} USD</div>
+                            <div style="color:var(--text-muted);font-size:0.72rem;">≈ ${quote.valueEur.toFixed(2)} € / unit</div>
+                        </div>
+                    </div>
+
+                    <label style="display:block;font-size:0.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Amount a enviar (${this._esc(tok.symbol)})</label>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+                        <input id="w2CryptoAmount" type="number" min="0.000001" step="0.000001" placeholder="Ex · 10" style="background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-default);padding:8px 12px;border-radius:6px;font-size:1.0rem;font-family:var(--font-mono);width:160px;">
+                        <span style="color:var(--text-muted);font-size:0.85rem;" id="w2CryptoQuote">~ — €</span>
+                    </div>
+
+                    <label style="display:block;font-size:0.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">La teva adreça destí (deposit address · cap secret · només per verificació)</label>
+                    <input id="w2CryptoAddr" type="text" placeholder="0x... · adreça pública del teu wallet emissor" style="width:100%;background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-default);padding:8px 12px;border-radius:6px;font-size:0.82rem;font-family:var(--font-mono);box-sizing:border-box;margin-bottom:12px;">
+
+                    <button class="w2-cta-primary" id="w2CryptoIntentBtn" data-token-id="${this._esc(tokenId)}" data-wallet-target="${this._esc(walletTarget)}" style="background:#fbbf24;border-color:#fbbf24;color:#0f172a;">
+                        ⚡ Generar deposit intent
+                    </button>
+                    <div id="w2CryptoStatus" style="margin-top:10px;font-size:0.82rem;display:none;"></div>
+                </div>`;
+
+            // Bind amount → quote viva
+            const amtInp = intentBox.querySelector('#w2CryptoAmount');
+            const quoteEl = intentBox.querySelector('#w2CryptoQuote');
+            amtInp?.addEventListener('input', async () => {
+                const amt = parseFloat(amtInp.value);
+                if (!Number.isFinite(amt) || amt <= 0) { quoteEl.textContent = '~ — €'; return; }
+                try {
+                    const q = await quoteToEur({ tokenId, amountToken: amt });
+                    quoteEl.innerHTML = `~ <strong style="color:#22c55e;">${q.valueEur.toFixed(2)} €</strong> · net ${q.netEur.toFixed(2)} € (gas ${q.gasEstimateEur.toFixed(4)} €)`;
+                } catch (e) { quoteEl.textContent = '✘ ' + (e?.message || 'quote error'); }
+            });
+
+            // Bind generate intent
+            intentBox.querySelector('#w2CryptoIntentBtn')?.addEventListener('click', () => this._generateCryptoIntent(intentBox, tokenId, walletTarget));
+
+        } catch (e) {
+            intentBox.innerHTML = `<div style="padding:12px;color:#ef4444;">✘ ${this._esc(e?.message || e)}</div>`;
+        }
+    }
+
+    async _generateCryptoIntent(intentBox, tokenId, walletTarget) {
+        const status = intentBox.querySelector('#w2CryptoStatus');
+        const setStatus = (text, kind = 'ok') => {
+            if (!status) return;
+            status.style.display = 'block';
+            status.innerHTML = text;
+            status.style.color = kind === 'ok' ? '#22c55e' : kind === 'warn' ? '#fbbf24' : '#ef4444';
+        };
+
+        const amount = parseFloat(intentBox.querySelector('#w2CryptoAmount')?.value);
+        const addr = (intentBox.querySelector('#w2CryptoAddr')?.value || '').trim();
+        if (!Number.isFinite(amount) || amount <= 0) { setStatus('Amount invàlid', 'err'); return; }
+        if (!addr || addr.length < 8) { setStatus('Adreça invàlida', 'err'); return; }
+
+        setStatus('⏳ Generant deposit intent…', 'warn');
+        try {
+            const { createDepositIntent, quoteToEur, getToken } = await import('../core/cryptoTopupService.js');
+            const quote = await quoteToEur({ tokenId, amountToken: amount });
+            const intent = await createDepositIntent({
+                projectId: walletTarget,
+                tokenId, amountToken: amount,
+                depositAddress: addr,
+                expectedEur: quote.netEur,
+                expiryMinutes: 60,
+                note: 'crypto top-up via /wallet/v2',
+            });
+            setStatus(`✓ Intent creat · <code>${this._esc(intent.id)}</code> · expira en 60 min`, 'ok');
+
+            const tok = getToken(tokenId);
+            const explorerUrl = tok?.explorerTxBase || 'https://etherscan.io/tx/';
+            intentBox.querySelector('#w2CryptoIntentBtn').style.display = 'none';
+            const followup = document.createElement('div');
+            followup.style.cssText = 'margin-top:14px;padding:14px;background:rgba(99,102,241,0.06);border:1px solid var(--accent-indigo);border-radius:6px;';
+            followup.innerHTML = `
+                <h4 style="margin:0 0 8px 0;font-size:0.95rem;">Següents passos</h4>
+                <ol style="margin:0;padding-left:1.2rem;font-size:0.85rem;line-height:1.6;">
+                    <li>Envia <strong>${amount.toFixed(6)} ${this._esc(tok.symbol)}</strong> a la teva adreça de control (la mateixa que has indicat).</li>
+                    <li>Quan la transacció estigui confirmada · introdueix el <strong>txHash</strong> sota.</li>
+                    <li>SOS verificarà i acreditarà <strong>~${quote.netEur.toFixed(2)}€</strong> al teu wallet.</li>
+                </ol>
+                <label style="display:block;font-size:0.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px;">TxHash blockchain</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <input id="w2CryptoTxHash" type="text" placeholder="0x... · hash de la transacció" style="flex:1;min-width:240px;background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-default);padding:8px 12px;border-radius:6px;font-size:0.82rem;font-family:var(--font-mono);box-sizing:border-box;">
+                    <button class="w2-cta-primary" id="w2CryptoConfirmBtn">✓ Confirmar i acreditar</button>
+                </div>
+                <p style="font-size:0.74rem;color:var(--text-muted);margin-top:8px;">
+                    📋 explorer · <a id="w2ExplorerLink" href="#" target="_blank" rel="noopener" style="color:var(--accent-indigo);">consultar tx (omple hash primer)</a>
+                </p>`;
+            intentBox.appendChild(followup);
+            followup.querySelector('#w2CryptoTxHash')?.addEventListener('input', (e) => {
+                const h = e.target.value.trim();
+                const link = followup.querySelector('#w2ExplorerLink');
+                if (h.length > 10) link.href = explorerUrl + h;
+            });
+            followup.querySelector('#w2CryptoConfirmBtn')?.addEventListener('click', () => this._confirmCryptoIntent(intent.id, followup));
+        } catch (e) {
+            setStatus('✘ ' + (e?.message || String(e)), 'err');
+        }
+    }
+
+    async _confirmCryptoIntent(intentId, container) {
+        const btn = container.querySelector('#w2CryptoConfirmBtn');
+        const hash = (container.querySelector('#w2CryptoTxHash')?.value || '').trim();
+        if (!hash || hash.length < 10) { alert('TxHash invàlid · cal el hash blockchain'); return; }
+        if (btn) { btn.textContent = '⏳ Confirmant…'; btn.disabled = true; }
+        try {
+            const { confirmDepositIntent } = await import('../core/cryptoTopupService.js');
+            const res = await confirmDepositIntent({ intentId, txHash: hash });
+            if (res?.ok) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:14px;">
+                        <div style="font-size:1.6rem;color:#22c55e;">✓</div>
+                        <h4 style="margin:6px 0 4px;color:#22c55e;">Crèdit aplicat</h4>
+                        <p style="color:var(--text-muted);font-size:0.85rem;margin:0;">${res.creditedEur.toFixed(2)} € al teu wallet · veure a la pestanya Saldo.</p>
+                        <button class="w2-cta-primary" data-w2-tab="saldo" style="margin-top:10px;">Veure Saldo →</button>
+                    </div>`;
+                container.querySelector('[data-w2-tab]')?.addEventListener('click', () => { this._activeTab = 'saldo'; this._updateUrl(); this._renderActiveTab(); });
+            }
+        } catch (e) {
+            alert('✘ Confirmació fallida\n\n' + (e?.message || e));
+            if (btn) { btn.textContent = '✓ Confirmar i acreditar'; btn.disabled = false; }
+        }
     }
 
     _esc(s) {
