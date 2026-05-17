@@ -517,6 +517,7 @@ export function renderGlobalNavHtml({ pathname = '', projectId = null } = {}) {
         ${projectPill}
         <div class="sos-global-nav-groups">${renderNavGroupedHtml({ active, projectId, className: 'sos-global-nav-link' })}</div>
         <div class="sos-global-nav-right">
+            <button type="button" id="sos-global-nav-search-btn" class="sos-global-nav-pill sos-global-nav-search" title="Cerca global (⌘K / Ctrl+K · o /)" aria-label="Obrir cerca global"><span>🔍</span><span class="sos-global-nav-pill-label">Cerca</span><kbd class="sos-global-nav-kbd">⌘K</kbd></button>
             <a href="/inbox" data-link class="sos-global-nav-pill sos-global-nav-msg" title="Missatges · Inbox DMs"><span>📨</span><span class="sos-global-nav-pill-label">Missatges</span></a>
             <a href="/wallet" data-link class="sos-global-nav-pill sos-global-nav-wallet" title="Saldo · Wallet personal"><span>💰</span><span id="sos-global-wallet-balance" class="sos-global-nav-pill-label">Saldo</span></a>
             <div class="sos-nav-group sos-global-nav-identity" data-nav-group="identity">
@@ -546,6 +547,17 @@ export function paintGlobalNav({
     el.innerHTML = `<nav class="sos-global-nav" aria-label="Global navigation">${renderGlobalNavHtml({ pathname, projectId })}</nav>`;
     // Re-bind dropdown handlers · nous botons emesos
     bindNavGroupDropdowns(el);
+    // v125 · search pill · click → palette globalSearch.open()
+    const searchBtn = el.querySelector('#sos-global-nav-search-btn');
+    if (searchBtn && !searchBtn.dataset.bound) {
+        searchBtn.dataset.bound = '1';
+        searchBtn.addEventListener('click', async () => {
+            try {
+                const mod = await import('./globalSearch.js');
+                if (typeof mod.open === 'function') mod.open();
+            } catch (_) { /* silent fallback · keyboard ⌘K segueix funcionant */ }
+        });
+    }
     // v121-fix · Cmd+K palette viu a globalSearch.js, no aquí
 }
 
@@ -651,8 +663,20 @@ const GLOBAL_NAV_CSS = `
     white-space: nowrap;
 }
 .sos-global-nav-pill:hover { background: rgba(99,102,241,0.12); color: var(--text-main); border-color: var(--accent-indigo); }
+.sos-global-nav-pill:focus-visible { outline: 2px solid var(--accent-indigo); outline-offset: 2px; }
 .sos-global-nav-msg { color: #a8b2ff; }
 .sos-global-nav-wallet { color: #22c55e; font-family: var(--font-mono); }
+/* v125 · search pill · color verm-blau · destacat per a discoverability */
+.sos-global-nav-search { color: #c4b5fd; font-family: var(--font-base); cursor: pointer; }
+.sos-global-nav-search:hover { background: rgba(167,139,250,0.18); border-color: #a78bfa; color: #ddd6fe; }
+.sos-global-nav-search .sos-global-nav-kbd {
+    background: rgba(0,0,0,0.30);
+    color: var(--text-muted);
+    padding: 1px 5px; border-radius: 4px;
+    font-family: var(--font-mono); font-size: 0.65rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-left: 2px;
+}
 .sos-global-nav-pill-label { font-weight: 600; }
 .sos-global-nav-avatar { font-weight: 700; }
 .sos-global-nav-identity > [role="menu"] { right: 0; left: auto; min-width: 240px; }
@@ -690,6 +714,7 @@ const GLOBAL_NAV_CSS = `
     .sos-global-nav-logo { font-size: var(--text-xs); }
     .sos-global-nav-project-pill { max-width: 140px; font-size: 0.72rem; }
     .sos-global-nav-pill-label { display: none; }   /* mobile · només icones */
+    .sos-global-nav-search .sos-global-nav-kbd { display: none; }  /* mobile · sense ⌘K hint */
     .sos-global-nav-home span,
     .sos-global-nav-logo span { display: none; }
 }
