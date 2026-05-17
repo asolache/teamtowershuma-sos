@@ -679,3 +679,122 @@ work_orders:
     status: backlog
     estimated_cost_eur: 6.00
     tags: ["sprint-v120", "quality", "eval-loop"]
+
+  - id: "wo-project-hub-subtabs"
+    project_id: "sos-dev-internal"
+    title: "Evolució Project Hub (vistes ASSOCIADES AL PROJECTE · NO persona) · subpestanyes (Hub · Map · Kanban · Comptabilitat+Wallet · Presentation) + dropdown extés"
+    description: |
+      Avui /project/:id és un hub monolític. Evolucionar a un layout amb
+      submenú de subpestanyes INTEGRADES · pestanyes principals visibles
+      sempre · dropdown amb seccions secundàries.
+
+      SCOPE · aquesta WO afecta NOMÉS les vistes associades a un projecte ·
+      NO toca vistes de persona/perfil (Profile · Ikigai · Skills propi ·
+      Wallet personal · Learn personal). Les vistes de persona són altres
+      WOs separades.
+
+      Pestanyes principals (visibles · 5) ·
+       1. Hub (millorat) · status del projecte · stats · activity stream
+       2. Map · ValueMapView integrat com a subview (no navegar fora)
+       3. Kanban · vista WOs/tasks tipo kanban (per role o fase)
+       4. Comptabilitat valor + Wallet (del projecte · contribucions/ledger)
+       5. Presentation · pàgina de presentació EXISTENT redissenyada amb IA
+          (Arquitectura d'Informació) clara · seccions ·
+           · Hero · qui som · què fem (1 línia + descripció)
+           · Canvas · info estructurada del Project Canvas (segments · value
+             propositions · channels · revenue streams · resources · etc.)
+           · Pitch · narrativa del Pitch generat (problem · solution · why-now)
+           · Map preview · snapshot del mapa de valor (rols + transaccions)
+           · CTA · contacte · signa pacte · explora KB
+          IA-precisa · ordre fix · semàntica HTML · accessible · sharable URL.
+
+      Dropdown "Més" (extensible) ·
+       · Pactes · vista pacts del projecte + signatura · DOC GENERATOR
+         (legal agents) viu aquí com a subsecció (no com a vista standalone)
+       · Sprints · roadmap + iteració del projecte
+       · KB · nodes/knowledge associats al projecte (no global)
+       · Settings · config projecte (visibility · members · stripe link)
+
+      Filosofia · TOT contextual al projecte sense canviar de ruta · permet
+      flow continu (mapa → kanban → wallet → pactes → presentation sense
+      perdre context). Avui cal navegar fora del project hub per a wallet/
+      pacts/legal-agents/presentation.
+
+      Pattern submenú · seguir el referent ja existent al Knowledge Hub
+      (LearnView · .lv-tab · data-mode · this._mode state · ?tab=X URL
+      param) PER COHERÈNCIA UX. Vegi's wo-submenu-pattern-canonical per al
+      requisit transversal.
+    priority: high
+    complexity: L
+    status: backlog
+    estimated_cost_eur: 16.00
+    tags: ["sprint-v133", "ux", "project-hub", "navigation", "legal-agents", "pacts", "presentation", "information-architecture"]
+
+  - id: "wo-submenu-pattern-canonical"
+    project_id: "sos-dev-internal"
+    title: "Pattern canonical de submenú UX (referent · LearnView .lv-tab) · auditar totes les vistes per coherència"
+    description: |
+      Avui tenim un únic submenú real implementat · LearnView (knowledge hub)
+      amb pattern · botons `.lv-tab` · attr `data-mode` · estat `this._mode`
+      · URL param `?tab=X` · render condicional. Funciona bé.
+
+      Quan introduïm submenús a altres vistes (començant per Project Hub
+      v132h+ · wo-project-hub-subtabs) · TOTS han de seguir el mateix
+      pattern visual + interaction model per evitar inconsistència UX.
+
+      Tasques ·
+       1. Extreure el pattern de LearnView a un component compartit ·
+          `js/ui/SubmenuTabs.js` (o similar) · API ·
+            renderTabs({ tabs, activeId, onSelect, urlParam? })
+          Tabs · [{ id, label, icon, onClick, disabled? }]
+          Style · CSS variables compartides (color · spacing · active state)
+       2. Auditar totes les vistes existents · identificar candidates a
+          submenú (ProjectHub · Wallet · Profile · Skills · Sectors · etc.)
+       3. Migrar LearnView al component compartit (regression-safe · zero
+          canvi UX visible)
+       4. Aplicar component a Project Hub v133 (consumidor #2 · valida API)
+       5. Documentar el pattern a docs/ux/SUBMENU-PATTERN.md (quan usar-lo ·
+          quan NO · exemples bo/dolent)
+
+      Acceptance ·
+       · LearnView funciona idènticament després de la migració (regression
+         test verd)
+       · Project Hub usa el mateix component (consistència visual
+         pixel-perfect)
+       · CSS variables centralitzades · canvi de tema afecta tots els submenús
+
+      Anti-pattern a evitar · cada vista inventant el seu propi submenú amb
+      estils/comportaments lleugerament diferents (cost cognitiu acumulat).
+    priority: high
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 9.00
+    tags: ["sprint-v133", "ux", "design-system", "navigation", "refactor"]
+
+  - id: "wo-benchmark-multi-api-compare"
+    project_id: "sos-dev-internal"
+    title: "Benchmark multi-API · executar 20 casos contra N providers + taula comparativa"
+    description: |
+      v132f té el CLI però només contra UN provider per execució. Extendre a
+      mode multi-provider · executar els 20 casos contra Anthropic + OpenAI +
+      Gemini + DeepSeek + MiniMax (els que tinguin API key) i produir una
+      taula comparativa amb ·
+       · winner per cas (FULL vs SLIM)
+       · winner per provider (qui dóna més qualitat per cas)
+       · cost real (€) per provider (estimateCostUsd via aiRouterService)
+       · win rate B per provider (algun té millor SLIM que altres?)
+       · veredict H1 per provider (slim·default sí per anthropic · no per X?)
+
+      Implementació ·
+       · CLI · --providers anthropic,openai,gemini (csv) · paral·lel per cas
+       · UI · /prompts-debug · permet escollir múltiples providers (multi-select)
+       · Output md · matriu N providers × 20 casos · resum agregat per provider
+       · Score normalitzat (rubric igual per tots · només input/output canvia)
+
+      Decisió-key · si algun provider té win rate B significativament diferent
+      → el default slim podria ser per-provider, no global.
+    priority: high
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 8.00
+    tags: ["sprint-v132g", "benchmark", "multi-provider", "prompt-efficiency"]

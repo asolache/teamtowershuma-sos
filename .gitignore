@@ -7,3 +7,7 @@
 node_modules/
 package-lock.json
 build/turbo-build.mjs.lock
+
+# v132f+g · benchmark dryrun outputs · ephemeral (live results poden commitejar-se manualment)
+docs/benchmarks/results-*-dryrun.md
+docs/benchmarks/results-*-dryrun-multi.md

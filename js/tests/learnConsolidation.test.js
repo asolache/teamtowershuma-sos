@@ -53,19 +53,22 @@ console.log('— A · 7 tabs al render shell');
 const v = new LearnView();
 const html = await v.getHtml();
 
+// v133 · migrats al component canonical SubmenuTabs · icona en span separat ·
+// data-submenu-tab substitueix data-mode (compatibilitat semàntica preservada)
 const EXPECTED_TABS = [
-    { id: 'roadmaps', label: '🤲 Roadmaps' },
-    { id: 'carpetas', label: '📚 Knowledge' },
-    { id: 'search',   label: '🔍 Cerca' },
-    { id: 'sectors',  label: '🏭 Sectors' },
-    { id: 'mind',     label: '🕸 Mind' },
-    { id: 'folders',  label: '📁 Carpetes' },
-    { id: 'tags',     label: '🏷 Tags' },
+    { id: 'roadmaps', icon: '🤲', text: 'Roadmaps'  },
+    { id: 'carpetas', icon: '📚', text: 'Knowledge' },
+    { id: 'search',   icon: '🔍', text: 'Cerca'     },
+    { id: 'sectors',  icon: '🏭', text: 'Sectors'   },
+    { id: 'mind',     icon: '🕸', text: 'Mind'      },
+    { id: 'folders',  icon: '📁', text: 'Carpetes'  },
+    { id: 'tags',     icon: '🏷', text: 'Tags'      },
 ];
 
 for (const tab of EXPECTED_TABS) {
-    ok('A · tab data-mode="' + tab.id + '"', html.includes(`data-mode="${tab.id}"`));
-    ok('A · label "' + tab.label + '" visible', html.includes(tab.label));
+    ok('A · tab data-submenu-tab="' + tab.id + '"', html.includes(`data-submenu-tab="${tab.id}"`));
+    ok('A · icona + label "' + tab.icon + ' ' + tab.text + '" presents',
+        html.includes(tab.icon) && html.includes(tab.text));
 }
 
 // ─── B · Sectors tab · render compacte amb SOCs sector ───────────────────
