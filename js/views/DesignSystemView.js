@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-18T13:00 · v128 · WALLET V2 SCAFFOLD (6 pestanyes · Saldo · Transaccions · Compres · Tarta · Projectes · Top-up) + /learn?tab=skills ELIMINAT (redundant) + plan doc UX/analyst total docs/wallet-v2-accounting-integration-plan.md · 4 sprints v128→v131 · 40 asserts nous';
+const BUILD_STAMP = '2026-05-18T15:00 · v129 · WALLET V2 CONTENT REAL (Saldo amb KPIs + graf 30d · Transaccions amb filtres + paginació + CSV · Projectes multi-wallet grid) + /ledger alias semàntic + DOMAIN PACKS 10→24 (food-coop · health · hotel · construction · software · coworking · ecommerce · media · housing · energy · legal · artisan · public · NGO) · cobertura tots sectors CNAE · 94 asserts nous';
 
 export default class DesignSystemView {
 

@@ -342,6 +342,470 @@ export const DOMAIN_PACKS = Object.freeze({
         ],
     },
 
+    // ── FOOD-COOP (cooperativa alimentària · grup de consum · forn artesà) ─
+    'food-coop': {
+        label: 'Cooperativa alimentària / forn / grup de consum',
+        keywords: [
+            'forn', 'horno', 'bakery', 'pa', 'pan', 'bread',
+            'agroecologia', 'agroecologic', 'agroecological',
+            'grup de consum', 'grupo consumo', 'food coop',
+            'productor local', 'productores locales', 'local producer',
+            'ramaderia', 'ganadería', 'farming', 'pagès', 'pagesa', 'farmer',
+            'restaurant cooperatiu', 'restauración cooperativa',
+            'cervesa artesana', 'craft beer', 'celler', 'bodega',
+        ],
+        sectorHints: ['A', 'C', 'G', 'I'],
+        archetypes: [
+            { id: 'producer-farm',      kind: 'coder',       name: 'Productor/a Pagès/a',         castell: 'pinya',       desc: 'Cultiu/criança · cicle estacional · directa al grup de consum' },
+            { id: 'baker-craftsperson', kind: 'coder',       name: 'Forner/a · Artesà/na',         castell: 'pinya',       desc: 'Producció diària · masses mare · qualitat artesanal' },
+            { id: 'distribution-coord', kind: 'pm',          name: 'Coordinador/a Distribució',    castell: 'tronc',       desc: 'Rutes · cestes · logística · planificació setmanal' },
+            { id: 'consumer-member',    kind: 'facilitator', name: 'Soci/a Consumidor/a',         castell: 'baixos',      desc: 'Quota mensual · recollida cesta · vot a l\'assemblea' },
+            { id: 'sanitary-inspection',kind: 'reviewer',    name: 'Sanitat · Inspecció',          castell: 'laterals',    desc: 'Compliment normatiu · traçabilitat · etiquetatge' },
+            { id: 'food-assembly',      kind: 'founder',     name: 'Assemblea de Sòcies',          castell: 'pom_de_dalt', desc: 'Decisions sobre productors · preus · admissions' },
+            { id: 'restaurant-client',  kind: 'facilitator', name: 'Restaurant/Empresa Client',    castell: 'baixos',      desc: 'B2B · comanda regular · canal d\'ingressos directe' },
+        ],
+        intangibles: [
+            'Confiança productor↔consumidor (sense intermediari)',
+            'Identitat ètica (km0 · sense químics · respecte animal)',
+            'Sobirania alimentària com a valor compartit',
+        ],
+        patterns: [
+            'Cicle productor↔grup de consum (collita setmanal ⇄ comandes anticipades)',
+            'Reciprocitat coop↔restaurant (qualitat ⇄ preu estable)',
+        ],
+    },
+
+    // ── HEALTH-CLINIC (centre salut · consulta privada · CSMA · ASSIR) ──
+    'health-clinic': {
+        label: 'Centre de salut / consulta clínica',
+        keywords: [
+            'centre de salut', 'centro salud', 'cap ', 'csma', 'assir',
+            'consulta', 'consultorio', 'consultori privat',
+            'metge', 'metgessa', 'médico', 'médica', 'doctor', 'physician',
+            'infermer', 'infermera', 'enfermero', 'enfermera', 'nurse',
+            'fisioterapeuta', 'physiotherapist', 'psicoleg', 'psicóloga', 'psychologist',
+            'odontolog', 'odontólogo', 'dentista', 'dentist',
+            'farmacia', 'farmàcia', 'pharmacy',
+        ],
+        sectorHints: ['Q'],
+        archetypes: [
+            { id: 'physician-primary',  kind: 'coder',       name: 'Metge/ssa de Familia',        castell: 'pinya',       desc: 'Consulta diària · triatge · derivacions especialistes' },
+            { id: 'specialist',         kind: 'coder',       name: 'Especialista',                 castell: 'pinya',       desc: 'Cardiologia/neumologia/etc · consultes derivades' },
+            { id: 'nurse',              kind: 'coder',       name: 'Infermer/a',                   castell: 'pinya',       desc: 'Pre-consulta · proves · administració medicació · cures' },
+            { id: 'admin-receptionist', kind: 'facilitator', name: 'Recepció/Administració',       castell: 'mans',        desc: 'Cites · facturació · interacció amb pacients' },
+            { id: 'medical-director',   kind: 'founder',     name: 'Director/a Mèdic/a',           castell: 'pom_de_dalt', desc: 'Protocols clínics · admissió de personal · qualitat' },
+            { id: 'patient',            kind: 'facilitator', name: 'Pacient',                      castell: 'baixos',      desc: 'Receptor del servei · seguiment · drets sanitaris' },
+            { id: 'health-insurance',   kind: 'reviewer',    name: 'Mútua · Asseguradora',         castell: 'laterals',    desc: 'Facturació · autoritzacions · auditoria' },
+            { id: 'lab-imaging',        kind: 'reviewer',    name: 'Laboratori/Radiologia',        castell: 'laterals',    desc: 'Proves externes · resultats · interpretació' },
+        ],
+        intangibles: [
+            'Confiança metge↔pacient (clau per a compliance)',
+            'Continuïtat assistencial (mateix professional al llarg del temps)',
+            'Confidencialitat de dades clíniques',
+        ],
+        patterns: [
+            'Cicle pacient↔metge (visita ⇄ tractament ⇄ seguiment)',
+            'Reciprocitat clínica↔asseguradora (servei ⇄ pagament + control)',
+        ],
+    },
+
+    // ── HOTEL-HOSPITALITY (hotel · alberg · turisme rural · BnB) ────────
+    'hotel-hospitality': {
+        label: 'Hotel / alberg / turisme rural / BnB',
+        keywords: [
+            'hotel', 'hotels', 'alberg', 'albergue', 'hostel',
+            'turisme rural', 'agroturisme', 'masia', 'casa rural',
+            'bnb', 'bed and breakfast', 'pension', 'pensió',
+            'recepcionista', 'concierge', 'cambrera', 'camarera de pisos',
+            'reserva', 'booking', 'check-in', 'check-out',
+            'restaurant hoteler', 'spa hotel',
+        ],
+        sectorHints: ['I'],
+        archetypes: [
+            { id: 'director-general',   kind: 'founder',     name: 'Director/a General',           castell: 'pom_de_dalt', desc: 'Estratègia · ocupació · revenue management · marca' },
+            { id: 'front-desk',         kind: 'facilitator', name: 'Recepció · Front Office',      castell: 'mans',        desc: 'Check-in/out · reserves · primer contacte client' },
+            { id: 'housekeeping',       kind: 'coder',       name: 'Cambrer/a de pisos',           castell: 'pinya',       desc: 'Habitacions · neteja · manteniment · turn-over diari' },
+            { id: 'kitchen-fb',         kind: 'coder',       name: 'Cuina · F&B',                  castell: 'pinya',       desc: 'Esmorzar · restaurant · room service · banquets' },
+            { id: 'maintenance',        kind: 'reviewer',    name: 'Manteniment',                  castell: 'laterals',    desc: 'Reparacions · piscina · climatització · jardí' },
+            { id: 'guest',              kind: 'facilitator', name: 'Hoste',                        castell: 'baixos',      desc: 'Receptor servei · valoracions · paga' },
+            { id: 'ota-channel',        kind: 'facilitator', name: 'OTA (Booking/Airbnb)',         castell: 'baixos',      desc: 'Distribució online · comissions · ranking algorithm' },
+            { id: 'local-tourism',      kind: 'facilitator', name: 'Patronat Turisme · DMO',       castell: 'baixos',      desc: 'Promoció destinació · cooperació local' },
+        ],
+        intangibles: [
+            'Hospitalitat (com es fa sentir l\'hoste)',
+            'Reputació online (estrelles · reviews · TripAdvisor)',
+            'Esperit de lloc (autèntic vs estandarditzat)',
+        ],
+        patterns: [
+            'Cicle hoste↔staff (necessitat ⇄ servei ⇄ valoració)',
+            'Reciprocitat hotel↔OTA (visibilitat ⇄ comissió)',
+        ],
+    },
+
+    // ── CONSTRUCTION (cooperativa obres · paletes · rehabilitació) ──────
+    'construction': {
+        label: 'Construcció / rehabilitació / paletes',
+        keywords: [
+            'construcció', 'construcción', 'construction',
+            'paleta', 'paletas', 'mason', 'bricklayer',
+            'fuster', 'fuster', 'carpenter',
+            'rehabilitació', 'rehabilitación', 'rehabilitation',
+            'arquitecte', 'arquitectura', 'arquitect',
+            'obra', 'project obra', 'building site',
+            'autoconstrucció', 'autoconstrucción',
+        ],
+        sectorHints: ['F'],
+        archetypes: [
+            { id: 'site-manager',       kind: 'pm',          name: 'Cap d\'Obra',                   castell: 'tronc',       desc: 'Planificació · pressupost · coordinació subcontractes' },
+            { id: 'architect',          kind: 'founder',     name: 'Arquitecte/a',                 castell: 'pom_de_dalt', desc: 'Projecte · llicències · supervisió tècnica' },
+            { id: 'worker-mason',       kind: 'coder',       name: 'Paleta · Treballador/a',       castell: 'pinya',       desc: 'Execució material · maçoneria · acabats' },
+            { id: 'worker-specialist',  kind: 'coder',       name: 'Especialista · Fuster/lampista',castell: 'pinya',       desc: 'Treball especialitzat · fusta · aigua · llum · gas' },
+            { id: 'safety-officer',     kind: 'reviewer',    name: 'Tècnic Seguretat',             castell: 'laterals',    desc: 'EPIs · prevenció riscos · auditoria' },
+            { id: 'client-owner',       kind: 'facilitator', name: 'Client/Promotor',              castell: 'baixos',      desc: 'Encàrrec · pagaments per fases · canvis durant obra' },
+            { id: 'supplier-materials', kind: 'facilitator', name: 'Proveïdor de materials',       castell: 'baixos',      desc: 'Subministraments · timing crític · descomptes per volum' },
+            { id: 'municipal-permits',  kind: 'reviewer',    name: 'Ajuntament · Llicències',      castell: 'laterals',    desc: 'Permisos d\'obra · revisió · final d\'obra' },
+        ],
+        intangibles: [
+            'Confiança client↔cap d\'obra (gestió de canvis i sobrecosts)',
+            'Reputació · obres ben acabades atreuen recomanacions',
+            'Cultura de seguretat (zero accidents)',
+        ],
+        patterns: [
+            'Cicle arquitecte↔obra (plànol ⇄ execució ⇄ modificacions)',
+            'Reciprocitat client↔contractista (pagament per fase ⇄ entrega DTD)',
+        ],
+    },
+
+    // ── SOFTWARE-AGENCY (consultora IT · agència web · startup SaaS) ────
+    'software-agency': {
+        label: 'Agència software / startup SaaS / consultora IT',
+        keywords: [
+            'software', 'saas', 'startup tecnologica', 'tech startup',
+            'desenvolupament', 'desarrollo', 'development',
+            'developer', 'programador', 'programadora', 'enginyer software',
+            'devops', 'sysadmin', 'cloud',
+            'agencia web', 'agència digital', 'digital agency',
+            'consultora it', 'consultoría tecnológica',
+            'react', 'node', 'python', 'rails',
+        ],
+        sectorHints: ['J', 'M'],
+        archetypes: [
+            { id: 'cto-founder',        kind: 'founder',     name: 'CTO · Founder Tècnic/a',       castell: 'pom_de_dalt', desc: 'Visió tècnica · arquitectura · roadmap · cultura eng' },
+            { id: 'product-manager',    kind: 'pm',          name: 'Product Manager',              castell: 'tronc',       desc: 'Roadmap · backlog · prioritzaciñ · interfície amb client' },
+            { id: 'engineer-senior',    kind: 'coder',       name: 'Senior Engineer',              castell: 'pinya',       desc: 'Arquitectura solucions · mentoring · code review' },
+            { id: 'engineer-junior',    kind: 'coder',       name: 'Junior Engineer',              castell: 'pinya',       desc: 'Implementació guiada · creixement · features mitjanes' },
+            { id: 'designer-ux',        kind: 'coder',       name: 'Designer (UX/UI)',             castell: 'pinya',       desc: 'Wireframes · prototips · sistema de disseny · tests usabilitat' },
+            { id: 'qa-tester',          kind: 'reviewer',    name: 'QA · Tester',                  castell: 'laterals',    desc: 'Test plans · regressions · accessibility audits' },
+            { id: 'devops-sre',         kind: 'reviewer',    name: 'DevOps · SRE',                 castell: 'laterals',    desc: 'CI/CD · infraestructura · observabilitat · cost · seguretat' },
+            { id: 'client-customer',    kind: 'facilitator', name: 'Client/Customer',              castell: 'baixos',      desc: 'Receptor producte · feedback · paga · churn risk' },
+            { id: 'investor-vc',        kind: 'facilitator', name: 'Inversor · VC',                castell: 'baixos',      desc: 'Capital · expectatives creixement · board' },
+        ],
+        intangibles: [
+            'Cultura d\'enginyeria (DRY · KISS · DTD · code review)',
+            'Velocity i reliability (ship rapid · sense break)',
+            'Confiança tècnica del client',
+        ],
+        patterns: [
+            'Cicle PM↔eng (spec ⇄ implementació ⇄ feedback usuari)',
+            'Reciprocitat client↔agència (pagament ⇄ DTD test booleà)',
+            'Pipeline junior→senior (mentoring ⇄ growth · multianyal)',
+        ],
+    },
+
+    // ── COWORKING (espai compartit · maker hub · co-living) ─────────────
+    'coworking': {
+        label: 'Coworking / espai compartit / co-living',
+        keywords: [
+            'coworking', 'co-working', 'co-work', 'coliving', 'co-living',
+            'espai compartit', 'shared workspace', 'shared space',
+            'membership coworking', 'hot desk', 'meeting room',
+            'comunitat treballadora', 'community manager coworking',
+        ],
+        sectorHints: ['L', 'N'],
+        archetypes: [
+            { id: 'space-founder',      kind: 'founder',     name: 'Fundador/a · Owner Espai',     castell: 'pom_de_dalt', desc: 'Visió · contracte espai · model membership' },
+            { id: 'community-manager',  kind: 'pm',          name: 'Community Manager',            castell: 'tronc',       desc: 'Onboarding · esdeveniments · cohesió · retenció' },
+            { id: 'member-coworker',    kind: 'coder',       name: 'Membre Coworker',              castell: 'pinya',       desc: 'Lloga lloc · networking · projectes propis' },
+            { id: 'event-host',         kind: 'facilitator', name: 'Tallerista · Event Host',      castell: 'mans',        desc: 'Imparteix esdeveniments · ompla calendari · capta nous membres' },
+            { id: 'cleaning-services',  kind: 'reviewer',    name: 'Manteniment · Neteja',         castell: 'laterals',    desc: 'Higiene · café · WiFi · climatització' },
+            { id: 'corporate-partner',  kind: 'facilitator', name: 'Partner Corporatiu',           castell: 'baixos',      desc: 'Sponsors · marca al espai · access events' },
+        ],
+        intangibles: [
+            'Cohesió de la comunitat (no és només WiFi i café)',
+            'Cultura de l\'espai (creatiu · estudiós · familiar · etc.)',
+        ],
+        patterns: [
+            'Cicle community manager↔membres (programa ⇄ assistència ⇄ recomanació)',
+            'Reciprocitat espai↔esdeveniments (sala ⇄ tràfic nou)',
+        ],
+    },
+
+    // ── E-COMMERCE (botiga online · marketplace · D2C brand) ────────────
+    'ecommerce': {
+        label: 'E-commerce · botiga online · D2C',
+        keywords: [
+            'ecommerce', 'e-commerce', 'tienda online', 'botiga online',
+            'd2c', 'direct to consumer', 'dtc',
+            'shopify', 'woocommerce', 'magento',
+            'marketplace', 'amazon seller', 'etsy', 'ebay',
+            'producte fisic online', 'físic online', 'dropshipping',
+        ],
+        sectorHints: ['G'],
+        archetypes: [
+            { id: 'ceo-founder',        kind: 'founder',     name: 'Founder/a · CEO',              castell: 'pom_de_dalt', desc: 'Visió marca · creixement · estratègia' },
+            { id: 'marketing-growth',   kind: 'pm',          name: 'Growth Marketing',             castell: 'tronc',       desc: 'Adquisició · funnel · CAC/LTV · creatives' },
+            { id: 'product-merchandiser',kind: 'pm',         name: 'Product/Merchandiser',         castell: 'tronc',       desc: 'Catàleg · pricing · llançaments estacionals' },
+            { id: 'operations-fulfill', kind: 'coder',       name: 'Operacions · Fulfillment',     castell: 'pinya',       desc: 'Stock · packaging · shipping · devolucions' },
+            { id: 'customer-support',   kind: 'facilitator', name: 'Customer Support',             castell: 'mans',        desc: 'Tickets · whatsapp · gestió queixes · reviews' },
+            { id: 'customer',           kind: 'facilitator', name: 'Client/a · End consumer',      castell: 'baixos',      desc: 'Compra · review · churn · referral' },
+            { id: 'supplier',           kind: 'facilitator', name: 'Proveïdor/a',                  castell: 'baixos',      desc: 'MOQs · timing · qualitat constant · contractes' },
+            { id: 'logistics-3pl',      kind: 'reviewer',    name: 'Logística · 3PL',              castell: 'laterals',    desc: 'Magatzem · enviament · returns · KPIs entregabilitat' },
+        ],
+        intangibles: [
+            'Marca (storytelling · estètica · valors)',
+            'Confiança en compra primera (reviews · garanties · suport)',
+            'Loyalty / repetició (clau per a LTV)',
+        ],
+        patterns: [
+            'Cicle marketing↔producte (campanya ⇄ vendes ⇄ stock-out)',
+            'Reciprocitat customer↔suport (problema ⇄ resolució ⇄ review positiva)',
+        ],
+    },
+
+    // ── COMMUNITY-MEDIA (ràdio comunitària · revista · diari local) ─────
+    'community-media': {
+        label: 'Ràdio comunitària · diari local · mitjà cooperatiu',
+        keywords: [
+            'radio', 'ràdio', 'ràdio comunitària', 'community radio',
+            'tv comunitaria', 'tv local', 'community tv',
+            'diari local', 'periódico local', 'local newspaper',
+            'revista', 'magazine', 'fanzine',
+            'mitja cooperatiu', 'mitjà cooperatiu', 'mèdia cooperatiu',
+            'periodista', 'journalist', 'redactor', 'redactora',
+        ],
+        sectorHints: ['J', 'R'],
+        archetypes: [
+            { id: 'editor-in-chief',    kind: 'founder',     name: 'Director/a · Editor in Chief', castell: 'pom_de_dalt', desc: 'Línia editorial · agenda · prioritats redacció' },
+            { id: 'reporter-journalist',kind: 'coder',       name: 'Periodista · Redactor/a',      castell: 'pinya',       desc: 'Articles · entrevistes · investigació local' },
+            { id: 'show-host',          kind: 'coder',       name: 'Conductor/a Programa',         castell: 'pinya',       desc: 'Programa setmanal · convidats · realització en directe' },
+            { id: 'technician',         kind: 'coder',       name: 'Tècnic/a So/Imatge',           castell: 'pinya',       desc: 'Streaming · edició · arxiu · infraestructura' },
+            { id: 'volunteer-contributor', kind: 'facilitator', name: 'Voluntari/a · Col·laborador',castell: 'mans',        desc: 'Aportacions puntuals · cobertura events · sense salari' },
+            { id: 'audience-listener',  kind: 'facilitator', name: 'Audiència · Oient',            castell: 'baixos',      desc: 'Receptora · interacció via xarxes · participació enquestes' },
+            { id: 'sponsor-advertiser', kind: 'facilitator', name: 'Sponsor · Anunciant',          castell: 'baixos',      desc: 'Anuncis · patrocini programa · cap influència editorial' },
+            { id: 'public-grant',       kind: 'reviewer',    name: 'Administració Pública',        castell: 'laterals',    desc: 'Subvenció ràdios lliures · llicències emissió' },
+        ],
+        intangibles: [
+            'Independència editorial (separació anuncis ↔ contingut)',
+            'Veu local autèntica (cap notícia que cap altre fa)',
+            'Comunitat d\'oients lleial',
+        ],
+        patterns: [
+            'Cicle editor↔periodista (encàrrec ⇄ article ⇄ publicació)',
+            'Reciprocitat ràdio↔oients (programa ⇄ feedback ⇄ donatius/sponsorship)',
+        ],
+    },
+
+    // ── HOUSING-COOP (cooperativa habitatge · cohabitatge · masoveria) ──
+    'housing-coop': {
+        label: 'Cooperativa d\'habitatge · cohabitatge · masoveria',
+        keywords: [
+            'habitatge', 'vivienda', 'housing',
+            'cooperativa habitatge', 'cooperativa vivienda',
+            'cohabitatge', 'cohabitación', 'cohousing', 'co-housing',
+            'masoveria', 'cesión de uso', 'cessió d\'us',
+            'andel', 'la borda', 'sostre civic',
+            'inquilinos cooperativos', 'inquilines cooperatives',
+        ],
+        sectorHints: ['L'],
+        archetypes: [
+            { id: 'general-assembly-h', kind: 'founder',     name: 'Assemblea General',            castell: 'pom_de_dalt', desc: 'Òrgan sobirà · decisions sobre habitatge · admissions' },
+            { id: 'resident-member',    kind: 'coder',       name: 'Resident/Sòcia',               castell: 'pinya',       desc: 'Habita · paga quota d\'ús · participa governança' },
+            { id: 'waiting-list-member',kind: 'facilitator', name: 'Llista d\'Espera',             castell: 'baixos',      desc: 'Esperant entrada · formació · contribució al projecte' },
+            { id: 'governing-council',  kind: 'pm',          name: 'Consell Rector',               castell: 'tronc',       desc: 'Executiu rotatori · representació · gestió diària' },
+            { id: 'commission-maintenance', kind: 'pm',      name: 'Comissió Manteniment',         castell: 'tronc',       desc: 'Comú · reparacions · zones comunes · pressupost' },
+            { id: 'architect-tech',     kind: 'reviewer',    name: 'Arquitecte/Tècnic',            castell: 'laterals',    desc: 'Projecte construcció · obres · llicències · final obra' },
+            { id: 'bank-finance',       kind: 'reviewer',    name: 'Banca/Finançament Ètic',       castell: 'laterals',    desc: 'Hipoteca col·lectiva · COOP57 · Triodos · Fiare' },
+            { id: 'neighborhood',       kind: 'facilitator', name: 'Veïnat · Districte',           castell: 'baixos',      desc: 'Relació territorial · barri · serveis municipals' },
+        ],
+        intangibles: [
+            'Confiança veïnal (saber qui hi viu i com decideix)',
+            'Sentit de comunitat (no només "veïns" sinó "sòcies")',
+            'Anti-especulació (habitatge com a dret · NO mercaderia)',
+        ],
+        patterns: [
+            'Cicle assemblea↔consell rector (mandat ⇄ execució ⇄ rendició)',
+            'Pipeline llista d\'espera↔resident (formació ⇄ admissió formal)',
+            'Reciprocitat coop↔banca ètica (préstec ⇄ retorn social)',
+        ],
+    },
+
+    // ── ENERGY-COOP (cooperativa energètica · solar comunitari) ─────────
+    'energy-coop': {
+        label: 'Cooperativa energètica · solar comunitari',
+        keywords: [
+            'energia', 'energía', 'energy',
+            'som energia', 'goiener', 'zencer', 'cooperativa energètica',
+            'solar', 'fotovoltaic', 'photovoltaic',
+            'comunitat energética', 'comunitat energètica', 'energy community',
+            'renovable', 'renewable',
+            'comercialitzadora', 'comercializadora',
+        ],
+        sectorHints: ['D'],
+        archetypes: [
+            { id: 'member-prosumer',    kind: 'coder',       name: 'Soci/a · Prosumidor/a',        castell: 'pinya',       desc: 'Consumeix + produeix energia · vot a assemblea' },
+            { id: 'tech-installer',     kind: 'coder',       name: 'Tècnic/a Instal·lador/a',      castell: 'pinya',       desc: 'Instal·lació plaques · manteniment · auditories energètiques' },
+            { id: 'energy-coordinator', kind: 'pm',          name: 'Coordinador/a Energètic',      castell: 'tronc',       desc: 'Gestió comercialitzadora · contractes · facturació' },
+            { id: 'general-assembly-e', kind: 'founder',     name: 'Assemblea',                    castell: 'pom_de_dalt', desc: 'Decisions estratègiques · admissions · preus' },
+            { id: 'regulator',          kind: 'reviewer',    name: 'CNMC · Regulador',             castell: 'laterals',    desc: 'Marc legal · permisos · auditories' },
+            { id: 'grid-operator',      kind: 'reviewer',    name: 'Distribuïdora elèctrica',      castell: 'laterals',    desc: 'Xarxa · contractes accés · facturació peatges' },
+            { id: 'town-hall',          kind: 'facilitator', name: 'Ajuntament · Municipi',        castell: 'baixos',      desc: 'Convenis comunitats energètiques · espai · ciutadania' },
+        ],
+        intangibles: [
+            'Sobirania energètica (no depèn d\'oligopoli)',
+            'Educació energètica dels socis (consum conscient)',
+            'Transició ecològica viscuda · no només discurs',
+        ],
+        patterns: [
+            'Cicle producció↔consum (excedent ⇄ xarxa ⇄ compensació)',
+            'Reciprocitat coop↔ajuntament (espai cedit ⇄ servei a ciutadania)',
+        ],
+    },
+
+    // ── LEGAL-ADVISORY (despatx advocats · gestoria · notaria) ──────────
+    'legal-advisory': {
+        label: 'Despatx d\'advocats · gestoria · notaria',
+        keywords: [
+            'advocat', 'advocada', 'abogado', 'abogada', 'lawyer',
+            'despatx', 'despacho', 'law firm',
+            'gestoria', 'gestor', 'gestora', 'gestoría',
+            'notari', 'notaria', 'notario', 'notaría',
+            'procurador', 'procuradora', 'procurador legal',
+            'assessor fiscal', 'asesor fiscal', 'tax advisor',
+        ],
+        sectorHints: ['M'],
+        archetypes: [
+            { id: 'managing-partner',   kind: 'founder',     name: 'Managing Partner',             castell: 'pom_de_dalt', desc: 'Visió · client key · contractació · model negoci' },
+            { id: 'senior-lawyer',      kind: 'coder',       name: 'Senior Lawyer',                castell: 'pinya',       desc: 'Casos complexos · mentoring · cartera clients' },
+            { id: 'junior-associate',   kind: 'coder',       name: 'Junior Associate',             castell: 'pinya',       desc: 'Recerca · drafts · acompanyament casos' },
+            { id: 'paralegal',          kind: 'facilitator', name: 'Paralegal · Administratiu',    castell: 'mans',        desc: 'Suport documental · arxiu · planificació audiencies' },
+            { id: 'client',             kind: 'facilitator', name: 'Client/a',                     castell: 'baixos',      desc: 'Particular o empresa · paga per hora o flat fee' },
+            { id: 'opposing-counsel',   kind: 'reviewer',    name: 'Advocat/da contrari/a',        castell: 'laterals',    desc: 'Diàleg processal · negociació · risc procés' },
+            { id: 'judge-tribunal',     kind: 'reviewer',    name: 'Jutge · Tribunal',             castell: 'laterals',    desc: 'Decisió final · jurisdicció · pressió a temps' },
+            { id: 'bar-association',    kind: 'reviewer',    name: 'Col·legi d\'Advocats',         castell: 'laterals',    desc: 'Ètica professional · formació · representació' },
+        ],
+        intangibles: [
+            'Confiança del client (informació molt sensible)',
+            'Reputació al col·legi (mèrits · ètica · victòries)',
+            'Network jurisdiccional (jutges · companys · vies)',
+        ],
+        patterns: [
+            'Cicle client↔senior (briefing ⇄ estratègia ⇄ defensa)',
+            'Reciprocitat despatx↔jutjat (escrits ⇄ resolucions)',
+        ],
+    },
+
+    // ── ARTISAN-CRAFT (cooperativa oficis · ceramista · luthier) ────────
+    'artisan-craft': {
+        label: 'Cooperativa d\'oficis · artesans · luthiers',
+        keywords: [
+            'artesa', 'artesà', 'artesana', 'artesano', 'artisan',
+            'ceramica', 'cerámica', 'pottery', 'ceramist',
+            'fuster', 'carpenter', 'carpintero',
+            'luthier', 'instrument maker',
+            'cuir', 'cuero', 'leather',
+            'taller propi', 'studio own',
+            'cooperativa oficis',
+        ],
+        sectorHints: ['C', 'R', 'S'],
+        archetypes: [
+            { id: 'master-craftsperson',kind: 'founder',     name: 'Mestre/a Artesà/na',           castell: 'pom_de_dalt', desc: 'Tradició · estil propi · mentora aprenents' },
+            { id: 'craftsperson',       kind: 'coder',       name: 'Artesà/na · Sòcia',            castell: 'pinya',       desc: 'Producció diària · gamma propia + encàrrecs' },
+            { id: 'apprentice',         kind: 'coder',       name: 'Aprenent/a',                   castell: 'pinya',       desc: '1-3 anys formació · pràctica amb mestre/a' },
+            { id: 'customer-direct',    kind: 'facilitator', name: 'Client/a directe/a',           castell: 'baixos',      desc: 'Mercat · botiga al taller · online' },
+            { id: 'gallery-shop',       kind: 'facilitator', name: 'Galeria · Botiga revenedora',  castell: 'baixos',      desc: 'Distribució · marge · visibilitat' },
+            { id: 'tourism-visitor',    kind: 'facilitator', name: 'Turista · Visitant taller',    castell: 'baixos',      desc: 'Open studios · venda spot · word-of-mouth' },
+            { id: 'craft-association',  kind: 'reviewer',    name: 'Gremi · Associació',           castell: 'laterals',    desc: 'Defensa ofici · denominació origen · formació' },
+        ],
+        intangibles: [
+            'Tradició viva (transmissió mestre↔aprenent)',
+            'Autenticitat (no industrial · únic)',
+            'Sentit del lloc i el material (terre · fusta · pell)',
+        ],
+        patterns: [
+            'Pipeline aprenent→artesà (anys de formació · ritu pas)',
+            'Cicle artesà↔galeria (consignació ⇄ venda ⇄ liquidació)',
+        ],
+    },
+
+    // ── PUBLIC-ADMIN (ajuntament · districte · entitat pública local) ───
+    'public-admin': {
+        label: 'Administració pública · ajuntament · districte',
+        keywords: [
+            'ajuntament', 'ayuntamiento', 'town hall', 'municipality',
+            'consell comarcal', 'consejo comarcal',
+            'diputació', 'diputación', 'provincial council',
+            'generalitat', 'comunidad autónoma',
+            'ministeri', 'ministerio', 'ministry',
+            'funcionari', 'funcionaria', 'funcionario', 'civil servant',
+            'regidor', 'regidora', 'concejal', 'concejala',
+            'pressupost participatiu', 'presupuesto participativo',
+        ],
+        sectorHints: ['O'],
+        archetypes: [
+            { id: 'mayor-leader',       kind: 'founder',     name: 'Alcalde/Alcaldessa · Cap polític', castell: 'pom_de_dalt', desc: 'Visió política · representació · veto pressupost' },
+            { id: 'councilor-area',     kind: 'pm',          name: 'Regidor/a d\'àrea',            castell: 'tronc',       desc: 'Cultura/educació/urbanisme/... · plans i pressupost' },
+            { id: 'department-head',    kind: 'pm',          name: 'Cap de Departament Tècnic',    castell: 'tronc',       desc: 'Coordinació funcionaris · execució plans · informes' },
+            { id: 'civil-servant',      kind: 'coder',       name: 'Funcionari/a',                 castell: 'pinya',       desc: 'Atenció pública · expedients · compliment normatiu' },
+            { id: 'citizen-resident',   kind: 'facilitator', name: 'Ciutadania · Veïnatge',        castell: 'baixos',      desc: 'Receptora serveis · vot · participació · queixes' },
+            { id: 'civic-association',  kind: 'facilitator', name: 'Entitat Cívica',               castell: 'baixos',      desc: 'AMPAs · veïns · cooperatives · diàleg estructurat' },
+            { id: 'opposition-party',   kind: 'reviewer',    name: 'Oposició · Grup polític',      castell: 'laterals',    desc: 'Control · esmenes · auditories · escrutini públic' },
+            { id: 'state-supervision',  kind: 'reviewer',    name: 'Tribunal Comptes · Auditoria', castell: 'laterals',    desc: 'Legalitat · transparència · execució pressupost' },
+        ],
+        intangibles: [
+            'Legitimitat democràtica (vot · transparència)',
+            'Confiança institucional (gestió justa · no clientelisme)',
+            'Cultura del servei públic (vocació · no només feina)',
+        ],
+        patterns: [
+            'Cicle ciutadania↔ajuntament (impostos ⇄ serveis ⇄ vot)',
+            'Reciprocitat regidoria↔entitats cíviques (subvenció ⇄ activitat al territori)',
+        ],
+    },
+
+    // ── NGO (ONG internacional · associació humanitària) ────────────────
+    'ngo-humanitarian': {
+        label: 'ONG · associació humanitària · entitat social',
+        keywords: [
+            'ong', 'ngo', 'organització no governamental',
+            'cooperació internacional', 'international cooperation',
+            'humanitari', 'humanitario', 'humanitarian',
+            'refugiat', 'refugiado', 'refugee',
+            'desenvolupament', 'desarrollo', 'development cooperation',
+            'fundació', 'fundación', 'foundation',
+            'associació sense afany de lucre', 'asociación sin fines de lucro',
+        ],
+        sectorHints: ['S', 'Q'],
+        archetypes: [
+            { id: 'executive-director', kind: 'founder',     name: 'Director/a Executiu/va',       castell: 'pom_de_dalt', desc: 'Estratègia · representació · captació fons · board' },
+            { id: 'program-manager',    kind: 'pm',          name: 'Coordinador/a Programa',       castell: 'tronc',       desc: 'Projectes terreny · M&E · reporting donants' },
+            { id: 'field-worker',       kind: 'coder',       name: 'Cooperant · Treballador/a terreny', castell: 'pinya',  desc: 'Impacte directe · contacte beneficiaris · informes' },
+            { id: 'volunteer',          kind: 'facilitator', name: 'Voluntari/a',                  castell: 'mans',        desc: 'Aportació puntual · campanyes · suport oficines' },
+            { id: 'beneficiary',        kind: 'facilitator', name: 'Beneficiari/a',                castell: 'baixos',      desc: 'Receptor/a programa · drets · participació pròpia' },
+            { id: 'donor-funder',       kind: 'facilitator', name: 'Donant · Finançador',          castell: 'baixos',      desc: 'Govern · fundació · particulars · empreses · expectatives reporting' },
+            { id: 'board-trustees',     kind: 'reviewer',    name: 'Junta · Patronat',             castell: 'laterals',    desc: 'Governança · auditoria · estratègia llarg termini' },
+            { id: 'audit-compliance',   kind: 'reviewer',    name: 'Auditoria · Compliance',       castell: 'laterals',    desc: 'Transparència · ús fons · accountability donants' },
+        ],
+        intangibles: [
+            'Llegitimitat moral (causa coherent · NO white savior)',
+            'Confiança donants (rendició clara)',
+            'Apoderament beneficiaris (NO dependència)',
+        ],
+        patterns: [
+            'Cicle donant↔programa (fons ⇄ resultats ⇄ report)',
+            'Reciprocitat ONG↔comunitat (suport ⇄ legitimitat local)',
+        ],
+    },
+
     // ── MAKER-SPACE (fab-lab · hackerspace · maker collective) ──────────
     'maker-space': {
         label: 'Maker space / Fab Lab / hackerspace',

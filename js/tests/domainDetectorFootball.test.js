@@ -63,8 +63,9 @@ ok('C · edu-formation detectat',                 d4?.domain === 'edu-formation'
 
 // ─── D · fallback · domini genèric ─────────────────────────────────────
 console.log('\n— D · fallback · projecte business genèric');
-const d5 = detectDomain({ name: 'SaaS dev tool', description: 'Plataforma de DevOps per a equips', sector: 'J' });
-ok('D · projecte business · retorna null (sense match keywords)',  d5 === null);
+// v129 · post-expansió packs · SaaS matcha software-agency · usem cas més genèric
+const d5 = detectDomain({ name: 'Mi proyecto', description: 'Una idea sin descripción clara', sector: 'J' });
+ok('D · projecte vague · retorna null (sense keywords específics)',  d5 === null);
 
 const d6 = detectDomain({ name: '', description: '', sector: 'R' });
 ok('D · empty input · retorna null',             d6 === null);
