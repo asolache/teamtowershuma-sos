@@ -1,10 +1,15 @@
 ---
 sector_id: S
-sector_name: "Otros Servicios (Arte, Deporte, Cultura y Servicios Personales)"
-sector_name_en: "Other Services (Arts, Sport, Culture & Personal Services)"
-cnae: "90-96"
-version: "v11.1"
-tags: ["deporte", "cultura", "arte", "entretenimiento", "servicios-personales", "eventos", "economia-creativa"]
+sector_name: "Otros Servicios"
+sector_name_en: "Other Service Activities"
+cnae: "94-96"
+cnae_official: "CNAE-2009 S · Otros servicios (organizaciones empresariales · religiosas · políticas · sindicales · asociacionismo · reparación equipos · servicios personales · perruqueria · neteja en sec · funeraris)"
+version: "v131"
+agent_type: sector-context
+roles_status: legacy-scope-overlap
+roles_status_note: "Aquest fitxer tenia rang '90-96' que solapava amb R (arts/esports són 90-93). v131 redueix scope a 94-96 (altres serveis · associacions · religioses · polítiques · reparació · personal). Els rols d'arts/esports/cultura s'han de migrar a R.md a v131b."
+canonical_archetypes_source: "domainDetector.DOMAIN_PACKS · religious-community (R·S) · political-movement (S) · art-collective (R·S) · worker-coop (M·N·C·F·I·J també pot ser S)"
+tags: ["asociaciones", "organizaciones-empresariales", "sindicatos", "partidos", "religiosas", "reparacion", "servicios-personales", "peluqueria", "tintoreria", "funeraria"]
 
 roles:
   - id: artistic_director

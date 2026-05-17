@@ -35,25 +35,21 @@ ok('B · breadcrumb NO té sos-global-search input', !bcHtml.includes('id="sos-g
 ok('B · breadcrumb NO té sos-bc-search-wrap',      !bcHtml.includes('sos-bc-search-wrap'));
 ok('B · sos-bc-trail present per a crumbs',        bcHtml.includes('sos-bc-trail'));
 
-// ─── C · Skills a /learn?tab=skills ──────────────────────────────────
-console.log('\n— C · Skills al hub /learn');
+// ─── C · Skills tab ELIMINAT del hub /learn (v128) ──────────────────────
+// v128 · /learn?tab=skills eliminat per redundància · era un landing duplicat
+// de /skills. Skills viuen ara només a la pàgina pròpia /skills.
+console.log('\n— C · /learn?tab=skills ELIMINAT (v128)');
 const learnSrc = fs.readFileSync(new URL('../views/LearnView.js', import.meta.url), 'utf8');
-ok('C · VALID_MODES inclou "skills"',     learnSrc.includes("'skills'"));
-ok('C · tab data-mode=skills al render',  learnSrc.includes('data-mode="skills"'));
-ok('C · _renderSkillsTab method existeix', learnSrc.includes('_renderSkillsTab'));
-ok('C · skills tab menciona LLM local',   learnSrc.includes('LLM local'));
-ok('C · skills tab menciona Permaweb-shared', learnSrc.includes('Permaweb-shared') || learnSrc.includes('permaweb-shared'));
-ok('C · skills tab menciona plantilles offline', learnSrc.includes('plantilles offline'));
+ok('C · VALID_MODES NO inclou "skills" (v128)',     !/'skills'/.test(learnSrc.match(/VALID_MODES = Object\.freeze\(\[[^\]]+\]/)?.[0] || ''));
+ok('C · NO hi ha tab button data-mode="skills"',    !learnSrc.includes('data-mode="skills"'));
+ok('C · _renderSkillsTab method ELIMINAT',          !/\b_renderSkillsTab\(\) \{/.test(learnSrc));
+ok('C · documenta v128 a un comentari',             /v128.*skills.*elimin|elimin.*skills.*v128/i.test(learnSrc));
 
-// ─── D · NavService · entrada Skills NOVA a /learn?tab=skills ─────────
-console.log('\n— D · navService Skills · entrada nova');
-const learnSkillsEntry = NAV_DESTINATIONS.find(d => d.id === 'learn-skills');
-ok('D · entrada learn-skills present', !!learnSkillsEntry);
-ok('D · learn-skills href = /learn?tab=skills', learnSkillsEntry?.href === '/learn?tab=skills');
-ok('D · learn-skills category = learn', learnSkillsEntry?.category === 'learn');
+// ─── D · NavService · entrada Skills mantinguda · learn-skills opcional ──
+console.log('\n— D · navService Skills · catàleg directe a /skills');
 const skillsEntry = NAV_DESTINATIONS.find(d => d.id === 'skills');
 ok('D · entrada skills (catàleg complet) mantinguda', !!skillsEntry);
-ok('D · skills label diferenciat (Catàleg)', skillsEntry?.label.includes('Catàleg'));
+ok('D · skills href = /skills', skillsEntry?.href === '/skills');
 
 // ─── E · Mobile · pill labels ocultes ────────────────────────────────
 console.log('\n— E · CSS mobile · pill labels ocultes');

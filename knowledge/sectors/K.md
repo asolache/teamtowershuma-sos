@@ -1,10 +1,15 @@
 ---
 sector_id: K
-sector_name: "Telecomunicaciones, Programación Informática y Servicios de Información"
-cnae: K
-sector_name_en: "Tech / Software / AI"
-version: "v11.1"
-tags: [tech, software, SaaS, IA, ciberseguridad, digital, plataforma, datos]
+sector_name: "Actividades Financieras y de Seguros"
+sector_name_en: "Financial & Insurance Activities"
+cnae: "64-66"
+cnae_official: "CNAE-2009 K · Actividades financieras y de seguros (servicios financieros · seguros, reaseguros y fondos de pensiones · actividades auxiliares)"
+version: "v131"
+agent_type: sector-context
+roles_status: legacy-mismatch
+roles_status_note: "Aquest fitxer tenia continguts de tech/software (sector J). v131 fixa el frontmatter a canonical CNAE K (financer). El contingut de rols sota es migrarà a v131b · mentre, el loader marca aquests roles com NO injectables al prompt VNA."
+canonical_archetypes_source: "domainDetector.LEGAL_AGENTS_CATALOG · banca/assegurances/fintech via packs específics"
+tags: ["finanzas", "banca", "seguros", "fintech", "inversion", "riesgo", "credito", "wealth-management"]
 
 roles:
   - id: generador-problema-usuario

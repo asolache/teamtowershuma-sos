@@ -1,10 +1,14 @@
 ---
 sector_id: F
 sector_name: "Construcción"
-cnae: F
 sector_name_en: "Construction"
-version: "v11.1"
-tags: [construcción, edificación, obra civil, reformas, promotora, residencial, infraestructuras, proptech]
+cnae: "41-43"
+cnae_official: "CNAE-2009 F · Construcción (construcción de edificios · ingeniería civil · construcción especializada · paletes · fusteria · lampisteria · electricitat · acabats)"
+version: "v131"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "domainDetector.DOMAIN_PACKS.construction (F)"
+tags: ["construcción", "edificación", "obra-civil", "reformas", "promotora", "residencial", "infraestructuras", "rehabilitación", "paletas", "carpintería", "fontanería", "electricidad"]
 
 roles:
   - id: promotor-vision

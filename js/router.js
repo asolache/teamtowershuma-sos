@@ -49,6 +49,7 @@ const ROUTES = [
     { path: '/efficiency',view: () => import('./views/EfficiencyView.js') },
     // MKT-001 sprint C · wallet prepago por proyecto
     { path: '/wallet',    view: () => import('./views/WalletView.js')    },
+    { path: '/wallet/v2', view: () => import('./views/WalletV2View.js')  },   // v128 · paral·lel · migració gradual
     // MKT-001 sprint D · cuadro comparativo de ahorro acumulado vs convencional
     { path: '/savings',   view: () => import('./views/SavingsView.js')   },
     // MAT-002-H · landing pública Matriu Incoopadora
@@ -61,8 +62,10 @@ const ROUTES = [
     { path: '/skills',    view: () => import('./views/SkillsExplorerView.js') },
     // UX-AUDIT-001 sprint H+ · /sectors · substitueix el botó "Knowledge Base" del Dashboard
     { path: '/sectors',   view: () => import('./views/SectorsView.js') },
-    // PERM-USER-001 sprint E · /registry · permaweb public registry
+    // PERM-USER-001 sprint E · /registry · permaweb public registry (clàssic · power-users)
+    // v129 · permaweb catàleg consolidat a /opportunities · alias /ledger porta al wallet
     { path: '/registry',  view: () => import('./views/RegistryView.js') },
+    { path: '/ledger',    view: () => import('./views/WalletV2View.js') },   // v129 · alias semàntic · ledger de transaccions = /wallet/v2?tab=transaccions
     { path: '/timeline',         view: () => import('./views/TimelineView.js') },
     { path: '/inbox',            view: () => import('./views/InboxView.js') },
     // NOTES-EVOLVE-001 · llistat captures FAB · evolve a project/wo/deliverable

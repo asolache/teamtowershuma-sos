@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-17T23:30 · v124 · UX wallet ↔ pact bridge (panel pacte vigent · grid agreements · notarització permaweb) + 10 agents legals (pact · NDA · service · incubator · cohort · advisor · equity · LOI · term-sheet · IP) + legalAgentsCatalog · 186 asserts nous';
+const BUILD_STAMP = '2026-05-18T19:00 · v131 · SECTOR CNAE AUDIT + sectorAgentLoader · fix 6 mappings crítics (K Financieras 64-66 · L Inmobiliarias 68 · M Profesionales 69-75 · N Administrativas 77-82 · Q Sanitarias 86-88 · R Arts/Esports 90-93) + S scope reduït · P scope expandit · loader anti-contaminació (no injecta rols legacy-mismatch) · 70 asserts nous';
 
 export default class DesignSystemView {
 

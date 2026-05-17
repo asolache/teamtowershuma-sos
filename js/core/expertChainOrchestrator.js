@@ -27,6 +27,7 @@ import { buildPrompt, listTasks } from './vnaExpertPrompts.js';
 import { runEscalation, AI_MODELS, estimateCostUsd } from './aiRouterService.js';
 import { pickRoutingForTask, pickTier } from './promptTierRouter.js';
 import { __test_helpers__ as adapterHelpers } from './aiDrivenCreationAdapter.js';
+import { detectDomain } from './domainDetector.js';
 
 export const EXPERT_CHAIN_VERSION = 'v1.0';
 
@@ -114,9 +115,34 @@ export async function runExpertChain({
 
     if (!generateWithProvider) throw new Error('runExpertChain · generateWithProvider required');
 
+    // v126 · domain detection abans del loop · injectada a context per a la
+    // fase 5 (design-value-map-rich) · evita rols genèrics no adequats al
+    // sub-domini real (ex futbol · teatre · cures · escola)
+    // v127 · telemetria via domainTelemetry · enriquim emit + persist event
+    const detT0 = Date.now();
+    const domainDetection = detectDomain({ name: context.name, description: context.description, sector: context.sector });
+    const detMs = Date.now() - detT0;
+    if (domainDetection) {
+        emit('domain-detected', 'info', { domain: domainDetection.domain, confidence: domainDetection.confidence, label: domainDetection.label, via: 'keywords', durationMs: detMs });
+        context = { ...context, domainDetection: { ...domainDetection, via: 'keywords' } };
+    } else {
+        emit('domain-detected', 'info', { domain: null, via: 'none', durationMs: detMs });
+    }
+    // Telemetria · best-effort · no bloca
+    try {
+        const { recordDetection } = await import('./domainTelemetry.js');
+        await recordDetection({
+            projectId: context.projectId || context.name || 'unknown-' + Date.now(),
+            name:      context.name,
+            sector:    context.sector,
+            detection: domainDetection ? { ...domainDetection, via: 'keywords' } : null,
+            durationMs: detMs,
+        });
+    } catch (_) { /* silent · telemetry mai trenca app */ }
+
     const out = {
         ok: true, costTotal: 0,
-        productService: null, canvas: null, pitch: null, landing: null,
+        domainDetection, productService: null, canvas: null, pitch: null, landing: null,
         valueMap: null, socs: [], sops: [], wos: [],
         phasesRun: [], phasesSkipped: [], phaseErrors: [],
     };
@@ -194,10 +220,21 @@ function _buildPhaseContext(phase, baseCtx, out) {
         c.canvas = out.canvas;
         c.pitch = out.pitch;
     }
-    // Fase 5 · value-map-rich rep canvas + pitch
+    // Fase 5 · value-map-rich rep canvas + pitch + domainDetection (v126)
     if (phase.id === 'design-value-map-rich') {
         c.canvas = out.canvas;
         c.pitch = out.pitch;
+        // v126 · domain detector · injecta arquetip específic del sub-domini
+        // (sports-team · arts-performance · coop-cares · edu-formation) quan
+        // detectat amb confidence ≥ 0.4 · evita el fallback a 5 rols genèrics
+        // del catàleg de sector (bug @alvaro · "equip de futbol" donava rols
+        // d'Arts en comptes de rols esportius)
+        try {
+            // Lazy ESM-friendly · síncron via require simulat al package ESM
+            // pattern · evitem await dins context builder · injectem només
+            // si el caller l'ha computat i passat via baseCtx.domainDetection
+            if (baseCtx.domainDetection) c.domainDetection = baseCtx.domainDetection;
+        } catch (_) {}
     }
     // Fase 6 · socs reb el valueMap
     if (phase.id === 'generate-socs-from-value-map') {

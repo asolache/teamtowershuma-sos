@@ -1,10 +1,15 @@
 ---
 sector_id: P
-sector_name: "Educación Reglada (K-12)"
-sector_name_en: "Formal Education (K-12)"
+sector_name: "Educación"
+sector_name_en: "Education"
 cnae: "85"
-version: "v11.1"
-tags: ["educacion", "escuela", "instituto", "docentes", "familia", "aprendizaje", "k12", "centro-educativo"]
+cnae_official: "CNAE-2009 P · Educación (primaria · secundaria · superior · universitaria · adultos · formació professional · idiomes · activitats de suport educatiu)"
+version: "v131"
+agent_type: sector-context
+roles_status: canonical-partial
+roles_status_note: "Contingut existent (K-12 escolar) és correcte però scope reduït. v131 expansiona el sector_name a Educació completa (P inclou escolar · superior · adult · FP · idiomes). Roles existents són válids per a K-12 · cal afegir rols universitaris i FP a v131b."
+canonical_archetypes_source: "domainDetector.DOMAIN_PACKS.edu-formation (P)"
+tags: ["educacion", "escuela", "instituto", "docentes", "familia", "aprendizaje", "K-12", "universidad", "formacion-profesional", "idiomas", "educacion-adultos"]
 
 roles:
   - id: school_director

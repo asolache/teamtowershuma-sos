@@ -450,8 +450,31 @@ Retorna NOMÉS aquest JSON ·
 }
 Sense markdown · sense codeblocks.`,
 
-    'design-value-map-rich': ({ name, description, sector, entity_type, lifecycle_stage, vna_zoom, product_service, canvas, pitch }) =>
-`TASCA · DISSENY DE MAPA DE VALOR RIC · pensa profundament com a consultor VNA llegendari.
+    'design-value-map-rich': ({ name, description, sector, entity_type, lifecycle_stage, vna_zoom, product_service, canvas, pitch, domainDetection = null }) => {
+        // v126 · sub-domain inference · si el caller passa domainDetection
+        // (de domainDetector.detectDomain) → injectem els arquetip específics
+        // del sub-domini (ex sports-team · 14 rols esportius reals) en
+        // comptes dels 5 genèrics del catàleg de sector. CLAU per a casos no-
+        // business · futbol · companyia de teatre · cooperativa cures · etc.
+        let domainBlock = '';
+        if (domainDetection && Array.isArray(domainDetection.archetypes) && domainDetection.archetypes.length) {
+            const archs = domainDetection.archetypes.map(a => `  · ${a.name} [${a.castell}] · ${a.desc}`).join('\n');
+            const intang = (domainDetection.intangibles || []).map(s => `  · ${s}`).join('\n');
+            const pats = (domainDetection.patterns || []).map(s => `  · ${s}`).join('\n');
+            domainBlock = `
+DOMINI DETECTAT · ${domainDetection.label} (confidence ${domainDetection.confidence}) ·
+Arquetip de rols ESPECÍFICS d'aquest domini (usa'ls com a punt de partida · POTS afegir-ne ·
+NO et limitis als 5 genèrics del catàleg de sector) ·
+${archs}
+
+Intangibles típics d'aquest domini (Verna Allee · clau per a la cohesió real) ·
+${intang}
+
+Patterns recíprocs comuns ·
+${pats}
+`;
+        }
+        return `TASCA · DISSENY DE MAPA DE VALOR RIC · pensa profundament com a consultor VNA llegendari.
 
 CONTEXT (tot rellevant per al teu raonament Allee) ·
 - Projecte · "${name}"
@@ -463,33 +486,35 @@ CONTEXT (tot rellevant per al teu raonament Allee) ·
 ${canvas ? '- Canvas vision · ' + canvas.vision : ''}
 ${pitch ? '- Pitch headline · ' + pitch.headline : ''}
 - Descripció · ${description || '(vaga)'}
-
+${domainBlock}
 THINK STEP-BY-STEP (mentalment · NO mostris el procés · només l'output) ·
+0. ¿El projecte és business típic o té sub-domini específic? (sports/team · arts/performance · cooperativa cures · escola · religious · militant · etc.) — adapta els ARQUETIP al sub-domini real ${domainDetection ? '(JA detectat: ' + domainDetection.label + ')' : '(infereix · NO et quedis amb 5 rols genèrics si el context demana 10+ rols específics)'}.
 1. Quin és el network real al voltant del producte/servei?
-2. Quins rols intervenen al cicle complet (producció · entrega · suport · ingressos)?
+2. Quins rols intervenen al cicle complet (producció · entrega · suport · ingressos · governança)?
 3. Per cada parell de rols · quines transaccions TANGIBLES (formals · facturables)?
-4. I quines INTANGIBLES (Allee · 40-60% del valor real)?
+4. I quines INTANGIBLES (Allee · 40-60% del valor real · ex confiança · reputació · identitat · cohesió)?
 5. Quins rols són emissor sense receptor (orfes)? Quins deliverables són morts?
 6. Quins cicles són recíprocs (A→B→A)? Quins són one-way?
 
 REQUISITS QUALITAT ·
-A · MAPA RIC · NO mínim · busca complecció VNA · ${vna_zoom || 'meso'} demana ${vna_zoom === 'macro' ? '1-3' : vna_zoom === 'micro' ? '8-15' : '4-7'} rols
-B · Cada rol té nom REAL del sector ${sector || ''} (ex consultoria M · "Methodology Reviewer" NO "Reviewer · QA")
+A · MAPA RIC · NO mínim · busca complecció VNA · ${vna_zoom || 'meso'} demana ${vna_zoom === 'macro' ? '1-3' : vna_zoom === 'micro' ? '8-15' : '4-7'} rols com a OBJECTIU · però si el sub-domini real demana MÉS rols arquetip (ex equip esportiu sempre té entrenador + jugadors + scout + patrocinador + afició + federació · MÍNIM 8) · supera el rang sense por
+B · Cada rol té nom REAL del sub-domini (ex futbol · "Primer Entrenador" NO "Coach" · "Director Esportiu" NO "Founder" · "Ojeador" NO "Reviewer")
 C · MIX obligatori · 60-70% transaccions tangibles · 30-40% intangibles · MAI 100% tangibles
-D · Almenys 1 CICLE RECÍPROC (A→B amb deliverable X · B→A amb deliverable Y) revelant confiança o dependència
+D · Almenys 1 CICLE RECÍPROC clar (A→B amb deliverable X · B→A amb deliverable Y) revelant confiança o dependència
 E · MAI rols orfes · MAI deliverables morts · cada deliverable té producer + ≥1 consumer
-F · Deliverables amb NOM DE DOMINI (NO "doc" · NO "comunicació" · sempre específic com "Acta sessió cohort signada per @alvaro")
-G · Mètriques Lean realistes (lead_time_hours = clock-time · cycle_time_hours = work-time · NO inventis)
+F · Deliverables amb NOM DE DOMINI (NO "doc" · NO "comunicació" · sempre específic com "Acta entrenament setmanal" · "Informe scouting rival" · "Renovació subscriptor temporada")
+G · Mètriques Lean realistes (lead_time_hours = clock-time · cycle_time_hours = work-time · NO inventis · per a esports usa cicles per partit/setmanal)
 
 Retorna NOMÉS aquest JSON ·
 {
   "valueMapVersion": "v1",
+  "domainInferred": "sports-team|arts-performance|coop-cares|edu-formation|business-generic|...",
   "thinking": "2-3 frases · com has organitzat el network · per a auditoria humana",
   "roles": [
     {
       "id": "rol-slug",
-      "kind": "founder|operations|creator|reviewer|facilitator|founder_anchor|cohort_manager|architect|sentinel|visioner|...",
-      "name": "nom específic del sector",
+      "kind": "founder|operations|creator|reviewer|facilitator|pm|coder|sporting-director|head-coach|player|scout|sponsor|fan-base|federation|...",
+      "name": "nom específic del sub-domini",
       "description": "1 frase · què fa al network",
       "castell_level": "pom_de_dalt|tronc|pinya|laterals|mans|baixos",
       "level": "macro|meso|micro",
@@ -499,7 +524,7 @@ Retorna NOMÉS aquest JSON ·
   "deliverables": [
     {
       "id": "del-slug",
-      "name": "nom específic del domini · ex 'Acta sessió Fent Pinya signada'",
+      "name": "nom específic del domini · ex 'Alineació partit jornada 5' · 'Informe scout rival'",
       "kind": "tangible|intangible",
       "producer": "rol-id",
       "consumers": ["rol-id", ...],
@@ -517,15 +542,16 @@ Retorna NOMÉS aquest JSON ·
       "lead_time_hours": 24,
       "cycle_time_hours": 2,
       "wip_units": 1,
-      "frequency": "daily|weekly|monthly|on-demand",
+      "frequency": "daily|weekly|monthly|per-match|on-demand",
       "reciprocates_with": "tx-N | null (si forma cicle amb una altra)"
     }
   ],
   "patterns_detected": [
-    "1-3 patrons VNA observats · ex 'cicle de feedback setmanal cohort-coordinadora revela confiança alta'"
+    "1-3 patrons VNA observats · ex 'cicle entrenador-jugador setmanal · instrucció ⇄ rendiment' · 'reciprocitat club-afició revela base econòmica i emocional'"
   ]
 }
-Sense markdown · sense codeblocks · NO escriguis cap text fora del JSON.`,
+Sense markdown · sense codeblocks · NO escriguis cap text fora del JSON.`;
+    },
 
     'generate-socs-from-value-map': ({ name, sector, lifecycle_stage, value_map, vna_zoom }) =>
 `TASCA · GENERA SOCs (Standard Operating CONCEPTS) DERIVATS DEL MAPA DE VALOR + ORDENACIÓ PER A LES 3 VISTES DEL SOS.

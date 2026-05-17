@@ -1,10 +1,15 @@
 ---
 sector_id: N
-sector_name: "Actividades Profesionales, Científicas y Técnicas"
-cnae: N
-sector_name_en: "Consulting / Professional Services"
-version: "v11.1"
-tags: [consultoría, B2B, I+D, diseño, marketing, arquitectura, legal, auditoría, estrategia]
+sector_name: "Actividades Administrativas y Servicios Auxiliares"
+sector_name_en: "Administrative & Support Service Activities"
+cnae: "77-82"
+cnae_official: "CNAE-2009 N · Actividades administrativas y servicios auxiliares (alquiler · ETT · agencias de viajes · seguridad · limpieza · servicios administrativos)"
+version: "v131"
+agent_type: sector-context
+roles_status: legacy-mismatch
+roles_status_note: "Aquest fitxer tenia continguts professional/consultoria (sector M). v131 fixa el frontmatter a canonical CNAE N (administratiu/auxiliar). El contingut de rols sota es migrarà a v131b."
+canonical_archetypes_source: "v131b · cal generar pack nou per a ETT · seguretat · neteja · serveis administratius"
+tags: ["ETT", "trabajo-temporal", "seguridad-privada", "limpieza", "agencias-viajes", "alquiler-equipos", "call-center", "BPO"]
 
 roles:
   - id: generador-demanda

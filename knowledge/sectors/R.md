@@ -1,10 +1,15 @@
 ---
 sector_id: R
-sector_name: "Actividades Sanitarias y de Servicios Sociales"
-cnae: R
-sector_name_en: "Health & Social Services"
-version: "v11.1"
-tags: [salud, sanidad, hospital, clínica, biotech, healthtech, servicios sociales, bienestar, farmacia]
+sector_name: "Actividades Artísticas, Recreativas y de Entretenimiento"
+sector_name_en: "Arts, Entertainment & Recreation"
+cnae: "90-93"
+cnae_official: "CNAE-2009 R · Actividades artísticas, recreativas y de entretenimiento (arts escèniques · creació literària · biblioteques · museus · patrimoni · joc d'atzar · esports · entreteniment recreatiu)"
+version: "v131"
+agent_type: sector-context
+roles_status: legacy-mismatch
+roles_status_note: "Aquest fitxer tenia continguts sanitari (sector Q). v131 fixa el frontmatter a canonical CNAE R (arts/esports/entreteniment). El contingut de rols sota es migrarà a v131b · veure parts dels rols a knowledge/sectors/S.md actual (que tenia arts/esports/cultura barrejats)."
+canonical_archetypes_source: "domainDetector.DOMAIN_PACKS · sports-team (R·S) · arts-performance (R) · art-collective (R·S)"
+tags: ["arts-escenicas", "musica", "teatre", "dansa", "museos", "patrimonio", "biblioteca", "esports", "club-deportivo", "lliga-esportiva", "joc-atzar", "entreteniment-recreatiu"]
 
 roles:
   - id: paciente-receptor
