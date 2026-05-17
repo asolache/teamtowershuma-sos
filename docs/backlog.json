@@ -696,10 +696,10 @@
       "id": "wo-orchestrator-expert-chain",
       "project_id": "sos-dev-internal",
       "title": "Orchestrator coherent cadena 8 fases prompts",
-      "description": "Avui ai-driven salta directament a SOC→SOP→WO. Ha d'executar prèviament ·\ndefine-product-service → personalize-canvas (IKIGAI) → personalize-pitch\n→ personalize-landing → design-value-map-rich → generate-socs-from-value-map\n→ generate-sops-with-skills → generate-wos-from-sop. Doc canonical a\nknowledge/vision/prompts-chain-plan.md.",
+      "description": "Avui ai-driven salta directament a SOC→SOP→WO. Ha d'executar prèviament ·\ndefine-product-service → personalize-canvas (IKIGAI) → personalize-pitch\n→ personalize-landing → design-value-map-rich → generate-socs-from-value-map\n→ generate-sops-with-skills → generate-wos-from-sop. Doc canonical a\nknowledge/vision/prompts-chain-plan.md.\n\nv132c+d status · ✅ DONE · expertChainOrchestrator amb 8 fases +\nvnaQuickSuggest wrapper unificat /map ↔ chain + escalation rubric\nslim→FULL si score < threshold. ValueMapView migrat a v132e.",
       "priority": "critical",
       "complexity": "M",
-      "status": "backlog",
+      "status": "done",
       "estimated_cost_eur": 8,
       "dependencies": [],
       "tags": [
@@ -765,14 +765,15 @@
       "description": "Avui tenim un únic submenú real implementat · LearnView (knowledge hub)\namb pattern · botons `.lv-tab` · attr `data-mode` · estat `this._mode`\n· URL param `?tab=X` · render condicional. Funciona bé.\n\nQuan introduïm submenús a altres vistes (començant per Project Hub\nv132h+ · wo-project-hub-subtabs) · TOTS han de seguir el mateix\npattern visual + interaction model per evitar inconsistència UX.\n\nTasques ·\n 1. Extreure el pattern de LearnView a un component compartit ·\n    `js/ui/SubmenuTabs.js` (o similar) · API ·\n      renderTabs({ tabs, activeId, onSelect, urlParam? })\n    Tabs · [{ id, label, icon, onClick, disabled? }]\n    Style · CSS variables compartides (color · spacing · active state)\n 2. Auditar totes les vistes existents · identificar candidates a\n    submenú (ProjectHub · Wallet · Profile · Skills · Sectors · etc.)\n 3. Migrar LearnView al component compartit (regression-safe · zero\n    canvi UX visible)\n 4. Aplicar component a Project Hub v133 (consumidor #2 · valida API)\n 5. Documentar el pattern a docs/ux/SUBMENU-PATTERN.md (quan usar-lo ·\n    quan NO · exemples bo/dolent)\n\nAcceptance ·\n · LearnView funciona idènticament després de la migració (regression\n   test verd)\n · Project Hub usa el mateix component (consistència visual\n   pixel-perfect)\n · CSS variables centralitzades · canvi de tema afecta tots els submenús\n\nAnti-pattern a evitar · cada vista inventant el seu propi submenú amb\nestils/comportaments lleugerament diferents (cost cognitiu acumulat).",
       "priority": "high",
       "complexity": "M",
-      "status": "backlog",
+      "status": "done",
       "estimated_cost_eur": 9,
       "tags": [
         "sprint-v133",
         "ux",
         "design-system",
         "navigation",
-        "refactor"
+        "refactor",
+        "done-v132j"
       ]
     },
     {
@@ -782,30 +783,32 @@
       "description": "v132f té el CLI però només contra UN provider per execució. Extendre a\nmode multi-provider · executar els 20 casos contra Anthropic + OpenAI +\nGemini + DeepSeek + MiniMax (els que tinguin API key) i produir una\ntaula comparativa amb ·\n · winner per cas (FULL vs SLIM)\n · winner per provider (qui dóna més qualitat per cas)\n · cost real (€) per provider (estimateCostUsd via aiRouterService)\n · win rate B per provider (algun té millor SLIM que altres?)\n · veredict H1 per provider (slim·default sí per anthropic · no per X?)\n\nImplementació ·\n · CLI · --providers anthropic,openai,gemini (csv) · paral·lel per cas\n · UI · /prompts-debug · permet escollir múltiples providers (multi-select)\n · Output md · matriu N providers × 20 casos · resum agregat per provider\n · Score normalitzat (rubric igual per tots · només input/output canvia)\n\nDecisió-key · si algun provider té win rate B significativament diferent\n→ el default slim podria ser per-provider, no global.",
       "priority": "high",
       "complexity": "M",
-      "status": "backlog",
+      "status": "done",
       "estimated_cost_eur": 8,
       "tags": [
         "sprint-v132g",
         "benchmark",
         "multi-provider",
-        "prompt-efficiency"
+        "prompt-efficiency",
+        "done-v132h"
       ]
     },
     {
       "id": "wo-project-hub-ia-aligned",
       "project_id": "sos-dev-internal",
       "title": "Project Hub V3 · IA aligned als 5 pilars del menú principal (crear · treballar · comptabilitzar · connectar · aprendre) + Equip",
-      "description": "Supersedeix wo-project-hub-subtabs. Realinear el Project Hub a la IA\nmental del menú principal (5 verbs · veure docs/ux/v134-project-hub-ia-alignment.md).\n\nTabs nivell 1 (6) ·\n 🏠 Hub | 🎨 Crear | 🔨 Treballar | 💶 Comptabilitzar | 🔗 Connectar | 👥 Equip\n\nSub-tabs nivell 2 (alineades amb vistes globals existents) ·\n · Crear ·         Canvas · Pitch · Pacte · Presentation\n · Treballar ·     Map · Kanban · Quality · Sprint · Lifecycle\n · Comptabilitzar · Wallet · Comptes · Pastís valor · Factures · Tokenomics\n · Connectar ·     Pactes signats · Propostes · Mercat\n · Equip ·         Membres · Rols · Permisos · Convidacions\n\nDropdown \"Més\" · Aprendre (KB projecte) · Sprints management · Lifecycle\ndashboard · Settings projecte.\n\nFilosofia · 2-nivells max · URL sync `?tab=X&sub=Y` · component\nSubmenuTabs.js reutilitzat (cal extensió v2 per a 2-nivells · veure\nwo-submenu-tabs-v2).\n\nPreview viu testable · /project-hub-v3-preview (post v134 commit).",
+      "description": "Supersedeix wo-project-hub-subtabs. Realinear el Project Hub a la IA\nmental del menú principal (5 verbs · veure docs/ux/v134-project-hub-ia-alignment.md).\n\nTabs nivell 1 (6) ·\n 🏠 Hub | 🎨 Crear | 🔨 Treballar | 💶 Comptabilitzar | 🔗 Connectar | 👥 Equip\n\nSub-tabs nivell 2 (alineades amb vistes globals existents) ·\n · Crear ·         Canvas · Pitch · Pacte · Presentation\n · Treballar ·     Map · Kanban · Quality · Sprint · Lifecycle\n · Comptabilitzar · Wallet · Comptes · Pastís valor · Factures · Tokenomics\n · Connectar ·     Pactes signats · Propostes · Mercat\n · Equip ·         Membres · Rols · Permisos · Convidacions\n\nDropdown \"Més\" · Aprendre (KB projecte) · Sprints management · Lifecycle\ndashboard · Settings projecte.\n\nFilosofia · 2-nivells max · URL sync `?tab=X&sub=Y` · component\nSubmenuTabs.js reutilitzat (cal extensió v2 per a 2-nivells · veure\nwo-submenu-tabs-v2).\n\nPreview viu testable · /project-hub-v3-preview (post v134 commit).\n\nv136 status · ✅ 6 tabs canonical visibles a /project/{id} via SubmenuTabs ·\ncada pilar mostra grid de cards amb ?project=X. PENDENT v141+ · render\nin-tab de les vistes (ara segueixen links externs) · cal SubmenuTabs v2\n(sub-submenu 2-nivells · veure wo-submenu-tabs-v2-sublevel).",
       "priority": "high",
       "complexity": "L",
-      "status": "backlog",
+      "status": "in-progress",
       "estimated_cost_eur": 18,
       "tags": [
         "sprint-v136",
         "ux",
         "project-hub",
         "ia-alignment",
-        "supersedes-wo-project-hub-subtabs"
+        "supersedes-wo-project-hub-subtabs",
+        "partial-v136"
       ]
     },
     {
@@ -862,10 +865,10 @@
       "id": "wo-quality-integration-project-hub",
       "project_id": "sos-dev-internal",
       "title": "Integrar Quality (rubric 12-criteris) com a subtab DE PROJECTE (Treballar) · treure de menu global",
-      "description": "ProjectQualityView avui · /quality standalone al menu global. v134 IA\ndiu · Quality és una vista de \"treballar\" del PROJECTE actiu.\n\nTasques ·\n 1. Moure ProjectQualityView a subtab `/project/:id?tab=treballar&sub=quality`\n 2. Redirect `/quality` → `/project/:id?tab=treballar&sub=quality` (preserva bookmarks)\n 3. Treure de navService.js (work category global)\n 4. Score live alimentat per runQualityAudit() cada vegada que canvia\n    el mapa o canvas (event-driven via store)\n 5. KPI cards · Score global · Integritat 7-regles · Criteris rubric (9/12)\n 6. Llista de criteris pendents amb action-link per resoldre cada un\n\nBeneficis · Quality contextual · l'usuari està treballant el projecte\ni veu la qualitat al costat · no ha de navegar fora.",
+      "description": "ProjectQualityView avui · /quality standalone al menu global. v134 IA\ndiu · Quality és una vista de \"treballar\" del PROJECTE actiu.\n\nTasques ·\n 1. Moure ProjectQualityView a subtab `/project/:id?tab=treballar&sub=quality`\n 2. Redirect `/quality` → `/project/:id?tab=treballar&sub=quality` (preserva bookmarks)\n 3. Treure de navService.js (work category global)\n 4. Score live alimentat per runQualityAudit() cada vegada que canvia\n    el mapa o canvas (event-driven via store)\n 5. KPI cards · Score global · Integritat 7-regles · Criteris rubric (9/12)\n 6. Llista de criteris pendents amb action-link per resoldre cada un\n\nBeneficis · Quality contextual · l'usuari està treballant el projecte\ni veu la qualitat al costat · no ha de navegar fora.\n\nv137 status · 🟡 PARCIAL · Quality visible al pilar Treballar com a\ncard (link a /quality?project=X). PENDENT · redirect /quality global +\ntreure de navService work category + render in-tab del rubric.",
       "priority": "medium",
       "complexity": "M",
-      "status": "backlog",
+      "status": "in-progress",
       "estimated_cost_eur": 6,
       "tags": [
         "sprint-v137",
@@ -882,14 +885,15 @@
       "description": "NOVA vista bidimensional · no existeix avui.\n\nA · GLOBAL · /team\n · Llistat persones del swarm SOS amb qui he col·laborat\n · Filter per projecte · sector · skill · rol exercit\n · Permisos GLOBALS · quins meus projectes pot veure/editar cada persona\n · Audit log · qui ha fet què cross-projects\n\nB · Per-projecte · subtab Equip dins de project hub\n · Membres · llista de qui hi participa al projecte\n · Rols · catàleg expandible (founder · ops · contributor · viewer · invited)\n · Permisos · matriu fine-grained per acció (read.*  edit.*  claim.wos\n   · approve.wos · manage.finances · manage.members)\n · Convidacions · email · link · expires\n · Activity per membre · contribucions · hores · WOs completats\n\nPermission model · RBAC base + role overrides per WO específic.\nStorage · KB node `team_<projectId>` · DID-based identifiers.\n\nCost estimate inclou · model permission + UI dual (global+project) +\naudit log + invitations flow.",
       "priority": "high",
       "complexity": "L",
-      "status": "backlog",
+      "status": "done",
       "estimated_cost_eur": 15,
       "tags": [
         "sprint-v139-v140",
         "team",
         "permissions",
         "rbac",
-        "new-view"
+        "new-view",
+        "done-v140"
       ]
     }
   ]

@@ -646,9 +646,13 @@ work_orders:
       → personalize-landing → design-value-map-rich → generate-socs-from-value-map
       → generate-sops-with-skills → generate-wos-from-sop. Doc canonical a
       knowledge/vision/prompts-chain-plan.md.
+
+      v132c+d status · ✅ DONE · expertChainOrchestrator amb 8 fases +
+      vnaQuickSuggest wrapper unificat /map ↔ chain + escalation rubric
+      slim→FULL si score < threshold. ValueMapView migrat a v132e.
     priority: critical
     complexity: M
-    status: backlog
+    status: done
     estimated_cost_eur: 8.00
     dependencies: []
     tags: ["sprint-v120", "orchestrator", "prompts-chain"]
@@ -771,9 +775,9 @@ work_orders:
       estils/comportaments lleugerament diferents (cost cognitiu acumulat).
     priority: high
     complexity: M
-    status: backlog
+    status: done   # v132j+k · SubmenuTabs.js component + LearnView migrat + ProjectHubV2 migrat
     estimated_cost_eur: 9.00
-    tags: ["sprint-v133", "ux", "design-system", "navigation", "refactor"]
+    tags: ["sprint-v133", "ux", "design-system", "navigation", "refactor", "done-v132j"]
 
   - id: "wo-benchmark-multi-api-compare"
     project_id: "sos-dev-internal"
@@ -799,9 +803,9 @@ work_orders:
       → el default slim podria ser per-provider, no global.
     priority: high
     complexity: M
-    status: backlog
+    status: done   # v132g+h · CLI multi-provider 5 APIs (anthropic+openai+gemini+deepseek+minimax) + matriu N×20 + veredict
     estimated_cost_eur: 8.00
-    tags: ["sprint-v132g", "benchmark", "multi-provider", "prompt-efficiency"]
+    tags: ["sprint-v132g", "benchmark", "multi-provider", "prompt-efficiency", "done-v132h"]
 
   - id: "wo-project-hub-ia-aligned"
     project_id: "sos-dev-internal"
@@ -828,11 +832,16 @@ work_orders:
       wo-submenu-tabs-v2).
 
       Preview viu testable · /project-hub-v3-preview (post v134 commit).
+
+      v136 status · ✅ 6 tabs canonical visibles a /project/{id} via SubmenuTabs ·
+      cada pilar mostra grid de cards amb ?project=X. PENDENT v141+ · render
+      in-tab de les vistes (ara segueixen links externs) · cal SubmenuTabs v2
+      (sub-submenu 2-nivells · veure wo-submenu-tabs-v2-sublevel).
     priority: high
     complexity: L
-    status: backlog
+    status: in-progress   # v134+v136 · 6 tabs + grid links DONE · in-tab render PENDENT
     estimated_cost_eur: 18.00
-    tags: ["sprint-v136", "ux", "project-hub", "ia-alignment", "supersedes-wo-project-hub-subtabs"]
+    tags: ["sprint-v136", "ux", "project-hub", "ia-alignment", "supersedes-wo-project-hub-subtabs", "partial-v136"]
 
   - id: "wo-submenu-tabs-v2-sublevel"
     project_id: "sos-dev-internal"
@@ -910,9 +919,13 @@ work_orders:
 
       Beneficis · Quality contextual · l'usuari està treballant el projecte
       i veu la qualitat al costat · no ha de navegar fora.
+
+      v137 status · 🟡 PARCIAL · Quality visible al pilar Treballar com a
+      card (link a /quality?project=X). PENDENT · redirect /quality global +
+      treure de navService work category + render in-tab del rubric.
     priority: medium
     complexity: M
-    status: backlog
+    status: in-progress
     estimated_cost_eur: 6.00
     tags: ["sprint-v137", "ux", "quality", "project-hub", "treballar"]
 
@@ -943,6 +956,6 @@ work_orders:
       audit log + invitations flow.
     priority: high
     complexity: L
-    status: backlog
+    status: done   # v140 · teamService.js (RBAC + members + invitations + audit) + TeamView /team (5 tabs · matriu rol×acció) + nav entry
     estimated_cost_eur: 15.00
-    tags: ["sprint-v139-v140", "team", "permissions", "rbac", "new-view"]
+    tags: ["sprint-v139-v140", "team", "permissions", "rbac", "new-view", "done-v140"]
