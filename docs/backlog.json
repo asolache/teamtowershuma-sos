@@ -649,16 +649,18 @@
       "id": "wo-llm-local-train",
       "project_id": "sos-dev-internal",
       "title": "LLM local SOS entrenat amb skills + history",
-      "description": "Usuari Power amb GPU fa fine-tune d'un open-weight (llama, qwen)\namb · skills declarades, history WOs executades, deliverables.\nResultat · agent personal que coneix el seu estil. Sync Permaweb\nopcional per a versió pública.",
+      "description": "Usuari Power amb GPU fa fine-tune d'un open-weight (llama, qwen)\namb · skills declarades, history WOs executades, deliverables.\nResultat · agent personal que coneix el seu estil. Sync Permaweb\nopcional per a versió pública.\n\nv146 status · ✅ INFRASTRUCTURE DONE · 3 capes implementades ·\n · A · ollamaProvider.js · HTTP adapter local (compatible AI_MODELS · port 11434)\n · B · llmTrainingDataset.js · JSONL builder · 3 formats (alpaca · chatml · sharegpt)\n · C · scripts/export-training-dataset.mjs · CLI per a generar dataset des de KB local\n · Doc docs/llm-local-training.md · 3 capes (inference · few-shot · fine-tune)\n   + alternatives cloud GPU (Together · Modal · RunPod · HF AutoTrain) per a\n   users sense GPU local (cas @alvaro · Mac 2012 no pot fine-tune)\n\nPendent · WO específica per al wizard cloud-fine-tune (1-click upload\nTogether AI) · marcat com a v149+ al roadmap del doc.",
       "priority": "medium",
       "complexity": "XL",
-      "status": "backlog",
+      "status": "done",
       "estimated_cost_eur": 30,
       "tags": [
-        "sprint-v120",
+        "sprint-v146",
         "llm-local",
         "training",
-        "open-weight"
+        "open-weight",
+        "ollama",
+        "done-v146"
       ]
     },
     {

@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T23:00 · v145+v145b · 24/24 DOMAIN PACKS ENRICHED · 4 pilots v145 (sports-team · arts-performance · coop-cares · software-agency) + 20 packs v145b via scripts/enrich-domain-packs-v145b.mjs (edu-formation · religious-community · political-movement · art-collective · worker-coop · research-lab · food-coop · health-clinic · hotel-hospitality · construction · coworking · ecommerce · community-media · housing-coop · energy-coop · legal-advisory · artisan-craft · public-admin · ngo-humanitarian · maker-space) · cada un 5-8 deliverables_tangible + 5 transactions_canonical · prompt design-value-map-rich injecta blocs · PROMPT QUALITY HARNESS operatiu (CLI --harness + baseline comparison) · tanca wo-domain-packs-enrich-all';
+const BUILD_STAMP = '2026-05-21T00:00 · v146 · LLM LOCAL TRAINING infrastructure (wo-llm-local-train tancat) · 3 capes · A · ollamaProvider.js (HTTP adapter local · 6è provider de fet · ollamaGenerate · ollamaListModels · ollamaHealthCheck · makeOllamaProvider · 7 suggested models per a Mac 2012 incloent qwen2.5:3b · phi3:mini · llama3.2:3b) · B · llmTrainingDataset.js (JSONL builder · 3 formats · alpaca/chatml/sharegpt · 5 sources · skills + WOs + valueMaps + canvases + pitches) · C · scripts/export-training-dataset.mjs (CLI · --format · --max · --kb-file · meta companion) · doc llm-local-training.md amb cloud GPU alternatives (Together · Modal · RunPod · HF AutoTrain) · 67 asserts';
 
 export default class DesignSystemView {
 

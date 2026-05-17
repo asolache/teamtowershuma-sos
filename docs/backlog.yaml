@@ -605,11 +605,22 @@ work_orders:
       amb · skills declarades, history WOs executades, deliverables.
       Resultat · agent personal que coneix el seu estil. Sync Permaweb
       opcional per a versió pública.
+
+      v146 status · ✅ INFRASTRUCTURE DONE · 3 capes implementades ·
+       · A · ollamaProvider.js · HTTP adapter local (compatible AI_MODELS · port 11434)
+       · B · llmTrainingDataset.js · JSONL builder · 3 formats (alpaca · chatml · sharegpt)
+       · C · scripts/export-training-dataset.mjs · CLI per a generar dataset des de KB local
+       · Doc docs/llm-local-training.md · 3 capes (inference · few-shot · fine-tune)
+         + alternatives cloud GPU (Together · Modal · RunPod · HF AutoTrain) per a
+         users sense GPU local (cas @alvaro · Mac 2012 no pot fine-tune)
+
+      Pendent · WO específica per al wizard cloud-fine-tune (1-click upload
+      Together AI) · marcat com a v149+ al roadmap del doc.
     priority: medium
     complexity: XL
-    status: backlog
+    status: done   # v146 · 3 capes infrastructure · fine-tune real requereix cloud GPU (doc)
     estimated_cost_eur: 30.00
-    tags: ["sprint-v120", "llm-local", "training", "open-weight"]
+    tags: ["sprint-v146", "llm-local", "training", "open-weight", "ollama", "done-v146"]
 
   - id: "wo-permaweb-skills-share"
     project_id: "sos-dev-internal"
