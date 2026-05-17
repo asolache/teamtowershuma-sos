@@ -52,6 +52,19 @@ Sense markdown · sense codeblocks. JSON pur.`;
     return { system, user, variant: 'A', label: 'rich-context-v131c', approxTokens: Math.ceil((system.length + user.length) / 4) };
 }
 
+// buildVariantARealPrompt · v132b · async · usa el prompt REAL exacte de
+// vnaExpertPrompts.design-value-map-rich · per a comparació A/B perfecta amb
+// el que SOS V11 envia a la IA en producció.
+export async function buildVariantARealPrompt(context = {}) {
+    try {
+        const { buildPrompt } = await import('./vnaExpertPrompts.js');
+        const p = buildPrompt({ taskKind: 'design-value-map-rich', context });
+        return { system: p.system, user: p.user, variant: 'A', label: 'real-vna-expert-chain', approxTokens: p.approxTokens };
+    } catch (_) {
+        return buildVariantAPrompt(context);
+    }
+}
+
 // buildVariantBPrompt · estil "Sugerir con IA" /map · curt · focused
 // Pattern descobert via codeReview de ValueMapView._runAISuggestion
 export function buildVariantBPrompt({ name, description, sector, vna_zoom = 'mid' }) {

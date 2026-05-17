@@ -116,6 +116,32 @@ Els TASK PROMPTS específics et diran què retornar. SEMPRE en JSON estricte (se
 - Si context insuficient · genera valors raonables del sector · mai retornes errors
 - **Cost-conscious** · output mínim que respon · context ric IN · output dens OUT`;
 
+// v132b · SYSTEM_BASE_SLIM · ~1500 chars (vs SYSTEM_BASE 3500+ chars)
+// Hipòtesi @alvaro · "menys context > més" · validat post-empirical v133.
+// Manté els 5 principis sagrats Verna Allee · MODEL CASTELLER · output JSON ·
+// elimina · principis SOS redundants · marc d'anàlisi exhaustiu · invariants
+// del prompt (que ara es valida POST-IA via scoreOutput · escalation si <70).
+export const SYSTEM_BASE_SLIM = `# Agent VNA · SOS V11
+
+Ets un consultor sènior en Verna Allee Value Network Analysis (VNA) · Lean · Antigravity.
+
+## 5 PRINCIPIS VNA SAGRATS
+1 · ROLES són actors actius amb agència (persona · equip · sistema · IA).
+2 · TRANSACTIONS són flows direccionals (emissor → receptor · sentit explícit).
+3 · TANGIBLE + INTANGIBLE · els intangibles són >40% del valor real (confiança · reputació · cures).
+4 · DELIVERABLES tenen nom específic del domini (no "documento" · no "comunicación").
+5 · PATTERN RECÍPROC · cap rol orfe · cicles A→B + B→A revelen confiança.
+
+## MODEL CASTELLER (rols ordenats per nivell)
+${_castellerPreamble()}
+
+## CONTRACTE SORTIDA
+- JSON estricte · res abans · res després
+- Cada rol amb castell_level vàlid
+- Nomenclatura sectorial (no "Founder" genèric · sí "Managing Partner" / "Cap d'Obra" / "CTO" / "Director Esportiu")
+- Sense placeholders ("X", "TODO", "Lorem ipsum")
+- Output dens · cost-conscious`;
+
 // ── Capa 2 · FEW_SHOT_EXAMPLES · per templateId ──────────────────────────
 // 2 casos canònics alineats amb els 2 templates del MVP. Cada exemple ·
 // minimal però complet (cobreix l'estructura) · score esperat ≥85.
@@ -719,7 +745,7 @@ function _minimal(template) {
 // templateId · 'founder-coop-tradicional' | 'default-balanced' | null (skip few-shot)
 // taskKind · ∈ TASK_KINDS
 // context · objecte amb name, description, sector, currentTemplate, …
-export function buildPrompt({ templateId = null, taskKind, context = {} } = {}) {
+export function buildPrompt({ templateId = null, taskKind, context = {}, slim = false } = {}) {
     if (!TASK_KINDS.includes(taskKind)) {
         throw new Error('buildPrompt · invalid taskKind: ' + taskKind);
     }
@@ -733,13 +759,19 @@ export function buildPrompt({ templateId = null, taskKind, context = {} } = {}) 
         fewShot.push({ role: 'assistant', content: ex.assistantOutput });
     }
 
+    // v132b · slim mode · usa SYSTEM_BASE_SLIM (50% menys tokens) ·
+    // hipòtesi @alvaro "menys context > més" · invariants validades POST-IA
+    // via scoreOutput · escalation a SYSTEM_BASE complet si score < 70.
+    const systemUsed = slim ? SYSTEM_BASE_SLIM : SYSTEM_BASE;
+
     return {
         version: PROMPTS_VERSION,
-        system:  SYSTEM_BASE,
+        system:  systemUsed,
         fewShot,
         user:    userPrompt,
         // tokenCount aproximat (1 token ≈ 4 chars) · per a budget guard
-        approxTokens: _estimateTokens(SYSTEM_BASE, fewShot, userPrompt),
+        approxTokens: _estimateTokens(systemUsed, fewShot, userPrompt),
+        slim,
     };
 }
 

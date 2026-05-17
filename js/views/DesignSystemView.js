@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-19T04:00 · v132 CORE · promptABTestService (variant A rich-context v131c vs variant B minimal-suggest-ia) · scoreOutput pure mètriques objectives (roles · intangibles_pct · reciprocal_cycles · castell_coverage · score 0-100) · runABTest paral·lel · summarizeABTests dashboard · LMS API spec v0.1 (12 endpoints REST+xAPI · schema KB lms_content · auth SBT · Slicing Pie royalties · timeline v141-v144) · 59 asserts nous';
+const BUILD_STAMP = '2026-05-19T06:00 · v132b · DEEP ANALYSIS VNA · doc vna-deep-analysis-v132b.md (REAL prompt 2477 tokens vs MINIMAL 184 · 93% saving) · SYSTEM_BASE_SLIM nou (1549 chars vs 5823 · 43% reduction) · buildPrompt({slim:true}) opt-in · buildVariantARealPrompt async per a A/B honest · 6 gaps a alfa identificats + roadmap v132c→v140 · 34 asserts nous';
 
 export default class DesignSystemView {
 
