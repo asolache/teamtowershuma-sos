@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-19T02:00 · v132a · ARXIVAR projecte restaurat (UI perduda a v2) · botons Archive/Unarchive a /projects · NO trenca contabilitat (ledger append-only immutable) · doc canonical Slicing Pie Mike Moyer · LMS build-vs-OpenEdX educatiu @alvaro · 3 decisions resoltes (whitelist alfa · pricing @alvaro pocket-money amb multiplier alfa · LMS build hybrid scorm-again) · 42 asserts nous';
+const BUILD_STAMP = '2026-05-19T04:00 · v132 CORE · promptABTestService (variant A rich-context v131c vs variant B minimal-suggest-ia) · scoreOutput pure mètriques objectives (roles · intangibles_pct · reciprocal_cycles · castell_coverage · score 0-100) · runABTest paral·lel · summarizeABTests dashboard · LMS API spec v0.1 (12 endpoints REST+xAPI · schema KB lms_content · auth SBT · Slicing Pie royalties · timeline v141-v144) · 59 asserts nous';
 
 export default class DesignSystemView {
 
