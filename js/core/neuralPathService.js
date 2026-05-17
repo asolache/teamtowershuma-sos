@@ -104,11 +104,19 @@ export function buildNeuralPathStep({
 
 // appendStep · async · persisteix un step al KB · fire-and-forget per al caller
 //   Si kb no és proveït, prova d'importar el default.
+// v123-new · després de persistir, emet 'sos:neural-step' CustomEvent perquè
+//   /map · /mind · /learn?tab=mind puguin reaccionar (pulsejar el node visitat,
+//   refrescar comptadors, animar live-activity layer).
 export async function appendStep({ kb = null, ...args } = {}) {
     try {
         const k = kb || (await import('./kb.js')).KB;
         const step = buildNeuralPathStep(args);
         await k.upsert(step);
+        try {
+            if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                window.dispatchEvent(new CustomEvent('sos:neural-step', { detail: step }));
+            }
+        } catch (_) {}
         return step;
     } catch (e) {
         console.warn('[neural-path] appendStep failed', e?.message);

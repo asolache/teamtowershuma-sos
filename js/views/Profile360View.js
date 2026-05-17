@@ -459,16 +459,40 @@ export default class Profile360View {
                 render();
             }));
             modal.querySelector('[data-save]')?.addEventListener('click', async () => {
+                // FIX IKIGAI DEFINITIU (3a iteració) · save + verify + force re-render
+                // Bug previs · #124 case-handle · #130 DID fallback. Aquest fix garanteix
+                // que després de l'upsert · llegim de tornada via getNode (no query cached)
+                // i si la verificació falla · re-intent automàtic. Després · render() amb
+                // la versió fresca.
                 try {
                     const updated = applyIkigaiToMember(member, working);
                     await KB.upsert(updated);
+
+                    // Verificació · getNode directe per id · llegeix la versió que tothom veurà
+                    let verified = await KB.getNode(updated.id);
+                    if (!verified || !verified.content?.ikigai) {
+                        // Re-intent · pot ser race condition al primer upsert
+                        console.warn('[ikigai] verification FAIL · re-trying upsert', { id: updated.id });
+                        await KB.upsert(updated);
+                        verified = await KB.getNode(updated.id);
+                    }
+                    if (!verified || !verified.content?.ikigai) {
+                        // Encara falla · informa l'usuari amb error explícit
+                        throw new Error('persistència no verificada al KB · revisa Settings → Purgar');
+                    }
+
+                    // Actualitzem la referència en memòria · render() farà fresh query igualment
+                    member = verified;
                     const msg = modal.querySelector('[data-msg]');
-                    if (msg) { msg.textContent = '✓ Ikigai desat'; msg.style.color = '#22c55e'; }
-                    toast({ kind: 'success', text: '✓ Ikigai desat · persisteix al matriu_member' });
-                    setTimeout(() => { modal.remove(); this.render(); }, 400);
+                    if (msg) { msg.textContent = '✓ Ikigai desat + verificat'; msg.style.color = '#22c55e'; }
+                    toast({ kind: 'success', text: '✓ Ikigai desat · verificat al KB · persisteix entre sessions' });
+                    modal.remove();
+                    await this.render();   // re-render IMMEDIAT · sense setTimeout · llegirà el verified
                 } catch (e) {
+                    console.error('[ikigai] save failed', e);
                     const msg = modal.querySelector('[data-msg]');
                     if (msg) { msg.textContent = '✗ ' + (e?.message || 'error'); msg.style.color = '#ef4444'; }
+                    toast({ kind: 'error', text: '✘ Ikigai no s\'ha pogut desar · ' + (e?.message || 'error desconegut') });
                 }
             });
         };

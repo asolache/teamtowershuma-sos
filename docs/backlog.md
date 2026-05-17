@@ -178,9 +178,51 @@
 
 ### D · UX y robustez
 
+#### ✅ Hito · Sprint Creació Llegendari (16-17 mai 2026 · 13 PRs · #135-#147)
+
+Sessió marató · va portar la creació de projecte al nivell alfa-ready. Resultats:
+- **v99 · MANIFEST-DTD** · 94 asserts blindant manifest Agent SOS ↔ createProject
+- **v100-104 · AI-DRIVEN trilogia** · socMatcher + 3 task prompts + streaming + /create-live UI + wizard pre-form
+- **v105 · NAVBAR única V3** · 5 grups imperatius · bottom-nav deprecated · Cmd+K search
+- **v106 · /learn subhub** · 7 tabs absorbeixen sectors/mind/folders/tags
+- **v107 · CRITICAL FIXES** · A1 sessionStorage redirect · A2 pre-flight API key · B1 SOC fallback · C2 Cmd+K no acumulació
+- **v108 · brand-specific scope** · teamtowers-brand/merchandising fora del catàleg genèric
+- **v109 · prod bugs batch** · avatar dropdown · ESC search · navigateTo SPA · IA fallback log · sync draft · IA quality prompts
+- **v110 · LEGENDARY CREATION** · skeletons + celebració gold + jerarquia CTA + hero revamped
+- **v111 · NODE-VIEW MARKDOWN** · /n/{id} carrega knowledge/.md parsejat + GitHub link
+- **v112 · SECTOR ROLE NAMING** · 17 CNAE × 5 rols (CTO Founder · Cap d'Obra · Managing Partner...) zero cost IA
+- **v113 · IA DEFAULT ALL MODES** · light/standard/max sempre ai-driven · vna_zoom auto-mapping
+- **v114 · LEGENDARY ALL AMBITIONS** · banner + narrativa + budget + hint WOs adaptat per cada ambition
+- **v115 · IKIGAI FIX DEFINITIU + HUB legendary** · verify+retry+await render + zone 0 stats clau
+- **v116 · VNA PROMPTS QUALITY** · Verna Allee methodology explícita als prompts · sector_role_examples
+
+Bones pràctiques destil·lades · veure `knowledge/vision/best-practices-2026-05.md`.
+
+#### Pendents
+
 | ID | Visión | Notas |
 |---|---|---|
 | **wo-knowledge-index-scope-002** | **Revisar `knowledge/_index.md` · separar contenido brand-specific TeamTowers de universal** (S · 3€) | Mismo problema que con `teamtowers-brand.md` (resuelto en v102 con `scope: brand-specific`) aplica a SOPs y a otros bloques. NO PERDER ningún SOC/SOP — solo asociarlos al proyecto `teamtowers.eu` (brand_owner). Frontmatter `scope: brand-specific` + `brand_owner: teamtowers` a los SOPs operativos TT (fent-pinya, castellers-demo, la-colla operativa, merchandising, etc.). Update `socMatcher`/`sopMatcher` para filtrar. `_index.md` debe ser **guía completa de TODO knowledge que aporte valor a IA + usuarios** con tablas separadas Universal vs Brand-specific. Verificar también roles/clients/vision por si tienen el mismo issue. Tests: brand-specific NO aparece en proyectos genéricos · SÍ en proyectos TT auto-detected. |
+| **wo-mobile-mini-apps-PR-D** | **Mobile mini-app launcher** (L · 10€) · vista mobile separada (`@media max-width:768px`) amb bottom-nav de 5 mini-apps (📸 capturar · 🎯 check-in ikigai · 🐝 swarm · 🛒 mercat · 👤 identitat). Cada mini-app cobra crèdit per microacció (0.005-0.05€). Encaixa amb el ledger triple-entry. **Palanca de model de negoci recurrent**. |
+| **wo-hub-tabs-integration** | **Hub `/hub/{id}` mode tabs** (L · 8€) · igual que `/learn` · 7 tabs · overview (zone 0 actual) · mapa · sops · kanban · qualitat · ledger · lifecycle. Cada tab embed inline (no full separate view). Resol "DRY integrant altres vistes" feedback @alvaro. |
+| **wo-vna-prompts-evidence-loop** | **IA cita el sector role example al output** (S · 3€) · després de v116 · verificar que els SOPs/WOs generats realment usen el nomenclatura del sector_role_examples · si no · re-intent amb prompt reforçat. |
+| **wo-prompts-sector-deeper** | **Sub-sectors CNAE 2 dígits** (M · 5€) · J62 software vs J63 dades vs J60 broadcast tenen rols diferents · enriquir sectorRoleCatalog amb 2on nivell. |
+| **wo-quality-board-realtime** | **Quality board cross-projects** (M · 5€) · al hub orgwide veure tots els projectes amb rubric scores + tendència · prioritzar quins enriquir amb IA. |
+| **wo-design-tokens-refactor** | **PR-C postposat** (M · 7€) · escala typography centralitzada (`--text-xs`/`-sm`/`-md`...) + refactor SwarmFlowView + NeuralPathView + AccountingView (estils antics hardcoded). |
+| **wo-onboarding-momentum** | **Primer projecte amb tutorial inline** (M · 6€) · l'usuari nou veu tooltip a `/create-live` · "això és la IA seleccionant SOCs del knowledge real" · educa mentre crea. |
+
+#### 🆕 Sprint v120 · WOs estratègics (gen 2026-05-17 @alvaro)
+
+| ID | Visión | Notes |
+|---|---|---|
+| **wo-agent-md-pattern** | **Refactor TASK_PROMPTS → fitxers `agents/*.md` (AGENT.md convention + MCP standard)** (L · 12€) · cada task = 1 fitxer .md amb frontmatter YAML (model · tools · output_schema) + body markdown (system + user templates). Compatible amb qualsevol IA (passa el .md com a system prompt). Anthropic MCP per a tools agnostic. Resol "somos agnosticos de IA". Permet també editar prompts sense tocar codi JS. Plan · 1) docs/AGENTS-pattern.md · 2) carpeta agents/ amb 13 fitxers · 3) parser agents/{task}.md → struct · 4) vnaExpertPrompts.js delega a agents · 5) /prompts-debug llegeix .md. |
+| **wo-skills-ecosystem** | **Skills page rediseny + ecosistema complet** (L · 15€) · /skills nova UI integrada · skills assignades a WOs (ja generades v119) · plantilles offline (CSV/MD descarregables per a usuari sense connexió) · entrenament LLM local SOS (skills declarades pelo usuari per fine-tune) · permaweb-shared skills (broadcast skill profile a la xarxa per a swarm matchmaking distribuït). Activa "skills market" del backlog wave 3. |
+| **wo-llm-local-train** | **LLM local SOS entrenat amb skills + history** (XL · 30€) · usuari Power amb GPU pot fer fine-tune d'un model open-weight (llama, qwen) amb · skills declarades, history WOs executades, deliverables reviewed. Resultat · agent personal que coneix el seu estil. Sync a Permaweb opcional per a versió pública. |
+| **wo-permaweb-skills-share** | **Skills compartides via Permaweb** (M · 8€) · publica un "skill profile" signat ECDSA al permaweb · qualsevol SOS pot descobrir-te + invitar-te a un WO. Base del swarm distribuit. |
+| **wo-wallet-redesign** | **Wallet UI rediseny + balance live al navbar** (M · 7€) · nova vista /wallet · saldo balance live (KB query + cache 30s) · history transactions filtered · top-up flows · split entre saldo personal vs saldo per project · transferència entre projects. Navbar pill `sos-global-nav-wallet` mostra balance numèric real (no només "Saldo" text). |
+| **wo-orchestrator-expert-chain** | **Orchestrator coherent cadena 8 fases** (M · 8€) · avui ai-driven salta directament a SOC→SOP→WO. Ha d'executar prèviament · define-product-service → personalize-canvas (IKIGAI) → personalize-pitch → personalize-landing → design-value-map-rich → generate-socs-from-value-map → generate-sops-with-skills → generate-wos-from-sop. Doc canonical a `knowledge/vision/prompts-chain-plan.md`. |
+| **wo-prompt-router-by-tier** | **Router IA per cost · usa reasoner per design-value-map · mid per la resta · small per landing** (S · 4€) · mapeja cada TASK_KIND al model tier òptim · `'design-value-map-rich' → 'reasoner'` ·  estalvi · 30-50% cost mantenint qualitat top a la fase crítica. |
+| **wo-prompt-eval-loop** | **Evaluador automàtic post-IA · re-intent si rejected** (M · 6€) · cada output IA passa per un evaluator (rubric-based · score booleà) · si rejected · re-prompt amb "intenta de nou · va fallar X". Resol regressions silents. |
 | H1.6.1 | Enriquecer `proyecto-custom` y `charla-conferencia` con info real | Esperando input @alvaro |
 | H1.7.1 | Plantilla informe ejecutivo MD descargable post-La Colla | Aprovechar el caso IKEA como referencia |
 | H2.2 | Ficha detalle de taller con agenda Fent Pinya pre-cargada | UX |

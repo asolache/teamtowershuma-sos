@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-16T23:30 · v105 · NAVBAR única V3 · 5 grups (Crear/Treballar/Comptabilitzar/Connectar/Aprendre) · bottom-nav deprecated · Cmd+K search · 93 asserts';
+const BUILD_STAMP = '2026-05-17T23:30 · v124 · UX wallet ↔ pact bridge (panel pacte vigent · grid agreements · notarització permaweb) + 10 agents legals (pact · NDA · service · incubator · cohort · advisor · equity · LOI · term-sheet · IP) + legalAgentsCatalog · 186 asserts nous';
 
 export default class DesignSystemView {
 

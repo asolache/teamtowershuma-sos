@@ -1081,6 +1081,24 @@ export default class ValueMapView {
             self._populateSectorSelect();
         });
 
+        // v123-new · listener neural-path · cada step (visit/edit/ai-fill) pot
+        // pulsejar el node corresponent al mapa si està visible. Off per defecte
+        // (state.neuralBridge = false) · activable des de UI futura.
+        if (typeof window !== 'undefined' && !this._neuralListener) {
+            this._neuralListener = (ev) => {
+                if (!self._state || !self._state.neuralBridge) return;
+                const step = ev?.detail;
+                const id = step?.content?.refId;
+                if (!id) return;
+                const color = step.content.kind === 'edit'    ? '#22d3ee'
+                            : step.content.kind === 'ai-fill' ? '#fbbf24'
+                            : step.content.kind === 'create'  ? '#22c55e'
+                            : '#a78bfa';
+                try { self.pulseNode(id, { color, durationMs: 1400 }); } catch (_) {}
+            };
+            window.addEventListener('sos:neural-step', this._neuralListener);
+        }
+
         // Mostrar nombre del proyecto en topbar
         if (this._state.projectId) {
             const proj = (store.getState().projects || []).find(p => p.id === this._state.projectId);
@@ -3413,30 +3431,49 @@ ${ctxResult.systemPrompt}`;
         // Limpiar pulsos previos
         svg.selectAll('.vmap-flow-pulse').remove();
 
-        // Helper · resolver posición actual de un nodo por id
-        const nodeMap = new Map();
-        d3.selectAll('.node').each(function(d) { if (d && d.id) nodeMap.set(d.id, d); });
+        // v123-fix · resolver posición de nodos amb fallback resilient ·
+        // 1) datum d3 (.node bound data amb x/y del force layout)
+        // 2) atributs DOM (cx/cy o transform="translate(x,y)") si el datum falla
+        //    (passa amb layouts custom no-force i en tests amb DOM estàtic)
+        const nodeMap = this._buildNodeMap(d3);
+
+        // v123-new · pulseStyle ∈ 'dot' | 'deliverable' | 'glow'
+        // ─ 'dot'         · cercle simple (per defecte · low cost)
+        // ─ 'deliverable' · cercle + label amb el deliverable.name flotant
+        // ─ 'glow'        · cercle gran amb glow més intens (per a presentacions)
+        const pulseStyle = this._state.flowPulseStyle || 'dot';
+
+        // v123-new · mapeig transaction → deliverable (via deliverable_ref o
+        // similarity al name). El label viatja amb el pulse.
+        const txMap = new Map();
+        for (const t of (this._state.transactions || [])) {
+            if (t?.id) txMap.set(t.id, t);
+        }
+        const deliverableMap = new Map();
+        for (const d of (this._state.deliverables || [])) {
+            if (d?.id) deliverableMap.set(d.id, d);
+        }
 
         cycle.pulses.forEach((pulse) => {
             const fromNode = nodeMap.get(pulse.from);
             const toNode   = nodeMap.get(pulse.to);
-            if (!fromNode || !toNode) return;
+            if (!fromNode || !toNode) {
+                if (!this._state._animMissWarned) {
+                    this._state._animMissWarned = true;
+                    console.warn('[ValueMapView] flowAnim · node sense posició ·', { from: pulse.from, to: pulse.to, mapSize: nodeMap.size });
+                }
+                return;
+            }
             this._state.flowAnimTimer = setTimeout(() => {
                 if (!this._state.flowAnim) return;
-                const circle = grp.append('circle')
-                    .attr('class', 'vmap-flow-pulse')
-                    .attr('r', 5)
-                    .attr('fill', '#a5b4fc')
-                    .attr('opacity', 0.95)
-                    .attr('cx', fromNode.x || 0)
-                    .attr('cy', fromNode.y || 0)
-                    .style('filter', 'drop-shadow(0 0 6px rgba(165,180,252,0.9))');
-                circle.transition()
-                    .duration(pulse.duration)
-                    .ease(d3.easeCubicInOut)
-                    .attr('cx', () => (toNode.x || 0))
-                    .attr('cy', () => (toNode.y || 0))
-                    .on('end', () => circle.remove());
+                this._renderFlowPulse({
+                    d3, grp,
+                    from: fromNode, to: toNode,
+                    duration: pulse.duration,
+                    pulseStyle,
+                    transaction: pulse.transactionId ? txMap.get(pulse.transactionId) : null,
+                    deliverableMap,
+                });
             }, pulse.delay);
         });
 
@@ -3444,5 +3481,100 @@ ${ctxResult.systemPrompt}`;
         this._state.flowAnimTimer = setTimeout(() => {
             if (this._state.flowAnim) this._runFlowPulses();
         }, cycle.totalDuration + 100);
+    }
+
+    // v123-new · helper · construeix Map<id,{x,y,el}> resilient
+    _buildNodeMap(d3) {
+        const map = new Map();
+        d3.selectAll('.node').each(function(d) {
+            const el = this;
+            let id = d?.id;
+            let x  = (d && Number.isFinite(d.x)) ? d.x : null;
+            let y  = (d && Number.isFinite(d.y)) ? d.y : null;
+            // Fallback · llegir id de data attr si datum buit
+            if (!id && el?.getAttribute) id = el.getAttribute('data-id') || el.getAttribute('id');
+            // Fallback · llegir cx/cy o transform si x/y no estan disponibles
+            if (x == null || y == null) {
+                if (el?.getAttribute) {
+                    const cx = el.getAttribute('cx');
+                    const cy = el.getAttribute('cy');
+                    if (cx != null && cy != null) { x = parseFloat(cx); y = parseFloat(cy); }
+                    if (x == null || y == null) {
+                        const tr = el.getAttribute('transform') || '';
+                        const m = tr.match(/translate\(([-\d.]+)[ ,]([-\d.]+)\)/);
+                        if (m) { x = parseFloat(m[1]); y = parseFloat(m[2]); }
+                    }
+                }
+            }
+            if (id && Number.isFinite(x) && Number.isFinite(y)) {
+                map.set(id, { id, x, y, el });
+            }
+        });
+        return map;
+    }
+
+    // v123-new · helper · render un pulse individual segons style
+    _renderFlowPulse({ d3, grp, from, to, duration, pulseStyle, transaction, deliverableMap }) {
+        const styleConfig = {
+            dot:         { r: 5,  glow: 6,  color: '#a5b4fc' },
+            deliverable: { r: 6,  glow: 8,  color: '#fbbf24' },
+            glow:        { r: 9,  glow: 18, color: '#22d3ee' },
+        };
+        const cfg = styleConfig[pulseStyle] || styleConfig.dot;
+        const g = grp.append('g').attr('class', 'vmap-flow-pulse');
+        const circle = g.append('circle')
+            .attr('r', cfg.r)
+            .attr('fill', cfg.color)
+            .attr('opacity', 0.95)
+            .attr('cx', from.x).attr('cy', from.y)
+            .style('filter', `drop-shadow(0 0 ${cfg.glow}px ${cfg.color}cc)`);
+
+        // 'deliverable' style · afegir label volant amb el deliverable name
+        let label = null;
+        if (pulseStyle === 'deliverable' && transaction) {
+            const delId = transaction.deliverable_ref || (transaction.deliverables || [])[0];
+            const del = delId ? deliverableMap.get(delId) : null;
+            const txt = del?.name || transaction.label || transaction.kind || '';
+            if (txt) {
+                label = g.append('text')
+                    .attr('x', from.x + 10).attr('y', from.y - 6)
+                    .attr('font-size', '10px').attr('font-family', 'var(--font-mono, monospace)')
+                    .attr('fill', '#fbbf24').attr('opacity', 0.92)
+                    .attr('pointer-events', 'none')
+                    .text(String(txt).slice(0, 24));
+            }
+        }
+
+        const t = circle.transition().duration(duration).ease(d3.easeCubicInOut)
+            .attr('cx', to.x).attr('cy', to.y);
+        if (label) {
+            label.transition().duration(duration).ease(d3.easeCubicInOut)
+                .attr('x', to.x + 10).attr('y', to.y - 6);
+        }
+        t.on('end', () => g.remove());
+    }
+
+    // v123-new · API pública per a bridge amb /path · marca un node com a
+    // "activat" pel patró neuronal (visit, edit, ai-fill) i fa un single-pulse
+    // glow al node. Útil per a la vista "live activity" del mind map.
+    pulseNode(nodeId, { color = '#a78bfa', durationMs = 1200 } = {}) {
+        if (!window.d3 || !this._svg) return false;
+        const d3 = window.d3;
+        const map = this._buildNodeMap(d3);
+        const node = map.get(nodeId);
+        if (!node) return false;
+        const grp = d3.select(this._svg).select('g.vmap-graph-grp').node()
+            ? d3.select(this._svg).select('g.vmap-graph-grp')
+            : d3.select(this._svg).select('g');
+        const ring = grp.append('circle')
+            .attr('class', 'vmap-node-pulse')
+            .attr('cx', node.x).attr('cy', node.y)
+            .attr('r', 8).attr('fill', 'none')
+            .attr('stroke', color).attr('stroke-width', 2)
+            .attr('opacity', 0.9);
+        ring.transition().duration(durationMs).ease(d3.easeCubicOut)
+            .attr('r', 36).attr('opacity', 0)
+            .on('end', () => ring.remove());
+        return true;
     }
 }

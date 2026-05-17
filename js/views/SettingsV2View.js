@@ -549,8 +549,9 @@ export default class SettingsV2View {
                 backupStatus('⏳ Llegint fitxer...', 'warn');
                 const snap = await readSnapshotFromFile(file);
                 const result = await importSnapshot(snap, { mode: 'merge' });
-                backupStatus('✓ Snapshot importat · ' + (result?.imported || 0) + ' nodes', 'ok');
-                toast({ kind: 'success', text: 'Snapshot importat · refresca per veure dades' });
+                const summary = (result?.imported || 0) + ' nodes' + (result?.projectsMerged ? ' · ' + result.projectsMerged + ' projectes nous' : '');
+                backupStatus('✓ Snapshot importat · ' + summary, 'ok');
+                toast({ kind: 'success', text: '✓ Snapshot importat · ' + summary + ' · ja visible sense refresc' });
                 e.target.value = '';
             } catch (err) {
                 backupStatus('✗ Error · ' + (err?.message || err), 'err');

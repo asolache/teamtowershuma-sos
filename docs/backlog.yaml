@@ -560,3 +560,122 @@ work_orders:
     deliverable_uri: "git:HEAD..iaHierarchicalService+test"
     dependencies: ["wo-soc-dual-001"]
     tags: ["batch-4", "ia-cost"]
+
+# ─── Sprint v120 WOs estratègics (afegit 2026-05-17 @alvaro) ────────────
+
+  - id: "wo-agent-md-pattern"
+    project_id: "sos-dev-internal"
+    title: "Refactor TASK_PROMPTS → fitxers agents/*.md (AGENT.md convention + MCP)"
+    description: |
+      Cada task = 1 fitxer .md amb frontmatter YAML (model · tools ·
+      output_schema) + body markdown (system + user templates). Compatible
+      amb qualsevol IA (passa el .md com a system prompt). Anthropic MCP
+      per a tools agnostic. Resol "somos agnosticos de IA". Permet editar
+      prompts sense tocar codi JS. Plan · 1) docs/AGENTS-pattern.md ·
+      2) carpeta agents/ amb 13 fitxers · 3) parser agents/{task}.md →
+      struct · 4) vnaExpertPrompts.js delega a agents · 5) /prompts-debug
+      llegeix .md.
+    priority: high
+    complexity: L
+    status: backlog
+    estimated_cost_eur: 12.00
+    tags: ["sprint-v120", "ia-agnostic", "mcp", "agent-md"]
+
+  - id: "wo-skills-ecosystem"
+    project_id: "sos-dev-internal"
+    title: "Skills page redisseny + ecosistema complet"
+    description: |
+      /skills nova UI integrada · skills assignades a WOs (ja generades
+      v119) · plantilles offline (CSV/MD descarregables) · entrenament
+      LLM local SOS · permaweb-shared skills (broadcast skill profile
+      signat ECDSA per a swarm matchmaking distribuit). Activa "skills
+      market" wave 3.
+    priority: high
+    complexity: L
+    status: backlog
+    estimated_cost_eur: 15.00
+    dependencies: ["wo-llm-local-train", "wo-permaweb-skills-share"]
+    tags: ["sprint-v120", "skills", "ecosystem"]
+
+  - id: "wo-llm-local-train"
+    project_id: "sos-dev-internal"
+    title: "LLM local SOS entrenat amb skills + history"
+    description: |
+      Usuari Power amb GPU fa fine-tune d'un open-weight (llama, qwen)
+      amb · skills declarades, history WOs executades, deliverables.
+      Resultat · agent personal que coneix el seu estil. Sync Permaweb
+      opcional per a versió pública.
+    priority: medium
+    complexity: XL
+    status: backlog
+    estimated_cost_eur: 30.00
+    tags: ["sprint-v120", "llm-local", "training", "open-weight"]
+
+  - id: "wo-permaweb-skills-share"
+    project_id: "sos-dev-internal"
+    title: "Skills compartides via Permaweb · swarm distribuit"
+    description: |
+      Publica un "skill profile" signat ECDSA al permaweb · qualsevol
+      SOS pot descobrir-te + invitar-te a un WO. Base swarm distribuit.
+    priority: medium
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 8.00
+    tags: ["sprint-v120", "permaweb", "skills", "swarm"]
+
+  - id: "wo-wallet-redesign"
+    project_id: "sos-dev-internal"
+    title: "Wallet UI redisseny + balance live al navbar"
+    description: |
+      Nova vista /wallet · saldo balance live (KB query + cache 30s) ·
+      history transactions · top-up flows · split saldo personal vs
+      project · transferència entre projects. Navbar pill mostra balance
+      numèric real (no només "Saldo" text).
+    priority: high
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 7.00
+    tags: ["sprint-v120", "wallet", "ux"]
+
+  - id: "wo-orchestrator-expert-chain"
+    project_id: "sos-dev-internal"
+    title: "Orchestrator coherent cadena 8 fases prompts"
+    description: |
+      Avui ai-driven salta directament a SOC→SOP→WO. Ha d'executar prèviament ·
+      define-product-service → personalize-canvas (IKIGAI) → personalize-pitch
+      → personalize-landing → design-value-map-rich → generate-socs-from-value-map
+      → generate-sops-with-skills → generate-wos-from-sop. Doc canonical a
+      knowledge/vision/prompts-chain-plan.md.
+    priority: critical
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 8.00
+    dependencies: []
+    tags: ["sprint-v120", "orchestrator", "prompts-chain"]
+
+  - id: "wo-prompt-router-by-tier"
+    project_id: "sos-dev-internal"
+    title: "Router IA per cost · mapeig TASK_KIND → model tier"
+    description: |
+      Router que mapeja cada TASK_KIND al model tier òptim ·
+      design-value-map-rich → reasoner (opus, r1) ·
+      personalize-* → mid (sonnet, deepseek-v3) ·
+      landing/canvas text → small (haiku, flash). Estalvi 30-50%.
+    priority: medium
+    complexity: S
+    status: backlog
+    estimated_cost_eur: 4.00
+    tags: ["sprint-v120", "cost-optim", "router"]
+
+  - id: "wo-prompt-eval-loop"
+    project_id: "sos-dev-internal"
+    title: "Evaluador automàtic post-IA · re-intent si rejected"
+    description: |
+      Cada output IA passa per un evaluator (rubric-based score booleà) ·
+      si rejected · re-prompt amb "intenta de nou · va fallar X". Resol
+      regressions silents.
+    priority: medium
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 6.00
+    tags: ["sprint-v120", "quality", "eval-loop"]

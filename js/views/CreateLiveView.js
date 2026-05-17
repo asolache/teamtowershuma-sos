@@ -22,6 +22,7 @@ import { createProject } from '../core/projectCreationOrchestrator.js';
 import { buildAiCallbacks } from '../core/aiDrivenCreationAdapter.js';
 import { loadIndex } from '../core/knowledgeIndexService.js';
 import { toast } from '../core/uxComponents.js';
+import { runExpertChain, CHAIN_PHASES } from '../core/expertChainOrchestrator.js';
 
 const CASTELL_ORDER = ['pom_de_dalt', 'tronc', 'pinya', 'laterals', 'mans', 'baixos'];
 const CASTELL_LABEL = {
@@ -63,8 +64,12 @@ export default class CreateLiveView {
             this._payload = raw ? JSON.parse(raw) : null;
         } catch (_) { this._payload = null; }
 
+        // FIX A1 · sessionStorage buit (refresh, deep-link) → redirect /create
+        // amb toast d'avís. Abans · pantalla buida encallada.
         if (!this._payload || !this._payload.name) {
+            try { toast({ kind: 'warning', text: 'Cal omplir el formulari primer · redirigint a /create', ttl: 3000 }); } catch (_) {}
             this._renderEmpty();
+            setTimeout(() => { (window.navigateTo || ((u) => window.location.href = u))('/create'); }, 1500);
             return;
         }
 
@@ -76,7 +81,7 @@ export default class CreateLiveView {
             });
         });
         document.getElementById('clCancelBtn')?.addEventListener('click', () => {
-            window.location.href = '/create';
+            (window.navigateTo || ((u) => window.location.href = u))('/create');
         });
 
         // Render header
@@ -86,14 +91,54 @@ export default class CreateLiveView {
         document.getElementById('clAmbition').textContent = this._payload.ambition || 'light';
         document.getElementById('clZoom').textContent = this._payload.vna_zoom || 'mid';
         document.getElementById('clEntityType').textContent = this._payload.entity_type || 'auto';
-        document.getElementById('clGenMode').textContent = this._payload.generationMode || 'ai-driven';
+
+        // AMBITION BANNER + NARRATIVE (legendary-all-ambitions sprint)
+        this._renderAmbitionHero();
 
         // Llançar pipeline · streaming
         await this._runPipeline();
     }
 
+    // _renderAmbitionHero · personalitza banner + narrativa + budget per ambition
+    _renderAmbitionHero() {
+        const amb = this._payload.ambition || 'light';
+        const profiles = {
+            light: {
+                icon: '✏️', label: 'LIGHT · ràpid',
+                narrative: 'Un projecte funcional en menys d\'1 minut · 1-3 SOCs essencials del knowledge · SOPs mínimes per arrencar. Perfect per validar idees abans d\'invertir més.',
+                budget: '~0.005€',
+            },
+            standard: {
+                icon: '⚡', label: 'STANDARD · construcció completa',
+                narrative: 'El sweet spot · 4-7 SOCs equilibrats · SOPs amb steps detallats · canvas + pitch personalitzats. Llest per arrencar el primer sprint amb confiança.',
+                budget: '~0.015€',
+            },
+            max: {
+                icon: '🏆', label: 'MAX · mega producte',
+                narrative: 'L\'experiència total · 8-15 SOCs profunds · SOPs detallades · Work Orders executables al Kanban · canvas + pitch + landing. Operació al complet des del minut 1.',
+                budget: '~0.030€',
+            },
+        };
+        const p = profiles[amb] || profiles.light;
+        const banner = document.getElementById('clAmbitionBanner');
+        if (banner) banner.classList.add('cl-amb-' + amb);
+        const icon = document.getElementById('clAmbitionIcon');
+        if (icon) icon.textContent = p.icon;
+        const lbl = document.getElementById('clAmbitionLabel');
+        if (lbl) lbl.textContent = p.label;
+        const narr = document.getElementById('clNarrative');
+        if (narr) narr.textContent = p.narrative;
+        const budget = document.getElementById('clBudget');
+        if (budget) budget.textContent = p.budget;
+    }
+
     async _runPipeline() {
         const p = this._payload;
+
+        // v122 · expert-chain · 8 fases coherents · usa runExpertChain orquestrador
+        if (p.generationMode === 'expert-chain') {
+            return this._runExpertChainPipeline();
+        }
 
         // Carrega index knowledge per al matcher (no bloca si falla · matcher ho gestiona)
         let knowledgeIndex = null;
@@ -128,6 +173,20 @@ export default class CreateLiveView {
             this._result = result;
             this._finished = true;
 
+            // FIX bug 5 · sync immediat dels tabs preview amb el result final ·
+            // (els events del pipeline arriben ABANS que this._result existeixi ·
+            // sense aquesta crida explícita els tabs queden buits per sempre)
+            this._draft.roles        = this._result.project?.vna_roles || [];
+            this._draft.transactions = this._result.transactions || [];
+            this._draft.deliverables = this._result.deliverables || [];
+            this._draft.canvas       = this._result.canvas || null;
+            this._draft.pitch        = this._result.pitch || null;
+            this._draft.sops         = (this._result.sops || []).map(s => s.content || s);
+            this._draft.socs         = (this._result.socs || []).map(s => s.content || s);
+            this._draft.wos          = (this._result.wos || []).map(w => w.content || w);
+            this._draft.socsSelected = this._result.socsSelected || [];
+            this._renderTabs();
+
             // Persist si ok
             if (result.ok) {
                 await KB.upsert(result.project);
@@ -148,6 +207,116 @@ export default class CreateLiveView {
         } catch (e) {
             this._appendEvent({ step: 'error', status: 'error', error: e?.message || String(e) });
             toast({ kind: 'error', text: '✘ Error creant projecte · ' + (e?.message || e), ttl: 8000 });
+        }
+    }
+
+    // v122 · runExpertChainPipeline · alternativa a createProject que executa
+    // les 8 fases canòniques del prompts-chain-plan (define-product → wos) ·
+    // delega tot al runExpertChain orquestrador. El resultat es persisteix
+    // directament al KB sense passar pel pipeline classify→seed→match clàssic.
+    async _runExpertChainPipeline() {
+        const p = this._payload;
+        try {
+            const { generateWithProvider } = await import('../core/aiProviderService.js');
+            const ambition = p.ambition || 'standard';
+            const maxCostEur = ambition === 'max' ? 0.10 : ambition === 'standard' ? 0.05 : 0.02;
+
+            const context = {
+                name:         p.name,
+                description:  p.description || '',
+                sector:       p.sector || null,
+                ambition,
+                vna_zoom:     p.vna_zoom || 'mid',
+                entity_type:  p.entity_type || 'business',
+                lifecycle_stage: p.lifecycle_stage || 'idea',
+            };
+
+            this._appendEvent({ step: 'expert-chain', status: 'start', phases: CHAIN_PHASES.length });
+
+            const out = await runExpertChain({
+                context,
+                generateWithProvider,
+                preferredProvider: p.preferredProvider || null,
+                maxCostEur,
+                onEvent: (e) => this._handleEvent(e),
+            });
+
+            // Sync draft amb output complet
+            this._draft.canvas       = out.canvas || null;
+            this._draft.pitch        = out.pitch || null;
+            this._draft.sops         = (out.sops || []);
+            this._draft.socs         = (out.socs || []);
+            this._draft.wos          = (out.wos || []);
+            this._draft.socsSelected = (out.socs || []).map(s => s.id).filter(Boolean);
+            this._draft.score        = Math.max(0, Math.min(100, 60 + (out.phasesRun.length * 5) - (out.phaseErrors.length * 10)));
+            this._draft.status       = this._draft.score >= 85 ? 'gold' : this._draft.score >= 70 ? 'silver' : 'bronze';
+            this._renderTabs();
+            this._renderQualityGauge();
+
+            // Persistència KB · projecte + roles + sops + socs + wos
+            const projectId = (p.name || 'projecte').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) + '-' + Date.now().toString(36);
+            const projectNode = {
+                id: projectId,
+                kind: 'project',
+                content: {
+                    title: p.name,
+                    description: p.description || '',
+                    sector: p.sector || null,
+                    ambition,
+                    vna_zoom: p.vna_zoom || 'mid',
+                    entity_type: p.entity_type || 'business',
+                    generationMode: 'expert-chain',
+                    canvas: out.canvas,
+                    pitch: out.pitch,
+                    landing: out.landing,
+                    value_map: out.valueMap,
+                    presentation_hints: out.presentationHints || null,
+                    vna_roles: (out.valueMap?.roles || []),
+                    expert_chain_version: 'v1.0',
+                    cost_eur: out.costTotal,
+                    phases_run: out.phasesRun,
+                    phases_skipped: out.phasesSkipped,
+                    phase_errors: out.phaseErrors,
+                },
+                created_at: new Date().toISOString(),
+            };
+
+            await KB.upsert(projectNode);
+            for (const soc of (out.socs || [])) {
+                await KB.upsert({ id: soc.id || ('soc-' + Math.random().toString(36).slice(2,8)), kind: 'soc', content: { ...soc, project_ref: projectId } });
+            }
+            for (const sop of (out.sops || [])) {
+                await KB.upsert({ id: sop.id || ('sop-' + Math.random().toString(36).slice(2,8)), kind: 'sop', content: { ...sop, project_ref: projectId } });
+            }
+            for (const wo of (out.wos || [])) {
+                await KB.upsert({ id: wo.id || ('wo-' + Math.random().toString(36).slice(2,8)), kind: 'wo', content: { ...wo, project_ref: projectId, status: 'todo' } });
+            }
+            await store.dispatch({ type: 'CREATE_PROJECT', payload: projectNode });
+
+            const result = {
+                ok: out.phaseErrors.length === 0,
+                score: this._draft.score,
+                status: this._draft.status,
+                project: projectNode,
+                roles: (out.valueMap?.roles || []),
+                sops: (out.sops || []).map(s => ({ content: s })),
+                socs: (out.socs || []).map(s => ({ content: s })),
+                wos:  (out.wos  || []).map(w => ({ content: w })),
+                cost: out.costTotal,
+                integrity: { ok: out.phaseErrors.length === 0, errorCount: out.phaseErrors.length },
+                missing: out.phaseErrors.map(e => e.phase),
+            };
+            this._result = result;
+            this._finished = true;
+            this._appendEvent({ step: 'finish', status: 'done', cost: out.costTotal, phases: out.phasesRun.length });
+            this._renderFinishBar(result);
+            toast({ kind: out.phaseErrors.length === 0 ? 'success' : 'warning',
+                    text: `✓ Expert-chain · ${out.phasesRun.length}/${CHAIN_PHASES.length} fases · ${out.costTotal.toFixed(4)}€`,
+                    ttl: 4500 });
+            sessionStorage.removeItem('createLivePayload');
+        } catch (e) {
+            this._appendEvent({ step: 'error', status: 'error', error: e?.message || String(e) });
+            toast({ kind: 'error', text: '✘ Expert-chain · ' + (e?.message || e), ttl: 8000 });
         }
     }
 
@@ -334,7 +503,18 @@ export default class CreateLiveView {
 
     _htmlTabCastell() {
         const roles = this._draft.roles;
-        if (!roles.length) return `<div class="cl-empty-tab">— Esperant rols del pipeline... —</div>`;
+        if (!roles.length) {
+            // Skeleton · suggereix què veurà l'usuari quan s'ompli
+            return `<div class="cl-skel-castell">
+                <div class="cl-skel-hint">🏰 El teu castell de rols apareixerà aquí · jerarquia per nivells (pom_de_dalt → baixos)</div>
+                ${CASTELL_ORDER.map(lvl => `
+                    <div class="cl-skel-row">
+                        <div class="cl-skel-label">${CASTELL_LABEL[lvl]}</div>
+                        <div class="cl-skel-pill"></div>
+                        <div class="cl-skel-pill" style="width:80px;"></div>
+                    </div>`).join('')}
+            </div>`;
+        }
         const byLevel = {};
         for (const r of roles) {
             const lvl = r.castell_level || 'pinya';
@@ -346,7 +526,7 @@ export default class CreateLiveView {
                     <div class="cl-castell-row">
                         <div class="cl-castell-lbl">${CASTELL_LABEL[lvl]}</div>
                         <div class="cl-castell-roles">
-                            ${(byLevel[lvl] || []).map(r => `<span class="cl-role-pill">${this._esc(r.name || r.id)}</span>`).join('') || '<span class="cl-role-empty">—</span>'}
+                            ${(byLevel[lvl] || []).map(r => `<span class="cl-role-pill cl-fade-in">${this._esc(r.name || r.id)}</span>`).join('') || '<span class="cl-role-empty">—</span>'}
                         </div>
                     </div>
                 `).join('')}
@@ -356,7 +536,16 @@ export default class CreateLiveView {
     _htmlTabMapa() {
         const txs = this._draft.transactions;
         const roles = this._draft.roles;
-        if (!txs.length) return `<div class="cl-empty-tab">— Esperant transaccions... —</div>`;
+        if (!txs.length) {
+            return `<div class="cl-skel-mapa">
+                <div class="cl-skel-hint">📊 El mapa de valor mostrarà aquí les transaccions entre rols · tangibles vs intangibles · mètriques Lean</div>
+                <div class="cl-mapa-summary">
+                    <span class="cl-pill cl-skel-pulse">— tangibles</span>
+                    <span class="cl-pill cl-skel-pulse">— intangibles</span>
+                </div>
+                ${[1,2,3].map(() => `<div class="cl-skel-tx"></div>`).join('')}
+            </div>`;
+        }
         const tangibleCount = txs.filter(t => t.type === 'tangible').length;
         const intangibleCount = txs.filter(t => t.type === 'intangible').length;
         return `
@@ -368,7 +557,7 @@ export default class CreateLiveView {
             </div>
             <div class="cl-mapa-list">
                 ${txs.map(t => `
-                    <div class="cl-tx-row">
+                    <div class="cl-tx-row cl-fade-in">
                         <span class="cl-tx-from">${this._esc(t.from || '')}</span>
                         <span class="cl-tx-arrow">→</span>
                         <span class="cl-tx-to">${this._esc(t.to || '')}</span>
@@ -383,24 +572,35 @@ export default class CreateLiveView {
     _htmlTabCanvas() {
         const c = this._draft.canvas;
         const p = this._draft.pitch;
-        if (!c && !p) return `<div class="cl-empty-tab">— Esperant canvas/pitch... —</div>`;
+        if (!c && !p) {
+            return `<div class="cl-skel-canvas">
+                <div class="cl-skel-hint">🎨 Canvas + Pitch apareixerà aquí · visió, missió, valors, stakeholders + pitch 6 seccions</div>
+                <h3 style="opacity:0.4;">Canvas</h3>
+                ${['Visió', 'Missió', 'Valors', 'Stakeholders', 'North Star'].map(l => `
+                    <div class="cl-canvas-block">
+                        <strong style="opacity:0.5;">${l}</strong>
+                        <div class="cl-skel-line"></div>
+                        <div class="cl-skel-line" style="width:60%;"></div>
+                    </div>`).join('')}
+            </div>`;
+        }
         return `
             <div class="cl-canvas">
                 ${c ? `
                     <h3>Canvas</h3>
-                    <div class="cl-canvas-block"><strong>Visió</strong><p>${this._esc(c.vision || '')}</p></div>
-                    <div class="cl-canvas-block"><strong>Missió</strong><p>${this._esc(c.mission || '')}</p></div>
-                    <div class="cl-canvas-block"><strong>Valors</strong><p>${(c.values || []).map(v => this._esc(v)).join(' · ')}</p></div>
-                    <div class="cl-canvas-block"><strong>Stakeholders</strong><p>${(c.stakeholders || []).map(s => this._esc(s)).join(' · ')}</p></div>
-                    <div class="cl-canvas-block"><strong>North Star</strong><p>${this._esc(c.northStar || '')}</p></div>
+                    <div class="cl-canvas-block cl-fade-in"><strong>Visió</strong><p>${this._esc(c.vision || '')}</p></div>
+                    <div class="cl-canvas-block cl-fade-in"><strong>Missió</strong><p>${this._esc(c.mission || '')}</p></div>
+                    <div class="cl-canvas-block cl-fade-in"><strong>Valors</strong><p>${(c.values || []).map(v => this._esc(v)).join(' · ')}</p></div>
+                    <div class="cl-canvas-block cl-fade-in"><strong>Stakeholders</strong><p>${(c.stakeholders || []).map(s => this._esc(s)).join(' · ')}</p></div>
+                    <div class="cl-canvas-block cl-fade-in"><strong>North Star</strong><p>${this._esc(c.northStar || '')}</p></div>
                 ` : ''}
                 ${p ? `
                     <h3>Pitch</h3>
-                    <div class="cl-canvas-block"><strong>Headline</strong><p>${this._esc(p.headline || '')}</p></div>
-                    <div class="cl-canvas-block"><strong>Problem</strong><p>${this._esc(p.problem || '')}</p></div>
-                    <div class="cl-canvas-block"><strong>Solution</strong><p>${this._esc(p.solution || '')}</p></div>
-                    <div class="cl-canvas-block"><strong>Market</strong><p>${this._esc(p.market || '')}</p></div>
-                    <div class="cl-canvas-block"><strong>Business</strong><p>${this._esc(p.business || '')}</p></div>
+                    <div class="cl-canvas-block cl-fade-in"><strong>Headline</strong><p>${this._esc(p.headline || '')}</p></div>
+                    <div class="cl-canvas-block cl-fade-in"><strong>Problem</strong><p>${this._esc(p.problem || '')}</p></div>
+                    <div class="cl-canvas-block cl-fade-in"><strong>Solution</strong><p>${this._esc(p.solution || '')}</p></div>
+                    <div class="cl-canvas-block cl-fade-in"><strong>Market</strong><p>${this._esc(p.market || '')}</p></div>
+                    <div class="cl-canvas-block cl-fade-in"><strong>Business</strong><p>${this._esc(p.business || '')}</p></div>
                 ` : ''}
             </div>`;
     }
@@ -409,15 +609,26 @@ export default class CreateLiveView {
         const wos = this._draft.wos;
         const sops = this._draft.sops;
         const isAi = (this._payload?.generationMode === 'ai-driven');
+        const amb = this._payload?.ambition || 'standard';
         if (!wos.length && !sops.length) {
-            return `<div class="cl-empty-tab">— ${isAi ? 'Esperant WOs de la IA...' : 'Mode template · activa "ai-driven" per generar WOs'} —</div>`;
+            // Hint adaptat per ambition · light/macro NO promet WOs perquè no s'inclouen
+            const hintByAmb = {
+                light: '✏️ MODE LIGHT · SOPs essencials apareixeran aquí. Per a Work Orders executables · puja a STANDARD o MAX (cost més alt · qualitat més detallada).',
+                standard: '⚡ MODE STANDARD · SOPs amb steps detallats + Work Orders al Kanban apareixeran aquí.',
+                max: '🏆 MODE MAX · SOPs profundes + WOs concrets amb DTD test booleà · llests per arrencar el primer sprint.',
+            };
+            const hint = isAi ? (hintByAmb[amb] || hintByAmb.standard) : 'Mode template · activa "ai-driven" per generar WOs';
+            return `<div class="cl-skel-wos">
+                <div class="cl-skel-hint">${hint}</div>
+                ${[1,2,3].map(() => `<div class="cl-skel-wo"><div class="cl-skel-line" style="width:70%;"></div><div class="cl-skel-line" style="width:40%;"></div></div>`).join('')}
+            </div>`;
         }
         return `
             ${sops.length ? `
                 <h4>SOPs · ${sops.length}</h4>
                 <div class="cl-sop-list">
                     ${sops.map(s => `
-                        <div class="cl-sop-row">
+                        <div class="cl-sop-row cl-fade-in">
                             <strong>${this._esc(s.title || s.id || '?')}</strong>
                             <span class="cl-sop-role">@${this._esc(s.role_ref || s.roleId || '?')}</span>
                             <span class="cl-sop-steps">${(s.steps || []).length} steps</span>
@@ -429,7 +640,7 @@ export default class CreateLiveView {
                 <h4 style="margin-top:14px;">Work Orders · ${wos.length}</h4>
                 <div class="cl-wo-list">
                     ${wos.map(w => `
-                        <div class="cl-wo-row">
+                        <div class="cl-wo-row cl-fade-in">
                             <strong>${this._esc(w.title || w.id)}</strong>
                             <span class="cl-wo-meta">SOP ${this._esc(w.sop_ref || '?')} · ${w.estimated_hours || '?'}h · ${this._esc(w.approval_rule || 'manual')}</span>
                             <p class="cl-wo-desc">${this._esc((w.description || '').slice(0, 200))}</p>
@@ -444,19 +655,38 @@ export default class CreateLiveView {
         const pid = result.project.id;
         const el = document.getElementById('clFinishBar');
         if (!el) return;
+        const isGold = result.score >= 85;
+        const amb = this._payload?.ambition || 'standard';
+        const statusEmoji = isGold ? '🏆' : result.score >= 70 ? '✨' : result.score >= 50 ? '👍' : '🚧';
+        // Text adaptat per ambition · MAX gold = "Mega producte legendari"
+        let statusText = 'Esborrany';
+        if (isGold)              statusText = (amb === 'max') ? 'Mega producte llegendari' : (amb === 'light' ? 'Light brillant' : 'Llegendari');
+        else if (result.score >= 70) statusText = (amb === 'max') ? 'Solidesa alta' : 'Sòlid';
+        else if (result.score >= 50) statusText = 'Operatiu';
+
+        // Primary CTA · si max amb WOs · Kanban · si no · Mapa de valor
+        const hasWos = (result.wos || []).length > 0;
+        const primary = hasWos
+            ? `<a href="/kanban?project=${encodeURIComponent(pid)}" data-link class="cl-btn-primary cl-btn-hero">⚡ Comença sprint Kanban →</a>`
+            : `<a href="/map?project=${encodeURIComponent(pid)}" data-link class="cl-btn-primary cl-btn-hero">📊 Explora el mapa de valor →</a>`;
+
         el.innerHTML = `
             <div class="cl-finish-info">
-                <strong>✓ Projecte creat</strong> · score <strong>${result.score}/100</strong> (${result.status}) ·
-                ${result.roles.length} rols · ${result.sops.length} SOPs · ${(result.wos || []).length} WOs ·
-                cost <strong>${(result.cost || 0).toFixed(4)}€</strong>
+                <div class="cl-finish-badge cl-finish-badge-${result.status || 'silver'}">${statusEmoji} ${statusText}</div>
+                <div class="cl-finish-meta">
+                    <strong>${result.score}/100</strong> · ${result.roles.length} rols · ${result.sops.length} SOPs${hasWos ? ' · ' + result.wos.length + ' WOs' : ''} · <strong>${(result.cost || 0).toFixed(4)}€</strong>
+                </div>
             </div>
             <div class="cl-finish-cta">
-                <a href="/kanban?project=${encodeURIComponent(pid)}" data-link class="cl-btn-primary">⚡ Comença sprint Kanban</a>
-                <a href="/map?project=${encodeURIComponent(pid)}" data-link class="cl-btn">📊 Mapa de valor</a>
-                <a href="/quality?project=${encodeURIComponent(pid)}" data-link class="cl-btn">🎯 Audit qualitat</a>
-                <a href="/hub/${encodeURIComponent(pid)}" data-link class="cl-btn">🏢 Hub projecte</a>
+                ${primary}
+                <div class="cl-finish-secondary">
+                    ${hasWos ? `<a href="/map?project=${encodeURIComponent(pid)}" data-link class="cl-btn">📊 Mapa</a>` : `<a href="/kanban?project=${encodeURIComponent(pid)}" data-link class="cl-btn">📋 Kanban</a>`}
+                    <a href="/quality?project=${encodeURIComponent(pid)}" data-link class="cl-btn">🎯 Qualitat</a>
+                    <a href="/hub/${encodeURIComponent(pid)}" data-link class="cl-btn">🏢 Hub</a>
+                </div>
             </div>`;
         el.style.display = 'flex';
+        if (isGold) el.classList.add('cl-finish-gold');
     }
 
     _renderErrorBar(result) {
@@ -493,9 +723,19 @@ export default class CreateLiveView {
             .cl-header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start; gap:14px; padding-bottom:14px; border-bottom:1px solid var(--border-default); margin-bottom:14px; }
             .cl-header h1 { margin:0 0 4px 0; font-size:1.25rem; }
             .cl-header .cl-descr { color:var(--text-secondary); font-size:0.9rem; max-width:60ch; }
-            .cl-meta-pills { display:flex; gap:6px; flex-wrap:wrap; }
+            .cl-header-main { flex:1; min-width:280px; }
+            .cl-meta-pills { display:flex; gap:6px; flex-wrap:wrap; align-self:flex-start; }
             .cl-meta-pill { background:rgba(255,255,255,0.04); border:1px solid var(--border-default); border-radius:999px; padding:3px 10px; font-size:0.75rem; }
             .cl-meta-pill strong { color:var(--accent-indigo); }
+
+            /* AMBITION BANNER (legendary-all-ambitions sprint) */
+            .cl-ambition-banner { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px; margin-bottom:8px; font-weight:700; font-size:0.78rem; letter-spacing:0.05em; text-transform:uppercase; }
+            .cl-ambition-banner.cl-amb-light    { background:linear-gradient(90deg,rgba(96,165,250,0.18),rgba(59,130,246,0.10)); color:#60a5fa; border:1px solid rgba(96,165,250,0.4); }
+            .cl-ambition-banner.cl-amb-standard { background:linear-gradient(90deg,rgba(168,85,247,0.20),rgba(99,102,241,0.10)); color:#c8b3ff; border:1px solid rgba(168,85,247,0.4); }
+            .cl-ambition-banner.cl-amb-max      { background:linear-gradient(90deg,rgba(251,191,36,0.20),rgba(245,158,11,0.10)); color:#fbbf24; border:1px solid rgba(251,191,36,0.4); box-shadow:0 0 16px rgba(251,191,36,0.25); }
+            .cl-ambition-icon { font-size:1rem; }
+
+            .cl-narrative { margin-top:10px; font-size:0.85rem; color:var(--text-secondary); line-height:1.55; padding:8px 12px; background:rgba(255,255,255,0.025); border-left:3px solid var(--accent-indigo); border-radius:0 6px 6px 0; font-style:italic; }
             .cl-progress-wrap { width:100%; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; margin-bottom:14px; position:relative; }
             .cl-progress-fill { height:100%; background:linear-gradient(90deg,#22c55e,#3b82f6); transition:width 0.3s ease; width:0%; }
             .cl-progress-pct { position:absolute; right:6px; top:-18px; font-size:0.7rem; color:var(--text-secondary); font-family:var(--font-mono); }
@@ -518,6 +758,29 @@ export default class CreateLiveView {
             .cl-tab-count { background:rgba(255,255,255,0.08); border-radius:999px; padding:0 6px; font-size:0.7rem; }
             .cl-tab-body { padding:16px; min-height:340px; max-height:60vh; overflow-y:auto; }
             .cl-empty-tab { padding:36px; text-align:center; color:var(--text-secondary); font-size:0.85rem; }
+
+            /* Skeletons (legendary sprint · espera amb pistes visuals) */
+            .cl-skel-hint { padding:10px 14px; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2); border-radius:8px; color:var(--text-secondary); font-size:0.78rem; margin-bottom:12px; line-height:1.5; }
+            .cl-skel-castell .cl-skel-row { display:flex; align-items:center; gap:10px; padding:6px 0; opacity:0.4; }
+            .cl-skel-label { width:180px; font-size:0.85rem; color:var(--text-muted); }
+            .cl-skel-pill { height:22px; width:120px; background:rgba(255,255,255,0.04); border-radius:6px; }
+            .cl-skel-pulse { animation:cl-pulse 1.4s ease-in-out infinite; }
+            .cl-skel-tx, .cl-skel-wo { height:42px; background:rgba(255,255,255,0.03); border-radius:6px; margin-bottom:6px; animation:cl-pulse 1.4s ease-in-out infinite; padding:8px 10px; }
+            .cl-skel-wo .cl-skel-line { background:rgba(255,255,255,0.06); height:10px; border-radius:3px; margin:4px 0; }
+            .cl-skel-canvas .cl-skel-line { background:rgba(255,255,255,0.04); height:9px; border-radius:3px; margin:4px 0; width:100%; animation:cl-pulse 1.6s ease-in-out infinite; }
+            @keyframes cl-pulse {
+                0%, 100% { opacity:0.35; }
+                50%      { opacity:0.7; }
+            }
+
+            /* Fade-in quan el draft s'omple */
+            .cl-fade-in {
+                animation:cl-fade-in 0.4s ease-out;
+            }
+            @keyframes cl-fade-in {
+                from { opacity:0; transform:translateY(4px); }
+                to   { opacity:1; transform:translateY(0); }
+            }
 
             .cl-castell .cl-castell-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,0.06); }
             .cl-castell-lbl { width:180px; font-size:0.85rem; color:var(--accent-indigo); }
@@ -571,28 +834,47 @@ export default class CreateLiveView {
             .cl-ev-step { font-weight:600; min-width:90px; }
             .cl-ev-extra { color:var(--text-secondary); }
 
-            .cl-finish-bar { display:none; position:fixed; bottom:0; left:0; right:0; padding:12px 18px; background:rgba(15,16,20,0.94); border-top:1px solid var(--border-default); backdrop-filter:blur(10px); z-index:30; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
-            .cl-finish-info { font-size:0.88rem; }
-            .cl-finish-info strong { color:#22c55e; }
+            .cl-finish-bar { display:none; position:fixed; bottom:0; left:0; right:0; padding:14px 20px; background:rgba(15,16,20,0.96); border-top:1px solid var(--border-default); backdrop-filter:blur(12px); z-index:30; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+            .cl-finish-info { display:flex; flex-direction:column; gap:4px; }
+            .cl-finish-badge { display:inline-block; padding:5px 12px; border-radius:999px; font-size:0.82rem; font-weight:700; letter-spacing:0.02em; align-self:flex-start; }
+            .cl-finish-badge-gold { background:linear-gradient(90deg,#fbbf24,#f59e0b); color:#000; box-shadow:0 0 24px rgba(251,191,36,0.5); }
+            .cl-finish-badge-silver { background:linear-gradient(90deg,#cbd5e1,#94a3b8); color:#000; }
+            .cl-finish-badge-bronze { background:linear-gradient(90deg,#d97706,#92400e); color:#fff; }
+            .cl-finish-badge-red { background:linear-gradient(90deg,#ef4444,#b91c1c); color:#fff; }
+            .cl-finish-meta { font-size:0.82rem; color:var(--text-secondary); font-family:var(--font-mono); }
+            .cl-finish-meta strong { color:var(--text-main); }
             .cl-finish-error strong { color:#ef4444; }
-            .cl-finish-cta { display:flex; gap:6px; flex-wrap:wrap; }
-            .cl-btn, .cl-btn-primary { padding:7px 14px; border-radius:6px; border:1px solid var(--border-default); background:rgba(255,255,255,0.04); color:var(--text-main); text-decoration:none; font-size:0.85rem; }
+            .cl-finish-cta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+            .cl-finish-secondary { display:flex; gap:5px; }
+            .cl-btn, .cl-btn-primary { padding:7px 14px; border-radius:6px; border:1px solid var(--border-default); background:rgba(255,255,255,0.04); color:var(--text-main); text-decoration:none; font-size:0.85rem; transition:all 0.15s; }
             .cl-btn-primary { background:linear-gradient(90deg,#3b82f6,#6366f1); border-color:transparent; font-weight:600; }
-            .cl-btn:hover, .cl-btn-primary:hover { filter:brightness(1.15); }
+            .cl-btn-hero { padding:10px 20px; font-size:0.92rem; box-shadow:0 4px 12px rgba(99,102,241,0.4); }
+            .cl-btn:hover, .cl-btn-primary:hover { filter:brightness(1.15); transform:translateY(-1px); }
+            .cl-finish-gold { animation:cl-celebrate 0.6s ease-out; }
+            @keyframes cl-celebrate {
+                0%   { transform:translateY(20px); opacity:0; }
+                60%  { transform:translateY(-4px); opacity:1; }
+                100% { transform:translateY(0); }
+            }
         </style>
 
         <div id="clRoot" class="cl-shell">
-            <div class="cl-header">
-                <div>
+            <div class="cl-header" id="clHeader">
+                <div class="cl-header-main">
+                    <div class="cl-ambition-banner" id="clAmbitionBanner">
+                        <span class="cl-ambition-icon" id="clAmbitionIcon">⚡</span>
+                        <span class="cl-ambition-label" id="clAmbitionLabel">CREANT…</span>
+                    </div>
                     <h1>🚀 Creant <span id="clProjectName">…</span></h1>
                     <div class="cl-descr" id="clProjectDescr">…</div>
+                    <div class="cl-narrative" id="clNarrative">Preparant pipeline…</div>
                 </div>
                 <div class="cl-meta-pills">
                     <span class="cl-meta-pill">sector · <strong id="clSector">—</strong></span>
-                    <span class="cl-meta-pill">ambition · <strong id="clAmbition">—</strong></span>
                     <span class="cl-meta-pill">zoom · <strong id="clZoom">—</strong></span>
                     <span class="cl-meta-pill">entitat · <strong id="clEntityType">—</strong></span>
-                    <span class="cl-meta-pill">mode · <strong id="clGenMode">—</strong></span>
+                    <span class="cl-meta-pill" id="clAmbitionPill">ambition · <strong id="clAmbition">—</strong></span>
+                    <span class="cl-meta-pill" id="clBudgetPill">inversió · <strong id="clBudget">—</strong></span>
                     <button id="clCancelBtn" class="cl-btn" style="background:transparent;padding:3px 10px;">cancel·la</button>
                 </div>
             </div>

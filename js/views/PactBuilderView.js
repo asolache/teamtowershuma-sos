@@ -109,6 +109,19 @@ export default class PactBuilderView {
                     ${exists ? this._renderStatusRow(summary) : this._renderInitForm(projectTypeId)}
                 </div>
 
+                <!-- v124 · panel wallet · bridge Pact ↔ Wallet (saldo + capital líquid + ingressos) -->
+                <div class="pb-section" id="pbWalletPanel" style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:14px 18px;">
+                    <h2 style="margin:0 0 10px 0;">💼 Wallet del projecte</h2>
+                    <div id="pbWalletBody" style="color:var(--text-muted);font-size:0.85rem;">Carregant saldo…</div>
+                </div>
+
+                ${exists ? `
+                <!-- v124 · panel notarització permaweb · només si signed -->
+                <div class="pb-section" id="pbNotaryPanel" style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:14px 18px;">
+                    <h2 style="margin:0 0 10px 0;">🌐 Notarització al permaweb</h2>
+                    <div id="pbNotaryBody" style="color:var(--text-muted);font-size:0.85rem;">Comprovant estat…</div>
+                </div>` : ''}
+
                 ${exists ? this._renderEditor() : ''}
 
                 ${exists ? `
@@ -406,11 +419,15 @@ export default class PactBuilderView {
     async afterRender() {
         ensureExplainerStyle();
         bindExplainerBadges(document);
+        // v124 · panel wallet sempre (existeixi pacte o no)
+        this._renderWalletPanel().catch(e => console.warn('[pact] wallet panel', e?.message));
         if (!this.pact) {
             // init form
             document.getElementById('pbInitCreate')?.addEventListener('click', () => this._handleCreate());
             return;
         }
+        // v124 · panel notarització · només si pact existeix
+        this._renderNotaryPanel().catch(e => console.warn('[pact] notary panel', e?.message));
         document.getElementById('pbSaveAll')?.addEventListener('click', () => this._handleSave());
         document.getElementById('pbReset')?.addEventListener('click', () => this._handleReset());
         document.getElementById('pbAddPartyBtn')?.addEventListener('click', () => this._handleAddParty());
@@ -684,6 +701,102 @@ export default class PactBuilderView {
         } catch (e) {
             console.warn('[pact] AI generate failed', e);
             fb.setError(e?.message || label('err.ai_failed'));
+        }
+    }
+
+    // v124 · _renderWalletPanel · bridge Pact → Wallet · resum saldo + capital
+    // líquid (de capital.totalEur si hasInitialCash) + topup count + link a /wallet
+    async _renderWalletPanel() {
+        const body = document.getElementById('pbWalletBody');
+        if (!body) return;
+        try {
+            const { getOrCreateWalletForProject, walletStats } = await import('../core/walletService.js');
+            const wallet = await getOrCreateWalletForProject(this.projectId);
+            const stats = walletStats(wallet);
+            const balance = (wallet.content?.balanceEur ?? 0).toFixed(2);
+            const cls = this.pact?.content?.clauses?.capital || {};
+            const capitalNote = cls.hasInitialCash
+                ? `Capital líquid declarat al pacte · <strong>${cls.totalEur || 0}€</strong>`
+                : (cls.totalEur ? `Capital intangible declarat · ${cls.totalEur}€ (no líquid)` : 'Capital no definit al pacte');
+            body.innerHTML = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:10px;">
+                    <div style="background:var(--bg-elevated);border-left:3px solid #22c55e;border-radius:6px;padding:8px 10px;">
+                        <div style="color:var(--text-muted);font-size:0.7rem;font-family:var(--font-mono);text-transform:uppercase;">Saldo</div>
+                        <div style="color:#22c55e;font-size:1.2rem;font-weight:700;font-family:var(--font-mono);">${balance}€</div>
+                    </div>
+                    <div style="background:var(--bg-elevated);border-left:3px solid #6366f1;border-radius:6px;padding:8px 10px;">
+                        <div style="color:var(--text-muted);font-size:0.7rem;font-family:var(--font-mono);text-transform:uppercase;">Recàrregues</div>
+                        <div style="color:var(--text-main);font-size:1.2rem;font-weight:700;font-family:var(--font-mono);">${stats.topupCount || 0}</div>
+                    </div>
+                    <div style="background:var(--bg-elevated);border-left:3px solid #fca5a5;border-radius:6px;padding:8px 10px;">
+                        <div style="color:var(--text-muted);font-size:0.7rem;font-family:var(--font-mono);text-transform:uppercase;">Consumit</div>
+                        <div style="color:var(--text-main);font-size:1.2rem;font-weight:700;font-family:var(--font-mono);">${(stats.totalConsumed || 0).toFixed(2)}€</div>
+                    </div>
+                </div>
+                <p style="margin:6px 0;">${capitalNote}</p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <a href="/wallet?project=${encodeURIComponent(this.projectId)}" data-link class="pb-btn-secondary">💼 Obrir wallet</a>
+                    <a href="/value-accounting?project=${encodeURIComponent(this.projectId)}" data-link class="pb-btn-secondary">🥧 Veure tarta</a>
+                </div>`;
+        } catch (e) {
+            body.innerHTML = `<p style="color:var(--accent-red);">Wallet · ${escapeHtml(e?.message || String(e))}</p>`;
+        }
+    }
+
+    // v124 · _renderNotaryPanel · publishToPermaweb del pact + estat actual
+    async _renderNotaryPanel() {
+        const body = document.getElementById('pbNotaryBody');
+        if (!body) return;
+        const arweaveTxId = this.pact?.content?.arweaveTxId || null;
+        const publishedAt = this.pact?.content?.publishedAt || null;
+        const summary = this.pact ? pactSummary(this.pact) : null;
+        if (arweaveTxId) {
+            body.innerHTML = `
+                <p style="margin:0 0 8px 0;color:#22c55e;">✓ Pacte notaritzat al permaweb</p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;font-size:0.78rem;">
+                    <div><strong>TxId</strong> · <code style="color:var(--accent-indigo);">${escapeHtml(arweaveTxId)}</code></div>
+                    ${publishedAt ? `<div><strong>Data</strong> · ${escapeHtml(new Date(publishedAt).toLocaleString('es-ES'))}</div>` : ''}
+                </div>
+                <p style="margin-top:8px;font-size:0.78rem;">Aquest registre és permanent · qualsevol persona pot verificar la integritat amb la signatura ECDSA i el txId.</p>`;
+            return;
+        }
+        const canNotarize = summary?.signedAll === true;
+        body.innerHTML = `
+            <p style="margin:0 0 10px 0;">La notarització al permaweb registra una còpia signada del pacte de manera permanent. Útil per a evidència legal · transparència amb stakeholders · verificació pública.</p>
+            <p style="margin:0 0 10px 0;font-size:0.78rem;color:var(--text-muted);">Cost estimat · ~0.50€ (descomptat del wallet del projecte) · refund automàtic si l'upload falla.</p>
+            ${canNotarize ? `
+                <button class="pb-btn" id="pbNotarizeBtn" style="background:#06b6d4;color:#fff;border-color:#06b6d4;">🌐 Notaritzar al permaweb</button>
+            ` : `
+                <p style="color:var(--accent-orange);font-size:0.82rem;">⚠ Cal que totes les parts hagin signat el pacte abans de notaritzar (actualment ${summary?.signaturesCount || 0}/${summary?.partiesCount || 0}).</p>
+            `}`;
+        if (canNotarize) {
+            document.getElementById('pbNotarizeBtn')?.addEventListener('click', () => this._handleNotarize());
+        }
+    }
+
+    // v124 · _handleNotarize · publishToPermaweb + persist arweaveTxId
+    async _handleNotarize() {
+        const btn = document.getElementById('pbNotarizeBtn');
+        if (btn) { btn.textContent = '⏳ Notaritzant…'; btn.disabled = true; }
+        try {
+            const { publishToPermaweb } = await import('../core/publicRegistryService.js');
+            const res = await publishToPermaweb({
+                entry: this.pact,
+                projectId: this.projectId,
+            });
+            if (res?.arweaveTxId) {
+                this.pact.content.arweaveTxId  = res.arweaveTxId;
+                this.pact.content.publishedAt  = res.publishedAt || new Date().toISOString();
+                await KB.upsert(this.pact);
+                alert('✓ Pacte notaritzat\n\nTxId · ' + res.arweaveTxId);
+                await this._renderNotaryPanel();
+                return;
+            }
+            throw new Error('publish returned no txId');
+        } catch (e) {
+            const msg = e?.message || String(e);
+            alert('✘ Notarització fallida\n\n' + msg);
+            if (btn) { btn.textContent = '🌐 Notaritzar al permaweb'; btn.disabled = false; }
         }
     }
 

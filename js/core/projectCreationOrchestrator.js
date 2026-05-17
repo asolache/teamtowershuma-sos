@@ -25,6 +25,7 @@ import { CATALOG, pickTemplate, applyContext } from './projectTemplateCatalog.js
 import { evaluateRubric, fromProject } from './valueFlowRubricService.js';
 import { validateIntegrity } from './valueFlowIntegrityService.js';
 import { matchSocs, VNA_ZOOM_LEVELS, ENTITY_TYPES } from './socMatcher.js';
+import { adaptRolesBySector, SECTOR_ROLES } from './sectorRoleCatalog.js';
 
 export const ORCHESTRATOR_VERSION = 'v1.1';
 
@@ -173,7 +174,8 @@ async function _runAiDriven({
         try {
             const r = await pickSocs({
                 candidates: matched.selected,
-                ctx: { name: project_ctx.name, description: project_ctx.description, sector: sector_cnae, entity_type, project_type: classification.project_type, vna_zoom },
+                // VNA-PROMPTS · context complet inclou lifecycle_stage (abans absent · era genèric)
+                ctx: { name: project_ctx.name, description: project_ctx.description, sector: sector_cnae, entity_type, project_type: classification.project_type, lifecycle_stage, vna_zoom },
             });
             if (r && Array.isArray(r.selected) && r.selected.length > 0) {
                 // Merge · respecta ordre IA però només dels que estaven als candidats
@@ -198,10 +200,15 @@ async function _runAiDriven({
         for (const soc of socsSelected) {
             emit('generate-sops', 'start', { soc: soc.relpath });
             try {
+                // VNA-PROMPTS · passa rols sectorials COM A INSPIRACIÓ (no copia)
+                // perquè la IA tingui nomenclatura real del sector
+                const sectorTable = SECTOR_ROLES[String(sector_cnae || '').toUpperCase()] || SECTOR_ROLES.DEFAULT;
+                const sector_role_examples = Object.entries(sectorTable).slice(0, 5).map(([k, v]) => ({ kind: k, name: v.name, description: v.description }));
                 const r = await generateSops({
                     soc,
                     project_ctx: { ...project_ctx, sector: sector_cnae, lifecycle_stage, entity_type },
                     role_kinds,
+                    sector_role_examples,
                 });
                 if (r && Array.isArray(r.sops)) {
                     for (const s of r.sops) {
@@ -238,11 +245,17 @@ async function _runAiDriven({
 
     // 5) Sobrescriu template amb sortida AI (si va generar quelcom · si no · fallback template)
     const finalTemplate = { ...personalized };
+    // FIX B1 · si IA NO va generar SOPs · mantenim els del template per garantir
+    // que els SOCs seleccionats tinguin sop_ref vàlid (sense això · rubric C11=0)
+    const effectiveSops = (allSops.length > 0) ? allSops : (personalized.sops || []);
     if (allSops.length > 0) finalTemplate.sops = allSops;
     if (socsSelected.length > 0) {
         // Promociona SOCs seleccionats a primera classe · cobertura SOP
+        // Si IA no va generar SOPs específics · cobertura amb SOPs template
         finalTemplate.socs = socsSelected.map((soc, i) => {
-            const coveringSops = allSops.filter(s => s.soc_ref === soc.relpath);
+            let coveringSops = allSops.filter(s => s.soc_ref === soc.relpath);
+            // Fallback · si cap SOP IA pertany a aquest SOC · associa-li tots els template
+            if (coveringSops.length === 0) coveringSops = effectiveSops.slice(0, Math.max(1, Math.ceil(effectiveSops.length / socsSelected.length)));
             return {
                 id:          'soc-ai-' + i,
                 name:        soc.title,
@@ -251,7 +264,7 @@ async function _runAiDriven({
                 phase:       soc.phase || lifecycle_stage,
                 checklist:   coveringSops.map((sop, j) => ({
                     id:                'i' + (j + 1),
-                    label:             'SOP ' + sop.title,
+                    label:             'SOP ' + (sop.title || sop.id),
                     sop_ref:           sop.id,
                     required:          true,
                     verification_kind: 'manual',
@@ -351,6 +364,14 @@ export async function createProject({
     emit('personalize', 'start', {});
     const ctx = { name, description, sector: sector || '', problem: description };
     let personalized = applyContext(template, ctx);
+
+    // SECTOR-ROLE-NAMING · sobreescriu noms de rol amb el catàleg sectorial
+    // (offline · zero cost IA). Si no hi ha sector · usa DEFAULT que ja és
+    // millor que els template hardcoded. Si hi ha sector conegut · noms reals
+    // d'aquell sector (ex · "CTO Founder" per J · "Cap d'Obra" per F).
+    const sectorCnae = sector || classification.sector_cnae || null;
+    personalized = { ...personalized, roles: adaptRolesBySector(personalized.roles, sectorCnae) };
+    emit('personalize', 'sector-roles-applied', { sector: sectorCnae, count: (personalized.roles || []).length });
 
     if (typeof personalize === 'function') {
         try {

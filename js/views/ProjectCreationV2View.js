@@ -20,6 +20,7 @@ import {
 import { CATALOG } from '../core/projectTemplateCatalog.js';
 import { toast } from '../core/uxComponents.js';
 import { ENTITY_CARDS, listFormats, resolveSuggestion } from '../core/projectEntityWizard.js';
+import { renderCnaeOptionsHtml, getCnae } from '../core/cnaeCatalog.js';
 
 export default class ProjectCreationV2View {
 
@@ -108,7 +109,11 @@ export default class ProjectCreationV2View {
 
             .pcv-hero { background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(99,102,241,0.10)); border:1px solid rgba(168,85,247,0.3); border-radius:10px; padding:1.4rem 1.6rem; margin-bottom:1.2rem; }
             .pcv-hero h1 { margin:0 0 0.4rem 0; font-size:1.5rem; }
-            .pcv-hero p { margin:0; font-size:0.9rem; color:var(--text-secondary); line-height:1.55; }
+            .pcv-hero p { margin:0 0 0.6rem 0; font-size:0.92rem; color:var(--text-secondary); line-height:1.5; }
+            .pcv-hero-pill { display:inline-block; padding:5px 12px; background:rgba(255,255,255,0.06); border-radius:999px; font-size:0.78rem; color:var(--text-secondary); }
+            .pcv-hero-pill code { font-family:var(--font-mono); background:rgba(168,85,247,0.2); padding:1px 6px; border-radius:3px; font-size:0.78rem; color:var(--text-main); }
+            .pcv-hero-pill a { color:var(--accent-indigo); text-decoration:none; }
+            .pcv-hero-pill a:hover { text-decoration:underline; }
 
             .pcv-form { background:var(--bg-panel); border:1px solid var(--border-default); border-radius:10px; padding:1.3rem 1.5rem; }
             .pcv-field { margin-bottom:1rem; }
@@ -186,11 +191,12 @@ export default class ProjectCreationV2View {
 
             <div class="pcv-main">
                 <div class="pcv-hero">
-                    <h1>🚀 Crea un projecte amb mapa de valor garantit</h1>
+                    <h1>🚀 Crea el teu projecte amb IA · en 90 segons</h1>
+                    <p>Roles · mapa de valor · canvas · SOPs · Work Orders · tot llest per executar. Score ≥85/100 garantit abans de desar.</p>
                     ${this._presetTemplateId ? `
-                        <p>Plantilla pre-seleccionada · <code style="font-family:var(--font-mono);background:rgba(168,85,247,0.2);padding:1px 6px;border-radius:3px;font-size:0.82rem;">${this._esc(this._presetTemplateId)}</code> · pipeline · classify → seed → personalize → validate (rubric 12 criteris + integritat 7 regles) → persist. Qualitat ≥85/100 garantida abans de desar. <a href="/process-catalog" data-link style="color:var(--accent-indigo);">↩ Canviar plantilla</a></p>
+                        <div class="pcv-hero-pill">📐 Plantilla activa · <code>${this._esc(this._presetTemplateId)}</code> · <a href="/process-catalog" data-link>canvia-la</a></div>
                     ` : `
-                        <p>Pipeline · classify → seed (template) → personalize → validate (rubric + integritat) → persist. Tots els templates puntuen ≥85/100 abans de desar. Roles + deliverables + transactions Lean + SOPs estructurats + SOC checklist · llestos per a operar. <a href="/process-catalog" data-link style="color:var(--accent-indigo);">📐 Començar des d'una plantilla?</a></p>
+                        <div class="pcv-hero-pill">💡 <a href="/process-catalog" data-link>O comença des d'una plantilla</a></div>
                     `}
                 </div>
 
@@ -236,8 +242,10 @@ export default class ProjectCreationV2View {
                     </div>
 
                     <div class="pcv-field">
-                        <label class="pcv-label" for="pcvSector">Sector (opcional)</label>
-                        <input type="text" id="pcvSector" class="pcv-input" placeholder="Ex · cures · tech · agroecologia · habitatge..." maxlength="80" autocomplete="off">
+                        <label class="pcv-label" for="pcvSector">Sector CNAE (opcional · però ajuda la IA a triar bé)</label>
+                        <select id="pcvSector" class="pcv-input">${renderCnaeOptionsHtml({ selected: this._presetSector || '' })}</select>
+                        <div class="pcv-help" id="pcvSectorHint">Selecciona el sector CNAE més proper · determina noms de rols + transaccions típiques al sector. Si trios "Altres" · escriu lliurement al subsector.</div>
+                        <input type="text" id="pcvSectorFree" class="pcv-input" placeholder="Subsector lliure · ex · 'agricultura ecològica de proximitat' · 'edtech infantil'" maxlength="80" autocomplete="off" style="margin-top:6px;display:none;">
                     </div>
 
                     <div class="pcv-field">
@@ -293,9 +301,9 @@ export default class ProjectCreationV2View {
 
     _renderAmbitionCards() {
         const items = [
-            { id: 'light',    ic: '✏️', nm: 'Light',     ds: 'Template + 1 IA call cheap · ràpid' },
-            { id: 'standard', ic: '⚡', nm: 'Standard',  ds: 'Template + IA enriquit · típic',     active: true },
-            { id: 'max',      ic: '🏆', nm: 'MAX',       ds: 'Template + IA full · qualitat top' },
+            { id: 'light',    ic: '✏️', nm: 'Light',     ds: 'IA mínima · macro · ràpid · cost més baix' },
+            { id: 'standard', ic: '⚡', nm: 'Standard',  ds: 'IA equilibrada · mid · construcció completa',     active: true },
+            { id: 'max',      ic: '🏆', nm: 'MAX',       ds: 'IA full · micro · mega producte amb WOs' },
         ];
         return items.map(it => {
             const def = AMBITION_LEVELS[it.id];
@@ -325,9 +333,31 @@ export default class ProjectCreationV2View {
         ['pcvName', 'pcvDescription', 'pcvSector'].forEach(id => {
             document.getElementById(id)?.addEventListener('input', () => this._updateCostPreview());
         });
+        // CNAE select · toggle free input + update hint
+        const sectorSel = document.getElementById('pcvSector');
+        if (sectorSel) {
+            const onChange = () => {
+                const v = sectorSel.value;
+                const free = document.getElementById('pcvSectorFree');
+                const hint = document.getElementById('pcvSectorHint');
+                if (free) free.style.display = (v === 'other') ? '' : (v ? '' : 'none');
+                if (hint) {
+                    if (v && v !== 'other') {
+                        const c = getCnae(v);
+                        hint.innerHTML = c ? '✓ <strong>' + c.code + '</strong> · ' + c.label + '<br/><em style="font-size:0.78rem;">Subsectors típics · ' + c.subhint + '. Pots refinar al camp lliure.</em>' : '';
+                    } else if (v === 'other') {
+                        hint.innerHTML = '↓ Escriu el sector lliure (max 80 chars).';
+                    } else {
+                        hint.innerHTML = 'Selecciona el sector CNAE més proper · determina noms de rols + transaccions típiques al sector.';
+                    }
+                }
+            };
+            sectorSel.addEventListener('change', onChange);
+            onChange();   // initial state si hi ha preset
+        }
         // Cancel · back to home
         document.getElementById('pcvCancel')?.addEventListener('click', () => {
-            window.location.href = '/home';
+            (window.navigateTo || ((u) => window.location.href = u))('/home');
         });
         // Submit
         document.getElementById('pcvSubmit')?.addEventListener('click', () => this._submit());
@@ -423,12 +453,21 @@ export default class ProjectCreationV2View {
         if (this._isCreating) return;
         const name = (document.getElementById('pcvName')?.value || this._presetName || '').trim();
         const description = (document.getElementById('pcvDescription')?.value || this._presetDescription || '').trim();
-        const sector = (document.getElementById('pcvSector')?.value || this._presetSector || '').trim() || null;
+        // CNAE picker · si user tria "other" · usa el camp lliure
+        const sectorSel = (document.getElementById('pcvSector')?.value || this._presetSector || '').trim();
+        const sectorFree = (document.getElementById('pcvSectorFree')?.value || '').trim();
+        const sector = sectorSel === 'other' ? (sectorFree || null) : (sectorSel || sectorFree || null);
         const ambition = this._selectedAmbition();
         const templateId = this._presetTemplateId || null;
         const entityType = document.getElementById('pcvEntityType')?.value || null;
-        const vnaZoom    = document.getElementById('pcvVnaZoom')?.value || null;
-        const genMode    = document.getElementById('pcvGenMode')?.value || (ambition === 'light' ? 'template' : 'ai-driven');
+        // PR-J · vna_zoom auto-mapping si l'usuari no l'ha tocat ·
+        // light → macro · standard → mid · max → micro
+        const vnaZoomRaw = document.getElementById('pcvVnaZoom')?.value;
+        const vnaZoom    = vnaZoomRaw || ({ light: 'macro', standard: 'mid', max: 'micro' }[ambition] || 'mid');
+        // PR-J · IA per defecte a TOTS els ambitions (light/standard/max) ·
+        // si no hi ha API key · el pre-flight check hasAnyApiKey() fa fallback
+        // automàtic a template. Mode template explícit només si l'usuari el tria.
+        const genMode    = document.getElementById('pcvGenMode')?.value || 'ai-driven';
 
         if (!name) {
             toast({ kind: 'error', text: 'El nom és obligatori' });
@@ -441,13 +480,32 @@ export default class ProjectCreationV2View {
         }
 
         // ── AI-DRIVEN streaming · redirigeix a /create-live amb payload ──
+        // FIX A2 · pre-flight check API key · si NO hi ha cap key configurada
+        // fallback automàtic a mode template + toast warning. Abans · pipeline
+        // emetia events però el projecte resultava buit sense feedback.
+        let effectiveGenMode = genMode;
         if (genMode === 'ai-driven') {
+            try {
+                const { hasAnyApiKey } = await import('../core/aiProviderService.js');
+                const ok = await hasAnyApiKey();
+                if (!ok) {
+                    toast({
+                        kind: 'warning',
+                        text: '⚠ Cap API key configurada · canvio a mode template (offline). Configura una clau a /settings per a IA real.',
+                        ttl: 6000,
+                    });
+                    effectiveGenMode = 'template';
+                }
+            } catch (_) { /* si la comprovació falla · seguim com ai-driven */ }
+        }
+
+        if (effectiveGenMode === 'ai-driven') {
             try {
                 sessionStorage.setItem('createLivePayload', JSON.stringify({
                     name, description, sector, ambition, templateId,
                     entity_type: entityType, vna_zoom: vnaZoom, generationMode: 'ai-driven',
                 }));
-                window.location.href = '/create-live';
+                (window.navigateTo || ((u) => window.location.href = u))('/create-live');
                 return;
             } catch (e) {
                 console.warn('[ProjectCreationV2] sessionStorage failed · fallback síncron', e);
@@ -517,7 +575,7 @@ export default class ProjectCreationV2View {
                 ttl: 6000,
             });
             setTimeout(() => {
-                window.location.href = '/hub/' + encodeURIComponent(result.project.id);
+                (window.navigateTo || ((u) => window.location.href = u))('/hub/' + encodeURIComponent(result.project.id));
             }, 1500);
         } catch (e) {
             toast({ kind: 'error', text: 'Error creant projecte · ' + (e?.message || e) });
