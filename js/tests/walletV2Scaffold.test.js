@@ -57,9 +57,9 @@ console.log('\n— E · sprint v129 implementat · v130/v131 segueixen placehold
 ok('E · Saldo IMPLEMENTAT (no placeholder v129)',         !w2Src.includes('Pestanya Saldo · sprint v129'));
 ok('E · Transaccions IMPLEMENTAT (no placeholder v129)',  !w2Src.includes('Pestanya Transaccions · sprint v129'));
 ok('E · Projectes IMPLEMENTAT (no placeholder v129)',     !w2Src.includes('Pestanya Projectes · sprint v129'));
-ok('E · Top-up encara placeholder v130',                  w2Src.includes('Top-up · sprint v130'));
-ok('E · Tarta encara placeholder v131',                   w2Src.includes('Tarta · sprint v131'));
-ok('E · Compres encara placeholder v131',                 w2Src.includes('Compres · sprint v131'));
+ok('E · Top-up IMPLEMENTAT (no placeholder v130)',        !w2Src.includes('Pestanya Top-up · sprint v130'));
+ok('E · Tarta IMPLEMENTAT (no placeholder v131)',         !w2Src.includes('Pestanya Tarta · sprint v131'));
+ok('E · Compres IMPLEMENTAT (no placeholder v131)',       !w2Src.includes('Pestanya Compres · sprint v131'));
 ok('E · view usa els 4 serveis backend (reuse)',
    w2Src.includes('walletService') && w2Src.includes('unifiedAccountingService') && w2Src.includes('stripeService') && w2Src.includes('cryptoTopupService'));
 
