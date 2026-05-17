@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-18T21:00 · v131b · SECTORS DEEP REWRITE · 6 sectors canonical (K Financieres · L Inmobiliarias · M Profesionales · N Administrativas · Q Sanitarias · R Arts/Esports) amb 6-9 roles cada + skill_levels (junior/mid/senior/principal) + 5 SOPs canonical · WIRE-UP sectorAgentLoader → vnaExpertPrompts.design-value-map-rich (injecta CONTEXT SECTORIAL al prompt) · J consolida tech post-K migration · 72 asserts nous';
+const BUILD_STAMP = '2026-05-18T22:30 · v131c · 10 sectors restants canonical (A·B·C·D·E·H·I·O·T·UV) amb skill_level_taxonomy + 5 sops_canonical · skillsMarketplaceService (match WO + cross-sector taxonomy) · sectorQualityRubric (score 0-100 vs canonical SOPs) · backlog v132 (wo-research-lms primer de la sèrie · wo-sectors-fusion · wo-dynamic-kb-index · wo-prompt-ab-test-vna) · 100 asserts nous';
 
 export default class DesignSystemView {
 

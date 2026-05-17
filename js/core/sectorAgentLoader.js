@@ -119,6 +119,24 @@ function _parseRoles(body) {
         }
         const tagsM = subBlock.match(/\n    tags: \[([^\]]+)\]/);
         if (tagsM) role.tags = tagsM[1].split(',').map(s => s.trim().replace(/^["']|["']$/g, ''));
+
+        // v131c · parse skill_levels nested block · format ·
+        //     skill_levels:
+        //       junior: ["skill1", "skill2"]
+        //       mid: ["skill3"]
+        const slIdx = subBlock.indexOf('    skill_levels:');
+        if (slIdx >= 0) {
+            role.skill_levels = {};
+            const slBlock = subBlock.slice(slIdx);
+            const slRegex = /\n      (junior|mid|senior|principal): \[([^\]]*)\]/g;
+            let slM;
+            while ((slM = slRegex.exec(slBlock)) !== null) {
+                const lvl = slM[1];
+                const arr = slM[2].split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+                role.skill_levels[lvl] = arr;
+            }
+        }
+
         roles.push(role);
     }
     return roles;

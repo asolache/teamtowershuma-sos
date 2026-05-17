@@ -3,8 +3,45 @@ sector_id: O
 sector_name: "Administración Pública y Defensa"
 sector_name_en: "Public Administration & Defence"
 cnae: "84"
-version: "v11.1"
-tags: ["administracion-publica", "gobierno", "sector-publico", "ayuntamiento", "politica-publica", "transparencia"]
+version: "v131c"
+cnae_official: "CNAE-2009 O · Administración Pública y defensa; Seguridad Social obligatoria (administració estatal · autonòmica · local · defensa · justícia · ordre públic · seguretat social)"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/O.md v131c · domainDetector.public-admin també activa context"
+tags: ["administracion-publica", "gobierno", "sector-publico", "ayuntamiento", "politica-publica", "transparencia", "diputacio", "comunitat-autonoma", "defensa", "seguridad-social"]
+
+skill_level_taxonomy:
+  junior: "0-2 anys · auxiliar administratiu · oposició C2/C1"
+  mid: "3-7 anys · tècnic d'administració · oposició A2 · grau"
+  senior: "8-15 anys · cap d'unitat · A1 amb anys de servei · habilitació estatal"
+  principal: "15+ anys · director general · funcionari habilitat eventual · polític electe"
+
+sops_canonical:
+  - id: sop-tramit-administratiu
+    title: "Tràmit administratiu ciutadà"
+    castell_level: mans
+    description: "Recepció sol·licitud · validació documentació · resolució · notificació · arxiu."
+    steps_summary: "dies-mesos · 2-4 stakeholders · Llei 39/2015"
+  - id: sop-contractacio-publica
+    title: "Contractació pública (procediment obert)"
+    castell_level: tronc
+    description: "Plec · publicació BOE/DOUE · presentació ofertes · valoració mesa · adjudicació · formalització."
+    steps_summary: "3-6 mesos · 6 stakeholders · LCSP"
+  - id: sop-pressupost-anual
+    title: "Pressupost anual · elaboració i aprovació"
+    castell_level: pom_de_dalt
+    description: "Proposta tècnica · negociació política · publicació · debat ple · aprovació · execució."
+    steps_summary: "4-8 mesos · 8 stakeholders · cicle anual"
+  - id: sop-inspeccio-control
+    title: "Inspecció / control reglat"
+    castell_level: laterals
+    description: "Calendari · visita · informe · expedient sancionador si escau · resolució · recurs."
+    steps_summary: "setmanes-anys · 3-5 stakeholders · garanties LP"
+  - id: sop-participacio-ciutadana
+    title: "Procés participació ciutadana"
+    castell_level: pinya
+    description: "Convocatòria · consulta · taula deliberació · informe síntesi · resposta institucional."
+    steps_summary: "1-6 mesos · 5+ stakeholders · transparència"
 
 roles:
   - id: political_authority

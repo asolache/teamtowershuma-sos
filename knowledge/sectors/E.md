@@ -3,8 +3,45 @@ sector_id: E
 sector_name: "Suministro de Agua, Saneamiento y Gestión de Residuos"
 sector_name_en: "Water Supply, Sewerage & Waste Management"
 cnae: "36-39"
-version: "v11.1"
-tags: ["agua", "saneamiento", "residuos", "medioambiente", "ciclo-del-agua", "economia-circular"]
+version: "v131c"
+cnae_official: "CNAE-2009 E · Suministro agua · actividades saneamiento · gestión residuos y descontaminación (captació · potabilització · distribució · clavegueram · recollida · tractament · valorització)"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/E.md v131c"
+tags: ["agua", "saneamiento", "residuos", "medioambiente", "ciclo-del-agua", "economia-circular", "EDAR", "ETAP", "reciclatge"]
+
+skill_level_taxonomy:
+  junior: "0-2 anys · operari planta tractament · FP grau mig"
+  mid: "3-7 anys · enginyer planta · químic responsable"
+  senior: "8-15 anys · cap planta · interacció ACA/CHE/MITECO"
+  principal: "15+ anys · director cicle aigua · estratègia circularitat"
+
+sops_canonical:
+  - id: sop-tractament-agua-diari
+    title: "Tractament aigua potable diari (ETAP)"
+    castell_level: tronc
+    description: "Captació · floculació · decantació · filtració · desinfecció · injecció xarxa · mostratge."
+    steps_summary: "diari 24/7 · 3 stakeholders · regulat sanitat"
+  - id: sop-edar-cicle
+    title: "Cicle aigua residual EDAR"
+    castell_level: tronc
+    description: "Arribada · pretractament · primari · biològic · secundari · terciari · abocament/reutilització."
+    steps_summary: "continu · 4 stakeholders · ACA control"
+  - id: sop-recollida-residus
+    title: "Recollida residus municipals"
+    castell_level: mans
+    description: "Ruta planificada · recollida · transport planta · pesatge · descàrrega · validació."
+    steps_summary: "diària · 3-4 stakeholders · concessió municipal"
+  - id: sop-valoritzacio-residus
+    title: "Valorització residus a la planta"
+    castell_level: laterals
+    description: "Classificació · separació materials · reciclatge · compostatge · valoració energètica."
+    steps_summary: "continu · 5 stakeholders · economia circular"
+  - id: sop-incidencia-mediambiental
+    title: "Gestió incident mediambiental"
+    castell_level: pom_de_dalt
+    description: "Detecció abocament/fuita · contenció · neteja · informe regulador · investigació · pla acció."
+    steps_summary: "hores · 6 stakeholders · regulator alert"
 
 roles:
   - id: operations_director_water
