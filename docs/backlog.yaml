@@ -680,9 +680,13 @@ work_orders:
     estimated_cost_eur: 6.00
     tags: ["sprint-v120", "quality", "eval-loop"]
 
+  # v134 supersedeix · arquitectura IA-aligned al menú principal · veure
+  # docs/ux/v134-project-hub-ia-alignment.md i wo-project-hub-ia-aligned.
+  # Aquesta WO original quedaria deprecated · però la mantenim per
+  # backwards-traceability del backlog.
   - id: "wo-project-hub-subtabs"
     project_id: "sos-dev-internal"
-    title: "Evolució Project Hub (vistes ASSOCIADES AL PROJECTE · NO persona) · subpestanyes (Hub · Map · Kanban · Comptabilitat+Wallet · Presentation) + dropdown extés"
+    title: "[SUPERSEDED v134] Evolució Project Hub · subpestanyes ad-hoc"
     description: |
       Avui /project/:id és un hub monolític. Evolucionar a un layout amb
       submenú de subpestanyes INTEGRADES · pestanyes principals visibles
@@ -798,3 +802,147 @@ work_orders:
     status: backlog
     estimated_cost_eur: 8.00
     tags: ["sprint-v132g", "benchmark", "multi-provider", "prompt-efficiency"]
+
+  - id: "wo-project-hub-ia-aligned"
+    project_id: "sos-dev-internal"
+    title: "Project Hub V3 · IA aligned als 5 pilars del menú principal (crear · treballar · comptabilitzar · connectar · aprendre) + Equip"
+    description: |
+      Supersedeix wo-project-hub-subtabs. Realinear el Project Hub a la IA
+      mental del menú principal (5 verbs · veure docs/ux/v134-project-hub-ia-alignment.md).
+
+      Tabs nivell 1 (6) ·
+       🏠 Hub | 🎨 Crear | 🔨 Treballar | 💶 Comptabilitzar | 🔗 Connectar | 👥 Equip
+
+      Sub-tabs nivell 2 (alineades amb vistes globals existents) ·
+       · Crear ·         Canvas · Pitch · Pacte · Presentation
+       · Treballar ·     Map · Kanban · Quality · Sprint · Lifecycle
+       · Comptabilitzar · Wallet · Comptes · Pastís valor · Factures · Tokenomics
+       · Connectar ·     Pactes signats · Propostes · Mercat
+       · Equip ·         Membres · Rols · Permisos · Convidacions
+
+      Dropdown "Més" · Aprendre (KB projecte) · Sprints management · Lifecycle
+      dashboard · Settings projecte.
+
+      Filosofia · 2-nivells max · URL sync `?tab=X&sub=Y` · component
+      SubmenuTabs.js reutilitzat (cal extensió v2 per a 2-nivells · veure
+      wo-submenu-tabs-v2).
+
+      Preview viu testable · /project-hub-v3-preview (post v134 commit).
+    priority: high
+    complexity: L
+    status: backlog
+    estimated_cost_eur: 18.00
+    tags: ["sprint-v136", "ux", "project-hub", "ia-alignment", "supersedes-wo-project-hub-subtabs"]
+
+  - id: "wo-submenu-tabs-v2-sublevel"
+    project_id: "sos-dev-internal"
+    title: "SubmenuTabs v2 · suport 2-nivells (sub-submenu reutilitzable)"
+    description: |
+      js/ui/SubmenuTabs.js v132j+k és pla (1 nivell). Necessari per a v134
+      Project Hub aligned ·
+       1. Render API · renderSubmenuTabs({ tabs, subTabs?, activeId, activeSubId, urlParams: { primary, secondary } })
+       2. Bind API · bindSubmenuTabs(container, ({ id, subId, level }) => ...)
+       3. URL sync · 2 params · default 'tab' + 'sub'
+       4. Estil visual diferenciat L1 vs L2 (L2 més petit · menys padding)
+       5. Keyboard nav · ← → mou dins L1 · ↑ ↓ dins L2
+
+      Migració · LearnView seguirà sent 1-nivell (regression-safe) ·
+      ProjectHubV3 nou consumidor 2-nivells.
+    priority: high
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 7.00
+    tags: ["sprint-v135", "design-system", "submenu", "refactor"]
+
+  - id: "wo-accounting-v2-redesign"
+    project_id: "sos-dev-internal"
+    title: "AccountingView v2 · redisseny UX amb mateixa qualitat que WalletV2 (per a Comptabilitzar tab)"
+    description: |
+      AccountingView avui és textual · double-entry ledger pur · poc visual.
+      Redisseny v2 alineat amb WalletV2 (referent UX dins el pilar) ·
+       · KPI cards (Actius · Passius · Equity · P&L mes)
+       · Llista compacta últimes N entrades amb categories visuals colored
+       · Filter per membre / categoria / període
+       · Export CSV
+       · Charts (línies P&L · pie categories)
+
+      Subtab dins de project hub · /project/:id?tab=comptabilitzar&sub=accounting.
+    priority: medium
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 8.00
+    tags: ["sprint-v138", "ux", "accounting", "project-hub", "comptabilitzar"]
+
+  - id: "wo-wallet-project-v2-redesign"
+    project_id: "sos-dev-internal"
+    title: "Wallet del projecte v2 · alineat WalletV2 UX (per a Comptabilitzar tab)"
+    description: |
+      Wallet del projecte (no personal) · refactor consistent amb WalletV2 ·
+       · Saldo live (KB query + cache 30s)
+       · Flow setmanal · línia 7 dies
+       · Inflow/outflow per categoria
+       · Transferència entre projectes
+       · Top-up via Stripe/crypto
+       · Movements ledger amb filter
+
+      Subtab dins de project hub · /project/:id?tab=comptabilitzar&sub=wallet.
+    priority: medium
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 7.00
+    tags: ["sprint-v138", "ux", "wallet", "project-hub", "comptabilitzar"]
+
+  - id: "wo-quality-integration-project-hub"
+    project_id: "sos-dev-internal"
+    title: "Integrar Quality (rubric 12-criteris) com a subtab DE PROJECTE (Treballar) · treure de menu global"
+    description: |
+      ProjectQualityView avui · /quality standalone al menu global. v134 IA
+      diu · Quality és una vista de "treballar" del PROJECTE actiu.
+
+      Tasques ·
+       1. Moure ProjectQualityView a subtab `/project/:id?tab=treballar&sub=quality`
+       2. Redirect `/quality` → `/project/:id?tab=treballar&sub=quality` (preserva bookmarks)
+       3. Treure de navService.js (work category global)
+       4. Score live alimentat per runQualityAudit() cada vegada que canvia
+          el mapa o canvas (event-driven via store)
+       5. KPI cards · Score global · Integritat 7-regles · Criteris rubric (9/12)
+       6. Llista de criteris pendents amb action-link per resoldre cada un
+
+      Beneficis · Quality contextual · l'usuari està treballant el projecte
+      i veu la qualitat al costat · no ha de navegar fora.
+    priority: medium
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 6.00
+    tags: ["sprint-v137", "ux", "quality", "project-hub", "treballar"]
+
+  - id: "wo-team-permissions-view"
+    project_id: "sos-dev-internal"
+    title: "Vista Equip + Permisos · GLOBAL (/team) i per-projecte (subtab Equip)"
+    description: |
+      NOVA vista bidimensional · no existeix avui.
+
+      A · GLOBAL · /team
+       · Llistat persones del swarm SOS amb qui he col·laborat
+       · Filter per projecte · sector · skill · rol exercit
+       · Permisos GLOBALS · quins meus projectes pot veure/editar cada persona
+       · Audit log · qui ha fet què cross-projects
+
+      B · Per-projecte · subtab Equip dins de project hub
+       · Membres · llista de qui hi participa al projecte
+       · Rols · catàleg expandible (founder · ops · contributor · viewer · invited)
+       · Permisos · matriu fine-grained per acció (read.*  edit.*  claim.wos
+         · approve.wos · manage.finances · manage.members)
+       · Convidacions · email · link · expires
+       · Activity per membre · contribucions · hores · WOs completats
+
+      Permission model · RBAC base + role overrides per WO específic.
+      Storage · KB node `team_<projectId>` · DID-based identifiers.
+
+      Cost estimate inclou · model permission + UI dual (global+project) +
+      audit log + invitations flow.
+    priority: high
+    complexity: L
+    status: backlog
+    estimated_cost_eur: 15.00
+    tags: ["sprint-v139-v140", "team", "permissions", "rbac", "new-view"]

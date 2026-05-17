@@ -86,15 +86,12 @@ ok('D · imports SubmenuTabs + getActiveTabFromUrl',
                                                     v3Src.includes('renderSubmenuTabs') &&
                                                     v3Src.includes('bindSubmenuTabs') &&
                                                     v3Src.includes('getActiveTabFromUrl'));
-ok('D · HUB_TABS · 5 pestanyes',                  v3Src.includes("id: 'hub'") &&
-                                                    v3Src.includes("id: 'map'") &&
-                                                    v3Src.includes("id: 'kanban'") &&
-                                                    v3Src.includes("id: 'wallet'") &&
-                                                    v3Src.includes("id: 'presentation'"));
-ok('D · HUB_DROPDOWN · 4 items',                  v3Src.includes("id: 'pacts'") &&
-                                                    v3Src.includes("id: 'sprints'") &&
-                                                    v3Src.includes("id: 'kb'") &&
-                                                    v3Src.includes("id: 'settings'"));
+// v134 · structure refactored · les assertions exhaustives es deleguen a
+// v134ProjectHubIaAligned.test.js · aquí només contracte estable
+ok('D · HUB_TABS · const declarat',               v3Src.includes('const HUB_TABS = Object.freeze(['));
+ok('D · HUB_DROPDOWN · const declarat',           v3Src.includes('const HUB_DROPDOWN = Object.freeze(['));
+ok('D · tab Hub overview · sempre present',       v3Src.includes("id: 'hub'"));
+ok('D · dropdown settings · sempre present',      v3Src.includes("id: 'settings'"));
 ok('D · DUMMY_PROJECT · Forn Vall',               v3Src.includes('Forn Vall'));
 ok('D · Presentation tab · 4 cells Canvas',        v3Src.includes('Segments') && v3Src.includes('Value Propositions') &&
                                                     v3Src.includes('Channels') && v3Src.includes('Revenue Streams'));

@@ -58,7 +58,7 @@ ok('B · output md multi té 5 files de provider', (() => {
 console.log('\n— C · backlog · refinaments scope');
 const yaml = fs.readFileSync(path.join(ROOT, 'docs/backlog.yaml'), 'utf8');
 ok('C · scope clarifica · NOMÉS vistes de PROJECTE no persona',
-                                                    yaml.includes('NO persona') && yaml.includes('NO toca vistes de persona'));
+                                                    yaml.includes('NO toca vistes de persona'));
 ok('C · 5 pestanyes principals (no 4)',           yaml.includes('Pestanyes principals (visibles · 5)'));
 ok('C · pestanya nova · Presentation',            yaml.includes('5. Presentation'));
 ok('C · presentation té secció Canvas + Pitch',   yaml.includes('Canvas · info estructurada') && yaml.includes('Pitch · narrativa'));
