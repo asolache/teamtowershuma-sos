@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-19T20:00 · v132b+c+d+e+f+g+h+i · DEEP ANALYSIS VNA + SYSTEM_BASE_SLIM + slim wire-up + vnaQuickSuggest + ValueMapView migrat + Benchmark CLI 5 APIs (multi-provider matriu N×20 · veredict cross-provider auto) + backlog WOs Project Hub subtabs (5 pestanyes · Presentation IA Canvas+Pitch · scope projecte-not-persona) + Submenu Pattern Canonical (refent LearnView) + v132i AUDIT 5 vistes existents + MOCKUP HTML self-contained interactiu per validació manual (Project Hub viu · 5 tabs + dropdown Més · Presentation tab amb Hero+Canvas+Pitch+Map+CTA · taula 7 decisions) · 268+ asserts nous';
+const BUILD_STAMP = '2026-05-19T22:00 · v132b+c+d+e+f+g+h+i+j · VNA DEEP ANALYSIS + SLIM + vnaQuickSuggest + ValueMapView migrat + Benchmark CLI 5 APIs + Project Hub subtabs backlog + Submenu Pattern Canonical (audit 5 vistes + mockup HTML validat + js/ui/SubmenuTabs.js component pur · render+bind+URL sync+a11y+CSS canonical · 50 asserts) · ready per migracions v133+ · 318+ asserts nous';
 
 export default class DesignSystemView {
 
