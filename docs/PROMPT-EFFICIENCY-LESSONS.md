@@ -71,17 +71,32 @@ Casos a `knowledge/benchmarks/vna-quality-cases.json` · 20 casos canonical.
 - API key Anthropic / OpenAI / Gemini configurada a `/settings`
 - Saldo wallet ≥ 0.10€ (~20 casos × 0.005€ promig)
 
-### Execució (CLI · futur v133)
+### Execució (CLI · v132f · disponible)
 ```bash
-node scripts/run-vna-benchmark.mjs --cases knowledge/benchmarks/vna-quality-cases.json
-```
+# Dry-run (sense LLM · validació pipeline)
+node scripts/run-vna-benchmark.mjs --dry-run --limit 3
 
-### Execució (UI · v132c · /prompts-debug)
-- Obrir `/prompts-debug?tab=design-value-map-rich`
-- Seleccionar cas del dropdown (a v133)
-- Click "▶ Run A/B test (LLM real)"
-- Veure resultats · omplir aquesta taula amb evidència
-- Save al KB · `type='prompt_ab_test_result'`
+# Live (Anthropic Haiku 4.5 per defecte · més barat)
+ANTHROPIC_API_KEY=sk-ant-... node scripts/run-vna-benchmark.mjs
+
+# Subset (iterar ràpid abans del full 20)
+ANTHROPIC_API_KEY=sk-ant-... node scripts/run-vna-benchmark.mjs --limit 5
+
+# OpenAI alternative
+OPENAI_API_KEY=sk-... node scripts/run-vna-benchmark.mjs --provider openai
+
+# Custom model
+ANTHROPIC_API_KEY=sk-ant-... node scripts/run-vna-benchmark.mjs --model claude-sonnet-4-6
+```
+Output · escriu `docs/benchmarks/results-<timestamp>.md` amb taula resultats + resum agregat + verdict H1.
+
+### Execució (UI · v132f · /prompts-debug)
+- Obrir `/prompts-debug` · sidebar dret · secció **🧪 A/B Lab**
+- (v132f) Seleccionar cas del **dropdown Cas benchmark** · auto-omple name/description/sector
+- Click **▶ Compara prompts (estàtic · sense LLM)** per veure els tokens FULL vs SLIM vs MINIMAL
+- Click **⚡ Run live A/B (LLM real)** per a comparació amb provider real (API key a `/settings`)
+- Resultat · winner + scores + tokens reals · còpia manual a la taula d'aquest doc
+- Save al KB · `type='prompt_ab_test_result'` (auto via `recordABTestResult`)
 
 ### Procediment manual (alternativa simple ara)
 ```js
@@ -141,6 +156,19 @@ import('./js/core/promptABTestService.js').then(async m => {
 - `vnaQuickSuggest.quickSuggestMap()` · single-call wrapper · slim default
 - `determineMode()` · helper UI · auto-elegeix quick vs full
 - Pendent · migrar `ValueMapView._runAISuggestion` a usar `quickSuggestMap` (no breaking · refactor intern)
+
+### v132e (ValueMapView migrat)
+- `ValueMapView._runAISuggestion` ara enruta · default `_runAISuggestionQuickSuggest` (nou) · feature flag `?vmap_ui=legacy` preservat
+- Adapter Orchestrator.callLLM → generateWithProvider({system, user}) retorna { text, usage }
+- `existingMap` injectat quan hi ha roles existents (mode completar transparent)
+- UI escalation hint quan score < 60 → "⚡ Escalant a prompt complet (qualitat baixa)…"
+- Backwards-compat verificat · API `_runAISuggestion()` sense args manté
+
+### v132f (benchmark CLI + UI dropdown)
+- CLI `scripts/run-vna-benchmark.mjs` executable · dry-run / limit / provider / model · output markdown
+- UI `/prompts-debug` · dropdown 20 casos benchmark · auto-omple ctx · botó "Run live A/B (LLM real)"
+- Provider adapter mínim a CLI (anthropic + openai) · llegeix env vars · no depèn de KB
+- Verdict H1 auto-calculat al markdown · win rate B ≥ 60% → CONFIRMAT
 
 ## Roadmap d'iteració (post-benchmark)
 

@@ -82,6 +82,80 @@ export default class PromptsDebugView {
         });
         // v132c · A/B Lab estàtic (sense LLM)
         document.getElementById('pdAbLabRun')?.addEventListener('click', () => this._runAbLab());
+        // v132f · A/B Lab live (LLM real) + dropdown de casos benchmark
+        document.getElementById('pdAbLabRunLive')?.addEventListener('click', () => this._runAbLabLive());
+        const benchSel = document.getElementById('pdBenchmarkCase');
+        if (benchSel) {
+            this._loadBenchmarkCases().then(() => {
+                benchSel.addEventListener('change', (e) => this._applyBenchmarkCase(e.target.value));
+            });
+        }
+    }
+
+    // v132f · carrega els 20 casos canonical i omple el dropdown
+    async _loadBenchmarkCases() {
+        const sel = document.getElementById('pdBenchmarkCase');
+        if (!sel) return;
+        try {
+            const res = await fetch('/knowledge/benchmarks/vna-quality-cases.json');
+            if (!res.ok) throw new Error('fetch ' + res.status);
+            const data = await res.json();
+            this._benchmarkCases = Array.isArray(data?.cases) ? data.cases : [];
+            for (const c of this._benchmarkCases) {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.id + ' · ' + (c.name || '').slice(0, 28);
+                sel.appendChild(opt);
+            }
+        } catch (e) {
+            // No critical · dropdown buit
+            console.warn('[PromptsDebug] benchmark cases unavailable ·', e?.message);
+        }
+    }
+
+    // v132f · aplica un cas benchmark al context · re-render
+    _applyBenchmarkCase(caseId) {
+        if (!caseId || !this._benchmarkCases) return;
+        const c = this._benchmarkCases.find(x => x.id === caseId);
+        if (!c) return;
+        this._ctx.name        = c.name;
+        this._ctx.description = c.description;
+        this._ctx.sector      = c.sector;
+        this.render();
+    }
+
+    // v132f · executa A/B test REAL amb LLM (usa generateWithProvider · necessita API key a /settings)
+    async _runAbLabLive() {
+        const out = document.getElementById('pdAbLabResult');
+        if (!out) return;
+        out.innerHTML = '<span style="color:var(--accent-orange);">⏳ Cridant LLM real (FULL i SLIM en paral·lel)…</span>';
+        try {
+            const { runABTest } = await import('../core/promptABTestService.js');
+            const { generateWithProvider } = await import('../core/aiProviderService.js');
+            const ctx = this._buildContext();
+            const r = await runABTest({
+                context: { name: ctx.name, description: ctx.description, sector: ctx.sector, vna_zoom: ctx.vna_zoom },
+                provider: generateWithProvider,
+                onProgress: (p) => {
+                    if (p.step === 'start') out.innerHTML = '<span style="color:var(--accent-orange);">⏳ A=' + p.promptA + 'tk · B=' + p.promptB + 'tk · esperant LLM…</span>';
+                },
+            });
+            const a = r.variants?.A; const b = r.variants?.B; const cmp = r.comparison;
+            const errA = a?.error ? '<span style="color:var(--accent-red);">⚠ ' + this._esc(a.error.slice(0, 60)) + '</span>' : '';
+            const errB = b?.error ? '<span style="color:var(--accent-red);">⚠ ' + this._esc(b.error.slice(0, 60)) + '</span>' : '';
+            out.innerHTML = `
+                <div style="background:var(--bg-elevated);border-radius:6px;padding:10px 12px;border-left:3px solid var(--accent-orange);">
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:6px;">
+                        <strong>🏆 Winner · ${this._esc(cmp?.winner || '—')}</strong>
+                        <code>${r.ms}ms</code>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;"><strong>A · FULL</strong><code>${a?.approxTokens || '—'} tk · score ${a?.score?.score ?? '—'} ${errA}</code></div>
+                    <div style="display:flex;justify-content:space-between;color:#22c55e;"><strong>B · SLIM</strong><code>${b?.approxTokens || '—'} tk · score ${b?.score?.score ?? '—'} ${errB}</code></div>
+                    <p style="margin:8px 0 0;font-size:0.72rem;color:var(--text-muted);">ΔScore · ${cmp?.deltaScore ?? '—'} · ${cmp?.summary ? this._esc(cmp.summary) : ''}</p>
+                </div>`;
+        } catch (e) {
+            out.innerHTML = '<span style="color:var(--accent-red);">Error LLM · ' + this._esc(e?.message || String(e)) + ' · configura API key a /settings</span>';
+        }
     }
 
     _buildContext() {
@@ -331,9 +405,16 @@ export default class PromptsDebugView {
                     </div>
                     <button id="pdResetCtx" class="pd-reset">↺ Reset al context per defecte</button>
 
-                    <h3 style="margin-top:1rem;color:var(--accent-purple);">🧪 A/B Lab (v132c)</h3>
-                    <p style="font-size:0.78rem;color:var(--text-muted);">Compara prompt FULL vs SLIM en viu · valida hipòtesi "menys context > més".</p>
+                    <h3 style="margin-top:1rem;color:var(--accent-purple);">🧪 A/B Lab (v132c+f)</h3>
+                    <p style="font-size:0.78rem;color:var(--text-muted);">Compara prompt FULL vs SLIM · valida hipòtesi "menys context > més".</p>
+                    <div class="pd-ctx-field">
+                        <label>Cas benchmark (v132f)</label>
+                        <select id="pdBenchmarkCase">
+                            <option value="">— context lliure —</option>
+                        </select>
+                    </div>
                     <button id="pdAbLabRun" class="pd-reset" style="background:var(--accent-purple);color:#fff;border-color:var(--accent-purple);">▶ Compara prompts (estàtic · sense LLM)</button>
+                    <button id="pdAbLabRunLive" class="pd-reset" style="background:var(--accent-orange);color:#fff;border-color:var(--accent-orange);margin-top:6px;">⚡ Run live A/B (LLM real · necessita API key)</button>
                     <div id="pdAbLabResult" style="margin-top:8px;font-size:0.78rem;"></div>
                 </aside>
 
