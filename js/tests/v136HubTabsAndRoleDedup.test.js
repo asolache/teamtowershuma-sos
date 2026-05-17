@@ -50,9 +50,10 @@ ok('A · constructor llegeix ?tab URL',             v2Src.includes("getActiveTab
 ok('A · _mode default · hub',                      v2Src.includes("this._mode = VALID_TAB_IDS.has(urlTab) ? urlTab : 'hub'"));
 ok('A · mount id="hubSubmenu" entre topbar i main',v2Src.includes('id="hubSubmenu"') && v2Src.includes('renderSubmenuTabs({ tabs: HUB_TABS'));
 ok('A · renderHubContent embolcalla 8 zones',     /_renderHubContent[\s\S]+?_zone0_Legendary[\s\S]+?_zone8_AdvancedTools/.test(v2Src));
-ok('A · renderPillarContent · grid links · context project',
+// v141+v142 · `_renderPillarContent` refactor · ara renderitza l2 submenu + in-tab preview
+// El test es delega a v141v142SubmenuV2AndInTab.test.js · aquí només contracte estable.
+ok('A · _renderPillarContent · context project preservat',
                                                     v2Src.includes('_renderPillarContent(') &&
-                                                    v2Src.includes('hub-pillar-grid') &&
                                                     v2Src.includes("encodeURIComponent(project.id)"));
 ok('A · afterRender bind submenu · re-render',     v2Src.includes('bindSubmenuTabs(mount,') && v2Src.includes('this.render();'));
 ok('A · destroy cleanup listener',                 v2Src.includes('destroy()') && v2Src.includes('this._cleanupTabs'));

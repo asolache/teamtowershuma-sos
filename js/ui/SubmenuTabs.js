@@ -23,7 +23,7 @@
 //   - CSS vars · `--sos-submenu-*` (configurables via tema)
 // =============================================================================
 
-export const SUBMENU_VERSION = 'v132j';
+export const SUBMENU_VERSION = 'v141';
 
 // ── HTML escape · defensive · evitem XSS en labels generats ──────────────
 function _esc(s) {
@@ -128,6 +128,25 @@ const SUBMENU_STYLES = `
 .sos-submenu-dropdown-item:hover { background: var(--bg-elevated, #161821); }
 .sos-submenu-dropdown-item.is-active { color: var(--accent-indigo, #6366f1); font-weight: 700; }
 .sos-submenu-dropdown-item .item-icon { font-size: 1.05rem; }
+
+/* v141 · variant l2 · sub-submenu compacte · viu DINS d'una tab pare */
+.sos-submenu.is-l2 {
+    height: 36px;
+    background: var(--bg-elevated, #161821);
+    border-bottom: 1px solid var(--border-default, #1f2937);
+    padding: 0 8px;
+}
+.sos-submenu.is-l2 .sos-submenu-tab {
+    font-size: 0.82rem;
+    padding: 0 10px;
+    font-weight: 500;
+}
+.sos-submenu.is-l2 .sos-submenu-tab.is-active {
+    background: var(--surface-2, var(--bg-panel, #0e0f13));
+    border-bottom: 2px solid var(--accent-purple, #a855f7);
+    color: var(--accent-purple, #a855f7);
+}
+.sos-submenu.is-l2 .sos-submenu-tab-icon { font-size: 0.95rem; }
 `;
 
 let _stylesInjected = false;
@@ -170,8 +189,12 @@ export function setActiveTabInUrl(urlParam, id) {
 // dropdown · [{ id, label, icon?, disabled? }] · opcional · genera "Més ▾"
 // activeId · string · id de la tab activa actual
 // urlParam · string · default 'tab' · només per a docs/clarity (el sync el fa bindSubmenuTabs)
-export function renderSubmenuTabs({ tabs = [], dropdown = null, activeId = null, urlParam = 'tab' } = {}) {
+// v141 · variant 'l1' (default) o 'l2' (sub-submenu compacte sense dropdown)
+export function renderSubmenuTabs({ tabs = [], dropdown = null, activeId = null, urlParam = 'tab', variant = 'l1' } = {}) {
     if (!Array.isArray(tabs) || tabs.length === 0) return '';
+    const isL2 = variant === 'l2';
+    // L2 no suporta dropdown · simplifica patró
+    if (isL2) dropdown = null;
 
     const tabHtml = tabs.map(t => {
         if (!t || !t.id) return '';
@@ -207,7 +230,8 @@ export function renderSubmenuTabs({ tabs = [], dropdown = null, activeId = null,
             + `</div></div>`;
     }
 
-    return `<nav class="sos-submenu" role="tablist" data-url-param="${_esc(urlParam)}">`
+    const wrapCls = 'sos-submenu' + (isL2 ? ' is-l2' : '');
+    return `<nav class="${wrapCls}" role="tablist" data-url-param="${_esc(urlParam)}">`
         + tabHtml + dropdownHtml + `</nav>`;
 }
 
