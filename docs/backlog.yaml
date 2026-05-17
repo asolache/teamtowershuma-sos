@@ -667,9 +667,9 @@ work_orders:
       landing/canvas text → small (haiku, flash). Estalvi 30-50%.
     priority: medium
     complexity: S
-    status: backlog
+    status: done   # IMPLEMENTAT a js/core/promptTierRouter.js · TASK_TO_TIER + pickTier + pickRoutingForTask + estimateCostMultiplier · usat per expertChainOrchestrator
     estimated_cost_eur: 4.00
-    tags: ["sprint-v120", "cost-optim", "router"]
+    tags: ["sprint-v120", "cost-optim", "router", "done-pre-v145"]
 
   - id: "wo-prompt-eval-loop"
     project_id: "sos-dev-internal"
@@ -959,3 +959,59 @@ work_orders:
     status: done   # v140 · teamService.js (RBAC + members + invitations + audit) + TeamView /team (5 tabs · matriu rol×acció) + nav entry
     estimated_cost_eur: 15.00
     tags: ["sprint-v139-v140", "team", "permissions", "rbac", "new-view", "done-v140"]
+
+  - id: "wo-domain-packs-enrich-all"
+    project_id: "sos-dev-internal"
+    title: "Domain packs · deliverables_tangible + transactions_canonical per als 24 packs (pilots 4 fets a v145)"
+    description: |
+      v145 ha enriquit 4 packs pilot (sports-team · arts-performance ·
+      coop-cares · software-agency) amb deliverables_tangible (5-8 cada) +
+      transactions_canonical (5-8 cada) · per evitar que el LLM inventi
+      noms genèrics ("Acta" · "Comunicació").
+
+      Pendents 20 packs · religious-community · political-movement ·
+      art-collective · worker-coop · research-lab · food-coop ·
+      health-clinic · hotel-hospitality · construction · coworking ·
+      ecommerce · community-media · housing-coop · energy-coop ·
+      legal-advisory · artisan-craft · public-admin · ngo-humanitarian ·
+      maker-space · edu-formation.
+
+      Cada pack · 6-8 deliverables_tangible (noms específics del sector) +
+      5-8 transactions_canonical { from, to, deliverable, type, frequency,
+      trigger }. El prompt vnaExpertPrompts._buildDomainBlock ja injecta
+      aquests blocs si presents.
+
+      Validació · cada pack enriquit s'ha de córrer per harness amb LLM
+      real i comprovar que · (a) avgScore ≥ 75 · (b) cap regression (cost,
+      qualitat) vs baseline · (c) deliverables/transactions output tenen
+      nom específic (no genèric).
+    priority: high
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 12.00
+    tags: ["sprint-v146-v150", "domain", "vna", "quality", "incremental"]
+
+  - id: "wo-prompt-eval-loop-auto"
+    project_id: "sos-dev-internal"
+    title: "Auto-improvement loop · CI integration del harness amb baseline + alerts"
+    description: |
+      v145 té promptQualityHarness + CLI --harness amb baseline compare.
+      Pendent · integrar al CI pipeline ·
+       · Cada PR que toca js/core/vnaExpertPrompts.js o knowledge/sectors/*
+         o js/core/domainDetector.js executa automàticament el harness amb
+         --baseline docs/benchmarks/baseline.json
+       · Exit code 2 (regression) → bloqueja merge
+       · Comment automàtic al PR amb delta score/cost/passRate
+       · Si --update-baseline a la PR description · accepta el nou baseline
+
+      Beneficis · auto-prevenció de regressions de qualitat · transparència
+      de cost-quality tradeoffs · evidència empírica per cada canvi al
+      prompt sense intervenció manual.
+
+      Dep · necessita API key real configurada al CI environment (Anthropic
+      o OpenAI · podem usar small-tier per a cost mínim).
+    priority: medium
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 9.00
+    tags: ["sprint-v146", "ci", "quality", "automation", "harness"]

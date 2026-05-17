@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T20:00 · v144 · AccountingV2View redesign · 5 tabs canonical (📊Resum · 📋Entrades · 📈P&L · 🥧Categories · 📄Export) · context switcher Personal/Projecte (mateix pattern WalletV2) · KPIs Actius/Passius/Equity/P&L · barres breakdown per compte · CSV download · /accounting → /accounting/v2 redirect · reutilitza computeBalanceSheet+computePLForPeriod+computeBalanceByAccount · tanca wo-accounting-v2-redesign';
+const BUILD_STAMP = '2026-05-20T22:00 · v145 · DOMAIN PACKS ENRICHED (4 pilots · sports-team · arts-performance · coop-cares · software-agency) amb deliverables_tangible (6-8 cada) + transactions_canonical (5-8 cada) injectats al prompt design-value-map-rich · resol "transactions/deliverables generics" + PROMPT QUALITY HARNESS (js/core/promptQualityHarness.js · runQualityHarness · aggregate · compareWithBaseline · serialize · CLI --harness mode amb baseline JSON · exit code 2 si regression score>3pp o cost>10%) · pendents 20 packs (wo-domain-packs-enrich-all) + CI integration (wo-prompt-eval-loop-auto)';
 
 export default class DesignSystemView {
 

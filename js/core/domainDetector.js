@@ -72,6 +72,27 @@ export const DOMAIN_PACKS = Object.freeze({
             'Reciprocitat club↔afició (esforç esportiu ⇄ suport econòmic-emocional)',
             'Pipeline cantera→primer equip→venda (formació ⇄ revaloració · multianyal)',
         ],
+        // v145 · anchoring específic per a evitar deliverables/transactions genèrics
+        deliverables_tangible: [
+            'Acta entrenament setmanal',
+            'Alineació partit jornada N',
+            'Informe scouting rival',
+            'Contracte renovació / fitxatge',
+            'Llicència federativa anual',
+            'Pla de pretemporada',
+            'Pressupost esportiu temporada',
+            'Informe mèdic lesió + readaptació',
+        ],
+        transactions_canonical: [
+            { from: 'head-coach',         to: 'player-first-team', deliverable: 'Acta entrenament setmanal',     type: 'tangible',  frequency: 'weekly',    trigger: 'sessió entrenament' },
+            { from: 'player-first-team',  to: 'head-coach',        deliverable: 'Rendiment al camp · feedback',  type: 'intangible',frequency: 'per-match', trigger: 'final de partit' },
+            { from: 'scout',              to: 'sporting-director', deliverable: 'Informe scouting rival',        type: 'tangible',  frequency: 'weekly',    trigger: 'partit pròxim rival' },
+            { from: 'sporting-director',  to: 'head-coach',        deliverable: 'Pla pretemporada',              type: 'tangible',  frequency: 'monthly',   trigger: 'inici cicle preparatori' },
+            { from: 'sponsor',            to: 'manager',           deliverable: 'Aportació econòmica + drets imatge', type: 'tangible', frequency: 'monthly', trigger: 'contracte vigent' },
+            { from: 'fan-base',           to: 'manager',           deliverable: 'Ingressos taquilla + botiga',   type: 'tangible',  frequency: 'per-match', trigger: 'partit a casa' },
+            { from: 'manager',            to: 'fan-base',          deliverable: 'Identitat de club · relat',     type: 'intangible',frequency: 'continu',   trigger: 'comunicació + resultats' },
+            { from: 'physio-medical',     to: 'player-first-team', deliverable: 'Informe mèdic + readaptació',   type: 'tangible',  frequency: 'on-demand', trigger: 'lesió detectada' },
+        ],
     },
 
     // ── ARTS-PERFORMANCE (teatre · companyia · festival · òpera · ...) ──
@@ -103,6 +124,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle artista↔dramaturgia (creació ⇄ revisió · per producció)',
             'Reciprocitat companyia↔públic (espectacle ⇄ assistència+feedback)',
         ],
+        // v145 · anchoring entregables tangibles + transactions canòniques
+        deliverables_tangible: [
+            'Guió producció',
+            'Cartell + dossier premsa',
+            'Bunches d\'assaig setmanal',
+            'Contracte gira (theater venue)',
+            'Liquidació taquilla',
+            'Programa de mà',
+            'Rider tècnic so/llum',
+            'Subvenció pública (BOE/DOGC)',
+        ],
+        transactions_canonical: [
+            { from: 'dramaturg',         to: 'artistic-director', deliverable: 'Guió producció',          type: 'tangible',  frequency: 'on-demand', trigger: 'nou projecte' },
+            { from: 'artistic-director', to: 'performer',         deliverable: 'Indicacions assaig',     type: 'intangible',frequency: 'daily',     trigger: 'sessió assaig' },
+            { from: 'performer',         to: 'audience',          deliverable: 'Espectacle',              type: 'intangible',frequency: 'per-show',  trigger: 'representació' },
+            { from: 'audience',          to: 'producer',          deliverable: 'Ingressos taquilla',     type: 'tangible',  frequency: 'per-show',  trigger: 'venda entrades' },
+            { from: 'producer',          to: 'venue',             deliverable: 'Contracte gira',         type: 'tangible',  frequency: 'on-demand', trigger: 'tour planificat' },
+            { from: 'tech-collaborator', to: 'venue',             deliverable: 'Rider tècnic so/llum',   type: 'tangible',  frequency: 'per-show',  trigger: 'muntatge sala' },
+        ],
     },
 
     // ── COOP-CARES (cooperativa cures · SAD · residència · ...) ─────────
@@ -132,6 +172,26 @@ export const DOMAIN_PACKS = Object.freeze({
         patterns: [
             'Cicle cuidadora↔persona atesa (atenció ⇄ feedback emocional · diari)',
             'Reciprocitat cooperativa↔administració (servei ⇄ finançament + control)',
+        ],
+        // v145 · anchoring tangibles + transactions canòniques
+        deliverables_tangible: [
+            'Pla d\'atenció individual (PAI)',
+            'Full d\'incidència diària',
+            'Acta assemblea cooperativa',
+            'Factura mensual servei',
+            'Informe trimestral seguiment',
+            'Concert / conveni amb administració',
+            'Reglament intern de règim',
+            'Pla de formació anual',
+        ],
+        transactions_canonical: [
+            { from: 'caregiver',     to: 'service-user',  deliverable: 'Atenció diària · pla cures',           type: 'tangible',  frequency: 'daily',     trigger: 'visita programada' },
+            { from: 'service-user',  to: 'caregiver',     deliverable: 'Feedback emocional · agraïment',       type: 'intangible',frequency: 'daily',     trigger: 'durant servei' },
+            { from: 'caregiver',     to: 'coordinator',   deliverable: 'Full d\'incidència diària',            type: 'tangible',  frequency: 'daily',     trigger: 'final de torn' },
+            { from: 'coordinator',   to: 'social-worker', deliverable: 'PAI · revisió trimestral',             type: 'tangible',  frequency: 'monthly',   trigger: 'revisió periòdica' },
+            { from: 'family',        to: 'coordinator',   deliverable: 'Copagament mensual',                   type: 'tangible',  frequency: 'monthly',   trigger: 'factura emesa' },
+            { from: 'coordinator',   to: 'family',        deliverable: 'Informe seguiment',                    type: 'tangible',  frequency: 'monthly',   trigger: 'fi de mes' },
+            { from: 'social-worker', to: 'coordinator',   deliverable: 'Valoració dependència + derivació',    type: 'tangible',  frequency: 'on-demand', trigger: 'nova alta usuari' },
         ],
     },
 
@@ -509,6 +569,27 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle PM↔eng (spec ⇄ implementació ⇄ feedback usuari)',
             'Reciprocitat client↔agència (pagament ⇄ DTD test booleà)',
             'Pipeline junior→senior (mentoring ⇄ growth · multianyal)',
+        ],
+        // v145 · anchoring tangibles + transactions canòniques
+        deliverables_tangible: [
+            'User story · acceptance criteria',
+            'Pull request · code review',
+            'Sprint demo · vídeo + notes',
+            'SaaS subscription invoice (MRR)',
+            'Incident post-mortem · 5 whys',
+            'Roadmap trimestre',
+            'OKRs Q · objectius + key results',
+            'Release notes · canvis prod',
+        ],
+        transactions_canonical: [
+            { from: 'product-manager',  to: 'engineer-senior',  deliverable: 'User story + acceptance criteria',  type: 'tangible',  frequency: 'weekly',     trigger: 'planning sprint' },
+            { from: 'engineer-senior',  to: 'qa-tester',        deliverable: 'Pull request',                       type: 'tangible',  frequency: 'daily',      trigger: 'feature complete' },
+            { from: 'engineer-junior',  to: 'engineer-senior',  deliverable: 'Code review request',                type: 'tangible',  frequency: 'daily',      trigger: 'commit pushed' },
+            { from: 'engineer-senior',  to: 'engineer-junior',  deliverable: 'Mentoring · code feedback',          type: 'intangible',frequency: 'daily',      trigger: 'PR review' },
+            { from: 'qa-tester',        to: 'devops-sre',       deliverable: 'Test green · ready to deploy',       type: 'tangible',  frequency: 'on-demand',  trigger: 'PR approved' },
+            { from: 'devops-sre',       to: 'client-customer',  deliverable: 'Release notes · canvis prod',        type: 'tangible',  frequency: 'biweekly',   trigger: 'deploy a producció' },
+            { from: 'client-customer',  to: 'product-manager',  deliverable: 'SaaS subscription invoice (MRR)',    type: 'tangible',  frequency: 'monthly',    trigger: 'cobrament mensual' },
+            { from: 'investor-vc',      to: 'cto-founder',      deliverable: 'Capital ronda · expectatives growth',type: 'tangible',  frequency: 'on-demand',  trigger: 'fundraising round' },
         ],
     },
 

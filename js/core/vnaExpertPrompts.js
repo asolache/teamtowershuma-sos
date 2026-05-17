@@ -487,6 +487,14 @@ Sense markdown · sense codeblocks.`,
             const archs = domainDetection.archetypes.map(a => `  · ${a.name} [${a.castell}] · ${a.desc}`).join('\n');
             const intang = (domainDetection.intangibles || []).map(s => `  · ${s}`).join('\n');
             const pats = (domainDetection.patterns || []).map(s => `  · ${s}`).join('\n');
+            // v145 · anchoring tangibles + transactions canòniques per a evitar genèrics
+            const tangs = Array.isArray(domainDetection.deliverables_tangible) && domainDetection.deliverables_tangible.length
+                ? domainDetection.deliverables_tangible.map(s => `  · ${s}`).join('\n')
+                : null;
+            const txsCanon = Array.isArray(domainDetection.transactions_canonical) && domainDetection.transactions_canonical.length
+                ? domainDetection.transactions_canonical.map(t =>
+                    `  · ${t.from} → ${t.to} · "${t.deliverable}" · ${t.type || '?'} · ${t.frequency || 'on-demand'} · trigger: ${t.trigger || '?'}`).join('\n')
+                : null;
             domainBlock = `
 DOMINI DETECTAT · ${domainDetection.label} (confidence ${domainDetection.confidence}) ·
 Arquetip de rols ESPECÍFICS d'aquest domini (usa'ls com a punt de partida · POTS afegir-ne ·
@@ -498,7 +506,13 @@ ${intang}
 
 Patterns recíprocs comuns ·
 ${pats}
-`;
+${tangs ? `
+Entregables TANGIBLES canonical del domini (NO inventis "Acta" · "Comunicació" · usa noms reals) ·
+${tangs}
+` : ''}${txsCanon ? `
+Transactions canonical del domini (8 cycles típics · adapta segons context · prioritza intangibles a < 100%) ·
+${txsCanon}
+` : ''}`;
         }
         // v131b · sectorContext · output de sectorAgentLoader.buildSectorContextBlock
         // complementa (NO substitueix) el domainDetection · injecta CNAE-2009 oficial +
