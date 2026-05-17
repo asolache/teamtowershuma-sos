@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-17T08:00 · v121 · EXPERT CHAIN ORCHESTRATOR (8 fases) + Prompt tier router (reasoner/mid/small · estalvi 30-50%) + SOC views (linear/castell/map presentationHints) · 60 asserts';
+const BUILD_STAMP = '2026-05-17T14:00 · v122 · runExpertChain INTEGRAT a CreateLiveView (generationMode=expert-chain) + AGENT.md pattern · 8 agents/*.md + loader + paritat CHAIN_PHASES/tier router · 99 asserts · BUG FIX breadcrumb search (conflicte ID amb globalSearch.js)';
 
 export default class DesignSystemView {
 

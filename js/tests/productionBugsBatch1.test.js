@@ -37,11 +37,14 @@ ok('B1 · identity div manté classe sos-nav-group (compat)', navHtml.includes('
 ok('B1 · avatar button té aria-haspopup', navHtml.includes('aria-haspopup="menu"'));
 
 // ─── B2 · ESC clear+blur al global search ──────────────────────────────
-console.log('\n— B2 · ESC tanca el global search');
-const navSrc = fs.readFileSync(new URL('../core/navService.js', import.meta.url), 'utf8');
-ok('B2 · navService maneja ev.key === "Escape"', navSrc.includes("ev.key === 'Escape'"));
-ok('B2 · ESC fa input.blur()', navSrc.includes('input.blur()'));
-ok('B2 · ESC neteja input.value', navSrc.match(/Escape[\s\S]{0,150}input\.value = ['"]['"]/));
+// v122-fix · el search palette viu a globalSearch.js (no a navService.js) ·
+// el binding del breadcrumb es va eliminar per evitar conflicte d'ID.
+console.log('\n— B2 · ESC tanca el global search · viu a globalSearch.js');
+const gsSrc = fs.readFileSync(new URL('../core/globalSearch.js', import.meta.url), 'utf8');
+ok('B2 · globalSearch maneja e.key === "Escape"', gsSrc.includes("e.key === 'Escape'"));
+ok('B2 · globalSearch palette té handler de teclat (Cmd+K)', gsSrc.includes('metaKey') && gsSrc.includes('ctrlKey'));
+ok('B2 · breadcrumb ja NO injecta search (v122-fix)',
+   !fs.readFileSync(new URL('../core/navService.js', import.meta.url), 'utf8').includes('sos-bc-search-wrap input'));
 
 // ─── B3 · navigateTo (no full reload) ──────────────────────────────────
 console.log('\n— B3 · ProjectCreationV2 + CreateLive usen navigateTo (SPA)');
@@ -83,9 +86,10 @@ ok('B5 · CreateLiveView sincronitza també deliverables', clvSrc.includes('this
 console.log('\n— B6 · SYSTEM_BASE amb requisits de qualitat explícits');
 ok('B6 · SYSTEM_BASE menciona QUALITAT MÍNIMA', SYSTEM_BASE.includes('QUALITAT MÍNIMA'));
 ok('B6 · SYSTEM_BASE prohibeix placeholders', SYSTEM_BASE.includes('placeholder'));
-ok('B6 · SYSTEM_BASE menciona dtd_test concret', SYSTEM_BASE.includes('dtd_test'));
-ok('B6 · SYSTEM_BASE requereix steps convertibles a WO', SYSTEM_BASE.includes('CONVERTIBLE A WORK ORDER'));
-ok('B6 · SYSTEM_BASE menciona consultora sènior', SYSTEM_BASE.includes('consultora sènior'));
+// v122 · SYSTEM_BASE refet a v119/120 · DTD viu com "DTD test booleà" · consultor masc
+ok('B6 · SYSTEM_BASE menciona DTD test booleà', SYSTEM_BASE.includes('DTD test') || SYSTEM_BASE.includes('test booleà'));
+ok('B6 · SYSTEM_BASE requereix steps convertibles a WO', SYSTEM_BASE.includes('convertible a WO') || SYSTEM_BASE.includes('CONVERTIBLE A WORK ORDER'));
+ok('B6 · SYSTEM_BASE menciona consultor sènior', SYSTEM_BASE.includes('consultor sènior') || SYSTEM_BASE.includes('consultora sènior'));
 
 // Task prompts enriquits
 const sopPrompt = buildPrompt({ taskKind: 'generate-sops-from-soc', context: { name: 'X', soc: { title: 'T' }, project_ctx: { description: 'd' }, role_kinds: ['founder'] } });

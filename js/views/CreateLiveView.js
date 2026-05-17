@@ -22,6 +22,7 @@ import { createProject } from '../core/projectCreationOrchestrator.js';
 import { buildAiCallbacks } from '../core/aiDrivenCreationAdapter.js';
 import { loadIndex } from '../core/knowledgeIndexService.js';
 import { toast } from '../core/uxComponents.js';
+import { runExpertChain, CHAIN_PHASES } from '../core/expertChainOrchestrator.js';
 
 const CASTELL_ORDER = ['pom_de_dalt', 'tronc', 'pinya', 'laterals', 'mans', 'baixos'];
 const CASTELL_LABEL = {
@@ -134,6 +135,11 @@ export default class CreateLiveView {
     async _runPipeline() {
         const p = this._payload;
 
+        // v122 · expert-chain · 8 fases coherents · usa runExpertChain orquestrador
+        if (p.generationMode === 'expert-chain') {
+            return this._runExpertChainPipeline();
+        }
+
         // Carrega index knowledge per al matcher (no bloca si falla · matcher ho gestiona)
         let knowledgeIndex = null;
         try { knowledgeIndex = await loadIndex({}); } catch (_) {}
@@ -201,6 +207,116 @@ export default class CreateLiveView {
         } catch (e) {
             this._appendEvent({ step: 'error', status: 'error', error: e?.message || String(e) });
             toast({ kind: 'error', text: '✘ Error creant projecte · ' + (e?.message || e), ttl: 8000 });
+        }
+    }
+
+    // v122 · runExpertChainPipeline · alternativa a createProject que executa
+    // les 8 fases canòniques del prompts-chain-plan (define-product → wos) ·
+    // delega tot al runExpertChain orquestrador. El resultat es persisteix
+    // directament al KB sense passar pel pipeline classify→seed→match clàssic.
+    async _runExpertChainPipeline() {
+        const p = this._payload;
+        try {
+            const { generateWithProvider } = await import('../core/aiProviderService.js');
+            const ambition = p.ambition || 'standard';
+            const maxCostEur = ambition === 'max' ? 0.10 : ambition === 'standard' ? 0.05 : 0.02;
+
+            const context = {
+                name:         p.name,
+                description:  p.description || '',
+                sector:       p.sector || null,
+                ambition,
+                vna_zoom:     p.vna_zoom || 'mid',
+                entity_type:  p.entity_type || 'business',
+                lifecycle_stage: p.lifecycle_stage || 'idea',
+            };
+
+            this._appendEvent({ step: 'expert-chain', status: 'start', phases: CHAIN_PHASES.length });
+
+            const out = await runExpertChain({
+                context,
+                generateWithProvider,
+                preferredProvider: p.preferredProvider || null,
+                maxCostEur,
+                onEvent: (e) => this._handleEvent(e),
+            });
+
+            // Sync draft amb output complet
+            this._draft.canvas       = out.canvas || null;
+            this._draft.pitch        = out.pitch || null;
+            this._draft.sops         = (out.sops || []);
+            this._draft.socs         = (out.socs || []);
+            this._draft.wos          = (out.wos || []);
+            this._draft.socsSelected = (out.socs || []).map(s => s.id).filter(Boolean);
+            this._draft.score        = Math.max(0, Math.min(100, 60 + (out.phasesRun.length * 5) - (out.phaseErrors.length * 10)));
+            this._draft.status       = this._draft.score >= 85 ? 'gold' : this._draft.score >= 70 ? 'silver' : 'bronze';
+            this._renderTabs();
+            this._renderQualityGauge();
+
+            // Persistència KB · projecte + roles + sops + socs + wos
+            const projectId = (p.name || 'projecte').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) + '-' + Date.now().toString(36);
+            const projectNode = {
+                id: projectId,
+                kind: 'project',
+                content: {
+                    title: p.name,
+                    description: p.description || '',
+                    sector: p.sector || null,
+                    ambition,
+                    vna_zoom: p.vna_zoom || 'mid',
+                    entity_type: p.entity_type || 'business',
+                    generationMode: 'expert-chain',
+                    canvas: out.canvas,
+                    pitch: out.pitch,
+                    landing: out.landing,
+                    value_map: out.valueMap,
+                    presentation_hints: out.presentationHints || null,
+                    vna_roles: (out.valueMap?.roles || []),
+                    expert_chain_version: 'v1.0',
+                    cost_eur: out.costTotal,
+                    phases_run: out.phasesRun,
+                    phases_skipped: out.phasesSkipped,
+                    phase_errors: out.phaseErrors,
+                },
+                created_at: new Date().toISOString(),
+            };
+
+            await KB.upsert(projectNode);
+            for (const soc of (out.socs || [])) {
+                await KB.upsert({ id: soc.id || ('soc-' + Math.random().toString(36).slice(2,8)), kind: 'soc', content: { ...soc, project_ref: projectId } });
+            }
+            for (const sop of (out.sops || [])) {
+                await KB.upsert({ id: sop.id || ('sop-' + Math.random().toString(36).slice(2,8)), kind: 'sop', content: { ...sop, project_ref: projectId } });
+            }
+            for (const wo of (out.wos || [])) {
+                await KB.upsert({ id: wo.id || ('wo-' + Math.random().toString(36).slice(2,8)), kind: 'wo', content: { ...wo, project_ref: projectId, status: 'todo' } });
+            }
+            await store.dispatch({ type: 'CREATE_PROJECT', payload: projectNode });
+
+            const result = {
+                ok: out.phaseErrors.length === 0,
+                score: this._draft.score,
+                status: this._draft.status,
+                project: projectNode,
+                roles: (out.valueMap?.roles || []),
+                sops: (out.sops || []).map(s => ({ content: s })),
+                socs: (out.socs || []).map(s => ({ content: s })),
+                wos:  (out.wos  || []).map(w => ({ content: w })),
+                cost: out.costTotal,
+                integrity: { ok: out.phaseErrors.length === 0, errorCount: out.phaseErrors.length },
+                missing: out.phaseErrors.map(e => e.phase),
+            };
+            this._result = result;
+            this._finished = true;
+            this._appendEvent({ step: 'finish', status: 'done', cost: out.costTotal, phases: out.phasesRun.length });
+            this._renderFinishBar(result);
+            toast({ kind: out.phaseErrors.length === 0 ? 'success' : 'warning',
+                    text: `✓ Expert-chain · ${out.phasesRun.length}/${CHAIN_PHASES.length} fases · ${out.costTotal.toFixed(4)}€`,
+                    ttl: 4500 });
+            sessionStorage.removeItem('createLivePayload');
+        } catch (e) {
+            this._appendEvent({ step: 'error', status: 'error', error: e?.message || String(e) });
+            toast({ kind: 'error', text: '✘ Expert-chain · ' + (e?.message || e), ttl: 8000 });
         }
     }
 
