@@ -61,6 +61,7 @@ const HUB_PILLAR_LINKS = Object.freeze({
     treballar: [
         { href: '/map',       label: 'Map',       icon: '🗺' },
         { href: '/kanban',    label: 'Kanban',    icon: '📋' },
+        { href: '/sops',      label: 'SOPs',      icon: '📜' },
         { href: '/quality',   label: 'Qualitat',  icon: '🎯' },
         { href: '/sprint',    label: 'Sprint',    icon: '🐝' },
         { href: '/lifecycle', label: 'Lifecycle', icon: '🌀' },
