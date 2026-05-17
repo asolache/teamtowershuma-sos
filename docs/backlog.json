@@ -715,12 +715,13 @@
       "description": "Router que mapeja cada TASK_KIND al model tier òptim ·\ndesign-value-map-rich → reasoner (opus, r1) ·\npersonalize-* → mid (sonnet, deepseek-v3) ·\nlanding/canvas text → small (haiku, flash). Estalvi 30-50%.",
       "priority": "medium",
       "complexity": "S",
-      "status": "backlog",
+      "status": "done",
       "estimated_cost_eur": 4,
       "tags": [
         "sprint-v120",
         "cost-optim",
-        "router"
+        "router",
+        "done-pre-v145"
       ]
     },
     {
@@ -895,6 +896,40 @@
         "rbac",
         "new-view",
         "done-v140"
+      ]
+    },
+    {
+      "id": "wo-domain-packs-enrich-all",
+      "project_id": "sos-dev-internal",
+      "title": "Domain packs · deliverables_tangible + transactions_canonical per als 24 packs (pilots 4 fets a v145)",
+      "description": "v145 ha enriquit 4 packs pilot (sports-team · arts-performance ·\ncoop-cares · software-agency) amb deliverables_tangible (5-8 cada) +\ntransactions_canonical (5-8 cada) · per evitar que el LLM inventi\nnoms genèrics (\"Acta\" · \"Comunicació\").\n\nPendents 20 packs · religious-community · political-movement ·\nart-collective · worker-coop · research-lab · food-coop ·\nhealth-clinic · hotel-hospitality · construction · coworking ·\necommerce · community-media · housing-coop · energy-coop ·\nlegal-advisory · artisan-craft · public-admin · ngo-humanitarian ·\nmaker-space · edu-formation.\n\nCada pack · 6-8 deliverables_tangible (noms específics del sector) +\n5-8 transactions_canonical { from, to, deliverable, type, frequency,\ntrigger }. El prompt vnaExpertPrompts._buildDomainBlock ja injecta\naquests blocs si presents.\n\nValidació · cada pack enriquit s'ha de córrer per harness amb LLM\nreal i comprovar que · (a) avgScore ≥ 75 · (b) cap regression (cost,\nqualitat) vs baseline · (c) deliverables/transactions output tenen\nnom específic (no genèric).",
+      "priority": "high",
+      "complexity": "M",
+      "status": "done",
+      "estimated_cost_eur": 12,
+      "tags": [
+        "sprint-v146-v150",
+        "domain",
+        "vna",
+        "quality",
+        "incremental"
+      ]
+    },
+    {
+      "id": "wo-prompt-eval-loop-auto",
+      "project_id": "sos-dev-internal",
+      "title": "Auto-improvement loop · CI integration del harness amb baseline + alerts",
+      "description": "v145 té promptQualityHarness + CLI --harness amb baseline compare.\nPendent · integrar al CI pipeline ·\n · Cada PR que toca js/core/vnaExpertPrompts.js o knowledge/sectors/*\n   o js/core/domainDetector.js executa automàticament el harness amb\n   --baseline docs/benchmarks/baseline.json\n · Exit code 2 (regression) → bloqueja merge\n · Comment automàtic al PR amb delta score/cost/passRate\n · Si --update-baseline a la PR description · accepta el nou baseline\n\nBeneficis · auto-prevenció de regressions de qualitat · transparència\nde cost-quality tradeoffs · evidència empírica per cada canvi al\nprompt sense intervenció manual.\n\nDep · necessita API key real configurada al CI environment (Anthropic\no OpenAI · podem usar small-tier per a cost mínim).",
+      "priority": "medium",
+      "complexity": "M",
+      "status": "backlog",
+      "estimated_cost_eur": 9,
+      "tags": [
+        "sprint-v146",
+        "ci",
+        "quality",
+        "automation",
+        "harness"
       ]
     }
   ]

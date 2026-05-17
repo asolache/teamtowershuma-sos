@@ -29,13 +29,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runABTest, summarizeABTests } from '../js/core/promptABTestService.js';
+// v145 · quality harness mode
+import { runQualityHarness, compareWithBaseline, serializeBaseline, loadBaselineFromText, DEFAULT_THRESHOLDS } from '../js/core/promptQualityHarness.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
 // ── CLI args parsing ───────────────────────────────────────────────────────
 function parseArgs(argv) {
-    const args = { cases: null, limit: null, dryRun: false, providers: null, provider: 'anthropic', model: null, outDir: 'docs/benchmarks' };
+    const args = { cases: null, limit: null, dryRun: false, providers: null, provider: 'anthropic', model: null, outDir: 'docs/benchmarks',
+                   harness: false, baseline: null, updateBaseline: false, slim: true };
     for (let i = 2; i < argv.length; i++) {
         const a = argv[i];
         if (a === '--cases')          args.cases    = argv[++i];
@@ -45,8 +48,22 @@ function parseArgs(argv) {
         else if (a === '--model')     args.model    = argv[++i];
         else if (a === '--out')       args.outDir   = argv[++i];
         else if (a === '--dry-run')   args.dryRun   = true;
+        // v145 · harness mode · runs quality + compares baseline
+        else if (a === '--harness')   args.harness  = true;
+        else if (a === '--baseline')  args.baseline = argv[++i];
+        else if (a === '--update-baseline') args.updateBaseline = true;
+        else if (a === '--no-slim')   args.slim     = false;
         else if (a === '--help' || a === '-h') {
-            console.log('Usage · node scripts/run-vna-benchmark.mjs [--providers anthropic,openai,gemini,deepseek,minimax] [--cases path] [--limit n] [--model id] [--dry-run]');
+            console.log('Usage · node scripts/run-vna-benchmark.mjs [options]');
+            console.log('  --providers anthropic,openai,gemini,deepseek,minimax  · csv de providers');
+            console.log('  --cases <path>           · benchmark cases JSON · default knowledge/benchmarks/vna-quality-cases.json');
+            console.log('  --limit <n>              · primers N casos');
+            console.log('  --model <id>             · model override');
+            console.log('  --dry-run                · sense LLM');
+            console.log('  --harness                · quality harness · runs current prompt + scores + compares baseline');
+            console.log('  --baseline <path>        · baseline JSON path · default docs/benchmarks/baseline.json');
+            console.log('  --update-baseline        · escriu el run actual com a nou baseline');
+            console.log('  --no-slim                · usa SYSTEM_BASE FULL (default SLIM)');
             process.exit(0);
         }
     }
@@ -380,6 +397,132 @@ async function runOneProvider(name, providerFn, cases) {
     return results;
 }
 
+// ── Harness mode · v145 · quality tracking amb baseline comparison ──────
+async function runHarnessMode(args, cases) {
+    const providerName = args.providerList[0];
+    console.log('=== VNA Harness · v145 · QUALITY TRACKING ===');
+    console.log('· Cases · ' + cases.length);
+    console.log('· Provider · ' + providerName + (args.model ? ' · ' + args.model : ''));
+    console.log('· Variant · ' + (args.slim ? 'SLIM (default)' : 'FULL'));
+    console.log('· Mode · ' + (args.dryRun ? 'DRY-RUN' : 'LIVE'));
+    console.log('');
+
+    let providerFn;
+    if (args.dryRun) {
+        providerFn = dryRunProvider;
+    } else {
+        try { providerFn = await makeProvider(providerName, args.model); }
+        catch (e) { console.error('✗ provider · ' + e.message); process.exit(1); }
+    }
+
+    const t0 = Date.now();
+    const run = await runQualityHarness({
+        cases, provider: providerFn, slim: args.slim,
+        onProgress: ({ idx, total, result }) => {
+            const tag = '[' + idx + '/' + total + '] ' + result.id;
+            if (result.ok) console.log(tag + ' · ok · score=' + result.score + ' · tokens=' + result.tokens + ' · €' + result.costEur + ' · ' + result.ms + 'ms');
+            else            console.log(tag + ' · ✗ ' + result.error);
+        },
+    });
+    if (!run.ok) { console.error('✗ harness · ' + run.error); process.exit(1); }
+    const ag = run.aggregate;
+    console.log('');
+    console.log('═══ AGGREGATE ═══');
+    console.log('· ok · ' + ag.ok + '/' + ag.total);
+    console.log('· avgScore · ' + ag.avgScore);
+    console.log('· passRate · ' + (ag.passRate * 100).toFixed(0) + '% (cases score ≥ ' + DEFAULT_THRESHOLDS.passScore + ')');
+    console.log('· avgTokens · ' + ag.avgTokens);
+    console.log('· avgCostEur · €' + ag.avgCostEur);
+    console.log('· totalCostEur · €' + ag.totalCostEur);
+    console.log('· runtime · ' + (Date.now() - t0) + 'ms');
+    console.log('');
+
+    const baselinePath = args.baseline || path.join(ROOT, 'docs/benchmarks/baseline.json');
+    let baseline = null;
+    if (fs.existsSync(baselinePath)) {
+        try {
+            const text = fs.readFileSync(baselinePath, 'utf8');
+            const parsed = loadBaselineFromText(text);
+            if (parsed.ok) baseline = parsed.baseline;
+            else console.warn('⚠ baseline existeix però invàlid · ' + parsed.error);
+        } catch (e) { console.warn('⚠ no es pot llegir baseline · ' + e.message); }
+    }
+
+    if (baseline) {
+        const cmp = compareWithBaseline({ current: run, baseline });
+        if (cmp.ok) {
+            console.log('═══ COMPARACIÓ vs BASELINE (' + baseline.timestamp.slice(0, 10) + ') ═══');
+            console.log('· Δscore · ' + (cmp.deltaScore >= 0 ? '+' : '') + cmp.deltaScore + 'pp');
+            console.log('· Δcost · ' + (cmp.deltaCost >= 0 ? '+' : '') + cmp.deltaCost + '%');
+            console.log('· Δtokens · ' + (cmp.deltaTokens >= 0 ? '+' : '') + cmp.deltaTokens);
+            console.log('· ΔpassRate · ' + (cmp.deltaPassRate >= 0 ? '+' : '') + cmp.deltaPassRate + 'pp');
+            console.log('· Verdict · ' + cmp.recommendation);
+            console.log('');
+            if (cmp.regression) {
+                console.error('🛑 REGRESSION detectada · exit 2');
+                writeHarnessOutput(run, cmp, args);
+                process.exit(2);
+            }
+        }
+    } else {
+        console.log('ℹ Cap baseline existent · ' + baselinePath);
+        console.log('  Crida amb --update-baseline per crear-ne un.');
+    }
+
+    if (args.updateBaseline) {
+        const ser = serializeBaseline(run);
+        fs.mkdirSync(path.dirname(baselinePath), { recursive: true });
+        fs.writeFileSync(baselinePath, JSON.stringify(ser, null, 2), 'utf8');
+        console.log('✅ baseline escrit · ' + path.relative(ROOT, baselinePath));
+    }
+
+    writeHarnessOutput(run, baseline ? compareWithBaseline({ current: run, baseline }) : null, args);
+}
+
+function writeHarnessOutput(run, cmp, args) {
+    const outDir = path.resolve(ROOT, args.outDir);
+    fs.mkdirSync(outDir, { recursive: true });
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const outFile = path.join(outDir, 'harness-' + ts + (args.dryRun ? '-dryrun' : '') + '.md');
+    const lines = [];
+    lines.push('# VNA Quality Harness · v145');
+    lines.push('');
+    lines.push('· Generated · ' + new Date().toISOString());
+    lines.push('· Variant · ' + (args.slim ? 'SLIM' : 'FULL'));
+    lines.push('· Mode · ' + (args.dryRun ? 'DRY-RUN' : 'LIVE'));
+    lines.push('');
+    lines.push('## Aggregate');
+    const ag = run.aggregate;
+    lines.push('| Metric | Value |');
+    lines.push('|---|---:|');
+    lines.push('| Cases ok | ' + ag.ok + ' / ' + ag.total + ' |');
+    lines.push('| Avg score | ' + ag.avgScore + ' |');
+    lines.push('| Pass rate (≥70) | ' + (ag.passRate * 100).toFixed(0) + '% |');
+    lines.push('| Avg tokens | ' + ag.avgTokens + ' |');
+    lines.push('| Avg cost | €' + ag.avgCostEur + ' |');
+    lines.push('| Total cost | €' + ag.totalCostEur + ' |');
+    lines.push('');
+    if (cmp?.ok) {
+        lines.push('## vs Baseline');
+        lines.push('| Δ | Value |');
+        lines.push('|---|---:|');
+        lines.push('| Δscore | ' + cmp.deltaScore + 'pp |');
+        lines.push('| Δcost | ' + cmp.deltaCost + '% |');
+        lines.push('| Δtokens | ' + cmp.deltaTokens + ' |');
+        lines.push('| ΔpassRate | ' + cmp.deltaPassRate + 'pp |');
+        lines.push('| Verdict | ' + cmp.recommendation + ' |');
+        lines.push('');
+    }
+    lines.push('## Per case');
+    lines.push('| Case | OK | Score | Tokens | Cost € | ms |');
+    lines.push('|---|---|---:|---:|---:|---:|');
+    for (const r of run.results) {
+        lines.push('| ' + r.id + ' | ' + (r.ok ? '✓' : '⚠ ' + (r.error || '')) + ' | ' + (r.score ?? '—') + ' | ' + (r.tokens ?? '—') + ' | ' + (r.costEur ?? '—') + ' | ' + (r.ms ?? '—') + ' |');
+    }
+    fs.writeFileSync(outFile, lines.join('\n'), 'utf8');
+    console.log('═══ Resultats · ' + path.relative(ROOT, outFile));
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 async function main() {
     const args = parseArgs(process.argv);
@@ -387,6 +530,12 @@ async function main() {
     const raw = JSON.parse(fs.readFileSync(casesPath, 'utf8'));
     let cases = Array.isArray(raw?.cases) ? raw.cases : [];
     if (args.limit) cases = cases.slice(0, args.limit);
+
+    // v145 · harness mode (quality + baseline comparison)
+    if (args.harness) {
+        await runHarnessMode(args, cases);
+        return;
+    }
 
     const isMulti = args.providerList.length > 1;
     console.log('=== VNA Benchmark · ' + (isMulti ? 'v132g · MULTI-PROVIDER' : 'v132f') + ' ===');

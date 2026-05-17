@@ -72,6 +72,27 @@ export const DOMAIN_PACKS = Object.freeze({
             'Reciprocitat club↔afició (esforç esportiu ⇄ suport econòmic-emocional)',
             'Pipeline cantera→primer equip→venda (formació ⇄ revaloració · multianyal)',
         ],
+        // v145 · anchoring específic per a evitar deliverables/transactions genèrics
+        deliverables_tangible: [
+            'Acta entrenament setmanal',
+            'Alineació partit jornada N',
+            'Informe scouting rival',
+            'Contracte renovació / fitxatge',
+            'Llicència federativa anual',
+            'Pla de pretemporada',
+            'Pressupost esportiu temporada',
+            'Informe mèdic lesió + readaptació',
+        ],
+        transactions_canonical: [
+            { from: 'head-coach',         to: 'player-first-team', deliverable: 'Acta entrenament setmanal',     type: 'tangible',  frequency: 'weekly',    trigger: 'sessió entrenament' },
+            { from: 'player-first-team',  to: 'head-coach',        deliverable: 'Rendiment al camp · feedback',  type: 'intangible',frequency: 'per-match', trigger: 'final de partit' },
+            { from: 'scout',              to: 'sporting-director', deliverable: 'Informe scouting rival',        type: 'tangible',  frequency: 'weekly',    trigger: 'partit pròxim rival' },
+            { from: 'sporting-director',  to: 'head-coach',        deliverable: 'Pla pretemporada',              type: 'tangible',  frequency: 'monthly',   trigger: 'inici cicle preparatori' },
+            { from: 'sponsor',            to: 'manager',           deliverable: 'Aportació econòmica + drets imatge', type: 'tangible', frequency: 'monthly', trigger: 'contracte vigent' },
+            { from: 'fan-base',           to: 'manager',           deliverable: 'Ingressos taquilla + botiga',   type: 'tangible',  frequency: 'per-match', trigger: 'partit a casa' },
+            { from: 'manager',            to: 'fan-base',          deliverable: 'Identitat de club · relat',     type: 'intangible',frequency: 'continu',   trigger: 'comunicació + resultats' },
+            { from: 'physio-medical',     to: 'player-first-team', deliverable: 'Informe mèdic + readaptació',   type: 'tangible',  frequency: 'on-demand', trigger: 'lesió detectada' },
+        ],
     },
 
     // ── ARTS-PERFORMANCE (teatre · companyia · festival · òpera · ...) ──
@@ -103,6 +124,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle artista↔dramaturgia (creació ⇄ revisió · per producció)',
             'Reciprocitat companyia↔públic (espectacle ⇄ assistència+feedback)',
         ],
+        // v145 · anchoring entregables tangibles + transactions canòniques
+        deliverables_tangible: [
+            'Guió producció',
+            'Cartell + dossier premsa',
+            'Bunches d\'assaig setmanal',
+            'Contracte gira (theater venue)',
+            'Liquidació taquilla',
+            'Programa de mà',
+            'Rider tècnic so/llum',
+            'Subvenció pública (BOE/DOGC)',
+        ],
+        transactions_canonical: [
+            { from: 'dramaturg',         to: 'artistic-director', deliverable: 'Guió producció',          type: 'tangible',  frequency: 'on-demand', trigger: 'nou projecte' },
+            { from: 'artistic-director', to: 'performer',         deliverable: 'Indicacions assaig',     type: 'intangible',frequency: 'daily',     trigger: 'sessió assaig' },
+            { from: 'performer',         to: 'audience',          deliverable: 'Espectacle',              type: 'intangible',frequency: 'per-show',  trigger: 'representació' },
+            { from: 'audience',          to: 'producer',          deliverable: 'Ingressos taquilla',     type: 'tangible',  frequency: 'per-show',  trigger: 'venda entrades' },
+            { from: 'producer',          to: 'venue',             deliverable: 'Contracte gira',         type: 'tangible',  frequency: 'on-demand', trigger: 'tour planificat' },
+            { from: 'tech-collaborator', to: 'venue',             deliverable: 'Rider tècnic so/llum',   type: 'tangible',  frequency: 'per-show',  trigger: 'muntatge sala' },
+        ],
     },
 
     // ── COOP-CARES (cooperativa cures · SAD · residència · ...) ─────────
@@ -133,6 +173,26 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle cuidadora↔persona atesa (atenció ⇄ feedback emocional · diari)',
             'Reciprocitat cooperativa↔administració (servei ⇄ finançament + control)',
         ],
+        // v145 · anchoring tangibles + transactions canòniques
+        deliverables_tangible: [
+            'Pla d\'atenció individual (PAI)',
+            'Full d\'incidència diària',
+            'Acta assemblea cooperativa',
+            'Factura mensual servei',
+            'Informe trimestral seguiment',
+            'Concert / conveni amb administració',
+            'Reglament intern de règim',
+            'Pla de formació anual',
+        ],
+        transactions_canonical: [
+            { from: 'caregiver',     to: 'service-user',  deliverable: 'Atenció diària · pla cures',           type: 'tangible',  frequency: 'daily',     trigger: 'visita programada' },
+            { from: 'service-user',  to: 'caregiver',     deliverable: 'Feedback emocional · agraïment',       type: 'intangible',frequency: 'daily',     trigger: 'durant servei' },
+            { from: 'caregiver',     to: 'coordinator',   deliverable: 'Full d\'incidència diària',            type: 'tangible',  frequency: 'daily',     trigger: 'final de torn' },
+            { from: 'coordinator',   to: 'social-worker', deliverable: 'PAI · revisió trimestral',             type: 'tangible',  frequency: 'monthly',   trigger: 'revisió periòdica' },
+            { from: 'family',        to: 'coordinator',   deliverable: 'Copagament mensual',                   type: 'tangible',  frequency: 'monthly',   trigger: 'factura emesa' },
+            { from: 'coordinator',   to: 'family',        deliverable: 'Informe seguiment',                    type: 'tangible',  frequency: 'monthly',   trigger: 'fi de mes' },
+            { from: 'social-worker', to: 'coordinator',   deliverable: 'Valoració dependència + derivació',    type: 'tangible',  frequency: 'on-demand', trigger: 'nova alta usuari' },
+        ],
     },
 
     // ── EDU-FORMATION (cooperativa educativa · escola lliure · ...) ────
@@ -162,6 +222,25 @@ export const DOMAIN_PACKS = Object.freeze({
         patterns: [
             'Cicle mestra↔alumnat (acompanyament ⇄ aprenentatge · diari)',
             'Reciprocitat escola↔família (educació ⇄ implicació + pagament)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Pla pedagògic anual',
+            'Calendari escolar',
+            'Acta assemblea trimestral',
+            'Informe d\'avaluació individual',
+            'Reglament intern centre',
+            'Pressupost cooperativa',
+            'Quota mensual família',
+            'Conveni amb administració',
+        ],
+        transactions_canonical: [
+            { from: 'teacher', to: 'student', deliverable: 'Sessió pedagògica', type: 'intangible', frequency: 'daily', trigger: 'classe diària' },
+            { from: 'teacher', to: 'family', deliverable: 'Informe avaluació individual', type: 'tangible', frequency: 'quarterly', trigger: 'final trimestre' },
+            { from: 'family', to: 'admin-staff', deliverable: 'Quota mensual', type: 'tangible', frequency: 'monthly', trigger: 'factura emesa' },
+            { from: 'pedagogical-team', to: 'general-assembly', deliverable: 'Pla pedagògic anual', type: 'tangible', frequency: 'yearly', trigger: 'planificació curs' },
+            { from: 'evaluator', to: 'pedagogical-team', deliverable: 'Validació pedagògica', type: 'tangible', frequency: 'yearly', trigger: 'auditoria externa' },
         ],
     },
     // ── RELIGIOUS-COMMUNITY (parròquia · vipassana · sufí · zen · cristiana de base) ──
@@ -196,6 +275,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle líder↔fidels (predicació ⇄ adhesió + donació · setmanal)',
             'Reciprocitat comunitat↔voluntariat (acollida ⇄ servei)',
             'Pipeline mentor↔nou cercador (acompanyament ⇄ creixement espiritual)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Programa litúrgic mensual',
+            'Sermó setmanal',
+            'Pla pastoral anual',
+            'Quota voluntària / donatiu',
+            'Acta consell pastoral',
+            'Memòria pastoral anual',
+            'Calendari celebracions',
+            'Activitats caritatives',
+        ],
+        transactions_canonical: [
+            { from: 'spiritual-leader', to: 'community-member', deliverable: 'Sermó setmanal', type: 'intangible', frequency: 'weekly', trigger: 'servei religiós' },
+            { from: 'community-member', to: 'admin-treasurer', deliverable: 'Quota / donatiu', type: 'tangible', frequency: 'monthly', trigger: 'captació mensual' },
+            { from: 'liturgical-team', to: 'community-member', deliverable: 'Cerimònia litúrgica', type: 'intangible', frequency: 'weekly', trigger: 'culte programat' },
+            { from: 'mentor-spiritual', to: 'community-member', deliverable: 'Acompanyament pastoral', type: 'intangible', frequency: 'on-demand', trigger: 'sol·licitud individual' },
+            { from: 'pastoral-council', to: 'spiritual-leader', deliverable: 'Pla pastoral anual', type: 'tangible', frequency: 'yearly', trigger: 'planificació' },
         ],
     },
 
@@ -234,6 +332,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Reciprocitat moviment↔afectats (acció ⇄ acompanyament real)',
             'Cicle premsa↔mitjans (comunicat ⇄ cobertura ⇄ pressió institucional)',
         ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Manifest fundacional',
+            'Pla d\'acció trimestral',
+            'Comunicat de premsa',
+            'Recursos legals · denúncia',
+            'Conveni amb aliats',
+            'Aportació militant',
+            'Programa electoral',
+            'Reglament intern',
+        ],
+        transactions_canonical: [
+            { from: 'assembly', to: 'spokesperson', deliverable: 'Mandat polític', type: 'intangible', frequency: 'quarterly', trigger: 'decisió assembleària' },
+            { from: 'spokesperson', to: 'press-team', deliverable: 'Comunicat premsa', type: 'tangible', frequency: 'weekly', trigger: 'acció pública' },
+            { from: 'militant-active', to: 'assembly', deliverable: 'Treball militant', type: 'intangible', frequency: 'weekly', trigger: 'assemblea ordinària' },
+            { from: 'sympathizer', to: 'militant-active', deliverable: 'Aportació econòmica', type: 'tangible', frequency: 'monthly', trigger: 'campanya quota' },
+            { from: 'legal-support', to: 'institution-target', deliverable: 'Denúncia / recurs', type: 'tangible', frequency: 'on-demand', trigger: 'vulneració detectada' },
+        ],
     },
 
     // ── ART-COLLECTIVE (col·lectiu artístic · co-working d\'artistes) ───
@@ -266,6 +383,25 @@ export const DOMAIN_PACKS = Object.freeze({
         patterns: [
             'Cicle artista↔col·lectiu (producció ⇄ exposició ⇄ feedback)',
             'Reciprocitat col·lectiu↔veïnat (obertura ⇄ suport contra desallotjament)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Obra original',
+            'Catàleg exposició',
+            'Convocatòria oberta',
+            'Memòria projecte',
+            'Conveni amb galeria',
+            'Subvenció pública',
+            'Pla anual col·lectiu',
+            'Espai-residència',
+        ],
+        transactions_canonical: [
+            { from: 'member-artist', to: 'artistic-coordinator', deliverable: 'Obra original', type: 'tangible', frequency: 'on-demand', trigger: 'final producció' },
+            { from: 'artistic-coordinator', to: 'curator', deliverable: 'Catàleg exposició', type: 'tangible', frequency: 'per-show', trigger: 'muntatge expo' },
+            { from: 'curator', to: 'gallery-buyer', deliverable: 'Comissariat venda', type: 'intangible', frequency: 'per-sale', trigger: 'transacció col·leccionista' },
+            { from: 'institutional-grant', to: 'artistic-coordinator', deliverable: 'Subvenció pública', type: 'tangible', frequency: 'yearly', trigger: 'resolució convocatòria' },
+            { from: 'community-host', to: 'member-artist', deliverable: 'Espai-residència', type: 'tangible', frequency: 'monthly', trigger: 'acord residència' },
         ],
     },
 
@@ -302,6 +438,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle assemblea↔consell rector (decisió ⇄ execució ⇄ rendició)',
             'Pipeline aspirant→sòcia (prova ⇄ admissió formal · ritu de pas)',
             'Reciprocitat coop↔federació (quota ⇄ formació + intercoop)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Acta assemblea anual',
+            'Aportació al capital social',
+            'Pla de viabilitat',
+            'Conveni laboral intern',
+            'Avantatge resultats anual',
+            'Informe auditoria social',
+            'Pla d\'adhesió soci',
+            'Estatuts cooperatius',
+        ],
+        transactions_canonical: [
+            { from: 'general-assembly', to: 'governing-board', deliverable: 'Mandat estratègic', type: 'intangible', frequency: 'yearly', trigger: 'assemblea ordinària' },
+            { from: 'worker-member', to: 'general-assembly', deliverable: 'Treball + aportació capital', type: 'tangible', frequency: 'monthly', trigger: 'vincle societari' },
+            { from: 'governing-board', to: 'worker-aspiring', deliverable: 'Pla d\'adhesió soci', type: 'tangible', frequency: 'on-demand', trigger: 'prova vincle' },
+            { from: 'client-customer', to: 'worker-member', deliverable: 'Compra / contracte servei', type: 'tangible', frequency: 'daily', trigger: 'venda' },
+            { from: 'auditor-internal', to: 'general-assembly', deliverable: 'Informe auditoria social', type: 'tangible', frequency: 'yearly', trigger: 'final exercici' },
         ],
     },
 
@@ -340,6 +495,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Reciprocitat lab↔agència finançament (paper + report ⇄ grant següent)',
             'Cicle paper↔peer-review (sotmissió ⇄ feedback ⇄ revisió)',
         ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Paper revisat per parells',
+            'Pre-print arXiv/bioRxiv',
+            'Dataset obert',
+            'Codi reproduïble (Zenodo)',
+            'Sol·licitud beca H2020/ERC',
+            'Informe progrés trimestral',
+            'Tesi doctoral',
+            'Patent / spin-off',
+        ],
+        transactions_canonical: [
+            { from: 'principal-investigator', to: 'phd-student', deliverable: 'Direcció tesi', type: 'intangible', frequency: 'weekly', trigger: 'reunió tutor' },
+            { from: 'phd-student', to: 'principal-investigator', deliverable: 'Resultats experimentals', type: 'tangible', frequency: 'monthly', trigger: 'review mensual' },
+            { from: 'research-engineer', to: 'lab-manager', deliverable: 'Codi reproduïble + dataset', type: 'tangible', frequency: 'on-demand', trigger: 'publicació pending' },
+            { from: 'principal-investigator', to: 'peer-reviewer', deliverable: 'Paper submission', type: 'tangible', frequency: 'on-demand', trigger: 'revisió cega' },
+            { from: 'funding-agency', to: 'principal-investigator', deliverable: 'Beca finançament', type: 'tangible', frequency: 'yearly', trigger: 'resolució convocatòria' },
+        ],
     },
 
     // ── FOOD-COOP (cooperativa alimentària · grup de consum · forn artesà) ─
@@ -372,6 +546,25 @@ export const DOMAIN_PACKS = Object.freeze({
         patterns: [
             'Cicle productor↔grup de consum (collita setmanal ⇄ comandes anticipades)',
             'Reciprocitat coop↔restaurant (qualitat ⇄ preu estable)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Comanda setmanal cistella',
+            'Albarà entrega',
+            'Factura producte fresc',
+            'Acta assemblea alimentària',
+            'Pla de cultivars / forn',
+            'Inspecció sanitària',
+            'Conveni distribució',
+            'Llistat preus de temporada',
+        ],
+        transactions_canonical: [
+            { from: 'producer-farm', to: 'distribution-coord', deliverable: 'Albarà entrega', type: 'tangible', frequency: 'weekly', trigger: 'collita setmanal' },
+            { from: 'distribution-coord', to: 'consumer-member', deliverable: 'Cistella setmanal', type: 'tangible', frequency: 'weekly', trigger: 'comanda confirmada' },
+            { from: 'consumer-member', to: 'distribution-coord', deliverable: 'Pagament setmanal', type: 'tangible', frequency: 'weekly', trigger: 'entrega rebuda' },
+            { from: 'sanitary-inspection', to: 'producer-farm', deliverable: 'Inspecció + certificat', type: 'tangible', frequency: 'yearly', trigger: 'auditoria anual' },
+            { from: 'baker-craftsperson', to: 'consumer-member', deliverable: 'Pa fresc artesà', type: 'tangible', frequency: 'daily', trigger: 'obertura forn' },
         ],
     },
 
@@ -407,6 +600,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle pacient↔metge (visita ⇄ tractament ⇄ seguiment)',
             'Reciprocitat clínica↔asseguradora (servei ⇄ pagament + control)',
         ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Historial clínic electrònic (HCE)',
+            'Recepta mèdica',
+            'Informe d\'alta',
+            'Sol·licitud d\'analítica',
+            'Programació cita',
+            'Factura mútua / asseguradora',
+            'Pla de cures infermeria',
+            'Protocol clínic actualitzat',
+        ],
+        transactions_canonical: [
+            { from: 'patient', to: 'admin-receptionist', deliverable: 'Cita programada', type: 'tangible', frequency: 'daily', trigger: 'sol·licitud usuari' },
+            { from: 'physician-primary', to: 'patient', deliverable: 'Visita + recepta', type: 'tangible', frequency: 'per-visit', trigger: 'cita complerta' },
+            { from: 'physician-primary', to: 'specialist', deliverable: 'Derivació + informe', type: 'tangible', frequency: 'on-demand', trigger: 'sospita diagnòstica' },
+            { from: 'nurse', to: 'patient', deliverable: 'Pla de cures', type: 'intangible', frequency: 'daily', trigger: 'hospitalització' },
+            { from: 'health-insurance', to: 'admin-receptionist', deliverable: 'Factura cobrada', type: 'tangible', frequency: 'monthly', trigger: 'prestació autoritzada' },
+        ],
     },
 
     // ── HOTEL-HOSPITALITY (hotel · alberg · turisme rural · BnB) ────────
@@ -439,6 +651,25 @@ export const DOMAIN_PACKS = Object.freeze({
         patterns: [
             'Cicle hoste↔staff (necessitat ⇄ servei ⇄ valoració)',
             'Reciprocitat hotel↔OTA (visibilitat ⇄ comissió)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Reserva confirmada',
+            'Check-in / check-out registry',
+            'Comanda F&B',
+            'Factura final hoste',
+            'Pla de neteja diari',
+            'Informe ocupació mensual',
+            'Conveni canal OTA',
+            'Pla turístic territorial',
+        ],
+        transactions_canonical: [
+            { from: 'ota-channel', to: 'front-desk', deliverable: 'Reserva confirmada', type: 'tangible', frequency: 'daily', trigger: 'booking online' },
+            { from: 'front-desk', to: 'guest', deliverable: 'Check-in + claus', type: 'tangible', frequency: 'per-stay', trigger: 'arribada hoste' },
+            { from: 'housekeeping', to: 'guest', deliverable: 'Habitació neta', type: 'intangible', frequency: 'daily', trigger: 'servei diari' },
+            { from: 'kitchen-fb', to: 'guest', deliverable: 'Servei restauració', type: 'tangible', frequency: 'per-meal', trigger: 'comanda à la carte' },
+            { from: 'guest', to: 'front-desk', deliverable: 'Pagament factura', type: 'tangible', frequency: 'per-stay', trigger: 'check-out' },
         ],
     },
 
@@ -473,6 +704,25 @@ export const DOMAIN_PACKS = Object.freeze({
         patterns: [
             'Cicle arquitecte↔obra (plànol ⇄ execució ⇄ modificacions)',
             'Reciprocitat client↔contractista (pagament per fase ⇄ entrega DTD)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Projecte d\'execució',
+            'Llicència d\'obres',
+            'Pla de seguretat i salut',
+            'Certificat fi d\'obra',
+            'Comanda de materials',
+            'Acta d\'inspecció',
+            'Pressupost partida',
+            'Factura mensual obra',
+        ],
+        transactions_canonical: [
+            { from: 'architect', to: 'site-manager', deliverable: 'Projecte d\'execució', type: 'tangible', frequency: 'on-demand', trigger: 'inici obra' },
+            { from: 'site-manager', to: 'worker-mason', deliverable: 'Ordre de treball diària', type: 'intangible', frequency: 'daily', trigger: 'planning matí' },
+            { from: 'supplier-materials', to: 'site-manager', deliverable: 'Comanda + albarà', type: 'tangible', frequency: 'weekly', trigger: 'sol·licitud obra' },
+            { from: 'safety-officer', to: 'worker-mason', deliverable: 'Formació prevenció', type: 'intangible', frequency: 'monthly', trigger: 'pla anual seguretat' },
+            { from: 'client-owner', to: 'site-manager', deliverable: 'Pagament partida', type: 'tangible', frequency: 'monthly', trigger: 'certificació mensual' },
         ],
     },
 
@@ -510,6 +760,27 @@ export const DOMAIN_PACKS = Object.freeze({
             'Reciprocitat client↔agència (pagament ⇄ DTD test booleà)',
             'Pipeline junior→senior (mentoring ⇄ growth · multianyal)',
         ],
+        // v145 · anchoring tangibles + transactions canòniques
+        deliverables_tangible: [
+            'User story · acceptance criteria',
+            'Pull request · code review',
+            'Sprint demo · vídeo + notes',
+            'SaaS subscription invoice (MRR)',
+            'Incident post-mortem · 5 whys',
+            'Roadmap trimestre',
+            'OKRs Q · objectius + key results',
+            'Release notes · canvis prod',
+        ],
+        transactions_canonical: [
+            { from: 'product-manager',  to: 'engineer-senior',  deliverable: 'User story + acceptance criteria',  type: 'tangible',  frequency: 'weekly',     trigger: 'planning sprint' },
+            { from: 'engineer-senior',  to: 'qa-tester',        deliverable: 'Pull request',                       type: 'tangible',  frequency: 'daily',      trigger: 'feature complete' },
+            { from: 'engineer-junior',  to: 'engineer-senior',  deliverable: 'Code review request',                type: 'tangible',  frequency: 'daily',      trigger: 'commit pushed' },
+            { from: 'engineer-senior',  to: 'engineer-junior',  deliverable: 'Mentoring · code feedback',          type: 'intangible',frequency: 'daily',      trigger: 'PR review' },
+            { from: 'qa-tester',        to: 'devops-sre',       deliverable: 'Test green · ready to deploy',       type: 'tangible',  frequency: 'on-demand',  trigger: 'PR approved' },
+            { from: 'devops-sre',       to: 'client-customer',  deliverable: 'Release notes · canvis prod',        type: 'tangible',  frequency: 'biweekly',   trigger: 'deploy a producció' },
+            { from: 'client-customer',  to: 'product-manager',  deliverable: 'SaaS subscription invoice (MRR)',    type: 'tangible',  frequency: 'monthly',    trigger: 'cobrament mensual' },
+            { from: 'investor-vc',      to: 'cto-founder',      deliverable: 'Capital ronda · expectatives growth',type: 'tangible',  frequency: 'on-demand',  trigger: 'fundraising round' },
+        ],
     },
 
     // ── COWORKING (espai compartit · maker hub · co-living) ─────────────
@@ -537,6 +808,25 @@ export const DOMAIN_PACKS = Object.freeze({
         patterns: [
             'Cicle community manager↔membres (programa ⇄ assistència ⇄ recomanació)',
             'Reciprocitat espai↔esdeveniments (sala ⇄ tràfic nou)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Quota mensual soci',
+            'Acord d\'ús d\'espai',
+            'Pla d\'esdeveniments',
+            'Factura facility services',
+            'Memòria activitats anual',
+            'Reglament d\'ús',
+            'Conveni corporate partner',
+            'Programa d\'activacions comunitat',
+        ],
+        transactions_canonical: [
+            { from: 'member-coworker', to: 'community-manager', deliverable: 'Quota mensual', type: 'tangible', frequency: 'monthly', trigger: 'subscripció recurrent' },
+            { from: 'community-manager', to: 'member-coworker', deliverable: 'Pla esdeveniments + xarxa', type: 'intangible', frequency: 'weekly', trigger: 'programació setmanal' },
+            { from: 'event-host', to: 'community-manager', deliverable: 'Activació esdeveniment', type: 'intangible', frequency: 'monthly', trigger: 'agenda mensual' },
+            { from: 'cleaning-services', to: 'space-founder', deliverable: 'Servei neteja', type: 'tangible', frequency: 'daily', trigger: 'contracte facility' },
+            { from: 'corporate-partner', to: 'space-founder', deliverable: 'Conveni partnership', type: 'tangible', frequency: 'yearly', trigger: 'acord anual' },
         ],
     },
 
@@ -570,6 +860,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle marketing↔producte (campanya ⇄ vendes ⇄ stock-out)',
             'Reciprocitat customer↔suport (problema ⇄ resolució ⇄ review positiva)',
         ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Comanda online',
+            'Albarà transport',
+            'Devolució autoritzada',
+            'Pla de campanyes marketing',
+            'Catàleg de producte',
+            'Factura proveïdor',
+            'Informe vendes setmanal',
+            'Tendència de stock',
+        ],
+        transactions_canonical: [
+            { from: 'customer', to: 'operations-fulfill', deliverable: 'Comanda online', type: 'tangible', frequency: 'daily', trigger: 'checkout' },
+            { from: 'operations-fulfill', to: 'customer', deliverable: 'Albarà + tracking', type: 'tangible', frequency: 'per-order', trigger: 'expedició' },
+            { from: 'supplier', to: 'operations-fulfill', deliverable: 'Estocs + factura', type: 'tangible', frequency: 'weekly', trigger: 'reposició inventari' },
+            { from: 'customer-support', to: 'customer', deliverable: 'Resolució incidència', type: 'intangible', frequency: 'daily', trigger: 'ticket obert' },
+            { from: 'marketing-growth', to: 'ceo-founder', deliverable: 'Pla campanyes', type: 'tangible', frequency: 'monthly', trigger: 'planning mensual' },
+        ],
     },
 
     // ── COMMUNITY-MEDIA (ràdio comunitària · revista · diari local) ─────
@@ -602,6 +911,25 @@ export const DOMAIN_PACKS = Object.freeze({
         patterns: [
             'Cicle editor↔periodista (encàrrec ⇄ article ⇄ publicació)',
             'Reciprocitat ràdio↔oients (programa ⇄ feedback ⇄ donatius/sponsorship)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Programació setmanal',
+            'Notícia publicada',
+            'Podcast / programa',
+            'Conveni patrocini',
+            'Resolució subvenció pública',
+            'Pla editorial trimestral',
+            'Acord d\'aparicions',
+            'Memòria activitats anual',
+        ],
+        transactions_canonical: [
+            { from: 'editor-in-chief', to: 'reporter-journalist', deliverable: 'Encàrrec editorial', type: 'tangible', frequency: 'daily', trigger: 'planning redacció' },
+            { from: 'reporter-journalist', to: 'editor-in-chief', deliverable: 'Notícia / reportatge', type: 'tangible', frequency: 'daily', trigger: 'entrega' },
+            { from: 'show-host', to: 'audience-listener', deliverable: 'Programa setmanal', type: 'intangible', frequency: 'weekly', trigger: 'emissió en directe' },
+            { from: 'sponsor-advertiser', to: 'editor-in-chief', deliverable: 'Conveni patrocini', type: 'tangible', frequency: 'yearly', trigger: 'renovació contracte' },
+            { from: 'public-grant', to: 'editor-in-chief', deliverable: 'Resolució subvenció', type: 'tangible', frequency: 'yearly', trigger: 'convocatòria pública' },
         ],
     },
 
@@ -637,6 +965,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Pipeline llista d\'espera↔resident (formació ⇄ admissió formal)',
             'Reciprocitat coop↔banca ètica (préstec ⇄ retorn social)',
         ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Quota mensual ús/cessió',
+            'Acord d\'adhesió soci',
+            'Pla de manteniment edifici',
+            'Acta assemblea anual',
+            'Estatuts cooperatius',
+            'Préstec / hipoteca col·lectiva',
+            'Reglament d\'ús',
+            'Memòria econòmica',
+        ],
+        transactions_canonical: [
+            { from: 'resident-member', to: 'general-assembly-h', deliverable: 'Aportació + treball', type: 'tangible', frequency: 'monthly', trigger: 'vincle societari' },
+            { from: 'general-assembly-h', to: 'governing-council', deliverable: 'Mandat anual', type: 'intangible', frequency: 'yearly', trigger: 'assemblea ordinària' },
+            { from: 'commission-maintenance', to: 'resident-member', deliverable: 'Manteniment edifici', type: 'tangible', frequency: 'weekly', trigger: 'pla anual' },
+            { from: 'architect-tech', to: 'governing-council', deliverable: 'Auditoria tècnica', type: 'tangible', frequency: 'yearly', trigger: 'revisió periòdica' },
+            { from: 'bank-finance', to: 'general-assembly-h', deliverable: 'Préstec col·lectiu', type: 'tangible', frequency: 'yearly', trigger: 'contracte hipoteca' },
+        ],
     },
 
     // ── ENERGY-COOP (cooperativa energètica · solar comunitari) ─────────
@@ -668,6 +1015,25 @@ export const DOMAIN_PACKS = Object.freeze({
         patterns: [
             'Cicle producció↔consum (excedent ⇄ xarxa ⇄ compensació)',
             'Reciprocitat coop↔ajuntament (espai cedit ⇄ servei a ciutadania)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Auditoria energètica',
+            'Instal·lació solar',
+            'Factura cooperativa',
+            'Conveni amb ajuntament',
+            'Llicència regulatòria',
+            'Pla quinquennal energètic',
+            'Informe d\'emissions CO2',
+            'Memòria assemblea anual',
+        ],
+        transactions_canonical: [
+            { from: 'tech-installer', to: 'member-prosumer', deliverable: 'Instal·lació solar', type: 'tangible', frequency: 'on-demand', trigger: 'contracte signat' },
+            { from: 'member-prosumer', to: 'energy-coordinator', deliverable: 'Aportació + factura mensual', type: 'tangible', frequency: 'monthly', trigger: 'vincle societari' },
+            { from: 'regulator', to: 'energy-coordinator', deliverable: 'Llicència regulatòria', type: 'tangible', frequency: 'yearly', trigger: 'renovació anual' },
+            { from: 'grid-operator', to: 'member-prosumer', deliverable: 'Excedents abocats', type: 'tangible', frequency: 'monthly', trigger: 'producció solar' },
+            { from: 'town-hall', to: 'energy-coordinator', deliverable: 'Conveni municipal', type: 'tangible', frequency: 'yearly', trigger: 'acord polític' },
         ],
     },
 
@@ -702,6 +1068,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle client↔senior (briefing ⇄ estratègia ⇄ defensa)',
             'Reciprocitat despatx↔jutjat (escrits ⇄ resolucions)',
         ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Dictamen jurídic',
+            'Recurs administratiu',
+            'Demanda judicial',
+            'Memòria d\'assumpte',
+            'Factura d\'honoraris',
+            'Contracte de serveis',
+            'Pla d\'estratègia processal',
+            'Informe d\'auditoria legal',
+        ],
+        transactions_canonical: [
+            { from: 'client', to: 'senior-lawyer', deliverable: 'Encàrrec d\'assumpte', type: 'tangible', frequency: 'on-demand', trigger: 'sol·licitud client' },
+            { from: 'senior-lawyer', to: 'junior-associate', deliverable: 'Tasca delegada', type: 'intangible', frequency: 'weekly', trigger: 'planning equip' },
+            { from: 'paralegal', to: 'senior-lawyer', deliverable: 'Investigació documental', type: 'tangible', frequency: 'daily', trigger: 'sol·licitud caso' },
+            { from: 'senior-lawyer', to: 'judge-tribunal', deliverable: 'Demanda / recurs', type: 'tangible', frequency: 'on-demand', trigger: 'litigation' },
+            { from: 'client', to: 'managing-partner', deliverable: 'Pagament honoraris', type: 'tangible', frequency: 'monthly', trigger: 'factura mensual' },
+        ],
     },
 
     // ── ARTISAN-CRAFT (cooperativa oficis · ceramista · luthier) ────────
@@ -734,6 +1119,25 @@ export const DOMAIN_PACKS = Object.freeze({
         patterns: [
             'Pipeline aprenent→artesà (anys de formació · ritu pas)',
             'Cicle artesà↔galeria (consignació ⇄ venda ⇄ liquidació)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Peça artesanal única',
+            'Encàrrec a mida',
+            'Conveni amb galeria',
+            'Curs / taller obert',
+            'Catàleg d\'obra',
+            'Certificat d\'autenticitat',
+            'Factura venda directa',
+            'Memòria taller anual',
+        ],
+        transactions_canonical: [
+            { from: 'master-craftsperson', to: 'apprentice', deliverable: 'Formació / mentoring', type: 'intangible', frequency: 'daily', trigger: 'taller obert' },
+            { from: 'craftsperson', to: 'customer-direct', deliverable: 'Peça artesanal', type: 'tangible', frequency: 'on-demand', trigger: 'encàrrec' },
+            { from: 'customer-direct', to: 'master-craftsperson', deliverable: 'Pagament + agraïment', type: 'tangible', frequency: 'per-piece', trigger: 'entrega' },
+            { from: 'gallery-shop', to: 'master-craftsperson', deliverable: 'Comissió venda', type: 'tangible', frequency: 'monthly', trigger: 'liquidació' },
+            { from: 'craft-association', to: 'master-craftsperson', deliverable: 'Certificat autenticitat', type: 'tangible', frequency: 'yearly', trigger: 'revisió anual' },
         ],
     },
 
@@ -770,6 +1174,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle ciutadania↔ajuntament (impostos ⇄ serveis ⇄ vot)',
             'Reciprocitat regidoria↔entitats cíviques (subvenció ⇄ activitat al territori)',
         ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Ple municipal · acta',
+            'Pressupost anual aprovat',
+            'Llicència / permís',
+            'Ordenança municipal',
+            'Resolució d\'expedient',
+            'Memòria d\'activitats',
+            'Conveni amb associacions',
+            'Informe d\'auditoria pública',
+        ],
+        transactions_canonical: [
+            { from: 'mayor-leader', to: 'department-head', deliverable: 'Mandat polític', type: 'intangible', frequency: 'monthly', trigger: 'prioritats consell' },
+            { from: 'civil-servant', to: 'citizen-resident', deliverable: 'Llicència / permís', type: 'tangible', frequency: 'on-demand', trigger: 'sol·licitud ciutadana' },
+            { from: 'citizen-resident', to: 'civic-association', deliverable: 'Participació veïnal', type: 'intangible', frequency: 'monthly', trigger: 'assemblea barri' },
+            { from: 'opposition-party', to: 'mayor-leader', deliverable: 'Control crític', type: 'intangible', frequency: 'monthly', trigger: 'ple ordinari' },
+            { from: 'state-supervision', to: 'mayor-leader', deliverable: 'Informe d\'auditoria', type: 'tangible', frequency: 'yearly', trigger: 'revisió comptes' },
+        ],
     },
 
     // ── NGO (ONG internacional · associació humanitària) ────────────────
@@ -804,6 +1227,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle donant↔programa (fons ⇄ resultats ⇄ report)',
             'Reciprocitat ONG↔comunitat (suport ⇄ legitimitat local)',
         ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Programa d\'intervenció',
+            'Pla operatiu anual',
+            'Informe d\'avaluació programa',
+            'Sol·licitud subvenció',
+            'Memòria d\'impacte',
+            'Acta junta directiva',
+            'Pressupost anual',
+            'Informe auditoria externa',
+        ],
+        transactions_canonical: [
+            { from: 'executive-director', to: 'program-manager', deliverable: 'Pla operatiu anual', type: 'tangible', frequency: 'yearly', trigger: 'planning estratègic' },
+            { from: 'program-manager', to: 'field-worker', deliverable: 'Mandat tasca', type: 'intangible', frequency: 'weekly', trigger: 'planning operatiu' },
+            { from: 'field-worker', to: 'beneficiary', deliverable: 'Assistència directa', type: 'tangible', frequency: 'daily', trigger: 'intervenció camp' },
+            { from: 'donor-funder', to: 'executive-director', deliverable: 'Aportació econòmica', type: 'tangible', frequency: 'yearly', trigger: 'subvenció resolta' },
+            { from: 'audit-compliance', to: 'board-trustees', deliverable: 'Informe auditoria', type: 'tangible', frequency: 'yearly', trigger: 'final exercici' },
+        ],
     },
 
     // ── MAKER-SPACE (fab-lab · hackerspace · maker collective) ──────────
@@ -836,6 +1278,25 @@ export const DOMAIN_PACKS = Object.freeze({
             'Cicle membre↔lab (quota ⇄ accés + suport)',
             'Pipeline visitant→membre→mentor (rite of passage tècnic)',
             'Reciprocitat sponsor↔lab (equip ⇄ visibilitat + drets reduïts)',
+        ],
+
+        // v145b · anchoring específic (deliverables + transactions canòniques)
+        deliverables_tangible: [
+            'Quota mensual fab-lab',
+            'Acord d\'ús d\'eines',
+            'Plantilles open-source',
+            'Pla d\'esdeveniments',
+            'Projecte de membres',
+            'Conveni amb sponsor',
+            'Programa de tallers',
+            'Memòria activitats anual',
+        ],
+        transactions_canonical: [
+            { from: 'member-maker', to: 'lab-coordinator', deliverable: 'Quota mensual', type: 'tangible', frequency: 'monthly', trigger: 'subscripció' },
+            { from: 'lab-coordinator', to: 'member-maker', deliverable: 'Accés eines + suport', type: 'intangible', frequency: 'daily', trigger: 'reserva taller' },
+            { from: 'workshop-host', to: 'visitor-guest', deliverable: 'Taller obert', type: 'intangible', frequency: 'weekly', trigger: 'esdeveniment programat' },
+            { from: 'expert-mentor', to: 'member-maker', deliverable: 'Mentoring tècnic', type: 'intangible', frequency: 'weekly', trigger: 'sessió programada' },
+            { from: 'sponsor-equipment', to: 'lab-coordinator', deliverable: 'Aportació equipament', type: 'tangible', frequency: 'yearly', trigger: 'conveni partnership' },
         ],
     },
 

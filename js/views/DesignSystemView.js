@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T20:00 · v144 · AccountingV2View redesign · 5 tabs canonical (📊Resum · 📋Entrades · 📈P&L · 🥧Categories · 📄Export) · context switcher Personal/Projecte (mateix pattern WalletV2) · KPIs Actius/Passius/Equity/P&L · barres breakdown per compte · CSV download · /accounting → /accounting/v2 redirect · reutilitza computeBalanceSheet+computePLForPeriod+computeBalanceByAccount · tanca wo-accounting-v2-redesign';
+const BUILD_STAMP = '2026-05-20T23:00 · v145+v145b · 24/24 DOMAIN PACKS ENRICHED · 4 pilots v145 (sports-team · arts-performance · coop-cares · software-agency) + 20 packs v145b via scripts/enrich-domain-packs-v145b.mjs (edu-formation · religious-community · political-movement · art-collective · worker-coop · research-lab · food-coop · health-clinic · hotel-hospitality · construction · coworking · ecommerce · community-media · housing-coop · energy-coop · legal-advisory · artisan-craft · public-admin · ngo-humanitarian · maker-space) · cada un 5-8 deliverables_tangible + 5 transactions_canonical · prompt design-value-map-rich injecta blocs · PROMPT QUALITY HARNESS operatiu (CLI --harness + baseline comparison) · tanca wo-domain-packs-enrich-all';
 
 export default class DesignSystemView {
 
