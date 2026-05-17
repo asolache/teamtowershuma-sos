@@ -370,8 +370,9 @@ export function buildBreadcrumb({ pathname = '/', search = '', projects = [] } =
 }
 
 // Renderiza el breadcrumb como HTML compacto.
-// items = output de buildBreadcrumb. options.phase = 'design'|...|null.
-export function renderBreadcrumbHtml({ items = [], phase = null, className = 'sos-breadcrumb' } = {}) {
+// v137 · accepta nextSuggestion opcional · es renderitza a la dreta (substitueix
+// el bloc del project-subnav antic). Forma · { label, gain, href, icon? }
+export function renderBreadcrumbHtml({ items = [], phase = null, className = 'sos-breadcrumb', nextSuggestion = null } = {}) {
     const crumbs = items.map((it, i) => {
         const sep = i > 0 ? '<span class="sos-bc-sep" aria-hidden="true">›</span>' : '';
         if (it.current) return sep + `<span class="sos-bc-current" aria-current="page">${_esc(it.label)}</span>`;
@@ -382,11 +383,21 @@ export function renderBreadcrumbHtml({ items = [], phase = null, className = 'so
         const m = PHASE_META[phase];
         phaseHtml = `<span class="sos-bc-phase" style="background:${m.color}22;color:${m.color};border-color:${m.color}55;" title="${_esc(m.hint)}">${m.icon} ${_esc(m.label)}</span>`;
     }
-    // v121-fix · search ELIMINAT del breadcrumb · conflicte d'ID amb la palette
-    // real de Cmd+K (globalSearch.js, SEARCH_ID = 'sos-global-search'). Dos
-    // elements amb mateix ID al DOM trencaven la palette. El trigger viu a
-    // globalSearch.js (botó flotant + listener Cmd+K).
-    return `<nav class="${className}" aria-label="Breadcrumb"><div class="sos-bc-trail">${crumbs}${phaseHtml}</div></nav>`;
+    // v137 · next-step CTA · substitueix sos-psub-cta
+    let nextHtml = '';
+    if (nextSuggestion && nextSuggestion.label) {
+        const ico  = nextSuggestion.icon ? `<span class="sos-bc-next-ico">${_esc(nextSuggestion.icon)}</span>` : '<span class="sos-bc-next-ico">📌</span>';
+        const gain = (typeof nextSuggestion.gain === 'number' && nextSuggestion.gain > 0)
+            ? `<span class="sos-bc-next-gain">+${nextSuggestion.gain} pts</span>` : '';
+        const href = nextSuggestion.href || '#';
+        nextHtml = `<a class="sos-bc-next" href="${_esc(href)}" data-link title="${_esc(nextSuggestion.title || nextSuggestion.label)}">
+            ${ico}<span class="sos-bc-next-lbl">Següent · ${_esc(nextSuggestion.label)}</span>${gain}
+        </a>`;
+    }
+    return `<nav class="${className}" aria-label="Breadcrumb">
+        <div class="sos-bc-trail">${crumbs}${phaseHtml}</div>
+        ${nextHtml}
+    </nav>`;
 }
 
 // CSS único inyectado una vez · idempotente. Llamado desde el router.
@@ -403,6 +414,18 @@ const BREADCRUMB_CSS = `
     flex-wrap: wrap;
 }
 .sos-breadcrumb .sos-bc-trail { display:flex; align-items:center; gap:6px; flex-wrap:wrap; flex:1; min-width:0; }
+.sos-breadcrumb .sos-bc-next {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 2px 10px; border-radius: 999px;
+    background: rgba(99, 102, 241, 0.12); color: var(--accent-indigo);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    font-size: 0.78rem; text-decoration: none; font-weight: 600;
+    white-space: nowrap; flex-shrink: 0;
+}
+.sos-breadcrumb .sos-bc-next:hover { background: rgba(99, 102, 241, 0.20); }
+.sos-breadcrumb .sos-bc-next-ico { font-size: 0.95rem; }
+.sos-breadcrumb .sos-bc-next-lbl { font-weight: 600; }
+.sos-breadcrumb .sos-bc-next-gain { color: var(--accent-green, #10b981); font-size: 0.72rem; }
 .sos-breadcrumb a, .sos-breadcrumb .sos-bc-current { display: inline-flex; align-items: center; gap: 4px; }
 .sos-breadcrumb a {
     color: var(--accent-indigo);
@@ -456,21 +479,43 @@ export async function paintBreadcrumb({
     let phase = null;
     const params = new URLSearchParams(search || '');
     const projectId = params.get('project') || (pathname.startsWith('/project/') ? decodeURIComponent(pathname.slice(9)) : null);
+    let nextSuggestion = null;
     if (projectId) {
         const p = (projects || []).find(x => x && x.id === projectId);
-        if (p) phase = detectProjectPhase(p, projectStats);
+        if (p) {
+            phase = detectProjectPhase(p, projectStats);
+            // v137 · calcula "next step" per al CTA al breadcrumb (substitueix el subnav antic)
+            try {
+                const KB = (await import('./kb.js')).KB;
+                await KB.init();
+                const [sops, workshops, marketItems] = await Promise.all([
+                    KB.query({ type: 'sop' }).catch(() => []),
+                    KB.query({ type: 'workshop' }).catch(() => []),
+                    KB.query({ type: 'market_item' }).catch(() => []),
+                ]);
+                const quality = computeQualityScore(p, { sops, workshops, marketItems });
+                const next = suggestNextDim(quality);
+                if (next && next.gain > 0) {
+                    const tab = _tabForDim(next.dim.id);
+                    const firstMissing = (next.missing && next.missing[0] && next.missing[0].label) || ('Completa ' + next.dim.label);
+                    nextSuggestion = {
+                        label: next.dim.label,
+                        icon:  next.dim.icon,
+                        gain:  next.gain,
+                        href:  tab.buildHref(p.id),
+                        title: firstMissing,
+                    };
+                }
+            } catch (_) { /* fallback · sense next CTA */ }
+        }
     }
-    // UX · ocultar el slot cuando no hay valor que mostrar (single-item sin phase)
-    // para no consumir altura en /dashboard etc. Mantiene la regla "el slot
-    // toma su altura natural" del flexbox · 0px cuando display:none.
-    if ((items?.length || 0) <= 1 && !phase) {
+    if ((items?.length || 0) <= 1 && !phase && !nextSuggestion) {
         targetEl.innerHTML = '';
         targetEl.style.display = 'none';
         return;
     }
     targetEl.style.display = '';
-    targetEl.innerHTML = renderBreadcrumbHtml({ items, phase });
-    // v121-fix · el binding Cmd+K viu només a globalSearch.js
+    targetEl.innerHTML = renderBreadcrumbHtml({ items, phase, nextSuggestion });
 }
 
 // ─── UX-AUDIT-001 sprint H+ pass 5 · Global Nav al top ────────────────────
