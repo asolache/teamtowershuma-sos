@@ -86,7 +86,10 @@ const html = renderGlobalNavHtml({ pathname: '/home' });
 ok('G · HTML conté logo', html.includes('sos-global-nav-logo'));
 ok('G · HTML conté home pill', html.includes('sos-global-nav-home'));
 ok('G · HTML conté el bloc de grups', html.includes('sos-global-nav-groups'));
-ok('G · HTML conté search input', html.includes('sos-global-search'));
+// v120 · search es MOU al breadcrumb · NO al navbar
+ok('G · HTML navbar NO té search input (mogut al breadcrumb)', !html.includes('sos-global-search'));
+ok('G · HTML conté pill Messages (Inbox)', html.includes('sos-global-nav-msg'));
+ok('G · HTML conté pill Wallet · saldo', html.includes('sos-global-nav-wallet'));
 ok('G · HTML conté avatar identity menu', html.includes('sos-global-nav-avatar'));
 // Project pill només si projectId
 const htmlNoProj = renderGlobalNavHtml({ pathname: '/home', projectId: null });

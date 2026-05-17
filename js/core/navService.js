@@ -83,7 +83,8 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'learn-sectors',icon: '🏭', label: 'Sectors CNAE',    href: '/learn?tab=sectors', global: true, category: 'learn',  hint: '21 SOCs CNAE · A-T · UV · match automàtic en crear projecte' },
     { id: 'learn-mind',   icon: '🕸',  label: 'Mind-graph',      href: '/learn?tab=mind',  global: true,  category: 'learn',   hint: 'Mind-as-Graph · stats per tipus + accés vista galàctica D3' },
     { id: 'learn-tags',   icon: '🏷', label: 'Tag cloud',       href: '/learn?tab=tags',  global: true,  category: 'learn',   hint: 'Folksonomia · etiquetes knowledge/ + KB · cloud freqüencial' },
-    { id: 'skills',       icon: '🤲', label: 'Skills',          href: '/skills',          global: true,  category: 'learn',   hint: '90 skills · 5 domains · 3 tiers · 12 tipus de projecte' },
+    { id: 'learn-skills', icon: '🤲', label: 'Skills',          href: '/learn?tab=skills', global: true, category: 'learn',  hint: '90 skills · 5 dominis · entrenament LLM local + plantilles offline + permaweb-shared (v120)' },
+    { id: 'skills',       icon: '📋', label: 'Catàleg skills',  href: '/skills',          global: true,  category: 'learn',   hint: '90 skills · 5 dominis · 3 tiers · 12 tipus de projecte (vista completa)' },
     { id: 'path',         icon: '🧠', label: 'Historial neural',href: '/path',            global: true,  category: 'learn',   hint: 'Path nodal cronològic · context bundles per a IA' },
     { id: 'notes',        icon: '📝', label: 'Notes captures',  href: '/notes',           global: true,  category: 'learn',   hint: 'Captures FAB · evolve a projecte / WO / deliverable' },
     { id: 'prompts-debug', icon: '🔍', label: 'Prompts debug',  href: '/prompts-debug',  global: true,  category: 'learn',   hint: 'Veu els prompts EXACTES que la IA reb per cada task · transparència total · context editable' },
@@ -380,14 +381,16 @@ export function renderBreadcrumbHtml({ items = [], phase = null, className = 'so
         const m = PHASE_META[phase];
         phaseHtml = `<span class="sos-bc-phase" style="background:${m.color}22;color:${m.color};border-color:${m.color}55;" title="${_esc(m.hint)}">${m.icon} ${_esc(m.label)}</span>`;
     }
-    return `<nav class="${className}" aria-label="Breadcrumb">${crumbs}${phaseHtml}</nav>`;
+    // Cmd+K search · viu al breadcrumb · estalvia espai al navbar
+    const searchHtml = `<div class="sos-bc-search-wrap"><input type="search" id="sos-global-search" placeholder="🔍 Cerca · Cmd+K" aria-label="Cerca ràpida" autocomplete="off"/></div>`;
+    return `<nav class="${className}" aria-label="Breadcrumb"><div class="sos-bc-trail">${crumbs}${phaseHtml}</div>${searchHtml}</nav>`;
 }
 
 // CSS único inyectado una vez · idempotente. Llamado desde el router.
 const BREADCRUMB_STYLE_ID = 'sos-breadcrumb-style';
 const BREADCRUMB_CSS = `
 .sos-breadcrumb {
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 10px;
     padding: 8px 1.5rem;
     background: var(--bg-panel);
     border-bottom: 1px solid var(--border-subtle);
@@ -396,6 +399,7 @@ const BREADCRUMB_CSS = `
     font-family: var(--font-mono);
     flex-wrap: wrap;
 }
+.sos-breadcrumb .sos-bc-trail { display:flex; align-items:center; gap:6px; flex-wrap:wrap; flex:1; min-width:0; }
 .sos-breadcrumb a, .sos-breadcrumb .sos-bc-current { display: inline-flex; align-items: center; gap: 4px; }
 .sos-breadcrumb a {
     color: var(--accent-indigo);
@@ -408,7 +412,6 @@ const BREADCRUMB_CSS = `
 .sos-breadcrumb .sos-bc-current { color: var(--text-main); font-weight: 600; padding: 2px 6px; }
 .sos-breadcrumb .sos-bc-sep { color: var(--text-disabled, var(--text-muted)); padding: 0 2px; opacity: 0.6; }
 .sos-breadcrumb .sos-bc-phase {
-    margin-left: auto;
     padding: 3px 10px;
     border-radius: var(--radius-full, 999px);
     border: 1px solid;
@@ -417,6 +420,19 @@ const BREADCRUMB_CSS = `
     letter-spacing: 0.06em;
     font-weight: 700;
     text-transform: uppercase;
+}
+/* Cmd+K search · viu aquí des de v120 · estalvia espai al navbar */
+.sos-bc-search-wrap { margin-left: auto; }
+.sos-bc-search-wrap input {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border-default);
+    border-radius: 6px; padding: 4px 10px; color: var(--text-main);
+    font-size: 0.78rem; font-family: var(--font-base);
+    width: 220px; transition: all 120ms;
+}
+.sos-bc-search-wrap input::placeholder { color: var(--text-muted); }
+.sos-bc-search-wrap input:focus {
+    outline: none; border-color: var(--accent-indigo);
+    background: rgba(99,102,241,0.05); width: 300px;
 }
 @media (max-width: 720px) {
     .sos-breadcrumb { padding: 6px 1rem; }
@@ -463,6 +479,8 @@ export async function paintBreadcrumb({
     }
     targetEl.style.display = '';
     targetEl.innerHTML = renderBreadcrumbHtml({ items, phase });
+    // Cmd+K search ara viu al breadcrumb · re-bind handlers (v120)
+    _bindGlobalSearch(targetEl);
 }
 
 // ─── UX-AUDIT-001 sprint H+ pass 5 · Global Nav al top ────────────────────
@@ -510,9 +528,8 @@ export function renderGlobalNavHtml({ pathname = '', projectId = null } = {}) {
         ${projectPill}
         <div class="sos-global-nav-groups">${renderNavGroupedHtml({ active, projectId, className: 'sos-global-nav-link' })}</div>
         <div class="sos-global-nav-right">
-            <div class="sos-global-nav-search">
-                <input type="search" id="sos-global-search" placeholder="🔍 Cerca · Cmd+K" aria-label="Cerca ràpida" autocomplete="off"/>
-            </div>
+            <a href="/inbox" data-link class="sos-global-nav-pill sos-global-nav-msg" title="Missatges · Inbox DMs"><span>📨</span><span class="sos-global-nav-pill-label">Missatges</span></a>
+            <a href="/wallet" data-link class="sos-global-nav-pill sos-global-nav-wallet" title="Saldo · Wallet personal"><span>💰</span><span id="sos-global-wallet-balance" class="sos-global-nav-pill-label">Saldo</span></a>
             <div class="sos-nav-group sos-global-nav-identity" data-nav-group="identity">
                 <button type="button" aria-haspopup="menu" aria-expanded="false" title="El meu compte" class="sos-global-nav-link sos-global-nav-avatar">👤 ▾</button>
                 <div role="menu" hidden>${_identityItemsHtml({ active })}</div>
@@ -673,30 +690,26 @@ const GLOBAL_NAV_CSS = `
 .sos-global-nav-right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     margin-left: 8px;
 }
-.sos-global-nav-search {
-    display: flex;
-    align-items: center;
-}
-.sos-global-nav-search input {
-    background: rgba(255,255,255,0.04);
+/* PILLS · Messages + Wallet sempre visibles · v120 */
+.sos-global-nav-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.05);
     border: 1px solid var(--border-default);
-    border-radius: 6px;
-    padding: 5px 10px;
-    color: var(--text-main);
-    font-size: 0.82rem;
-    width: 200px;
-    transition: all var(--dur-fast);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.78rem;
+    transition: all 120ms;
+    white-space: nowrap;
 }
-.sos-global-nav-search input::placeholder { color: var(--text-muted); }
-.sos-global-nav-search input:focus {
-    outline: none;
-    border-color: var(--accent-indigo);
-    background: rgba(99,102,241,0.05);
-    width: 260px;
-}
+.sos-global-nav-pill:hover { background: rgba(99,102,241,0.12); color: var(--text-main); border-color: var(--accent-indigo); }
+.sos-global-nav-msg { color: #a8b2ff; }
+.sos-global-nav-wallet { color: #22c55e; font-family: var(--font-mono); }
+.sos-global-nav-pill-label { font-weight: 600; }
 .sos-global-nav-avatar { font-weight: 700; }
 .sos-global-nav-identity > [role="menu"] { right: 0; left: auto; min-width: 240px; }
 .sos-global-nav-link {
@@ -731,8 +744,10 @@ const GLOBAL_NAV_CSS = `
     .sos-global-nav-inner { flex-wrap: wrap; gap: 8px; }
     .sos-global-nav-link { font-size: var(--text-xs); padding: 6px 8px; }
     .sos-global-nav-logo { font-size: var(--text-xs); }
-    .sos-global-nav-search { display: none; }
     .sos-global-nav-project-pill { max-width: 140px; font-size: 0.72rem; }
+    .sos-global-nav-pill-label { display: none; }   /* mobile · només icones */
+    .sos-bc-search-wrap input { width: 150px; }
+    .sos-bc-search-wrap input:focus { width: 180px; }
     .sos-global-nav-home span,
     .sos-global-nav-logo span { display: none; }
 }
