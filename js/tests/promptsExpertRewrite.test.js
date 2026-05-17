@@ -88,7 +88,7 @@ const p3 = buildPrompt({
     },
 });
 ok('E · "DERIVATS DEL MAPA DE VALOR"',  p3.user.includes('DERIVATS DEL MAPA DE VALOR'));
-ok('E · SOC INVARIANT explicat (què + per què)',  p3.user.includes('"què + per què"'));
+ok('E · SOC INVARIANT explicat (què + per què)',  p3.user.includes('què + per què'));
 ok('E · checklist d\'estats desitjats (no tasques)',  p3.user.includes('estats desitjats') && p3.user.includes('no és una tasca') || p3.user.includes('estat desitjat'));
 ok('E · output socs[] amb checklist verification_kind',  p3.user.includes('verification_kind'));
 ok('E · level macro/meso/micro per SOC',  p3.user.includes('"level": "macro|meso|micro"'));

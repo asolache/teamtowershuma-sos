@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-17T07:30 · v120 · NAVBAR FIX (search→breadcrumb · pills Messages+Wallet) + Skills al hub /learn + AGENT.md/MCP doc + 8 WOs sprint v120 · 40 asserts (sobre v119 prompts expert)';
+const BUILD_STAMP = '2026-05-17T08:00 · v121 · EXPERT CHAIN ORCHESTRATOR (8 fases) + Prompt tier router (reasoner/mid/small · estalvi 30-50%) + SOC views (linear/castell/map presentationHints) · 60 asserts';
 
 export default class DesignSystemView {
 

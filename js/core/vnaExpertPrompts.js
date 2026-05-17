@@ -528,11 +528,16 @@ Retorna NOMÉS aquest JSON ·
 Sense markdown · sense codeblocks · NO escriguis cap text fora del JSON.`,
 
     'generate-socs-from-value-map': ({ name, sector, lifecycle_stage, value_map, vna_zoom }) =>
-`TASCA · GENERA SOCs (Standard Operating CONCEPTS) DERIVATS DEL MAPA DE VALOR.
+`TASCA · GENERA SOCs (Standard Operating CONCEPTS) DERIVATS DEL MAPA DE VALOR + ORDENACIÓ PER A LES 3 VISTES DEL SOS.
 
-Un SOC és l'INVARIANT · "què + per què" d'un procés del network. Un SOP és el "com" concret (canvia · evoluciona). Un SOC està per sobre del SOP · ho contextualitza.
+UN SOC = un PROCÉS del network. És l'INVARIANT (què + per què). Mata 2 ocells d'un tret · genera el SOC + dóna les "presentation hints" per a les 3 vistes canòniques del SOS (mapa de valor · castell · lineal).
 
-Mira el mapa de valor · agrupa transaccions en blocs lògics · cada bloc és un SOC.
+VOCABULARI · "procés" i "SOC" són sinònims al SOS V11. Un SOC és el "què cal fer i per què" d'un procés concret del network. SOPs concrets vindran després (generate-sops-with-skills).
+
+VISTES DEL SOS (el teu output les ha d'alimentar) ·
+- **mapView** · graf 2D · roles a nodes · transactions a arestes · zoom macro/meso/micro
+- **castellView** · 6 nivells castellers (pom_de_dalt → tronc → pinya → laterals → mans → baixos) · ordena rols per nivell
+- **linearView** · seqüència temporal de processos (SOCs) · "primer es fa X, després Y, després Z"
 
 CONTEXT ·
 - Projecte · "${name}"
@@ -542,17 +547,20 @@ CONTEXT ·
 
 MAPA DE VALOR (entrada) ·
 ${value_map ? JSON.stringify({
-    roles: (value_map.roles || []).map(r => ({ id: r.id, name: r.name, kind: r.kind })),
-    transactions: (value_map.transactions || []).map(t => ({ id: t.id, from: t.from, to: t.to, type: t.type, trigger: t.trigger })),
+    roles: (value_map.roles || []).map(r => ({ id: r.id, name: r.name, kind: r.kind, castell_level: r.castell_level })),
+    deliverables: (value_map.deliverables || []).map(d => ({ id: d.id, name: d.name, kind: d.kind })),
+    transactions: (value_map.transactions || []).map(t => ({ id: t.id, from: t.from, to: t.to, deliverable: t.deliverable, type: t.type, trigger: t.trigger })),
     patterns: value_map.patterns_detected,
-}, null, 2).slice(0, 1500) : '(falta · genera amb supòsits raonables)'}
+}, null, 2).slice(0, 1800) : '(falta · genera amb supòsits raonables)'}
 
 REQUISITS ·
 - Cada SOC té NOM ESPECÍFIC del domini (ex · "Cicle setmanal cohort coordinadora" · "Onboarding nou client consultoria") · MAI "Procés 1"
-- Cada SOC té PURPOSE clar · per què existeix (no és redundant amb el name)
-- Cada SOC té PHASE (idea/mvp/validation/scale) · típicament la majoria coincideixen amb la fase del projecte
-- Cada SOC té CHECKLIST de 3-6 items · cada item és un estat desitjat (no una tasca)
+- Cada SOC té PURPOSE clar · per què existeix
+- Cada SOC té PHASE (idea/mvp/validation/scale)
+- Cada SOC té CHECKLIST de 3-6 items · estats desitjats (NO accions)
 - Cada item té VERIFICATION_KIND · 'sop-exists' | 'tdd' | 'manual-review' | 'attestation'
+- Cada SOC té TRANSACTION_REFS · lista de tx ids del value_map que aquest SOC orquestra
+- Cada SOC té ORDER_INDEX · posició temporal a la linearView (0-based · 0 = el primer)
 
 Retorna NOMÉS aquest JSON ·
 {
@@ -563,18 +571,37 @@ Retorna NOMÉS aquest JSON ·
       "purpose": "per què existeix · 1-2 frases",
       "phase": "idea|mvp|validation|scale",
       "level": "macro|meso|micro",
-      "outcomes": [2-4 outcomes mesurables · què demostra que el SOC funciona],
+      "order_index": 0,
+      "transaction_refs": ["tx-1", "tx-2"],
+      "involved_roles": ["rol-id-1", "rol-id-2"],
+      "outcomes": [2-4 outcomes mesurables],
       "checklist": [
         {
           "id": "i1",
-          "label": "estat desitjat · NO acció (ex · 'Acta signada per tots els socis presents')",
+          "label": "estat desitjat · ex 'Acta signada per tots els socis presents'",
           "required": true,
           "verification_kind": "sop-exists|tdd|manual-review|attestation",
-          "sop_ref": null   // l'omplirà generate-sops-with-skills · null per ara
+          "sop_ref": null
         }
       ]
     }
-  ]
+  ],
+  "presentationHints": {
+    "linearOrder": ["soc-id-primer", "soc-id-segon", "soc-id-tercer"],
+    "castellGrouping": {
+      "pom_de_dalt": ["soc-ids · processos estratègics"],
+      "tronc":       ["soc-ids · processos d'execució crítica"],
+      "pinya":       ["soc-ids · processos de suport"],
+      "laterals":    ["soc-ids · processos de validació/QA"],
+      "mans":        ["soc-ids · processos d'interfície externa"],
+      "baixos":      ["soc-ids · processos d'ancoratge ètic/legal"]
+    },
+    "deliverableSequence": ["del-id-primer", "del-id-segon", "..."],
+    "mapClustering": {
+      "cluster-a": { "label": "Captació", "soc_ids": ["..."], "color_hint": "#3b82f6" },
+      "cluster-b": { "label": "Operació", "soc_ids": ["..."], "color_hint": "#22c55e" }
+    }
+  }
 }
 Sense markdown · sense codeblocks.`,
 
