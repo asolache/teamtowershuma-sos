@@ -82,12 +82,32 @@ const agent = await loadAgent('define-product-service');
 // → { id, version, frontmatter: { model_tier, routing, … }, body: '## Rol\n…' }
 ```
 
+## Agents legals · `agents/legal/*.md` (v124)
+
+Plantilles d'agreements per accelerar la incubadora + accelerador. Cada agent
+genera un document JSON estructurat llest per renderitzar a markdown signat ·
+notaritzable al permaweb · vinculat a la comptabilitat del projecte.
+
+Catàleg runtime · `js/core/legalAgentsCatalog.js` (10 agents · 8 categories).
+
+1. **founding** · `pact-de-socis` · fundacional · slicing-pie + vesting
+2. **pre-deal** · `nda-mutual` · confidencialitat bilateral · 1-pàgina
+3. **pre-deal** · `letter-of-intent` · LOI no vinculant · 30d exclusivitat
+4. **deal** · `term-sheet` · ronda inversió · reasoner-tier · binding alt
+5. **cohort** · `incubator-membership` · 6m · equity ≤10% · serveis bidireccional
+6. **cohort** · `accelerator-cohort` · 12 setmanes · milestones DTD · demo day
+7. **commercial** · `service-agreement` · DTD test booleà · milestones-payment
+8. **relational** · `advisor-agreement` · 1-20h/mes · equity ≤2%
+9. **compensation** · `equity-grant` · real/phantom · vesting · clawback
+10. **contribution** · `ip-assignment` · contributor → projecte · moral rights
+
 ## Pla de migració · 4 fases (veure docs/AGENTS-pattern.md)
 
-- **Fase 1 (v122 · ARA)** · agents/ amb 8 .md + loader + tests · additive · zero breaking
+- **Fase 1 (v122)** · agents/ amb 8 .md + loader + tests · additive · zero breaking
+- **Fase 1.5 (v124 · ARA)** · agents/legal/ · 10 plantilles legals + catàleg
 - **Fase 2** · vnaExpertPrompts.js delega a loader per a les 8 fases canòniques
-- **Fase 3** · UI /prompts-debug llegeix agents/ directament · edit live
-- **Fase 4** · agents publicats al permaweb · marketplace de skills
+- **Fase 3** · UI `/prompts-debug` · `/agreements` llegeixen agents/ directament
+- **Fase 4** · agents publicats al permaweb · marketplace de skills + agreements
 
 ## MCP (Model Context Protocol)
 
