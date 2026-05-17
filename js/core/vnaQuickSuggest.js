@@ -23,6 +23,9 @@
 
 import { buildPrompt } from './vnaExpertPrompts.js';
 import { scoreOutput } from './promptABTestService.js';
+// v135 · alfa+ items #1 + #2 · re-export · disponible a consumidors de quickSuggest
+export { vnaClarify, enrichContextWithAnswers, VNA_CLARIFY_VERSION } from './vnaClarify.js';
+export { detectGaps, buildGapFillPrompt, runGapFillTurn, mergeGapFill, VNA_GAP_VERSION } from './vnaGapDetector.js';
 
 export const VNA_QUICK_VERSION = 'v1.0';
 

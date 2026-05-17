@@ -7,12 +7,12 @@
 
 | # | Item | Status | Evidència codebase |
 |---|---|---|---|
-| 1 | **Pre-thinking phase** · clarification questions | ❌ No | Sense funció dedicada · només `iaContextService` (context gathering passiu) |
-| 2 | **Multi-turn conversational** · 2a crida si gaps | 🟡 Parcial | Escalation per **qualitat** sí (v132c · rubric < 70 → reintenta FULL) · per **gaps** no |
-| 3 | **Embedding similarity** · fusionar rols similars | ❌ No | Només mencionat com a TODO a `contextPruner.js:272` · sense embedding service ni vector store |
+| 1 | **Pre-thinking phase** · clarification questions | ✅ **Sí v135** | `js/core/vnaClarify.js` · async `vnaClarify({context,provider})` retorna {questions:[]} + helper `enrichContextWithAnswers` |
+| 2 | **Multi-turn conversational** · 2a crida si gaps | ✅ **Sí v135** | `js/core/vnaGapDetector.js` · `detectGaps()` pure + `runGapFillTurn()` 2a crida targeted + `mergeGapFill()` dedupe |
+| 3 | **Embedding similarity** · fusionar rols similars | ✅ **Sí v136** | `js/core/roleDedup.js` · `cosineSimilarity` + `detectDuplicateRoles({embedder, threshold})` + `mergeDuplicates` (transitive · remap txs · self-loop filter · dedupe) · `dedupRoles` composite · 2 embedder factories (OpenAI · Mock test) |
 | 4 | **Real-time co-creation** · accept/reject per rol | ✅ Sí | `ValueMapView` `_aiProposals` sistema funcional · botons "✓ Aceptar / ✕" · CSS `.vmap-proposal-card.accepted/rejected` · v131+ |
 | 5 | **Cross-project pattern mining** | 🟡 Estàtic | 24 domain packs + 21 sectors CNAE canonical pre-curats · **no runtime mining** (no aprèn de projectes reals) |
-| 6 | **xAPI tracking quality** | 🟡 Espec | Spec a `docs/lms-api-spec-v0.1.md` (12 endpoints inclou xAPI Tin Can · `/v1/statements`) · **sense implementació JS** |
+| 6 | **xAPI tracking quality** | ✅ **Sí v136** | `js/core/xapiService.js` · Tin Can compatible (verbs canonical adl.gov + SOS extension namespace · activity types) · `recordStatement` + 4 helpers SOS (`recordMapGenerated/Accepted/ClarifyAnswered/GapFilled`) + `listStatements` filter + `summarizeStatements` agg · KB persistent type='xapi_statement' |
 | 7 | **Wiki community moderation** · arquetip publicable | ❌ No | `permaweb-skills-share` existeix per a skills · NO per a arquetip · `domainDetector` és source-of-truth tancat |
 
 ## Detall per item
@@ -132,13 +132,20 @@ versioning + voting + merge.
 
 | Prioritat | Item | Quina millora real porta |
 |---|---|---|
-| 🔥 ALTA | #2 Multi-turn gaps | Resol bug "futbol sense scout" amb 2a crida targeted |
-| 🔥 ALTA | #1 Pre-thinking clarify | Redueix ambigüitat de description abans de costar tokens |
-| 🟡 MITJ | #6 xAPI quality | Audit trail · evidència empírica de quality per benchmark |
-| 🟡 MITJ | #3 Embedding similarity | Resol duplicate roles (cas comú · 6 rols generats · 2 idèntics) |
+| ✅ DONE v135 | #1 Pre-thinking clarify | Redueix ambigüitat de description abans de costar tokens |
+| ✅ DONE v135 | #2 Multi-turn gaps | Resol bug "futbol sense scout" amb 2a crida targeted |
+| ✅ DONE v131+ | #4 Co-creation | Operatiu · ValueMapView · iterar UX només si feedback |
+| ✅ DONE v136 | #6 xAPI quality tracking | Audit trail · evidència empírica de quality per benchmark |
+| ✅ DONE v136 | #3 Embedding similarity | Resol duplicate roles (cas comú · 6 rols generats · 2 idèntics) |
 | 🟢 BAIX | #5 Pattern mining | Té estàtic ja · runtime és complexitat sense alfa-blocker |
 | 🟢 BAIX | #7 Wiki community | Post-tracció comunitat (no abans de tenir 50+ usuaris) |
-| ✅ DONE | #4 Co-creation | Operatiu · ValueMapView · iterar UX només si feedback |
+
+## Estat post-v136 · 5/7 items DONE · ALFA-READY
+
+Items que falten · #5 (pattern mining runtime · estàtic ja existeix) · #7
+(wiki community · post-tracció 50+ usuaris). **Cap és alfa-blocker.**
+
+Veredicte · SOS V11 pot declarar-se **ALFA en creació de mapes de valor**.
 
 ## Pròxims WOs proposats al backlog (si confirmes)
 
