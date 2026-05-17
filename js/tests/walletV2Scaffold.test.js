@@ -52,15 +52,15 @@ ok('D · cap button data-mode="skills"',        !learnSrc.includes('data-mode="s
 ok('D · _renderSkillsTab method ELIMINAT',     !/\b_renderSkillsTab\(\) \{/.test(learnSrc));
 ok('D · documenta v128 a comentari',           /v128.*skills.*elimin|elimin.*skills.*v128/i.test(learnSrc));
 
-// ─── E · placeholders descriuen els 4 sprints futurs ───────────────────
-console.log('\n— E · placeholders prep · v129 · v130 · v131');
-ok('E · placeholder Saldo menciona sprint v129',         w2Src.includes('Saldo · sprint v129'));
-ok('E · placeholder Transaccions menciona v129',         w2Src.includes('Transaccions · sprint v129'));
-ok('E · placeholder Projectes menciona v129',            w2Src.includes('Projectes · sprint v129'));
-ok('E · placeholder Top-up menciona v130',               w2Src.includes('Top-up · sprint v130'));
-ok('E · placeholder Tarta menciona v131',                w2Src.includes('Tarta · sprint v131'));
-ok('E · placeholder Compres menciona v131',              w2Src.includes('Compres · sprint v131'));
-ok('E · placeholders citen els serveis backend reusable',
+// ─── E · estat sprints · v129 done · v130/v131 placeholders ──────────
+console.log('\n— E · sprint v129 implementat · v130/v131 segueixen placeholders');
+ok('E · Saldo IMPLEMENTAT (no placeholder v129)',         !w2Src.includes('Pestanya Saldo · sprint v129'));
+ok('E · Transaccions IMPLEMENTAT (no placeholder v129)',  !w2Src.includes('Pestanya Transaccions · sprint v129'));
+ok('E · Projectes IMPLEMENTAT (no placeholder v129)',     !w2Src.includes('Pestanya Projectes · sprint v129'));
+ok('E · Top-up encara placeholder v130',                  w2Src.includes('Top-up · sprint v130'));
+ok('E · Tarta encara placeholder v131',                   w2Src.includes('Tarta · sprint v131'));
+ok('E · Compres encara placeholder v131',                 w2Src.includes('Compres · sprint v131'));
+ok('E · view usa els 4 serveis backend (reuse)',
    w2Src.includes('walletService') && w2Src.includes('unifiedAccountingService') && w2Src.includes('stripeService') && w2Src.includes('cryptoTopupService'));
 
 // ─── F · pla doc · diagnòstic + 4 fases ────────────────────────────────
