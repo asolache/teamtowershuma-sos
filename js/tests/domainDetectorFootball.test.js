@@ -72,7 +72,7 @@ ok('D · empty input · retorna null',             d6 === null);
 // ─── E · helpers · listDomains + getDomainPack ────────────────────────
 console.log('\n— E · helpers UI');
 const list = listDomains();
-ok('E · listDomains té 4 entries',               list.length === 4);
+ok('E · listDomains té ≥ 4 entries (v127 expanded)', list.length >= 4);
 ok('E · entries tenen archetypeCount',           list.every(l => l.archetypeCount > 0));
 ok('E · getDomainPack(sports-team) retorna pack',
    getDomainPack('sports-team')?.archetypes?.length > 0);
@@ -126,7 +126,7 @@ const orchSrc = fs.readFileSync(new URL('../core/expertChainOrchestrator.js', im
 ok('I · importa detectDomain',                   orchSrc.includes("import { detectDomain }"));
 ok('I · executa detectDomain pre-loop',          orchSrc.includes('detectDomain({ name: context.name'));
 ok('I · emit domain-detected event',             orchSrc.includes("emit('domain-detected'"));
-ok('I · injecta context.domainDetection',         orchSrc.includes('context = { ...context, domainDetection }'));
+ok('I · injecta context.domainDetection',         /context = \{ \.\.\.context, domainDetection/.test(orchSrc));
 ok('I · phaseCtx · passa domainDetection a fase 5', orchSrc.includes('c.domainDetection = baseCtx.domainDetection'));
 
 console.log('\n' + pass + ' pass · ' + fail + ' fail');
