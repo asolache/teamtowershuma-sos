@@ -476,7 +476,7 @@ Retorna NOMÉS aquest JSON ·
 }
 Sense markdown · sense codeblocks.`,
 
-    'design-value-map-rich': ({ name, description, sector, entity_type, lifecycle_stage, vna_zoom, product_service, canvas, pitch, domainDetection = null, sectorContext = null }) => {
+    'design-value-map-rich': ({ name, description, sector, entity_type, lifecycle_stage, vna_zoom, product_service, canvas, pitch, domainDetection = null, sectorContext = null, existingMap = null }) => {
         // v126 · sub-domain inference · si el caller passa domainDetection
         // (de domainDetector.detectDomain) → injectem els arquetip específics
         // del sub-domini (ex sports-team · 14 rols esportius reals) en
@@ -510,8 +510,24 @@ CONTEXT SECTORIAL CNAE-2009 ESPANYA (knowledge/sectors/${sector || 'X'}.md · v1
 ${sectorContext}
 `;
         }
-        return `TASCA · DISSENY DE MAPA DE VALOR RIC · pensa profundament com a consultor VNA llegendari.
-
+        // v132c · mode completar · si l'usuari ja té un mapa parcial, hem d'enriquir
+        // (no regenerar des de zero) · pattern del botó "Sugerir con IA" /map
+        let existingBlock = '';
+        if (existingMap && (existingMap.roles?.length || existingMap.transactions?.length)) {
+            const existingRoles = (existingMap.roles || []).map(r => '  · ' + (r.name || r.id) + (r.castell_level ? ' [' + r.castell_level + ']' : '')).join('\n');
+            const existingTxs   = (existingMap.transactions || []).map(t => '  · ' + (t.from || '?') + '→' + (t.to || '?') + ' (' + (t.deliverable || t.label || t.type || '') + ')').join('\n');
+            existingBlock = `
+MODE COMPLETAR · l'usuari JA té aquest mapa parcial · AFEGEIX els rols/transactions/deliverables que FALTEN · NO repeteixis els existents ·
+${existingRoles ? 'Rols existents ·\n' + existingRoles : ''}
+${existingTxs ? 'Transactions existents ·\n' + existingTxs : ''}
+Genera SOLS NOUS rols/transactions que tinguin sentit amb el context · prioritza intangibles · cicles recíprocs amb els existents.
+`;
+        }
+        const taskHeader = existingBlock
+            ? 'TASCA · ENRIQUIR MAPA DE VALOR EXISTENT · afegeix el que falta · pensa com a consultor VNA llegendari.'
+            : 'TASCA · DISSENY DE MAPA DE VALOR RIC · pensa profundament com a consultor VNA llegendari.';
+        return `${taskHeader}
+${existingBlock}
 CONTEXT (tot rellevant per al teu raonament Allee) ·
 - Projecte · "${name}"
 - Sector CNAE · ${sector || '(infereix)'}

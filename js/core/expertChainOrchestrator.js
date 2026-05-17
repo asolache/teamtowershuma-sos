@@ -53,8 +53,10 @@ function _costEur({ modelKey, usage }) {
 }
 
 // _runSingleTask · pure helper · build prompt + escalation + parse
-async function _runSingleTask({ taskKind, context, generateWithProvider, preferredProvider, emit }) {
-    const prompt = buildPrompt({ taskKind, context });
+// v132c · accepta `slim` per a usar SYSTEM_BASE_SLIM (43% menys tokens) +
+// `qualityRubric` per a escalation post-IA si score < threshold.
+async function _runSingleTask({ taskKind, context, generateWithProvider, preferredProvider, emit, slim = false, qualityThreshold = 0 }) {
+    const prompt = buildPrompt({ taskKind, context, slim });
     const routeKind = pickRoutingForTask(taskKind);
     const tier = pickTier(taskKind);
     const usageRef = { last: null };
@@ -77,12 +79,47 @@ async function _runSingleTask({ taskKind, context, generateWithProvider, preferr
     };
 
     const result = await runEscalation({ taskKind: routeKind, generate, evaluate, ctx: { taskKind }, preferredProvider });
-    const text = result?.output || '';
-    const parsed = _parseJsonSafe(text, null);
-    const cost = _costEur({ modelKey: result?.modelKey, usage: usageRef.last });
+    let text = result?.output || '';
+    let parsed = _parseJsonSafe(text, null);
+    let cost = _costEur({ modelKey: result?.modelKey, usage: usageRef.last });
 
-    emit('phase', 'done', { taskKind, modelKey: result?.modelKey, tier, cost, output: parsed });
-    return { parsed, cost, modelKey: result?.modelKey || null, tier };
+    // v132c · quality rubric · si slim+threshold actiu i score < threshold ·
+    // refà amb prompt FULL (escalation per qualitat · no per parse-error)
+    let escalatedToFull = false;
+    if (slim && qualityThreshold > 0 && parsed && taskKind === 'design-value-map-rich') {
+        try {
+            const { scoreOutput } = await import('./promptABTestService.js');
+            const score = scoreOutput(parsed);
+            emit('phase', 'rubric', { taskKind, slim: true, score: score?.score, threshold: qualityThreshold });
+            if (score && score.score < qualityThreshold) {
+                emit('phase', 'escalate', { taskKind, reason: 'quality-below-threshold', score: score.score });
+                const promptFull = buildPrompt({ taskKind, context, slim: false });
+                const generateFull = async (modelKey) => {
+                    const res = await generateWithProvider(modelKey, {
+                        systemPrompt:    promptFull.system,
+                        userPrompt:      promptFull.user,
+                        fewShot:         promptFull.fewShot,
+                        maxOutputTokens: 1800,
+                        temperature:     tier === 'reasoner' ? 0.5 : 0.4,
+                    });
+                    if (res?.usage) usageRef.last = res.usage;
+                    return res?.text || '';
+                };
+                const result2 = await runEscalation({ taskKind: routeKind, generate: generateFull, evaluate, ctx: { taskKind, escalated: true }, preferredProvider });
+                const text2 = result2?.output || '';
+                const parsed2 = _parseJsonSafe(text2, null);
+                if (parsed2) {
+                    parsed = parsed2;
+                    text = text2;
+                    cost += _costEur({ modelKey: result2?.modelKey, usage: usageRef.last });
+                    escalatedToFull = true;
+                }
+            }
+        } catch (_) { /* silent · escalation best-effort */ }
+    }
+
+    emit('phase', 'done', { taskKind, modelKey: result?.modelKey, tier, cost, output: parsed, slim, escalatedToFull });
+    return { parsed, cost, modelKey: result?.modelKey || null, tier, slim, escalatedToFull };
 }
 
 // runExpertChain · async · executa les 8 fases en ordre
@@ -107,8 +144,19 @@ export async function runExpertChain({
     skip = {},
     maxCostEur = 1.0,
     onEvent = null,
+    // v132c · slim mode · usa SYSTEM_BASE_SLIM (43% menys tokens) ·
+    // qualityThreshold · si scoreOutput<X · refà amb prompt FULL (escalation per qualitat)
+    slim = false,
+    qualityThreshold = 70,
+    // v132c · mode completar · si context.existingMap té roles/transactions ·
+    // el prompt diu "enrich aquest mapa, no regeneris des de zero"
+    existingMap = null,
 } = {}) {
     const t0 = Date.now();
+    // v132c · injecta existingMap al context perquè phase 5 el rebi
+    if (existingMap && (existingMap.roles?.length || existingMap.transactions?.length)) {
+        context = { ...context, existingMap };
+    }
     const emit = (step, status, payload = {}) => {
         if (typeof onEvent === 'function') { try { onEvent({ step, status, ...payload }); } catch (_) {} }
     };
@@ -212,8 +260,12 @@ export async function runExpertChain({
         }
 
         // Single-call phases (1-6)
+        // v132c · slim + qualityThreshold només aplicat a design-value-map-rich (fase 5)
+        // que és la fase pivotal · les altres fases sempre full per evitar regressions
+        const useSlim = slim && phase.id === 'design-value-map-rich';
+        const usedThreshold = useSlim ? qualityThreshold : 0;
         try {
-            const r = await _runSingleTask({ taskKind: phase.taskKind, context: phaseCtx, generateWithProvider, preferredProvider, emit });
+            const r = await _runSingleTask({ taskKind: phase.taskKind, context: phaseCtx, generateWithProvider, preferredProvider, emit, slim: useSlim, qualityThreshold: usedThreshold });
             out.costTotal += r.cost;
             if (r.parsed) _applyPhaseOutput(phase, out, r.parsed);
             out.phasesRun.push(phase.id);
@@ -254,6 +306,11 @@ function _buildPhaseContext(phase, baseCtx, out) {
             if (baseCtx.domainDetection) c.domainDetection = baseCtx.domainDetection;
             // v131b · sectorContext (string text del knowledge/sectors/X.md)
             if (baseCtx.sectorContext) c.sectorContext = baseCtx.sectorContext;
+            // v132c · mode completar · si existingMap té roles/transactions ·
+            // el prompt sap que ha d'enriquir, no regenerar des de zero
+            if (baseCtx.existingMap && (baseCtx.existingMap.roles?.length || baseCtx.existingMap.transactions?.length)) {
+                c.existingMap = baseCtx.existingMap;
+            }
         } catch (_) {}
     }
     // Fase 6 · socs reb el valueMap

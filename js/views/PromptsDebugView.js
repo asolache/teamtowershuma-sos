@@ -80,6 +80,8 @@ export default class PromptsDebugView {
             this._ctx = { ...DEFAULT_CTX };
             this.render();
         });
+        // v132c · A/B Lab estàtic (sense LLM)
+        document.getElementById('pdAbLabRun')?.addEventListener('click', () => this._runAbLab());
     }
 
     _buildContext() {
@@ -328,6 +330,11 @@ export default class PromptsDebugView {
                         </select>
                     </div>
                     <button id="pdResetCtx" class="pd-reset">↺ Reset al context per defecte</button>
+
+                    <h3 style="margin-top:1rem;color:var(--accent-purple);">🧪 A/B Lab (v132c)</h3>
+                    <p style="font-size:0.78rem;color:var(--text-muted);">Compara prompt FULL vs SLIM en viu · valida hipòtesi "menys context > més".</p>
+                    <button id="pdAbLabRun" class="pd-reset" style="background:var(--accent-purple);color:#fff;border-color:var(--accent-purple);">▶ Compara prompts (estàtic · sense LLM)</button>
+                    <div id="pdAbLabResult" style="margin-top:8px;font-size:0.78rem;"></div>
                 </aside>
 
                 <main id="pdPanel" class="pd-main">
@@ -335,6 +342,33 @@ export default class PromptsDebugView {
                 </main>
             </div>
         </div>`;
+    }
+
+    // v132c · panel A/B Lab · comparació estàtica FULL vs SLIM (sense LLM)
+    // Si l'usuari té cas a la KB amb LLM provider · pot córrer runABTest real
+    async _runAbLab() {
+        const out = document.getElementById('pdAbLabResult');
+        if (!out) return;
+        out.innerHTML = '<span style="color:var(--text-muted);">⏳ Comparant FULL vs SLIM…</span>';
+        try {
+            const { buildPrompt } = await import('../core/vnaExpertPrompts.js');
+            const { buildVariantBPrompt, scoreOutput } = await import('../core/promptABTestService.js');
+            const ctx = this._buildContext();
+            const full = buildPrompt({ taskKind: 'design-value-map-rich', context: ctx, slim: false });
+            const slim = buildPrompt({ taskKind: 'design-value-map-rich', context: ctx, slim: true });
+            const minB = buildVariantBPrompt(ctx);
+            const saving = (((full.approxTokens - slim.approxTokens) / full.approxTokens) * 100).toFixed(0);
+            const minPct = (((full.approxTokens - minB.approxTokens) / full.approxTokens) * 100).toFixed(0);
+            out.innerHTML = `
+                <div style="background:var(--bg-elevated);border-radius:6px;padding:8px 10px;border-left:3px solid var(--accent-purple);">
+                    <div style="display:flex;justify-content:space-between;"><strong>FULL</strong><code>${full.approxTokens} tk</code></div>
+                    <div style="display:flex;justify-content:space-between;color:#22c55e;"><strong>SLIM (v132c)</strong><code>${slim.approxTokens} tk · -${saving}%</code></div>
+                    <div style="display:flex;justify-content:space-between;color:var(--accent-orange);"><strong>MINIMAL</strong><code>${minB.approxTokens} tk · -${minPct}%</code></div>
+                    <p style="margin:8px 0 0;font-size:0.72rem;color:var(--text-muted);">SLIM manté els 5 principis Verna Allee · MODEL CASTELLER · contracte sortida. Per a A/B amb LLM real · usa <code>runABTest()</code> des de la KB.</p>
+                </div>`;
+        } catch (e) {
+            out.innerHTML = '<span style="color:var(--accent-red);">Error · ' + this._esc(e?.message || String(e)) + '</span>';
+        }
     }
 
     _esc(s) {
