@@ -31,7 +31,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-18T11:00 · v127 · VNA QUALITY NIQUELAT · 6 packs nous (religious · political · art · worker-coop · research · maker · 10 packs total) · LLM fallback one-shot (~0.0005€) · multi-domain combine · /prompts-debug panel amb override manual + alternatives · domainTelemetry (% cobertura · costos · top dominis) · 102 asserts nous';
+const BUILD_STAMP = '2026-05-18T13:00 · v128 · WALLET V2 SCAFFOLD (6 pestanyes · Saldo · Transaccions · Compres · Tarta · Projectes · Top-up) + /learn?tab=skills ELIMINAT (redundant) + plan doc UX/analyst total docs/wallet-v2-accounting-integration-plan.md · 4 sprints v128→v131 · 40 asserts nous';
 
 export default class DesignSystemView {
 

@@ -49,6 +49,7 @@ const ROUTES = [
     { path: '/efficiency',view: () => import('./views/EfficiencyView.js') },
     // MKT-001 sprint C · wallet prepago por proyecto
     { path: '/wallet',    view: () => import('./views/WalletView.js')    },
+    { path: '/wallet/v2', view: () => import('./views/WalletV2View.js')  },   // v128 · paral·lel · migració gradual
     // MKT-001 sprint D · cuadro comparativo de ahorro acumulado vs convencional
     { path: '/savings',   view: () => import('./views/SavingsView.js')   },
     // MAT-002-H · landing pública Matriu Incoopadora
