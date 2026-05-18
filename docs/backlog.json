@@ -800,18 +800,17 @@
       "id": "wo-project-hub-ia-aligned",
       "project_id": "sos-dev-internal",
       "title": "Project Hub V3 · IA aligned als 5 pilars del menú principal (crear · treballar · comptabilitzar · connectar · aprendre) + Equip",
-      "description": "Supersedeix wo-project-hub-subtabs. Realinear el Project Hub a la IA\nmental del menú principal (5 verbs · veure docs/ux/v134-project-hub-ia-alignment.md).\n\nTabs nivell 1 (6) ·\n 🏠 Hub | 🎨 Crear | 🔨 Treballar | 💶 Comptabilitzar | 🔗 Connectar | 👥 Equip\n\nSub-tabs nivell 2 (alineades amb vistes globals existents) ·\n · Crear ·         Canvas · Pitch · Pacte · Presentation\n · Treballar ·     Map · Kanban · Quality · Sprint · Lifecycle\n · Comptabilitzar · Wallet · Comptes · Pastís valor · Factures · Tokenomics\n · Connectar ·     Pactes signats · Propostes · Mercat\n · Equip ·         Membres · Rols · Permisos · Convidacions\n\nDropdown \"Més\" · Aprendre (KB projecte) · Sprints management · Lifecycle\ndashboard · Settings projecte.\n\nFilosofia · 2-nivells max · URL sync `?tab=X&sub=Y` · component\nSubmenuTabs.js reutilitzat (cal extensió v2 per a 2-nivells · veure\nwo-submenu-tabs-v2).\n\nPreview viu testable · /project-hub-v3-preview (post v134 commit).\n\nv136 status · ✅ 6 tabs canonical visibles a /project/{id} via SubmenuTabs ·\ncada pilar mostra grid de cards amb ?project=X. PENDENT v141+ · render\nin-tab de les vistes (ara segueixen links externs) · cal SubmenuTabs v2\n(sub-submenu 2-nivells · veure wo-submenu-tabs-v2-sublevel).",
+      "description": "Supersedeix wo-project-hub-subtabs. Realinear el Project Hub a la IA\nmental del menú principal (5 verbs · veure docs/ux/v134-project-hub-ia-alignment.md).\n\nTabs nivell 1 (6) ·\n 🏠 Hub | 🎨 Crear | 🔨 Treballar | 💶 Comptabilitzar | 🔗 Connectar | 👥 Equip\n\nSub-tabs nivell 2 (alineades amb vistes globals existents) ·\n · Crear ·         Canvas · Pitch · Pacte · Presentation\n · Treballar ·     Map · Kanban · Quality · Sprint · Lifecycle\n · Comptabilitzar · Wallet · Comptes · Pastís valor · Factures · Tokenomics\n · Connectar ·     Pactes signats · Propostes · Mercat\n · Equip ·         Membres · Rols · Permisos · Convidacions\n\nDropdown \"Més\" · Aprendre (KB projecte) · Sprints management · Lifecycle\ndashboard · Settings projecte.\n\nFilosofia · 2-nivells max · URL sync `?tab=X&sub=Y` · component\nSubmenuTabs.js reutilitzat (cal extensió v2 per a 2-nivells · veure\nwo-submenu-tabs-v2).\n\nPreview viu testable · /project-hub-v3-preview (post v134 commit).\n\nv136 status · ✅ 6 tabs canonical visibles a /project/{id} via SubmenuTabs ·\ncada pilar mostra grid de cards amb ?project=X. PENDENT v141+ · render\nin-tab de les vistes (ara segueixen links externs) · cal SubmenuTabs v2\n(sub-submenu 2-nivells · veure wo-submenu-tabs-v2-sublevel).\nv150 · ✅ DONE · resolt redundancy d'UX detectat per @alvaro · L2\nsubmenu + preview placeholders eliminats (redundants · només eren\nlink a la vista) · ara pilar = grid de cards · click directe a vista\nglobal · -1 barra horizontal · -1 click al destí real. WalletV2 +\nAccountingV2 · ctx-bar fusionada amb submenu (1 fila enlloc de 2).",
       "priority": "high",
       "complexity": "L",
-      "status": "in-progress",
+      "status": "done",
       "estimated_cost_eur": 18,
       "tags": [
-        "sprint-v136",
+        "sprint-v150",
         "ux",
         "project-hub",
         "ia-alignment",
-        "supersedes-wo-project-hub-subtabs",
-        "partial-v136"
+        "done-v150"
       ]
     },
     {

@@ -148,6 +148,11 @@ export default class WalletV2View {
             .w2-shell { min-height: 100dvh; background: var(--bg-dark); color: var(--text-main); font-family: var(--font-base); display: flex; flex-direction: column; }
             /* v143 · context switcher · barra dual personal/projecte */
             .w2-ctx-bar { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--bg-panel); border-bottom: 1px solid var(--border-default); flex-wrap: wrap; }
+            /* v150 · fused bar · submenu + context switcher en 1 sola fila */
+            .w2-bar-fused { display: flex; align-items: stretch; background: var(--bg-panel); border-bottom: 1px solid var(--border-default); }
+            .w2-bar-fused-tabs { flex: 1; min-width: 0; overflow-x: auto; }
+            .w2-bar-fused-tabs .sos-submenu { border-bottom: none; }
+            .w2-bar-fused-ctx { display: flex; align-items: center; padding: 0 12px; border-left: 1px solid var(--border-default); flex-shrink: 0; }
             .w2-ctx-label { font-size: 0.78rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
             .w2-ctx-select { background: var(--bg-elevated); color: var(--text-main); border: 1px solid var(--border-default); padding: 5px 28px 5px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 600; font-family: inherit; cursor: pointer; min-width: 200px; }
             .w2-ctx-select:hover { border-color: var(--accent-indigo); }
@@ -259,15 +264,15 @@ export default class WalletV2View {
                 contextLinks: contextLinks.map(l => ({ ...l })),
             })}
 
-            <div class="w2-ctx-bar">
-                <label for="w2ContextSel" class="w2-ctx-label">📍 Context ·</label>
-                <select id="w2ContextSel" class="w2-ctx-select" aria-label="Context wallet">
-                    ${ctxOptions}
-                </select>
-                <span class="w2-ctx-hint">${this._projectId ? 'Wallet del projecte · ' + this._esc(projName) : 'Wallet personal'}</span>
+            <!-- v150 · ctx-bar fusionada amb submenu · 1 sola fila enlloc de 2 -->
+            <div class="w2-bar-fused">
+                <div id="w2Submenu" class="w2-bar-fused-tabs">${submenuHtml}</div>
+                <div class="w2-bar-fused-ctx">
+                    <select id="w2ContextSel" class="w2-ctx-select" aria-label="Context wallet" title="Canviar context wallet">
+                        ${ctxOptions}
+                    </select>
+                </div>
             </div>
-
-            <div id="w2Submenu">${submenuHtml}</div>
             <main class="w2-main" id="w2Main">
                 <div class="w2-loading">⏳ Carregant…</div>
             </main>

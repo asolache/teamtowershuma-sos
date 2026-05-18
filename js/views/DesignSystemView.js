@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-21T04:00 · v147+v148+v149 · EXPERT CHAIN SIMPLIFICATION · les 6 propostes de l\'audit v146 implementades · v147 SLIM auto per phase (slimByDefault flag · només Value Map + SOCs FULL · -50% cost) + personalize-landing ELIMINAT (post-chain template _buildLandingFromCanvasAndPitch sense LLM · -10% tokens) · v148 clarifyBeforeRun + clarifyAnswers + gapDetect post-Phase 5 wire-up (vnaClarify + vnaGapDetector v135) · v149 embedder option · roleDedup post-Phase 5 (v136) + .github/workflows/prompt-harness.yml CI baseline check · Impacte mesurat · cost -53% · qualitat +30pp · zero regressions futures';
+const BUILD_STAMP = '2026-05-21T06:00 · v150 · UX simplification · resol redundància detectada per @alvaro · ProjectHubV2 · L2 submenu + preview placeholders ELIMINATS (eren només link a vista global · cosa redundant) · ara pilar = grid de cards · click directe = navegació · -1 barra horizontal · -1 click al destí · WalletV2 + AccountingV2 · ctx-bar fusionada amb submenu (1 fila enlloc de 2) · tanca wo-project-hub-ia-aligned definitivament · 26 asserts v150';
 
 export default class DesignSystemView {
 

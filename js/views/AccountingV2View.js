@@ -147,6 +147,11 @@ export default class AccountingV2View {
         <style>
             .acc-shell { min-height: 100dvh; background: var(--bg-dark); color: var(--text-main); font-family: var(--font-base); display: flex; flex-direction: column; }
             .acc-ctx-bar { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--bg-panel); border-bottom: 1px solid var(--border-default); flex-wrap: wrap; }
+            /* v150 · fused bar · submenu + context switcher en 1 sola fila */
+            .acc-bar-fused { display: flex; align-items: stretch; background: var(--bg-panel); border-bottom: 1px solid var(--border-default); }
+            .acc-bar-fused-tabs { flex: 1; min-width: 0; overflow-x: auto; }
+            .acc-bar-fused-tabs .sos-submenu { border-bottom: none; }
+            .acc-bar-fused-ctx { display: flex; align-items: center; padding: 0 12px; border-left: 1px solid var(--border-default); flex-shrink: 0; }
             .acc-ctx-label { font-size: 0.78rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
             .acc-ctx-select { background: var(--bg-elevated); color: var(--text-main); border: 1px solid var(--border-default); padding: 5px 28px 5px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 600; font-family: inherit; cursor: pointer; min-width: 200px; }
             .acc-ctx-select:hover { border-color: var(--accent-indigo); }
@@ -185,15 +190,15 @@ export default class AccountingV2View {
                 contextLinks: contextLinks.map(l => ({ ...l })),
             })}
 
-            <div class="acc-ctx-bar">
-                <label for="accContextSel" class="acc-ctx-label">📍 Context ·</label>
-                <select id="accContextSel" class="acc-ctx-select" aria-label="Context comptes">
-                    ${ctxOptions}
-                </select>
-                <span class="acc-ctx-hint">${this._projectId ? 'Comptes del projecte · ' + this._esc(projName) : 'Comptes personals'}</span>
+            <!-- v150 · ctx-bar fusionada amb submenu · 1 sola fila enlloc de 2 -->
+            <div class="acc-bar-fused">
+                <div id="accSubmenu" class="acc-bar-fused-tabs">${submenuHtml}</div>
+                <div class="acc-bar-fused-ctx">
+                    <select id="accContextSel" class="acc-ctx-select" aria-label="Context comptes" title="Canviar context comptes">
+                        ${ctxOptions}
+                    </select>
+                </div>
             </div>
-
-            <div id="accSubmenu">${submenuHtml}</div>
             <main class="acc-main" id="accMain">
                 <div class="acc-empty">⏳ Carregant…</div>
             </main>
