@@ -61,42 +61,39 @@ ok('C · comptabilitzar · 5 kinds (wallet..tokenomics)',
 ok('C · equip · 4 sub-tabs (members..invites)',    /equip:[\s\S]+?id: 'members'[\s\S]+?id: 'roles'[\s\S]+?id: 'permissions'[\s\S]+?id: 'invites'/.test(v2));
 ok('C · equip · invites href apunta a /team',      /id: 'invites'[\s\S]+?href: '\/team\?/.test(v2));
 
-// ─── D · ProjectHubV2View · sub-tab routing + bind ─────────────────────
-console.log('\n— D · sub-tab routing + bind');
-ok('D · _sub state al constructor',                v2.includes('this._sub'));
-ok('D · URL param sub · getActiveTabFromUrl',      v2.includes("getActiveTabFromUrl('sub'"));
-ok('D · L1 click reseteja _sub al primer del nou pilar',
-                                                    v2.includes('subs[0]?.id || null'));
-ok('D · afterRender · bind l2 mount hubSubSubmenu',v2.includes("getElementById('hubSubSubmenu')") &&
-                                                    v2.includes('this._cleanupSubTabs'));
-ok('D · l2 bind callback · re-render només subBody',v2.includes('this._sub = newSub') && v2.includes('this._renderSubBody()'));
-ok('D · destroy · cleanup ambdós listeners',       v2.includes('this._cleanupTabs?.()') && v2.includes('this._cleanupSubTabs?.()'));
+// ─── D · ProjectHubV2View · sub-tab routing · v150 simplificat ────────
+// v150 · L2 submenu i preview eliminats · pilar = grid de cards · click directe ·
+// vegeu v150UxSimplification.test.js per a assertions exhaustives del nou disseny
+console.log('\n— D · pilar grid (v150 · L2 submenu eliminat)');
+ok('D · NO L2 submenu (v150 · eliminat)',           !v2.includes("urlParam: 'sub'"));
+ok('D · NO sub state al constructor',               !v2.includes('this._sub = '));
+ok('D · destroy · 1 sol listener (cleanupTabs)',     /destroy\(\) \{[\s\S]*?this\._cleanupTabs\?\.\(\)[\s\S]*?\}/.test(v2));
 
-// ─── E · _renderPillarContent · l2 submenu + sub-body mount ────────────
-console.log('\n— E · _renderPillarContent · l2 submenu');
-ok('E · renderSubmenuTabs amb variant l2',         v2.includes("variant: 'l2'"));
-ok('E · mount id="hubSubSubmenu"',                 v2.includes('id="hubSubSubmenu"'));
-ok('E · mount id="hubSubBody"',                    v2.includes('id="hubSubBody"'));
+// ─── E · _renderPillarContent · grid de cards (no L2 submenu) ──────────
+console.log('\n— E · _renderPillarContent · grid de cards');
+ok('E · NO renderSubmenuTabs amb variant l2 dins pilar',
+                                                    !v2.includes("variant: 'l2'"));
 ok('E · zero-links pilar · message',               v2.includes('Aquest pilar encara no té vistes assignades'));
+ok('E · grid de cards hub-pilar-card',              v2.includes('class="hub-pilar-card"'));
 
-// ─── F · _renderSubBody + _renderSubInTab · per kind ───────────────────
-console.log('\n— F · _renderSubBody · per-kind preview');
-ok('F · _renderSubBody mètode',                    v2.includes('_renderSubBody()'));
-ok('F · _renderSubInTab mètode',                   v2.includes('_renderSubInTab(sub, fullHref)'));
-ok('F · "Obre vista completa →" link',             v2.includes('Obre vista completa →'));
-ok('F · canvas preview · Status / Stakeholders / Valor proposta',
-                                                    v2.includes("k === 'canvas'") &&
-                                                    v2.includes('Stakeholders') &&
-                                                    v2.includes('Valor proposta'));
-ok('F · map preview · Rols / Transaccions / Castell',
-                                                    v2.includes("k === 'map'") &&
-                                                    v2.includes("'6 nivells'"));
-ok('F · quality preview · score + rubric + integritat',
-                                                    v2.includes("k === 'quality'") &&
-                                                    v2.includes("'12-criteris'") &&
-                                                    v2.includes("'7-regles'"));
-ok('F · wallet preview · saldo + flow',            v2.includes("k === 'wallet'") && v2.includes('Saldo'));
-ok('F · team-* kinds · matriu RBAC mencionada',    v2.includes("k.startsWith('team-')") && v2.includes('matriu RBAC'));
+// ─── F · pilar cards · descripcions per kind ──────────────────────────
+console.log('\n— F · pilar cards · descripcions per kind');
+ok('F · _pilarCardDesc helper · 1-liner descripcions',  v2.includes('_pilarCardDesc(kind)'));
+ok('F · NO "Obre vista completa →" link (redundància eliminada)',
+                                                    !v2.includes('Obre vista completa →'));
+// Manté legacy assertions del v141+v142 que segueixen vàlides
+ok('F · canvas desc · Visió + Stakeholders',        v2.includes("Visió · missió · valors · stakeholders"));
+ok('F · map desc · VNA',                            v2.includes('Mapa de valor VNA'));
+ok('F · quality desc · 12-criteris',                v2.includes("'12-criteris'") || v2.includes('12-criteris'));
+ok('F · wallet desc',                               v2.includes('Saldo + flow'));
+ok('F · team-* kinds · permission matrix mencionada',
+                                                    v2.includes('RBAC') || v2.includes('Matriu RBAC'));
+
+// v150 contract · les assertions exhaustives del nou disseny viuen a
+// v150UxSimplification.test.js · aquí només verifiquem que l'orphan code
+// del v141+v142 ja no existeix (regressió de la simplificació).
+ok('F · v150 · contract reset · no orphan _renderSubBody', !v2.includes('_renderSubBody()'));
+ok('F · v150 · contract reset · no orphan _renderSubInTab',!v2.includes('_renderSubInTab(sub, fullHref)'));
 
 console.log('\n' + pass + ' pass · ' + fail + ' fail');
 process.exit(fail > 0 ? 1 : 0);

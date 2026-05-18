@@ -848,11 +848,16 @@ work_orders:
       cada pilar mostra grid de cards amb ?project=X. PENDENT v141+ · render
       in-tab de les vistes (ara segueixen links externs) · cal SubmenuTabs v2
       (sub-submenu 2-nivells · veure wo-submenu-tabs-v2-sublevel).
+      v150 · ✅ DONE · resolt redundancy d'UX detectat per @alvaro · L2
+      submenu + preview placeholders eliminats (redundants · només eren
+      link a la vista) · ara pilar = grid de cards · click directe a vista
+      global · -1 barra horizontal · -1 click al destí real. WalletV2 +
+      AccountingV2 · ctx-bar fusionada amb submenu (1 fila enlloc de 2).
     priority: high
     complexity: L
-    status: in-progress   # v134+v136 · 6 tabs + grid links DONE · in-tab render PENDENT
+    status: done   # v150 · simplificació · L2 submenu + preview placeholders eliminats · pilar = grid de cards · click directe
     estimated_cost_eur: 18.00
-    tags: ["sprint-v136", "ux", "project-hub", "ia-alignment", "supersedes-wo-project-hub-subtabs", "partial-v136"]
+    tags: ["sprint-v150", "ux", "project-hub", "ia-alignment", "done-v150"]
 
   - id: "wo-submenu-tabs-v2-sublevel"
     project_id: "sos-dev-internal"
