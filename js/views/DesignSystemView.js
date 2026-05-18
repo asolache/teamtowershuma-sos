@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-18T20:00 · v158 · SIMPLIFICATION · Value Map creation canonical · ABANS 3 fluxos diferents (CreateLive expert chain · ValueMapView quickSuggest · ProjectQuality aiFillDim) + path legacy preservat al ValueMapView via ?vmap_ui=legacy · ARA 1 sol path: quickSuggestMap (slim-first + escalation automàtic si score < 60) + legacy ELIMINAT al ValueMapView · NOU vnaShapeEvaluators.js amb 3 evaluadors booleans (evaluateValueMapShape · evaluateSocsShape · evaluateSopsShape · deterministes · 100% sense LLM · gating decisions per al loop d\'auto-millora) · NOU quickSuggestSocs + quickSuggestSops a vnaQuickSuggest.js (mateix patró slim-first + escalate) · NOU runValueMapCycle({ context, skip? }) loop canonical map → SOCs → SOPs amb shape eval per fase · 33 asserts v158';
+const BUILD_STAMP = '2026-05-18T22:00 · v159 · INTEGRATION · Project creation form usa el nou sistema canonical · runExpertChain ara accepta useValueMapCycle (default true) · phase 5 (design-value-map-rich) intercepta amb runValueMapCycle() de v158 (slim-first + shape eval booleà per fase · gating automàtic) · phases 6+7 (SOCs/SOPs) ja no es criden independentment · els outputs venen del cycle amb shape eval scores · ProjectCreationV2View + CreateLiveView automàticament beneficien (sense canvis UI) · valueMapCycle metadata persistit al projectNode KB (auditable · degraded flag · scores per fase · issues) · TEST COMPARATIU v159 mockeja provider amb outputs realistes · executa NEW (useValueMapCycle=true) vs OLD (false) · valida que NEW ≥ OLD en shape eval scores map/SOCs/SOPs · 29 asserts v159';
 
 export default class DesignSystemView {
 

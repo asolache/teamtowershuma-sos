@@ -368,7 +368,7 @@ export async function runValueMapCycle({
     if (!skip.socs && valueMap) {
         emit('cycle-phase', { phase: 'socs' });
         const socsRes = await quickSuggestSocs({ context, valueMap, slim: true, qualityThreshold: 70, generateWithProvider, preferredProvider, onProgress });
-        out.socs = { ok: socsRes.ok, score: socsRes.eval?.score || 0, issues: socsRes.eval?.issues || [], data: socsRes.socs, escalatedToFull: socsRes.escalatedToFull };
+        out.socs = { ok: socsRes.ok, score: socsRes.eval?.score || 0, issues: socsRes.eval?.issues || [], data: socsRes.socs, presentationHints: socsRes.presentationHints || null, escalatedToFull: socsRes.escalatedToFull };
         if (!socsRes.ok) { out.degraded = true; }
     }
 
