@@ -650,14 +650,16 @@ export default class ProjectHubV2View {
     }
 
     _zone7_Knowledge({ project }) {
+        // v152 · Knowledge cards redundants amb el pilar Treballar (Map · SOPs · Quality)
+        // i el pilar Comptabilitzar (Tokenomics) · netejat per a no duplicar navegació.
+        // Mantenim només els que NO viuen com a pilar sub-tab encara · Pitch doc ·
+        // Workshops · Market. Substituïm "VNA · Mapa de valor" per CTA "Continuar creant"
+        // que porta al CreateLiveView amb el projecte actual com a base (mode iteració).
         const items = [
-            { ic: '🎨', nm: 'Canvas',     ds: '5 pilars',        href: '/canvas?project=' + project.id },
-            { ic: '📣', nm: 'Pitch doc',  ds: 'Investor doc IA-sint.', href: '/pitch-doc/' + project.id },
-            { ic: '🗺️', nm: 'VNA',        ds: 'Mapa de valor',   href: '/map?project=' + project.id },
-            { ic: '📋', nm: 'SOCs',       ds: 'Standard Op Concepts', href: '/sops?project=' + project.id },
-            { ic: '🪙', nm: 'Tokenomics', ds: 'Equity + token',  href: '/tokenomics?project=' + project.id },
-            { ic: '🎓', nm: 'Workshops',  ds: 'Formació',        href: '/workshops?project=' + project.id },
-            { ic: '🛒', nm: 'Market',     ds: 'Productes/serveis', href: '/market?project=' + project.id },
+            { ic: '✨', nm: 'Continuar creant', ds: 'Iterar el projecte amb IA',  href: '/create-live?project=' + project.id },
+            { ic: '📣', nm: 'Pitch doc',       ds: 'Investor doc IA-sint.',       href: '/pitch-doc/' + project.id },
+            { ic: '🎓', nm: 'Workshops',       ds: 'Formació · publicable',        href: '/workshops?project=' + project.id },
+            { ic: '🛒', nm: 'Market',          ds: 'Productes/serveis al mercat', href: '/market?project=' + project.id },
         ];
         return `
         <div class="hub-zone">

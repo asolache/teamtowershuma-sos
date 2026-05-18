@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-21T08:00 · v151 · AUDIT pantalles + 5 migracions a SubmenuTabs canonical · 7 vistes ja canonical + 5 migrades · SettingsV2 (7 tabs · api-keys/theme/ai/payments/permaweb/manifesto/backup) · Opportunities (7 tabs · profiles/projects/wos/market/workshops/cvnodals/users) · CreateLive (4 preview tabs · castell/mapa/canvas/wos) · Notes (CAPTURE_TYPES amb count badges) · MobileMockup (4 screens · home/wo/wallet/activity) · backwards-compat preservat (display:none o handlers paral·lels) · pattern UX 100% consistent cross-vistes · doc audit docs/ux/v151-submenu-pattern-audit.md · 34 asserts';
+const BUILD_STAMP = '2026-05-21T10:00 · v152 · UX refinement · HomeView "Crear projecte" CTA prominent substitueix Value Map redundant + Aprendre substitueix Paper legacy mort · ProjectHubV2 zone7 Knowledge net (VNA/Canvas/SOCs/Tokenomics ja viuen als pilars · ara "Continuar creant" + Pitch doc + Workshops + Market) · navService learn-skills duplicat ELIMINAT (skills canonical /skills · learn tab skills va morir v128) · doc audit fusió pantalles (4 obsoletes + 4 redundants amb LearnView tabs · 8 vistes eliminables sprint v153+) · 19 asserts';
 
 export default class DesignSystemView {
 
