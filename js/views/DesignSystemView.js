@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-21T12:00 · v153 · Hub Avui ENRIQUIT (4 KPI cards · Top 3 WOs prioritaris clicables · Cash flow setmanal 7 dies bar visual verd/vermell · _weeklyFlow helper pure) + TimelineView UPGRADE (5 perspective filters · Tot/WOs/Pactes/Ledger/Network · FILTER_TO_KINDS canonical mapping · SubmenuTabs canonical · TopBar custom eliminat · URL ?filter i ?sort persistents) · 23 asserts';
+const BUILD_STAMP = '2026-05-21T16:00 · v155 · Kanban prompt REFACTORITZAT · port de Sprint 6-section structured approach (audit v154) · buildExecutionPrompt ara genera 5 seccions OBLIGATÒRIES adaptades al kind (code · content · generic) · "5 seccions OBLIGATÒRIES · no n\'ometis cap" · regles irrenunciables · TDD check si tdd-auto · _detectWoKind heuristic · _executeAi · wire runEscalation chain 5 providers fallback (Anthropic→OpenAI→Gemini→DeepSeek→Minimax · com Sprint robustesa) + fallback Orchestrator legacy edge case · aiAttempts + aiModelKey trace al WO updated · backwards-compat amb tests.js antics (cohabiten NO inventis + NO inventes · [VER CATÀLEG] + [VER CATÁLOGO] · test booleà + test booleano) · 30 asserts';
 
 export default class DesignSystemView {
 
