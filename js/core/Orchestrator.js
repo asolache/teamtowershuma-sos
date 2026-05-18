@@ -300,7 +300,7 @@ class OrchestratorCore {
                         textResponse = d.candidates[0].content.parts[0].text;
                     }
 
-                    // ── MINIMAX ──────────────────────────────────────────────
+                    // ── MINIMAX · via edge proxy (v160.2) ────────────────────
                     else if (provider === 'minimax') {
                         const body = {
                             model: MINIMAX_MODEL,
@@ -311,10 +311,10 @@ class OrchestratorCore {
                                 { role: 'user',   content: userPrompt + (responseFormat === 'json_object' ? '\n\nResponde ÚNICAMENTE con JSON válido.' : '') }
                             ]
                         };
-                        const r = await fetch(MINIMAX_API_URL, {
+                        const r = await fetch('/api/minimax-proxy', {
                             method:  'POST',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                            body:    JSON.stringify(body)
+                            headers: { 'Content-Type': 'application/json' },
+                            body:    JSON.stringify({ apiKey, ...body })
                         });
                         if (!r.ok) throw new Error(`[MiniMax HTTP ${r.status}] ${await r.text()}`);
                         const d = await r.json();
