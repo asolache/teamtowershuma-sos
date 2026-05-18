@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-21T16:00 · v155 · Kanban prompt REFACTORITZAT · port de Sprint 6-section structured approach (audit v154) · buildExecutionPrompt ara genera 5 seccions OBLIGATÒRIES adaptades al kind (code · content · generic) · "5 seccions OBLIGATÒRIES · no n\'ometis cap" · regles irrenunciables · TDD check si tdd-auto · _detectWoKind heuristic · _executeAi · wire runEscalation chain 5 providers fallback (Anthropic→OpenAI→Gemini→DeepSeek→Minimax · com Sprint robustesa) + fallback Orchestrator legacy edge case · aiAttempts + aiModelKey trace al WO updated · backwards-compat amb tests.js antics (cohabiten NO inventis + NO inventes · [VER CATÀLEG] + [VER CATÁLOGO] · test booleà + test booleano) · 30 asserts';
+const BUILD_STAMP = '2026-05-21T18:00 · v156 · BUG FIX · Kanban swarm IA · ABANS redirigia a /sprint?wo=X (codi legacy SWARM-RELOC-001) · ARA executa IN-PLACE via _executeAi (5 seccions estructurades v155 + runEscalation chain) · WO updated directament + Run autonomous loop button al toolbar (substitueix /sprint funcionalitat · processa N WOs pending amb IA seqüencial in-place · output a aiOutput field de cada WO · NO sprint_run nodes volàtils) + Sprint deprecation banner (orange · linkat a /kanban?project=sos-dev-internal) · 19 asserts';
 
 export default class DesignSystemView {
 

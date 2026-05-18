@@ -367,10 +367,12 @@ export default class KanbanView {
                 </select>
                 <button class="kb-btn" id="kbBtnFromSop">📋 Desde SOP</button>
                 <button class="kb-btn kb-btn-primary" id="kbBtnNew">＋ Nueva WO</button>
-                <label id="kbSwarmToggle" style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:4px;background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.30);font-size:0.78rem;cursor:pointer;color:#a8b2ff;user-select:none;" title="Mode swarm · cada WO té botó auto-run amb agent IA · llegeix de docs/backlog.yaml">
+                <label id="kbSwarmToggle" style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:4px;background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.30);font-size:0.78rem;cursor:pointer;color:#a8b2ff;user-select:none;" title="Mode swarm · cada WO té botó auto-run amb agent IA">
                     <input type="checkbox" id="kbSwarmCheckbox" style="width:14px;height:14px;cursor:pointer;accent-color:#a855f7;">
                     🐝 Swarm mode
                 </label>
+                <!-- v156 · Autonomous loop · processa N WOs pending amb agent IA in-place (substitueix botó /sprint) -->
+                <button class="kb-btn" id="kbBtnAutonomousLoop" style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:0;" title="Processa totes les WOs pending del projecte actiu amb agent IA · seqüencial · trace al WO mateix · in-place (substitueix /sprint)">🤖 Run autonomous loop</button>
             </div>
 
             <div class="kb-main">
@@ -399,6 +401,8 @@ export default class KanbanView {
         this._render();
         document.getElementById('kbBtnNew').addEventListener('click',     () => this._openCreateModal());
         document.getElementById('kbBtnFromSop').addEventListener('click', () => this._openFromSopModal());
+        // v156 · autonomous loop (substitueix botó /sprint)
+        document.getElementById('kbBtnAutonomousLoop')?.addEventListener('click', () => this._runAutonomousLoop());
 
         // SWARM-RELOC-001 · swarm mode toggle · persisteix a localStorage per
         // projecte · si actiu · cada WO té botó "🐝 Auto-run" amb agent IA
@@ -559,6 +563,53 @@ export default class KanbanView {
 
     // ─── H7.2 · Auto-ejecución de WO por IA ─────────────────────────────────
     // Construye contexto via KnowledgeLoader (SOCs + SOP + projectId) →
+    // ─── v156 · _runAutonomousLoop · processa pending WOs amb IA in-place ──
+    // Substitueix la funcionalitat de /sprint "Run autonomous loop" PERÒ
+    // operant sobre les WOs del kanban del projecte actiu · output queda
+    // vinculat a cada WO (no a sprint_run nodes desconnectats). UX més coherent.
+    async _runAutonomousLoop() {
+        const pending = (this.workOrders || []).filter(w => {
+            const c = w.content || w;
+            const status = c.status || 'backlog';
+            return (status === 'backlog' || status === 'pending') &&
+                   c.assignee?.kind === 'ai';
+        });
+        if (pending.length === 0) {
+            try { const { toast } = await import('../core/uxComponents.js');
+                toast({ kind: 'info', text: 'Cap WO IA pending · res a processar', ttl: 3000 });
+            } catch (_) {}
+            return;
+        }
+        const max = parseInt(prompt('Quantes WOs pending vols processar amb IA?\n\nWOs IA pending detectades · ' + pending.length + '\n\n(Cancel·la per a no executar)', String(Math.min(5, pending.length))), 10);
+        if (!max || max < 1) return;
+        const batch = pending.slice(0, max);
+        const btn = document.getElementById('kbBtnAutonomousLoop');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ 0/' + batch.length + '…'; }
+        let ok = 0, fail = 0;
+        for (let i = 0; i < batch.length; i++) {
+            if (btn) btn.textContent = '⏳ ' + (i + 1) + '/' + batch.length + '…';
+            try {
+                await this._executeAi(batch[i].id);
+                ok++;
+            } catch (e) {
+                console.warn('[kanban] autonomous loop · WO failed', batch[i].id, e?.message);
+                fail++;
+            }
+        }
+        if (btn) { btn.disabled = false; btn.textContent = '🤖 Run autonomous loop'; }
+        try {
+            const { toast } = await import('../core/uxComponents.js');
+            toast({
+                kind: fail > 0 ? 'warning' : 'success',
+                text: '🤖 Loop acabat · ' + ok + ' ✓ · ' + fail + ' ✗ de ' + batch.length,
+                ttl: 5000,
+            });
+        } catch (_) {}
+        // Re-render board to show updated statuses
+        this._renderBoard?.();
+        this._renderStats?.();
+    }
+
     // llama Orchestrator.callLLM → captura tokens reales → actualiza WO →
     // si approvalRule='tdd-auto' y tddCheck pasa, transiciona a ledgered.
     async _executeAi(woId, extras = {}) {
@@ -789,20 +840,16 @@ export default class KanbanView {
                 if (!woId) return;
                 const wo = (this.workOrders || []).find(w => w.id === woId);
                 if (!wo) return;
+                // v156 · resol bug "swarm redirigeix a /sprint" · ara executa IN-PLACE
+                // dins el kanban via _executeAi (canonical · 5 seccions estructurades +
+                // runEscalation chain v155). Sprint vista queda en deprecation.
                 btn.disabled = true;
-                btn.textContent = '⏳ Llançant swarm loop...';
+                btn.textContent = '⏳ Llançant agent IA…';
                 try {
-                    const { toast } = await import('../core/uxComponents.js');
-                    toast({
-                        kind: 'info',
-                        text: '🐝 Swarm autonomous loop · veure /sprint per a status',
-                        ttl: 4000,
-                    });
-                    // Per a alfa · redirigim a /sprint amb el WO pre-seleccionat
-                    setTimeout(() => {
-                        window.location.href = '/sprint?wo=' + encodeURIComponent(woId);
-                    }, 1500);
-                } catch (e) {
+                    await this._executeAi(woId);
+                } catch (err) {
+                    console.warn('[kanban] swarm run failed', err);
+                } finally {
                     btn.disabled = false;
                     btn.textContent = '🐝 Auto-run amb agent IA';
                 }
