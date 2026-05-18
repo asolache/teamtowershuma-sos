@@ -1069,3 +1069,33 @@ work_orders:
     status: done
     estimated_cost_eur: 12.00
     tags: ["sprint-v147-v148-v149", "expert-chain", "simplification", "wire-up", "done-v149"]
+
+  - id: "wo-hub-avui-timeline-upgrade"
+    project_id: "sos-dev-internal"
+    title: "Hub Avui enriquit + Timeline upgrade (canonical SubmenuTabs · perspective filter)"
+    description: |
+      v153 · resol feedback @alvaro · "mejorar el hub la seccion avui con
+      contenido y revisa la pagina timeline y haz un plan para que vaya".
+
+      v153 · DONE · 2 movim ·
+
+      Movim 1 · ProjectHubV2View._zone2_Today enriquit ·
+       · 4 KPI cards (WOs actius · Done setmana · Saldo wallet · Prioritat alta)
+       · Top 3 WOs prioritaris · click navega a /kanban?wo=ID · meta priority+
+         status+due
+       · Cash flow setmanal · 7 dies bar visual (verd inflow / vermell outflow)
+       · _weeklyFlow helper · pure · agrupa ledger entries per dia
+
+      Movim 2 · TimelineView upgrade ·
+       · FILTER_TABS canonical SubmenuTabs · 5 perspectives (Tot · WOs ·
+         Pactes · Ledger · Network)
+       · FILTER_TO_KINDS mapping · derivers concrets per cada filter
+       · URL params · ?filter=X i ?sort=X persistits via history.replaceState
+       · TopBar custom ELIMINAT · global navbar suficient
+       · Sort buttons preservats (legacy compat) · ara persisteixen URL
+       · Header · "Activitat recent · X de N events · filtre actiu"
+    priority: medium
+    complexity: M
+    status: done
+    estimated_cost_eur: 8.00
+    tags: ["sprint-v153", "ux", "project-hub", "timeline", "done-v153"]

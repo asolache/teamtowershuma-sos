@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-21T10:00 · v152 · UX refinement · HomeView "Crear projecte" CTA prominent substitueix Value Map redundant + Aprendre substitueix Paper legacy mort · ProjectHubV2 zone7 Knowledge net (VNA/Canvas/SOCs/Tokenomics ja viuen als pilars · ara "Continuar creant" + Pitch doc + Workshops + Market) · navService learn-skills duplicat ELIMINAT (skills canonical /skills · learn tab skills va morir v128) · doc audit fusió pantalles (4 obsoletes + 4 redundants amb LearnView tabs · 8 vistes eliminables sprint v153+) · 19 asserts';
+const BUILD_STAMP = '2026-05-21T12:00 · v153 · Hub Avui ENRIQUIT (4 KPI cards · Top 3 WOs prioritaris clicables · Cash flow setmanal 7 dies bar visual verd/vermell · _weeklyFlow helper pure) + TimelineView UPGRADE (5 perspective filters · Tot/WOs/Pactes/Ledger/Network · FILTER_TO_KINDS canonical mapping · SubmenuTabs canonical · TopBar custom eliminat · URL ?filter i ?sort persistents) · 23 asserts';
 
 export default class DesignSystemView {
 

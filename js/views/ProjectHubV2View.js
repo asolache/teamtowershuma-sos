@@ -546,21 +546,138 @@ export default class ProjectHubV2View {
         </div>`;
     }
 
+    // v153 · _zone2_Today enriquit · KPIs + Top 3 WOs prioritaris + cash flow + upcoming
     _zone2_Today({ todayWos, cashBalance }) {
+        const woWeekDone = (todayWos || []).filter(w => {
+            const c = w.content || w; const ts = c.completedAt || c.doneAt;
+            return ts && (Date.now() - ts) < 7 * 86400000;
+        }).length;
+        const alertsCount = (todayWos || []).filter(w => {
+            const c = w.content || w; return c.priority === 'critical' || c.priority === 'high';
+        }).length;
+        // Top 3 WOs prioritaris · sort per priority + due
+        const PRIO_ORDER = { critical: 4, high: 3, medium: 2, low: 1 };
+        const top3 = [...(todayWos || [])]
+            .sort((a, b) => (PRIO_ORDER[b.priority] || 0) - (PRIO_ORDER[a.priority] || 0))
+            .slice(0, 3);
+        // Cash flow setmanal · 7 dies · bar visual simple
+        const days7 = this._weeklyFlow(this._project?.ledger || []);
+        const maxAbs = Math.max(...days7.map(d => Math.max(Math.abs(d.inflow), Math.abs(d.outflow))), 1);
+        const projId = encodeURIComponent(this.projectId);
+
         return `
         <div class="hub-zone">
             <div class="hub-zone-head">
-                <h2>🎯 Avui · ${todayWos.length} WOs · cash ${formatCostEur(cashBalance)}</h2>
-                <a href="/kanban?project=${encodeURIComponent(this.projectId)}" data-link>→ Kanban</a>
+                <h2>🎯 Avui · activitat del projecte</h2>
+                <a href="/kanban?project=${projId}" data-link>→ Kanban complet</a>
             </div>
-            ${todayWos.length === 0
-                ? '<div class="hub-empty">Cap WO pendent · crea\'n una a Kanban</div>'
-                : `<div class="hub-today-grid">${todayWos.map(w => `
-                    <div class="hub-wo-item">
-                        <div class="ttl">${this._esc(w.title || w.id)}</div>
-                        <div class="meta">${this._esc(w.priority || 'medium')} · ${this._esc(w.status)}</div>
-                    </div>`).join('')}</div>`}
-        </div>`;
+
+            <!-- v153 · 4 KPI cards -->
+            <div class="hub-today-kpis">
+                <div class="hub-today-kpi">
+                    <div class="num">${(todayWos || []).length}</div>
+                    <div class="lbl">WOs actius</div>
+                </div>
+                <div class="hub-today-kpi">
+                    <div class="num">${woWeekDone}</div>
+                    <div class="lbl">Done setmana</div>
+                </div>
+                <div class="hub-today-kpi">
+                    <div class="num">${formatCostEur(cashBalance)}</div>
+                    <div class="lbl">Saldo wallet</div>
+                </div>
+                <div class="hub-today-kpi" style="${alertsCount > 0 ? 'border-color:var(--accent-orange);' : ''}">
+                    <div class="num" style="${alertsCount > 0 ? 'color:var(--accent-orange);' : ''}">${alertsCount}</div>
+                    <div class="lbl">Prioritat alta</div>
+                </div>
+            </div>
+
+            <!-- v153 · Top 3 WOs prioritaris -->
+            ${top3.length === 0
+                ? '<div class="hub-empty" style="margin-top:10px;">Cap WO pendent · <a href="/kanban?project=' + projId + '" data-link style="color:var(--accent-indigo);">crea\'n una a Kanban →</a></div>'
+                : `<div class="hub-today-top3" style="margin-top:12px;">
+                    <div class="hub-today-subhead">📌 Top 3 prioritaris</div>
+                    ${top3.map(w => {
+                        const c = w.content || w;
+                        const prioColor = c.priority === 'critical' ? 'var(--accent-red)'
+                            : c.priority === 'high' ? 'var(--accent-orange)'
+                            : c.priority === 'medium' ? 'var(--accent-indigo)' : 'var(--text-muted)';
+                        const dueStr = c.dueAt ? this._formatRelativeTime(c.dueAt) : '';
+                        return `<a href="/kanban?project=${projId}&wo=${encodeURIComponent(w.id || c.id || '')}" data-link class="hub-today-wo">
+                            <div class="ttl">${this._esc(c.title || w.title || w.id)}</div>
+                            <div class="meta">
+                                <span class="prio" style="color:${prioColor};">● ${this._esc(c.priority || 'medium')}</span>
+                                <span class="status">${this._esc(c.status || w.status || 'pending')}</span>
+                                ${dueStr ? `<span class="due">⏰ ${this._esc(dueStr)}</span>` : ''}
+                            </div>
+                        </a>`;
+                    }).join('')}
+                </div>`}
+
+            <!-- v153 · Cash flow setmanal · bar visual -->
+            ${days7.some(d => d.inflow > 0 || d.outflow > 0) ? `
+                <div class="hub-today-cashflow" style="margin-top:14px;">
+                    <div class="hub-today-subhead">💸 Cash flow · 7 dies</div>
+                    <div class="hub-cf-bars">
+                        ${days7.map(d => {
+                            const inH = (d.inflow / maxAbs) * 100;
+                            const outH = (d.outflow / maxAbs) * 100;
+                            return `<div class="hub-cf-day" title="${d.label} · +${d.inflow.toFixed(2)}€ · -${d.outflow.toFixed(2)}€">
+                                <div class="bar-stack">
+                                    <div class="bar-in"  style="height:${inH}%;"></div>
+                                    <div class="bar-out" style="height:${outH}%;"></div>
+                                </div>
+                                <div class="day-lbl">${d.short}</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+        <style>
+            .hub-today-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; }
+            .hub-today-kpi { background:rgba(255,255,255,0.04); border:1px solid var(--border-default); border-radius:8px; padding:10px 12px; text-align:center; }
+            .hub-today-kpi .num { font-size:1.4rem; font-weight:800; color:var(--accent-indigo); font-family:var(--font-mono); }
+            .hub-today-kpi .lbl { font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; margin-top:3px; }
+            .hub-today-subhead { font-size:0.78rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+            .hub-today-top3 { display:flex; flex-direction:column; gap:6px; }
+            .hub-today-wo { display:flex; flex-direction:column; gap:3px; padding:8px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border-default); border-radius:6px; text-decoration:none; color:var(--text-main); transition:all 0.15s; }
+            .hub-today-wo:hover { border-color:var(--accent-indigo); background:rgba(99,102,241,0.08); }
+            .hub-today-wo .ttl { font-size:0.88rem; font-weight:600; }
+            .hub-today-wo .meta { display:flex; gap:10px; font-size:0.72rem; color:var(--text-muted); }
+            .hub-today-wo .meta .prio { font-weight:700; }
+            .hub-cf-bars { display:flex; gap:6px; align-items:flex-end; height:60px; padding:6px 0; }
+            .hub-cf-day { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+            .hub-cf-day .bar-stack { width:100%; height:50px; display:flex; flex-direction:column-reverse; justify-content:flex-start; gap:1px; align-items:stretch; }
+            .hub-cf-day .bar-in { background:var(--accent-green); border-radius:1px; min-height:1px; }
+            .hub-cf-day .bar-out { background:var(--accent-red); border-radius:1px; min-height:1px; }
+            .hub-cf-day .day-lbl { font-size:0.62rem; color:var(--text-muted); text-transform:uppercase; }
+        </style>`;
+    }
+
+    // v153 · _weeklyFlow · pure · 7 dies inflow/outflow per al cash flow bar chart
+    _weeklyFlow(ledger = []) {
+        const now = Date.now();
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+            const t = new Date(now - i * 86400000);
+            const dayStart = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+            const dayEnd = dayStart + 86400000;
+            let inflow = 0, outflow = 0;
+            for (const e of (ledger || [])) {
+                const c = e.content || e;
+                const ts = c.ts || c.createdAt || 0;
+                if (ts < dayStart || ts >= dayEnd) continue;
+                const amt = c.amount || 0;
+                if (amt > 0) inflow += amt; else outflow += Math.abs(amt);
+            }
+            days.push({
+                label: t.toLocaleDateString(),
+                short: ['Dg','Dl','Dt','Dc','Dj','Dv','Ds'][t.getDay()],
+                inflow, outflow,
+            });
+        }
+        return days;
     }
 
     _zone3_Processes({ processes }) {
