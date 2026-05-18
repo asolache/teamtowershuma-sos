@@ -59,8 +59,8 @@ function _costEur({ modelKey, usage }) {
 // _runSingleTask · pure helper · build prompt + escalation + parse
 // v132c · accepta `slim` per a usar SYSTEM_BASE_SLIM (43% menys tokens) +
 // `qualityRubric` per a escalation post-IA si score < threshold.
-async function _runSingleTask({ taskKind, context, generateWithProvider, preferredProvider, emit, slim = false, qualityThreshold = 0 }) {
-    const prompt = buildPrompt({ taskKind, context, slim });
+async function _runSingleTask({ taskKind, context, generateWithProvider, preferredProvider, emit, slim = false, qualityThreshold = 0, contextProfile = 'sos-current' }) {
+    const prompt = buildPrompt({ taskKind, context, slim, contextProfile });
     const routeKind = pickRoutingForTask(taskKind);
     const tier = pickTier(taskKind);
     const usageRef = { last: null };
@@ -97,7 +97,7 @@ async function _runSingleTask({ taskKind, context, generateWithProvider, preferr
             emit('phase', 'rubric', { taskKind, slim: true, score: score?.score, threshold: qualityThreshold });
             if (score && score.score < qualityThreshold) {
                 emit('phase', 'escalate', { taskKind, reason: 'quality-below-threshold', score: score.score });
-                const promptFull = buildPrompt({ taskKind, context, slim: false });
+                const promptFull = buildPrompt({ taskKind, context, slim: false, contextProfile });
                 const generateFull = async (modelKey) => {
                     const res = await generateWithProvider(modelKey, {
                         systemPrompt:    promptFull.system,
@@ -168,6 +168,9 @@ export async function runExpertChain({
     // (slim-first + shape eval booleà per fase · gating automàtic). Default ON
     // perquè és estrictament millor que el path legacy (qualitat + cost).
     useValueMapCycle = true,
+    // v162 · contextProfile · 'sos-current' (default · legacy) | 'verna-minimal' | 'verna-guided'
+    // Propagat a totes les fases · canvas/pitch/landing reben METASKILL preamble en verna-*
+    contextProfile = 'sos-current',
 } = {}) {
     const t0 = Date.now();
     // v132c · injecta existingMap al context perquè phase 5 el rebi
@@ -361,7 +364,7 @@ export async function runExpertChain({
                     const ctxPerItem = phase.perItem === 'socs'
                         ? { ...phaseCtx, soc: item }
                         : { ...phaseCtx, sop: item };
-                    const r = await _runSingleTask({ taskKind: phase.taskKind, context: ctxPerItem, generateWithProvider, preferredProvider, emit });
+                    const r = await _runSingleTask({ taskKind: phase.taskKind, context: ctxPerItem, generateWithProvider, preferredProvider, emit, contextProfile });
                     out.costTotal += r.cost;
                     if (r.parsed) {
                         if (phase.perItem === 'socs' && Array.isArray(r.parsed.sops)) {
@@ -388,7 +391,7 @@ export async function runExpertChain({
         // qualityThreshold només actiu a design-value-map-rich (la fase pivotal)
         const usedThreshold = phase.id === 'design-value-map-rich' ? qualityThreshold : 0;
         try {
-            const r = await _runSingleTask({ taskKind: phase.taskKind, context: phaseCtx, generateWithProvider, preferredProvider, emit, slim: useSlim, qualityThreshold: usedThreshold });
+            const r = await _runSingleTask({ taskKind: phase.taskKind, context: phaseCtx, generateWithProvider, preferredProvider, emit, slim: useSlim, qualityThreshold: usedThreshold, contextProfile });
             out.costTotal += r.cost;
             if (r.parsed) _applyPhaseOutput(phase, out, r.parsed);
             out.phasesRun.push(phase.id);

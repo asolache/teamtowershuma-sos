@@ -142,6 +142,23 @@ ${_castellerPreamble()}
 - Sense placeholders ("X", "TODO", "Lorem ipsum")
 - Output dens · cost-conscious`;
 
+// v162 · METASKILL preamble per tasks narratives (canvas/pitch/landing) en
+// verna-* · força el model a derivar misió/visió ABANS d'omplir els camps ·
+// trenca l'inèrcia de "ikigai genèric" o "pitch plantilla". KISS · 1 bloc curt.
+const VERNA_METASKILL_PREAMBLE = `## CONTEXT METASKILL (deriva PRIMER · després omple)
+Abans de respondre · deriva del projecte ·
+- **Misió** · per a què existeix · una frase present
+- **Visió** · estat futur a 3-5 anys · aspiracional
+- **Objectius** · 1-3 mesurables (no genèrics)
+
+Usa la metaskill derivada com a FILTRE · cada element de la teva resposta ha de connectar amb ella. Prohibit · vocabulari genèric tipus "qualitat" · "innovació" · "excel·lència" sense substantivar. Si la descripció és ambigua · pren la millor interpretació · NO copiïs plantilles d'altres sectors.`;
+
+const VERNA_PREAMBLE_TASKS = new Set([
+    'personalize-canvas',
+    'personalize-pitch',
+    'personalize-landing',
+]);
+
 // v160 · SYSTEM_BASE_VERNA · inspirat en la skill Claude de @alvaro · "menys
 // és més" portat a l'extrem · ZERO exemples literals · ancoratge en METASKILL
 // (misió/visió/objectius) · tipologies tangible/intangible ABSTRACTES (no
@@ -939,7 +956,16 @@ export function buildPrompt({ templateId = null, taskKind, context = {}, slim = 
     }
 
     const taskFn = TASK_PROMPTS[taskKind];
-    const userPrompt = taskFn(effectiveCtx);
+    let userPrompt = taskFn(effectiveCtx);
+
+    // v162 · verna preamble per tasks narratives (canvas/pitch/landing) ·
+    // injecta METASKILL framing que el system base genèric no aporta. Skip
+    // per a design-value-map-verna (que ja conté el seu propi bloc METASKILL).
+    if (contextProfile === 'verna-minimal' || contextProfile === 'verna-guided') {
+        if (VERNA_PREAMBLE_TASKS.has(taskKind)) {
+            userPrompt = VERNA_METASKILL_PREAMBLE + '\n\n' + userPrompt;
+        }
+    }
 
     const fewShot = [];
     // v160 · verna profiles · NO injectar fewShot (anchoring literal)
