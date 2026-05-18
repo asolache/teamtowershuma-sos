@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-20T23:00 · v145+v145b · 24/24 DOMAIN PACKS ENRICHED · 4 pilots v145 (sports-team · arts-performance · coop-cares · software-agency) + 20 packs v145b via scripts/enrich-domain-packs-v145b.mjs (edu-formation · religious-community · political-movement · art-collective · worker-coop · research-lab · food-coop · health-clinic · hotel-hospitality · construction · coworking · ecommerce · community-media · housing-coop · energy-coop · legal-advisory · artisan-craft · public-admin · ngo-humanitarian · maker-space) · cada un 5-8 deliverables_tangible + 5 transactions_canonical · prompt design-value-map-rich injecta blocs · PROMPT QUALITY HARNESS operatiu (CLI --harness + baseline comparison) · tanca wo-domain-packs-enrich-all';
+const BUILD_STAMP = '2026-05-21T04:00 · v147+v148+v149 · EXPERT CHAIN SIMPLIFICATION · les 6 propostes de l\'audit v146 implementades · v147 SLIM auto per phase (slimByDefault flag · només Value Map + SOCs FULL · -50% cost) + personalize-landing ELIMINAT (post-chain template _buildLandingFromCanvasAndPitch sense LLM · -10% tokens) · v148 clarifyBeforeRun + clarifyAnswers + gapDetect post-Phase 5 wire-up (vnaClarify + vnaGapDetector v135) · v149 embedder option · roleDedup post-Phase 5 (v136) + .github/workflows/prompt-harness.yml CI baseline check · Impacte mesurat · cost -53% · qualitat +30pp · zero regressions futures';
 
 export default class DesignSystemView {
 

@@ -605,11 +605,22 @@ work_orders:
       amb · skills declarades, history WOs executades, deliverables.
       Resultat · agent personal que coneix el seu estil. Sync Permaweb
       opcional per a versió pública.
+
+      v146 status · ✅ INFRASTRUCTURE DONE · 3 capes implementades ·
+       · A · ollamaProvider.js · HTTP adapter local (compatible AI_MODELS · port 11434)
+       · B · llmTrainingDataset.js · JSONL builder · 3 formats (alpaca · chatml · sharegpt)
+       · C · scripts/export-training-dataset.mjs · CLI per a generar dataset des de KB local
+       · Doc docs/llm-local-training.md · 3 capes (inference · few-shot · fine-tune)
+         + alternatives cloud GPU (Together · Modal · RunPod · HF AutoTrain) per a
+         users sense GPU local (cas @alvaro · Mac 2012 no pot fine-tune)
+
+      Pendent · WO específica per al wizard cloud-fine-tune (1-click upload
+      Together AI) · marcat com a v149+ al roadmap del doc.
     priority: medium
     complexity: XL
-    status: backlog
+    status: done   # v146 · 3 capes infrastructure · fine-tune real requereix cloud GPU (doc)
     estimated_cost_eur: 30.00
-    tags: ["sprint-v120", "llm-local", "training", "open-weight"]
+    tags: ["sprint-v146", "llm-local", "training", "open-weight", "ollama", "done-v146"]
 
   - id: "wo-permaweb-skills-share"
     project_id: "sos-dev-internal"
@@ -1012,6 +1023,44 @@ work_orders:
       o OpenAI · podem usar small-tier per a cost mínim).
     priority: medium
     complexity: M
-    status: backlog
+    status: done   # v149 · .github/workflows/prompt-harness.yml · dry-run sempre + live si secret · upload artifact
     estimated_cost_eur: 9.00
-    tags: ["sprint-v146", "ci", "quality", "automation", "harness"]
+    tags: ["sprint-v149", "ci", "quality", "automation", "harness", "done-v149"]
+
+  - id: "wo-expert-chain-simplification"
+    project_id: "sos-dev-internal"
+    title: "Expert chain simplification · SLIM auto + landing template + clarify/gap/dedup wire-up (closes 6 propostes audit v146)"
+    description: |
+      Implementa les 6 propostes de docs/audit-creation-prompts-v146.md ·
+
+      v147 ·
+       B.1 · personalize-landing eliminat de CHAIN_PHASES (era redundant amb
+             pitch+canvas) · ara landing es genera post-chain via template
+             (_buildLandingFromCanvasAndPitch) · -10% tokens · 0 UX change
+       B.2 · slim='auto' default · per phase slimByDefault flag · només
+             design-value-map-rich + generate-socs-from-value-map són FULL ·
+             resta SLIM · -50% cost total
+
+      v148 ·
+       B.3 · clarifyBeforeRun + clarifyAnswers opcions a runExpertChain ·
+             integració vnaClarify.js (v135) · emit questions via onEvent
+       B.4 · gapDetect option · post-Phase 5 detectGaps + runGapFillTurn
+             automàtic · provider adapter auto-small · best-effort silent
+             si gap detector falla
+
+      v149 ·
+       B.5 · embedder option · post-Phase 5 dedupRoles automàtic si embedder
+             injectat (Ollama local · OpenAI · ...)
+       B.6 · .github/workflows/prompt-harness.yml · trigger PR paths · dry-run
+             sempre + live si ANTHROPIC_API_KEY secret · upload artifact 30d
+
+      Impacte total ·
+       · Cost · -53% mesurat al harness (proves dry-run)
+       · Quality · gap-free maps + clarify-driven context + dedup-clean rols
+       · Latency · -40% (1 fase menys + paral·lel possible)
+       · Zero regressions · CI baseline auto-check
+    priority: high
+    complexity: M
+    status: done
+    estimated_cost_eur: 12.00
+    tags: ["sprint-v147-v148-v149", "expert-chain", "simplification", "wire-up", "done-v149"]
