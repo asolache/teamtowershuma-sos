@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-21T18:00 · v156 · BUG FIX · Kanban swarm IA · ABANS redirigia a /sprint?wo=X (codi legacy SWARM-RELOC-001) · ARA executa IN-PLACE via _executeAi (5 seccions estructurades v155 + runEscalation chain) · WO updated directament + Run autonomous loop button al toolbar (substitueix /sprint funcionalitat · processa N WOs pending amb IA seqüencial in-place · output a aiOutput field de cada WO · NO sprint_run nodes volàtils) + Sprint deprecation banner (orange · linkat a /kanban?project=sos-dev-internal) · 19 asserts';
+const BUILD_STAMP = '2026-05-18T18:00 · v157 · BUG FIX · Kanban autonomous loop · ABANS cada iteració del loop obria _openExecutionModal sobreescrivint l\'anterior · només el modal de l\'última WO quedava visible (totes les altres es guardaven a IndexedDB però perdíem la finestra per revisar/ledgeritzar) · ARA _executeAi accepta extras.__silent flag · skip tots els modals quan és true + retorna { ok, wo, aiOutput, state, tokens, latencyMs, error? } · _runAutonomousLoop col·lecciona array de results · al final obre _openAutonomousLoopSummary modal amb llista de TOTES les WOs processades · per cada row · 👁 Veure (obre modal individual) · ✓ Ledger (transiciona a ledgered) · 🔁 Re-run (re-executa IA) + preview primers 200 chars de aiOutput · 34 asserts v157';
 
 export default class DesignSystemView {
 

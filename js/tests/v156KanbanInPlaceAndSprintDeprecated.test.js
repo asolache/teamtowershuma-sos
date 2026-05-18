@@ -35,9 +35,9 @@ ok('B · botó · linkat a _runAutonomousLoop',         kb.includes('kbBtnAutono
 ok('B · _runAutonomousLoop · mètode definit',         kb.includes('async _runAutonomousLoop()'));
 ok('B · filtra WOs pending + assignee.kind===ai',     /pending = \(this\.workOrders[\s\S]{0,300}assignee\?\.kind === 'ai'/.test(kb));
 ok('B · prompt confirm max WOs · cancel safe',        kb.includes("prompt('Quantes WOs pending"));
-ok('B · loop seqüencial · _executeAi per cada batch', kb.includes('this._executeAi(batch[i].id)'));
+ok('B · loop seqüencial · _executeAi per cada batch', /this\._executeAi\(batch\[i\]\.id/.test(kb));
 ok('B · toast empty case · "Cap WO IA pending"',     kb.includes('Cap WO IA pending'));
-ok('B · toast final · ok/fail count',                 kb.includes("'🤖 Loop acabat · '"));
+ok('B · summary modal (v157) substitueix toast',     kb.includes('_openAutonomousLoopSummary'));
 ok('B · re-render board + stats post-loop',           kb.includes('this._renderBoard?.()') && kb.includes('this._renderStats?.()'));
 
 // ─── C · Sprint deprecation banner ─────────────────────────────────────

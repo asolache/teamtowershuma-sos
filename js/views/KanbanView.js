@@ -585,37 +585,119 @@ export default class KanbanView {
         const batch = pending.slice(0, max);
         const btn = document.getElementById('kbBtnAutonomousLoop');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ 0/' + batch.length + '…'; }
-        let ok = 0, fail = 0;
+        // v157 · col·lecciona resultats · silent mode evita modals que es solapen ·
+        // al final mostra summary amb tots els outputs · cada un revisable+ledgerizable
+        const results = [];
         for (let i = 0; i < batch.length; i++) {
             if (btn) btn.textContent = '⏳ ' + (i + 1) + '/' + batch.length + '…';
             try {
-                await this._executeAi(batch[i].id);
-                ok++;
+                const r = await this._executeAi(batch[i].id, { __silent: true });
+                results.push(r || { ok: false, wo: batch[i], state: 'unknown' });
             } catch (e) {
                 console.warn('[kanban] autonomous loop · WO failed', batch[i].id, e?.message);
-                fail++;
+                results.push({ ok: false, wo: batch[i], state: 'error', error: e?.message });
             }
         }
         if (btn) { btn.disabled = false; btn.textContent = '🤖 Run autonomous loop'; }
-        try {
-            const { toast } = await import('../core/uxComponents.js');
-            toast({
-                kind: fail > 0 ? 'warning' : 'success',
-                text: '🤖 Loop acabat · ' + ok + ' ✓ · ' + fail + ' ✗ de ' + batch.length,
-                ttl: 5000,
-            });
-        } catch (_) {}
         // Re-render board to show updated statuses
         this._renderBoard?.();
         this._renderStats?.();
+        // v157 · summary modal · totes les WOs processades · revisable + ledgerize per cada un
+        this._openAutonomousLoopSummary(results);
+    }
+
+    // v157 · summary modal post-autonomous-loop · llista totes les WOs processades ·
+    // permet veure aiOutput · ledgerize · re-run · sense perdre cap.
+    _openAutonomousLoopSummary(results = []) {
+        const root = document.getElementById('kbExecRoot');
+        if (!root) return;
+        const ok   = results.filter(r => r.ok).length;
+        const fail = results.length - ok;
+        const rowsHtml = results.map((r, i) => {
+            const wo = r.wo || {};
+            const c  = wo.content || {};
+            const stateColor = r.state === 'ready'       ? '#22c55e'
+                            : r.state === 'tdd-passed'  ? '#22c55e'
+                            : r.state === 'tdd-failed'  ? '#facc15'
+                            : r.state === 'error'       ? '#ef4444'
+                            : '#94a3b8';
+            const stateIcon = r.state === 'ready' || r.state === 'tdd-passed' ? '✓' : '✗';
+            const aiOutPreview = (r.aiOutput || '').slice(0, 200).replace(/[<>&]/g, (ch) => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[ch])) + ((r.aiOutput || '').length > 200 ? '…' : '');
+            const woId = wo.id || c.id || '?';
+            return `
+            <div data-loop-row="${i}" style="background:rgba(255,255,255,0.03);border:1px solid var(--border-default);border-left:3px solid ${stateColor};border-radius:6px;padding:10px 12px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:200px;">
+                        <div style="font-weight:700;font-size:0.92rem;">
+                            <span style="color:${stateColor};">${stateIcon}</span> ${(c.title || woId).replace(/[<>&]/g, ch=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[ch]))}
+                        </div>
+                        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">
+                            ${r.state || 'unknown'} · tokens ${(r.tokens?.prompt_tokens || 0)}↓ / ${(r.tokens?.completion_tokens || 0)}↑ · ${(r.latencyMs || 0)}ms
+                            ${r.error ? ' · err · ' + r.error.slice(0, 80) : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-shrink:0;">
+                        <button class="kb-btn" data-loop-view="${i}" style="font-size:0.78rem;padding:4px 10px;">👁 Veure</button>
+                        ${r.ok && r.state !== 'tdd-passed' ? `<button class="kb-btn kb-btn-primary" data-loop-ledger="${woId}" style="font-size:0.78rem;padding:4px 10px;">✓ Ledger</button>` : ''}
+                        <button class="kb-btn" data-loop-rerun="${woId}" style="font-size:0.78rem;padding:4px 10px;">🔁 Re-run</button>
+                    </div>
+                </div>
+                ${r.aiOutput ? `<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:0.76rem;color:var(--text-secondary);">Preview · primers 200 chars</summary><pre style="font-size:0.72rem;background:var(--bg-elevated);padding:8px;border-radius:4px;margin-top:4px;white-space:pre-wrap;max-height:200px;overflow:auto;">${aiOutPreview}</pre></details>` : ''}
+            </div>`;
+        }).join('');
+        root.innerHTML = `
+            <div class="kb-exec-bg" id="kbExecBg" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;">
+                <div class="kb-exec-modal" style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:12px;padding:1.5rem;max-width:1000px;width:100%;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+                        <h2 style="margin:0;font-size:1.2rem;">🤖 Loop autonomous · summary</h2>
+                        <div style="display:flex;gap:10px;align-items:center;font-size:0.85rem;">
+                            <span style="color:#22c55e;font-weight:700;">${ok} ✓</span>
+                            <span style="color:${fail > 0 ? '#facc15' : 'var(--text-muted)'};font-weight:700;">${fail} ✗</span>
+                            <span style="color:var(--text-muted);">de ${results.length}</span>
+                            <button class="kb-btn" id="kbExecClose" style="margin-left:10px;">Tancar</button>
+                        </div>
+                    </div>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 14px;">Cada WO ja s'ha guardat amb el seu output. Pots revisar · ledgerizar (acceptar+contabilitzar) · o re-executar.</p>
+                    ${rowsHtml || '<div style="color:var(--text-muted);text-align:center;padding:2rem;">Cap resultat</div>'}
+                </div>
+            </div>`;
+        const close = () => { root.innerHTML = ''; };
+        document.getElementById('kbExecBg').addEventListener('click', e => { if (e.target.id === 'kbExecBg') close(); });
+        document.getElementById('kbExecClose').addEventListener('click', close);
+        // Per-row actions · view detail modal · ledger · re-run
+        root.querySelectorAll('[data-loop-view]').forEach(b => b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const i = parseInt(b.getAttribute('data-loop-view'), 10);
+            const r = results[i];
+            if (!r) return;
+            this._openExecutionModal(r.wo, { state: r.state, text: r.aiOutput, tokens: r.tokens || {}, latencyMs: r.latencyMs });
+        }));
+        root.querySelectorAll('[data-loop-ledger]').forEach(b => b.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const woId = b.getAttribute('data-loop-ledger');
+            try { await this._ledgerize(woId, {}); b.textContent = '✓ Ledgered'; b.disabled = true; }
+            catch (err) { console.warn('[kanban] ledger failed', err); }
+        }));
+        root.querySelectorAll('[data-loop-rerun]').forEach(b => b.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const woId = b.getAttribute('data-loop-rerun');
+            b.disabled = true; b.textContent = '⏳';
+            try { await this._executeAi(woId); }
+            catch (err) { console.warn('[kanban] rerun failed', err); }
+            finally { b.disabled = false; b.textContent = '🔁 Re-run'; }
+        }));
     }
 
     // llama Orchestrator.callLLM → captura tokens reales → actualiza WO →
     // si approvalRule='tdd-auto' y tddCheck pasa, transiciona a ledgered.
     async _executeAi(woId, extras = {}) {
         const wo = this.workOrders.find(x => x.id === woId);
-        if (!wo) return;
+        if (!wo) return null;
         const c = { ...wo.content, ...extras };
+        // v157 · silent mode · skip modal opening (per al autonomous loop · evita
+        // que cada modal sobreescrigui el següent · només l'últim era visible).
+        // Retorna { ok, wo, aiOutput, error } perquè el caller agregui resultats.
+        const silent = !!extras.__silent;
 
         // Resolver SOCs/SOPs a inyectar
         const socs = Array.isArray(c.socRefs) && c.socRefs.length
@@ -623,7 +705,7 @@ export default class KanbanView {
             : ['teamtowers-brand'];
         const sops = c.sopRef ? [c.sopRef.replace(/^sop-/, '')] : [];
 
-        this._openExecutionModal(wo, { state: 'loading' });
+        if (!silent) this._openExecutionModal(wo, { state: 'loading' });
         const startedAt = Date.now();
 
         try {
@@ -722,37 +804,39 @@ export default class KanbanView {
                 const passed = this._evalTdd(c.tddCheck, aiOutput);
                 if (passed) {
                     await this._ledgerize(woId, {});
-                    this._openExecutionModal({ ...updated, content: { ...updated.content, status: 'ledgered' } }, {
+                    if (!silent) this._openExecutionModal({ ...updated, content: { ...updated.content, status: 'ledgered' } }, {
                         state: 'tdd-passed',
                         text:  aiOutput,
                         tokens, latencyMs, sources: ctx.sources,
                     });
-                    return;
+                    return { ok: true, wo: updated, aiOutput, state: 'tdd-passed', tokens, latencyMs };
                 } else {
                     // TDD falló: vuelve a backlog para revisión humana.
                     const failed = { ...updated, content: { ...updated.content, status: 'backlog', tddFailed: true } };
                     await this._save(failed);
-                    this._openExecutionModal(failed, {
+                    if (!silent) this._openExecutionModal(failed, {
                         state: 'tdd-failed',
                         text:  aiOutput,
                         tokens, latencyMs, sources: ctx.sources,
                     });
-                    return;
+                    return { ok: false, wo: failed, aiOutput, state: 'tdd-failed', tokens, latencyMs };
                 }
             }
 
-            this._openExecutionModal(updated, {
+            if (!silent) this._openExecutionModal(updated, {
                 state: 'ready',
                 text:  aiOutput,
                 tokens, latencyMs,
                 sources: ctx.sources,
             });
+            return { ok: true, wo: updated, aiOutput, state: 'ready', tokens, latencyMs };
         } catch (err) {
             console.error('[H7.2] Error ejecutando WO con IA:', err);
-            this._openExecutionModal(wo, {
+            if (!silent) this._openExecutionModal(wo, {
                 state: 'error',
                 msg: err.message + '\n\nVerifica tu API key en /settings y que netlify dev esté corriendo.',
             });
+            return { ok: false, wo, aiOutput: null, state: 'error', error: err?.message || String(err) };
         }
     }
 
