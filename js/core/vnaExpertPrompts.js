@@ -922,18 +922,19 @@ export function buildPrompt({ templateId = null, taskKind, context = {}, slim = 
     }
 
     // v160 · verna profiles · strip context layers que ancoren el model
+    // v161 · diferenciació real verna-minimal vs verna-guided ·
+    //   minimal · també esborra `sector` (zero hint)
+    //   guided  · conserva `sector` (codi CNAE · hint abstracte ja present als user prompts)
     let effectiveCtx = context || {};
     if (contextProfile === 'verna-minimal' || contextProfile === 'verna-guided') {
         effectiveCtx = { ...effectiveCtx };
-        // Strip totes les capes amb exemples literals
         delete effectiveCtx.domainDetection;
         delete effectiveCtx.sectorContext;
         delete effectiveCtx.sectorSeed;
         delete effectiveCtx.subtypeHint;
         delete effectiveCtx.currentTemplate;
-        // Per a 'verna-guided' · conservem sector (sols el codi CNAE) com a hint abstracte
         if (contextProfile === 'verna-minimal') {
-            // No-op · ja s'ha netejat
+            delete effectiveCtx.sector;
         }
     }
 

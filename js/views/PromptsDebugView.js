@@ -209,14 +209,26 @@ export default class PromptsDebugView {
                 return { text, usage: result?.usage || null };
             };
 
-            // Build set of fewshot literal role names (lowercased) for overlap metric
-            const fewShotRoleNames = new Set();
+            // v161 · landmark-based anchoring detection · exact match no captava
+            // anchoring semàntic (ex · "Fundador Ancoratge" vs few-shot "Founder Anchor").
+            // Extraiem paraules distintives (>4 chars · no genèriques) dels role.name + role.kind
+            // dels few-shots i comprovem substring containment al output. KISS · prou per
+            // detectar replicació de signatures característiques sense fals positiu massiu.
+            const GENERIC_WORDS = new Set([
+                'manager','founder','operations','creator','reviewer','facilitator','team',
+                'director','responsable','coordinador','gestor','cap','lead','operacions',
+                'col·la','colla','del','dels','les','los','par','par','project','projecte',
+            ]);
+            const fewShotLandmarks = new Set();
             Object.values(FEW_SHOT_EXAMPLES).forEach(ex => {
                 try {
                     const parsed = JSON.parse(ex.assistantOutput);
                     (parsed.roles || []).forEach(r => {
-                        if (r.name) fewShotRoleNames.add(String(r.name).toLowerCase());
-                        if (r.kind) fewShotRoleNames.add(String(r.kind).toLowerCase());
+                        const tokens = String((r.name || '') + ' ' + (r.kind || ''))
+                            .toLowerCase()
+                            .split(/[^a-zàèéíòóúïü·]+/)
+                            .filter(t => t.length > 4 && !GENERIC_WORDS.has(t));
+                        tokens.forEach(t => fewShotLandmarks.add(t));
                     });
                 } catch (_) {}
             });
@@ -259,9 +271,13 @@ export default class PromptsDebugView {
 
             const fewshotOverlapPct = (profile) => {
                 const set = allRoleNames[profile];
-                if (!set.size) return 0;
+                if (!set.size || !fewShotLandmarks.size) return 0;
                 let hits = 0;
-                set.forEach(n => { if (fewShotRoleNames.has(n)) hits++; });
+                set.forEach(n => {
+                    for (const lm of fewShotLandmarks) {
+                        if (n.includes(lm)) { hits++; break; }
+                    }
+                });
                 return Math.round((hits / set.size) * 100);
             };
 
