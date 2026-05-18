@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-21T18:00 · v156 · BUG FIX · Kanban swarm IA · ABANS redirigia a /sprint?wo=X (codi legacy SWARM-RELOC-001) · ARA executa IN-PLACE via _executeAi (5 seccions estructurades v155 + runEscalation chain) · WO updated directament + Run autonomous loop button al toolbar (substitueix /sprint funcionalitat · processa N WOs pending amb IA seqüencial in-place · output a aiOutput field de cada WO · NO sprint_run nodes volàtils) + Sprint deprecation banner (orange · linkat a /kanban?project=sos-dev-internal) · 19 asserts';
+const BUILD_STAMP = '2026-05-18T20:00 · v158 · SIMPLIFICATION · Value Map creation canonical · ABANS 3 fluxos diferents (CreateLive expert chain · ValueMapView quickSuggest · ProjectQuality aiFillDim) + path legacy preservat al ValueMapView via ?vmap_ui=legacy · ARA 1 sol path: quickSuggestMap (slim-first + escalation automàtic si score < 60) + legacy ELIMINAT al ValueMapView · NOU vnaShapeEvaluators.js amb 3 evaluadors booleans (evaluateValueMapShape · evaluateSocsShape · evaluateSopsShape · deterministes · 100% sense LLM · gating decisions per al loop d\'auto-millora) · NOU quickSuggestSocs + quickSuggestSops a vnaQuickSuggest.js (mateix patró slim-first + escalate) · NOU runValueMapCycle({ context, skip? }) loop canonical map → SOCs → SOPs amb shape eval per fase · 33 asserts v158';
 
 export default class DesignSystemView {
 
