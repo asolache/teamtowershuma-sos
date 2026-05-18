@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-21T12:00 · v153 · Hub Avui ENRIQUIT (4 KPI cards · Top 3 WOs prioritaris clicables · Cash flow setmanal 7 dies bar visual verd/vermell · _weeklyFlow helper pure) + TimelineView UPGRADE (5 perspective filters · Tot/WOs/Pactes/Ledger/Network · FILTER_TO_KINDS canonical mapping · SubmenuTabs canonical · TopBar custom eliminat · URL ?filter i ?sort persistents) · 23 asserts';
+const BUILD_STAMP = '2026-05-21T14:00 · v154 · SkillsExplorerView migració al pattern canonical · se-topbar custom + se-stats-row eliminats del render (ocults amb display:none per backwards-compat) · SubmenuTabs canonical amb 6 tabs (Totes + 5 categories · soft/hard/meta/care/governance · count badges) · urlParam category · sync select dropdown legacy · destroy cleanup · resol feedback "skills page diseño viejo · falta migrar al pattern canonical com la resta de vistes v151" · 16 asserts';
 
 export default class DesignSystemView {
 
