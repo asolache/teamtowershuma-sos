@@ -167,6 +167,240 @@ export async function fullExpertChain(opts) {
     return runExpertChain(opts);
 }
 
+// v158 · quickSuggestSocs · derivat del mapa de valor · slim-first + escalate
+//   context  · { name, sector, lifecycle_stage, vna_zoom }
+//   valueMap · output de quickSuggestMap (map field)
+// Retorna · { ok, socs, presentationHints, eval, ms, slim, escalatedToFull }
+export async function quickSuggestSocs({
+    context = {},
+    valueMap = null,
+    slim = true,
+    qualityThreshold = 70,
+    generateWithProvider = null,
+    preferredProvider = null,
+    modelKey = 'auto-reasoner',
+    onProgress = null,
+} = {}) {
+    const t0 = Date.now();
+    const emit = (step, payload) => { try { onProgress?.({ step, ...payload }); } catch (_) {} };
+    if (!valueMap) return { ok: false, error: 'valueMap required', ms: 0 };
+    if (!generateWithProvider) {
+        try { const mod = await import('./aiProviderService.js'); generateWithProvider = mod.generateWithProvider; }
+        catch (_) { return { ok: false, error: 'provider not available', ms: 0 }; }
+    }
+
+    const { evaluateSocsShape } = await import('./vnaShapeEvaluators.js');
+    const ctx = {
+        name:            context.name,
+        sector:          context.sector,
+        lifecycle_stage: context.lifecycle_stage,
+        vna_zoom:        context.vna_zoom || 'meso',
+        value_map:       valueMap,
+    };
+    const prompt = buildPrompt({ taskKind: 'generate-socs-from-value-map', context: ctx, slim });
+    emit('prompt-built', { tokens: prompt.approxTokens, slim });
+
+    const runOnce = async (sl) => {
+        const p = buildPrompt({ taskKind: 'generate-socs-from-value-map', context: ctx, slim: sl });
+        const res = await generateWithProvider(modelKey, {
+            systemPrompt: p.system, userPrompt: p.user, fewShot: p.fewShot,
+            maxOutputTokens: 2200, temperature: 0.4, preferredProvider,
+        });
+        return { text: res?.text || '', usage: res?.usage || null };
+    };
+
+    let text, usage;
+    try { ({ text, usage } = await runOnce(slim)); emit('first-call-done', { tokens: usage?.outputTokens }); }
+    catch (e) { return { ok: false, error: 'first-call-failed: ' + (e?.message || String(e)), ms: Date.now() - t0 }; }
+
+    let parsed = _parseJsonOutput(text);
+    if (!parsed) return { ok: false, error: 'parse-failed · no JSON', ms: Date.now() - t0, rawOutput: text.slice(0, 300) };
+
+    let evalRes = evaluateSocsShape(parsed);
+    let escalatedToFull = false;
+    if (slim && evalRes.score < qualityThreshold) {
+        emit('escalating', { reason: 'shape-eval', score: evalRes.score, threshold: qualityThreshold });
+        try {
+            const { text: t2 } = await runOnce(false);
+            const parsed2 = _parseJsonOutput(t2);
+            if (parsed2) {
+                const eval2 = evaluateSocsShape(parsed2);
+                if (eval2.score > evalRes.score) {
+                    parsed = parsed2; evalRes = eval2; escalatedToFull = true;
+                    emit('escalation-success', { newScore: eval2.score });
+                }
+            }
+        } catch (_) {}
+    }
+
+    const ms = Date.now() - t0;
+    emit('done', { ms, score: evalRes.score, escalatedToFull });
+    return {
+        ok: evalRes.ok,
+        socs: Array.isArray(parsed.socs) ? parsed.socs : [],
+        presentationHints: parsed.presentationHints || null,
+        eval: evalRes,
+        ms, slim, escalatedToFull,
+        tokens: prompt.approxTokens, usage,
+        rawOutput: parsed,
+    };
+}
+
+// v158 · quickSuggestSops · per un SOC · slim-first + escalate
+//   context     · { name, sector, lifecycle_stage, description, entity_type }
+//   soc         · 1 SOC del output de quickSuggestSocs
+//   role_kinds  · llista de role kinds disponibles
+// Retorna · { ok, sops, eval, ms, slim, escalatedToFull }
+export async function quickSuggestSops({
+    context = {},
+    soc = null,
+    role_kinds = [],
+    sector_role_examples = null,
+    available_skills = null,
+    slim = true,
+    qualityThreshold = 70,
+    generateWithProvider = null,
+    preferredProvider = null,
+    modelKey = 'auto-mid',
+    onProgress = null,
+} = {}) {
+    const t0 = Date.now();
+    const emit = (step, payload) => { try { onProgress?.({ step, ...payload }); } catch (_) {} };
+    if (!soc) return { ok: false, error: 'soc required', ms: 0 };
+    if (!generateWithProvider) {
+        try { const mod = await import('./aiProviderService.js'); generateWithProvider = mod.generateWithProvider; }
+        catch (_) { return { ok: false, error: 'provider not available', ms: 0 }; }
+    }
+
+    const { evaluateSopsShape } = await import('./vnaShapeEvaluators.js');
+    const ctx = {
+        name: context.name,
+        soc,
+        project_ctx: {
+            description:     context.description,
+            sector:          context.sector,
+            entity_type:     context.entity_type,
+            lifecycle_stage: context.lifecycle_stage,
+        },
+        role_kinds, sector_role_examples, available_skills,
+    };
+    const prompt = buildPrompt({ taskKind: 'generate-sops-with-skills', context: ctx, slim });
+    emit('prompt-built', { tokens: prompt.approxTokens, slim });
+
+    const runOnce = async (sl) => {
+        const p = buildPrompt({ taskKind: 'generate-sops-with-skills', context: ctx, slim: sl });
+        const res = await generateWithProvider(modelKey, {
+            systemPrompt: p.system, userPrompt: p.user, fewShot: p.fewShot,
+            maxOutputTokens: 2200, temperature: 0.4, preferredProvider,
+        });
+        return { text: res?.text || '', usage: res?.usage || null };
+    };
+
+    let text, usage;
+    try { ({ text, usage } = await runOnce(slim)); emit('first-call-done', { tokens: usage?.outputTokens }); }
+    catch (e) { return { ok: false, error: 'first-call-failed: ' + (e?.message || String(e)), ms: Date.now() - t0 }; }
+
+    let parsed = _parseJsonOutput(text);
+    if (!parsed) return { ok: false, error: 'parse-failed · no JSON', ms: Date.now() - t0, rawOutput: text.slice(0, 300) };
+
+    let evalRes = evaluateSopsShape(parsed);
+    let escalatedToFull = false;
+    if (slim && evalRes.score < qualityThreshold) {
+        emit('escalating', { reason: 'shape-eval', score: evalRes.score, threshold: qualityThreshold });
+        try {
+            const { text: t2 } = await runOnce(false);
+            const parsed2 = _parseJsonOutput(t2);
+            if (parsed2) {
+                const eval2 = evaluateSopsShape(parsed2);
+                if (eval2.score > evalRes.score) {
+                    parsed = parsed2; evalRes = eval2; escalatedToFull = true;
+                    emit('escalation-success', { newScore: eval2.score });
+                }
+            }
+        } catch (_) {}
+    }
+
+    const ms = Date.now() - t0;
+    emit('done', { ms, score: evalRes.score, escalatedToFull });
+    return {
+        ok: evalRes.ok,
+        sops: Array.isArray(parsed.sops) ? parsed.sops : [],
+        eval: evalRes,
+        ms, slim, escalatedToFull,
+        tokens: prompt.approxTokens, usage,
+        rawOutput: parsed,
+    };
+}
+
+// v158 · runValueMapCycle · loop canonical · map → SOCs → SOPs · cada step
+// té eval booleà · si gating falla, escala a rich · si escala falla, segueix
+// igualment però marca degraded=true al result final. Caller pot decidir.
+//
+// Retorna · {
+//   ok, degraded, ms,
+//   map:   { ok, score, issues, data },
+//   socs:  { ok, score, issues, data },
+//   sops:  { ok, score, issues, data[] · 1 per SOC },
+// }
+export async function runValueMapCycle({
+    context = {},
+    existingMap = null,
+    generateWithProvider = null,
+    preferredProvider = null,
+    onProgress = null,
+    qualityThreshold = 60,
+    skip = {},
+} = {}) {
+    const t0 = Date.now();
+    const emit = (step, payload) => { try { onProgress?.({ step, ...payload }); } catch (_) {} };
+    const out = { ok: true, degraded: false, ms: 0, map: null, socs: null, sops: null };
+
+    // Phase 1 · map
+    if (!skip.map) {
+        emit('cycle-phase', { phase: 'map' });
+        const mapRes = await quickSuggestMap({ context, existingMap, slim: true, qualityThreshold, generateWithProvider, preferredProvider, onProgress });
+        out.map = { ok: mapRes.ok, score: mapRes.score?.score || 0, issues: [], data: mapRes.map, escalatedToFull: mapRes.escalatedToFull };
+        if (!mapRes.ok) { out.ok = false; out.degraded = true; out.ms = Date.now() - t0; return out; }
+    }
+    const valueMap = out.map?.data || existingMap;
+
+    // Phase 2 · SOCs
+    if (!skip.socs && valueMap) {
+        emit('cycle-phase', { phase: 'socs' });
+        const socsRes = await quickSuggestSocs({ context, valueMap, slim: true, qualityThreshold: 70, generateWithProvider, preferredProvider, onProgress });
+        out.socs = { ok: socsRes.ok, score: socsRes.eval?.score || 0, issues: socsRes.eval?.issues || [], data: socsRes.socs, escalatedToFull: socsRes.escalatedToFull };
+        if (!socsRes.ok) { out.degraded = true; }
+    }
+
+    // Phase 3 · SOPs · 1 per SOC (paral·lel · max 3 per evitar rate limit)
+    if (!skip.sops && out.socs?.data?.length) {
+        emit('cycle-phase', { phase: 'sops', count: out.socs.data.length });
+        const role_kinds = (valueMap?.roles || []).map(r => r.kind).filter(Boolean);
+        const batches = [];
+        for (let i = 0; i < out.socs.data.length; i += 3) batches.push(out.socs.data.slice(i, i + 3));
+        const allSopResults = [];
+        for (const batch of batches) {
+            const batchRes = await Promise.all(batch.map(soc =>
+                quickSuggestSops({ context, soc, role_kinds, slim: true, qualityThreshold: 70, generateWithProvider, preferredProvider, onProgress })
+            ));
+            allSopResults.push(...batchRes);
+        }
+        const allOk = allSopResults.every(r => r.ok);
+        const avgScore = Math.round(allSopResults.reduce((s, r) => s + (r.eval?.score || 0), 0) / Math.max(1, allSopResults.length));
+        const allIssues = allSopResults.flatMap((r, i) => (r.eval?.issues || []).map(iss => '[soc-' + i + '] ' + iss));
+        out.sops = {
+            ok: allOk, score: avgScore, issues: allIssues,
+            data: allSopResults.map(r => r.sops || []),
+            escalatedCount: allSopResults.filter(r => r.escalatedToFull).length,
+        };
+        if (!allOk) out.degraded = true;
+    }
+
+    out.ms = Date.now() - t0;
+    emit('cycle-done', { ms: out.ms, degraded: out.degraded, ok: out.ok });
+    return out;
+}
+
 // determineMode · helper UI · suggereix quick vs full segons context
 // Retorna 'quick' si · ja hi ha mapa parcial · usuari demana suggerències ràpides
 // Retorna 'full' si · projecte nou · es vol cadena expert completa (socs+sops+wos)

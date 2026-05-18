@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-18T18:00 · v157 · BUG FIX · Kanban autonomous loop · ABANS cada iteració del loop obria _openExecutionModal sobreescrivint l\'anterior · només el modal de l\'última WO quedava visible (totes les altres es guardaven a IndexedDB però perdíem la finestra per revisar/ledgeritzar) · ARA _executeAi accepta extras.__silent flag · skip tots els modals quan és true + retorna { ok, wo, aiOutput, state, tokens, latencyMs, error? } · _runAutonomousLoop col·lecciona array de results · al final obre _openAutonomousLoopSummary modal amb llista de TOTES les WOs processades · per cada row · 👁 Veure (obre modal individual) · ✓ Ledger (transiciona a ledgered) · 🔁 Re-run (re-executa IA) + preview primers 200 chars de aiOutput · 34 asserts v157';
+const BUILD_STAMP = '2026-05-18T20:00 · v158 · SIMPLIFICATION · Value Map creation canonical · ABANS 3 fluxos diferents (CreateLive expert chain · ValueMapView quickSuggest · ProjectQuality aiFillDim) + path legacy preservat al ValueMapView via ?vmap_ui=legacy · ARA 1 sol path: quickSuggestMap (slim-first + escalation automàtic si score < 60) + legacy ELIMINAT al ValueMapView · NOU vnaShapeEvaluators.js amb 3 evaluadors booleans (evaluateValueMapShape · evaluateSocsShape · evaluateSopsShape · deterministes · 100% sense LLM · gating decisions per al loop d\'auto-millora) · NOU quickSuggestSocs + quickSuggestSops a vnaQuickSuggest.js (mateix patró slim-first + escalate) · NOU runValueMapCycle({ context, skip? }) loop canonical map → SOCs → SOPs amb shape eval per fase · 33 asserts v158';
 
 export default class DesignSystemView {
 

@@ -16,11 +16,11 @@ console.log('=== v132e · ValueMapView · migració quickSuggestMap (no-breaking
 
 const src = fs.readFileSync(new URL('../views/ValueMapView.js', import.meta.url), 'utf8');
 
-// ─── A · feature flag · ?vmap_ui=legacy ────────────────────────────────
-console.log('— A · feature flag legacy preservat (no breaking)');
-ok('A · constant useLegacy declarada',                 src.includes('const useLegacy') && src.includes('vmap_ui') && src.includes("'legacy'"));
+// ─── A · canonical path (v158 · legacy eliminat) ──────────────────────
+console.log('— A · canonical path · v158 elimina legacy');
 ok('A · default · path NOU (quickSuggest)',            src.includes('this._runAISuggestionQuickSuggest('));
-ok('A · legacy · path ANTIC preservat',                src.includes('this._runAISuggestionLegacy('));
+ok('A · v158 · legacy ELIMINAT (no useLegacy)',        !src.includes("get('vmap_ui') === 'legacy'"));
+ok('A · v158 · NO crida _runAISuggestionLegacy',       !src.includes('this._runAISuggestionLegacy('));
 ok('A · outer try/catch UI unified',                   src.includes("catch (err)") && src.includes("'❌ Error: '"));
 
 // ─── B · path NOU · _runAISuggestionQuickSuggest ──────────────────────
@@ -48,12 +48,10 @@ ok('C · Phase1 ocult · Phase2 visible',                 src.includes("vmapAIPh
                                                           src.includes("vmapAIPhase2').style.display = 'block'"));
 ok('C · log info si escalatedToFull',                   src.includes('escalat a FULL prompt'));
 
-// ─── D · path LEGACY preservat · ?vmap_ui=legacy ──────────────────────
-console.log('\n— D · path LEGACY preservat (zero risc regressió)');
-ok('D · _runAISuggestionLegacy definit',                src.includes('async _runAISuggestionLegacy('));
-ok('D · legacy té try { ... } catch ',                  src.includes('async _runAISuggestionLegacy') && src.match(/_runAISuggestionLegacy[\s\S]{0,150}try \{/));
-ok('D · legacy preserva KnowledgeLoader.buildContext',  src.includes('KnowledgeLoader.buildContext'));
-ok('D · legacy preserva ctxResult.systemPrompt',        src.includes('ctxResult.systemPrompt'));
+// ─── D · v158 · legacy ELIMINAT (simplificació) ───────────────────────
+console.log('\n— D · v158 · path únic · legacy completament eliminat');
+ok('D · _runAISuggestionLegacy NO definit',             !src.includes('async _runAISuggestionLegacy('));
+ok('D · v158 · comentari simplificació present',        src.includes('v158 · canonical · path únic'));
 
 // ─── E · vnaQuickSuggest mòdul disponible ─────────────────────────────
 console.log('\n— E · vnaQuickSuggest (v132d) disponible per a ValueMapView');
