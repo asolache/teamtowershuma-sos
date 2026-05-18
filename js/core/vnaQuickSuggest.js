@@ -61,6 +61,9 @@ export async function quickSuggestMap({
     preferredProvider = null,
     modelKey = 'auto-small',
     onProgress = null,
+    // v160 · contextProfile · 'sos-current' | 'verna-minimal' | 'verna-guided'
+    // Si 'verna-*' · usa task 'design-value-map-verna' i strip de capes ancoradores
+    contextProfile = 'sos-current',
 } = {}) {
     const t0 = Date.now();
     const emit = (step, payload) => { try { onProgress?.({ step, ...payload }); } catch (_) {} };
@@ -83,7 +86,12 @@ export async function quickSuggestMap({
         fullCtx.existingMap = existingMap;
     }
 
-    const prompt = buildPrompt({ taskKind: 'design-value-map-rich', context: fullCtx, slim });
+    // v160 · ruta canonical · si contextProfile='verna-*' usa el nou task amb
+    // sistema VERNA pur · zero exemples literals · ancla en metaskill
+    const taskKindUsed = (contextProfile === 'verna-minimal' || contextProfile === 'verna-guided')
+        ? 'design-value-map-verna'
+        : 'design-value-map-rich';
+    const prompt = buildPrompt({ taskKind: taskKindUsed, context: fullCtx, slim, contextProfile });
     emit('prompt-built', { tokens: prompt.approxTokens, slim, hasExistingMap: !!fullCtx.existingMap });
 
     // First call · slim
@@ -117,7 +125,7 @@ export async function quickSuggestMap({
     if (slim && score && score.score < qualityThreshold) {
         emit('escalating', { reason: 'score < threshold', score: score.score, threshold: qualityThreshold });
         try {
-            const promptFull = buildPrompt({ taskKind: 'design-value-map-rich', context: fullCtx, slim: false });
+            const promptFull = buildPrompt({ taskKind: taskKindUsed, context: fullCtx, slim: false, contextProfile });
             const res2 = await generateWithProvider(modelKey, {
                 systemPrompt:    promptFull.system,
                 userPrompt:      promptFull.user,
@@ -350,6 +358,8 @@ export async function runValueMapCycle({
     onProgress = null,
     qualityThreshold = 60,
     skip = {},
+    // v160 · contextProfile propagat a fase 1 (map) · SOCs/SOPs encara legacy
+    contextProfile = 'sos-current',
 } = {}) {
     const t0 = Date.now();
     const emit = (step, payload) => { try { onProgress?.({ step, ...payload }); } catch (_) {} };
@@ -358,7 +368,7 @@ export async function runValueMapCycle({
     // Phase 1 · map
     if (!skip.map) {
         emit('cycle-phase', { phase: 'map' });
-        const mapRes = await quickSuggestMap({ context, existingMap, slim: true, qualityThreshold, generateWithProvider, preferredProvider, onProgress });
+        const mapRes = await quickSuggestMap({ context, existingMap, slim: true, qualityThreshold, generateWithProvider, preferredProvider, onProgress, contextProfile });
         out.map = { ok: mapRes.ok, score: mapRes.score?.score || 0, issues: [], data: mapRes.map, escalatedToFull: mapRes.escalatedToFull };
         if (!mapRes.ok) { out.ok = false; out.degraded = true; out.ms = Date.now() - t0; return out; }
     }

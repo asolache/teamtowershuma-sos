@@ -244,16 +244,16 @@ class OrchestratorCore {
                         }
                     }
 
-                    // ── OPENAI ───────────────────────────────────────────────
+                    // ── OPENAI · via edge proxy (v160.2 · CORS-safe) ─────────
                     else if (provider === 'openai') {
                         const body = {
                             model: 'gpt-4o', temperature, max_tokens: 8192,
                             messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt + (responseFormat === 'json_object' ? '\n\nResponde ÚNICAMENTE con JSON válido.' : '') }]
                         };
                         if (responseFormat === 'json_object') body.response_format = { type: 'json_object' };
-                        const r = await fetch('https://api.openai.com/v1/chat/completions', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                            body: JSON.stringify(body)
+                        const r = await fetch('/api/openai-proxy', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ apiKey, ...body })
                         });
                         if (!r.ok) throw new Error(`[HTTP ${r.status}] ${await r.text()}`);
                         const d = await r.json();
@@ -261,16 +261,16 @@ class OrchestratorCore {
                         if (d.usage) tokenUsage = { prompt_tokens: d.usage.prompt_tokens, completion_tokens: d.usage.completion_tokens, total_tokens: d.usage.total_tokens };
                     }
 
-                    // ── DEEPSEEK ─────────────────────────────────────────────
+                    // ── DEEPSEEK · via edge proxy (v160.2) ───────────────────
                     else if (provider === 'deepseek') {
                         const body = {
                             model: 'deepseek-chat', temperature, max_tokens: 8192,
                             messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt + (responseFormat === 'json_object' ? '\n\nResponde ÚNICAMENTE con JSON válido.' : '') }]
                         };
                         if (responseFormat === 'json_object') body.response_format = { type: 'json_object' };
-                        const r = await fetch('https://api.deepseek.com/chat/completions', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                            body: JSON.stringify(body)
+                        const r = await fetch('/api/deepseek-proxy', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ apiKey, ...body })
                         });
                         if (!r.ok) throw new Error(`[HTTP ${r.status}] ${await r.text()}`);
                         const d = await r.json();
@@ -278,15 +278,19 @@ class OrchestratorCore {
                         if (d.usage) tokenUsage = { prompt_tokens: d.usage.prompt_tokens, completion_tokens: d.usage.completion_tokens, total_tokens: d.usage.total_tokens };
                     }
 
-                    // ── GEMINI ───────────────────────────────────────────────
+                    // ── GEMINI · via edge proxy (v160.2) ─────────────────────
                     else if (provider === 'gemini') {
                         const mimeType = responseFormat === 'json_object' ? 'application/json' : 'text/plain';
                         const models   = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
                         let gRes = null;
                         for (const m of models) {
-                            const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`, {
+                            const r = await fetch('/api/gemini-proxy', {
                                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ contents: [{ parts: [{ text: `${systemPrompt}\n\nINPUT:\n${userPrompt}` }] }], generationConfig: { temperature, maxOutputTokens: 8192, responseMimeType: mimeType } })
+                                body: JSON.stringify({
+                                    apiKey, model: m,
+                                    contents: [{ parts: [{ text: `${systemPrompt}\n\nINPUT:\n${userPrompt}` }] }],
+                                    generationConfig: { temperature, maxOutputTokens: 8192, responseMimeType: mimeType },
+                                })
                             });
                             if (r.ok) { gRes = r; break; }
                         }
@@ -296,7 +300,7 @@ class OrchestratorCore {
                         textResponse = d.candidates[0].content.parts[0].text;
                     }
 
-                    // ── MINIMAX ──────────────────────────────────────────────
+                    // ── MINIMAX · via edge proxy (v160.2) ────────────────────
                     else if (provider === 'minimax') {
                         const body = {
                             model: MINIMAX_MODEL,
@@ -307,10 +311,10 @@ class OrchestratorCore {
                                 { role: 'user',   content: userPrompt + (responseFormat === 'json_object' ? '\n\nResponde ÚNICAMENTE con JSON válido.' : '') }
                             ]
                         };
-                        const r = await fetch(MINIMAX_API_URL, {
+                        const r = await fetch('/api/minimax-proxy', {
                             method:  'POST',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                            body:    JSON.stringify(body)
+                            headers: { 'Content-Type': 'application/json' },
+                            body:    JSON.stringify({ apiKey, ...body })
                         });
                         if (!r.ok) throw new Error(`[MiniMax HTTP ${r.status}] ${await r.text()}`);
                         const d = await r.json();
