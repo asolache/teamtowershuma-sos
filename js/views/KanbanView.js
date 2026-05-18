@@ -121,32 +121,114 @@ export function generateWosFromSop(sopSlug, steps, options = {}) {
 // ─── Builder del userPrompt para auto-ejecución IA (H7.2) ───────────────────
 // Pública para test. Construye el userPrompt que se enviará al LLM cuando
 // el operador pulse "▶ Ejecutar con IA" en una WO de tipo IA.
+//
+// v155 · refactor · port de Sprint's 6-section structured prompt approach
+// (audit Sprint vs Kanban v154 · "el que millora qualitat entregable").
+// L'estructura clara de seccions força el LLM a output complet · validable
+// per humà en < 5 min · sense parts buides.
 export function buildExecutionPrompt(wo) {
     const c = wo.content || {};
     const ass = c.assignee || {};
+    const kind = _detectWoKind(c);
+
     const lines = [
-        'Ejecuta esta Work Order del SOS V11 (Swarm Operative System) y devuelve el entregable correspondiente en español, en Markdown limpio.',
+        '# TASCA · Executa aquesta Work Order del SOS V11',
         '',
-        'WORK ORDER:',
-        '- Título: ' + (c.title || '(sin título)'),
-        '- Descripción: ' + (c.description || '(sin descripción)'),
-        c.sopRef  ? '- SOP de referencia: `' + c.sopRef + '`'   : null,
-        c.stepRef ? '- Paso del SOP: `' + c.stepRef + '`'       : null,
-        c.workshopId ? '- Workshop asociado: ' + c.workshopId    : null,
-        '- Engine asignado: ' + (ass.engine || 'anthropic'),
-        '- Aprobación: ' + (c.approvalRule || 'manual'),
+        'Genera l\'entregable corresponent en MARKDOWN ESTRUCTURAT seguint EXACTAMENT les 5 seccions de sortida descrites més avall. Cap secció pot quedar buida. Català o castellà segons descripció.',
         '',
-        'REGLAS IRRENUNCIABLES:',
-        '1. Respeta el SOC raíz `soc-teamtowers-brand` y los SOCs específicos que recibes en el contexto.',
-        '2. NO inventes datos. Si falta información, marca `[pendiente — el operador debe añadir contexto]`.',
-        '3. NO incluyas precios; usa `[VER CATÁLOGO]` o `[PRECIO]` como placeholder.',
-        '4. Cita textualmente del SOP cuando aplique (entre comillas).',
-        '5. Output autocontenido y autosuficiente para que un humano pueda revisarlo y aprobarlo en menos de 5 minutos.',
+        '## CONTEXT WO',
+        '- **id**: `' + (wo.id || c.id || '(sense id)') + '`',
+        '- **título**: ' + (c.title || '(sense títol)'),
+        '- **descripció**: ' + (c.description || '(sense descripció)'),
+        c.sopRef     ? '- **SOP referència**: `' + c.sopRef + '`'             : null,
+        c.stepRef    ? '- **Pas del SOP**: `' + c.stepRef + '`'                : null,
+        c.workshopId ? '- **Workshop associat**: ' + c.workshopId              : null,
+        c.priority   ? '- **prioritat**: ' + c.priority                         : null,
+        '- **engine**: ' + (ass.engine || 'anthropic'),
+        '- **aprovació**: ' + (c.approvalRule || 'manual'),
+        '- **kind inferit**: ' + kind,
+        '',
+        '## REGLES IRRENUNCIABLES (compliance · REGLAS IRRENUNCIABLES)',
+        '1. Respecta el SOC raíz / soc-teamtowers-brand i els SOCs específics que reps al context system.',
+        '2. NO inventis dades · NO inventes datos. Si falta info, marca `[pendent — l\'operador ha d\'afegir context]`.',
+        '3. NO incloguis preus · NO incluyas precios · usa `[VER CATÀLEG]` o `[VER CATÁLOGO]` com a placeholder.',
+        '4. Cita textualment del SOP quan apliqui (entre cometes).',
+        '5. Output autocontingut · revisable en < 5 min per humà.',
     ];
     if (c.approvalRule === 'tdd-auto' && c.tddCheck) {
-        lines.push('6. El output debe estar construido para pasar este test booleano: `' + c.tddCheck + '`. Diseña la estructura del output para que ese check evalúe `true`.');
+        lines.push('6. **TDD check · test booleano** · el output ha d\'estar construït per passar aquest test booleà · `' + c.tddCheck + '`. Dissenya l\'estructura perquè evalui `true`.');
     }
+
+    // v155 · 5 seccions estructurades · adaptades al kind de WO
+    lines.push('', '## 📦 ENTREGABLE · 5 seccions OBLIGATÒRIES (no n\'ometis cap)');
+    if (kind === 'code' || kind === 'engineering') {
+        lines.push(
+            '### 1. Resum executiu (3-4 línies)',
+            'Què aporta aquest entregable · per què val la pena · valor diferencial al projecte.',
+            '',
+            '### 2. Pla d\'implementació',
+            'Llistat dels fitxers/components a crear o modificar · 1 línia descripció per cada un · ordre seqüencial.',
+            '',
+            '### 3. API surface / contracte',
+            'Exports principals · signatures · format input/output · sense implementació interna.',
+            '',
+            '### 4. Test plan + riscos',
+            '- Tests · llistat grups (A · B · C…) + què verifica cada un.',
+            '- Riscos · 2-3 identificats + mitigació concreta.',
+            '',
+            '### 5. Aplicació + verificació',
+            'Pasos exactes per a aplicar manualment · comanda terminal si cal · verificació booleana (com saps que ha funcionat).',
+        );
+    } else if (kind === 'content' || kind === 'copy' || kind === 'pitch' || kind === 'doc') {
+        lines.push(
+            '### 1. Resum executiu (3-4 línies)',
+            'Què aporta · per a qui · diferencial.',
+            '',
+            '### 2. Outline · estructura del document',
+            'Llistat de seccions amb 1 línia descripció per cada una.',
+            '',
+            '### 3. Cos del document (draft complet)',
+            'Tot el contingut · llest per publicar · sense placeholders genèrics (excepte els marcats [VER CATÀLEG]).',
+            '',
+            '### 4. CTAs + següents passos',
+            'Crides a l\'acció · 1 primària + 2 secundàries · enllaços relatius si apliquen.',
+            '',
+            '### 5. Riscos + revisió suggerida',
+            'Què revisar · 2-3 punts crítics per al humà · checklist booleà.',
+        );
+    } else {
+        // Generic kind · default 5 sections (procediment · audit · comm · etc)
+        lines.push(
+            '### 1. Resum executiu (3-4 línies)',
+            'Què aporta aquest entregable · per què · valor diferencial.',
+            '',
+            '### 2. Output principal',
+            'El contingut canonical demanat · estructura clara · sense parts buides.',
+            '',
+            '### 3. Decisions preses + alternatives descartades',
+            'Per cada decisió no òbvia · 1 línia rationale · 1 línia alternativa descartada + per què.',
+            '',
+            '### 4. Test/verificació booleana',
+            'Com saps que aquest output ha funcionat · check explícit (humà o automàtic) · format · "Aquesta sortida és vàlida si X · Y · Z".',
+            '',
+            '### 5. Riscos + següents passos',
+            'Riscos detectats · mitigació · 2-3 next steps concrets.',
+        );
+    }
+    lines.push(
+        '',
+        'IMPORTANT · les 5 seccions han d\'estar TOTES presents · titulades exactament com indicat · cap "TBD" o "pendent" excepte als placeholders permesos.',
+    );
     return lines.filter(Boolean).join('\n');
+}
+
+// v155 · _detectWoKind · pure · infereix tipus WO per adaptar seccions del prompt
+function _detectWoKind(c) {
+    if (!c) return 'generic';
+    const txt = ((c.title || '') + ' ' + (c.description || '') + ' ' + (c.sopRef || '')).toLowerCase();
+    if (/code|implement|refactor|engineer|test|api|backend|frontend|component|module|library/i.test(txt)) return 'code';
+    if (/content|copy|landing|pitch|blog|article|doc|writeup|post/i.test(txt)) return 'content';
+    return 'generic';
 }
 
 // ─── Cálculo de coste de una WO ─────────────────────────────────────────────
@@ -521,23 +603,52 @@ export default class KanbanView {
                 console.warn('[kanban] buildWoContext failed · fallback al base context', e?.message);
             }
 
-            // Cache-bust dinámico para Orchestrator (ver BUG-002/003)
-            const { Orchestrator } = await import('../core/Orchestrator.js?v=' + Date.now());
-            const result = await Orchestrator.callLLM({
-                preferredEngine: c.assignee?.engine || 'anthropic',
-                systemPrompt:    sosHeader ? (sosHeader + '\n\n---\n\n' + ctx.systemPrompt) : ctx.systemPrompt,
-                userPrompt:      buildExecutionPrompt({ ...wo, content: c }),
-                responseFormat:  'text',
-                temperature:     0.3,
-            });
-
-            const aiOutput = (typeof result.content === 'string')
-                ? result.content
-                : (result.content?.raw || JSON.stringify(result.content, null, 2));
-            const tokens = result.telemetry?.tokens || {};
-            const latencyMs = result.telemetry?.latencyMs || (Date.now() - startedAt);
+            // v155 · escalation chain 5 providers (com Sprint via runSprintItem) ·
+            // robustesa · si Anthropic té credit baix · automàticament salta a
+            // OpenAI → Gemini → DeepSeek → Minimax. Fallback final · Orchestrator
+            // legacy directe (per a edge cases de runEscalation no disponible).
+            const systemPromptCombined = sosHeader ? (sosHeader + '\n\n---\n\n' + ctx.systemPrompt) : ctx.systemPrompt;
+            const userPrompt = buildExecutionPrompt({ ...wo, content: c });
+            let aiOutput = '', tokens = {}, latencyMs = 0, attempts = null, modelKey = null;
+            try {
+                const { generateWithProvider } = await import('../core/aiProviderService.js');
+                const { runEscalation }        = await import('../core/aiRouterService.js');
+                const generate = (mk) => generateWithProvider(mk, {
+                    systemPrompt:    systemPromptCombined,
+                    userPrompt,
+                    maxOutputTokens: 1800,
+                    temperature:     0.3,
+                });
+                const r = await runEscalation({
+                    taskKind:         'creative-narrative',   // mateixa que Sprint draft
+                    generate,
+                    preferredProvider: c.assignee?.engine || null,
+                });
+                aiOutput = r.output?.text || '';
+                tokens   = { prompt_tokens: r.output?.usage?.inputTokens || 0, completion_tokens: r.output?.usage?.outputTokens || 0 };
+                latencyMs = Date.now() - startedAt;
+                attempts = r.attempts || null;
+                modelKey = r.modelKey || r.output?.modelKey || null;
+            } catch (escErr) {
+                // Fallback · si runEscalation no disponible (cas edge) · usa Orchestrator legacy
+                console.warn('[kanban] runEscalation failed · fallback Orchestrator · ' + (escErr?.message || ''));
+                const { Orchestrator } = await import('../core/Orchestrator.js?v=' + Date.now());
+                const result = await Orchestrator.callLLM({
+                    preferredEngine: c.assignee?.engine || 'anthropic',
+                    systemPrompt:    systemPromptCombined,
+                    userPrompt,
+                    responseFormat:  'text',
+                    temperature:     0.3,
+                });
+                aiOutput = (typeof result.content === 'string')
+                    ? result.content
+                    : (result.content?.raw || JSON.stringify(result.content, null, 2));
+                tokens = result.telemetry?.tokens || {};
+                latencyMs = result.telemetry?.latencyMs || (Date.now() - startedAt);
+            }
 
             // Actualizar WO con tokens y output. status='done' (lista para aprobar).
+            // v155 · trace escalation · aiAttempts + aiModelKey · UX failover visible
             const updated = {
                 ...wo,
                 content: {
@@ -548,6 +659,8 @@ export default class KanbanView {
                     actualHours: Math.max(0, latencyMs / 3600000),  // h equiv (anecdótico)
                     aiLatencyMs: latencyMs,
                     aiSources: ctx.sources,
+                    aiAttempts: attempts,                            // v155 · failover trace
+                    aiModelKey: modelKey,                            // v155 · model real que ha respost
                     status:    'done',
                 },
             };
