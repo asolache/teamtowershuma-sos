@@ -23,6 +23,7 @@ import { buildAiCallbacks } from '../core/aiDrivenCreationAdapter.js';
 import { loadIndex } from '../core/knowledgeIndexService.js';
 import { toast } from '../core/uxComponents.js';
 import { runExpertChain, CHAIN_PHASES } from '../core/expertChainOrchestrator.js';
+import { renderSubmenuTabs, bindSubmenuTabs } from '../ui/SubmenuTabs.js';
 
 const CASTELL_ORDER = ['pom_de_dalt', 'tronc', 'pinya', 'laterals', 'mans', 'baixos'];
 const CASTELL_LABEL = {
@@ -73,7 +74,16 @@ export default class CreateLiveView {
             return;
         }
 
-        // Tab switching
+        // v151 · canonical SubmenuTabs · re-render quan canvia tab preview
+        const clMount = document.getElementById('clSubmenu');
+        if (clMount) {
+            try { this._cleanupTabs?.(); } catch (_) {}
+            this._cleanupTabs = bindSubmenuTabs(clMount, (tabId) => {
+                this._activeTab = tabId;
+                this._renderTabs();
+            }, { urlParam: 'preview' });
+        }
+        // Legacy support · data-cl-tab segueix funcionant per a links externs
         document.querySelectorAll('[data-cl-tab]').forEach(el => {
             el.addEventListener('click', () => {
                 this._activeTab = el.getAttribute('data-cl-tab');
@@ -888,12 +898,17 @@ export default class CreateLiveView {
 
             <div class="cl-split">
                 <div class="cl-preview">
-                    <div class="cl-tabbar">
-                        <button class="cl-tab active" data-cl-tab="castell">🏰 Castell <span class="cl-tab-count"></span></button>
-                        <button class="cl-tab"        data-cl-tab="mapa">📊 Mapa valor <span class="cl-tab-count"></span></button>
-                        <button class="cl-tab"        data-cl-tab="canvas">🎨 Canvas + Pitch <span class="cl-tab-count"></span></button>
-                        <button class="cl-tab"        data-cl-tab="wos">⚡ SOPs + WOs <span class="cl-tab-count"></span></button>
-                    </div>
+                    <!-- v151 · canonical SubmenuTabs · 4 preview tabs -->
+                    <div id="clSubmenu">${renderSubmenuTabs({
+                        tabs: [
+                            { id: 'castell', label: 'Castell',          icon: '🏰' },
+                            { id: 'mapa',    label: 'Mapa valor',       icon: '📊' },
+                            { id: 'canvas',  label: 'Canvas + Pitch',   icon: '🎨' },
+                            { id: 'wos',     label: 'SOPs + WOs',       icon: '⚡' },
+                        ],
+                        activeId: this._activeTab,
+                        urlParam: 'preview',
+                    })}</div>
                     <div id="clTabBody" class="cl-tab-body">
                         <div class="cl-empty-tab">— Iniciant pipeline... —</div>
                     </div>

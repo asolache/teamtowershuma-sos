@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-21T06:00 · v150 · UX simplification · resol redundància detectada per @alvaro · ProjectHubV2 · L2 submenu + preview placeholders ELIMINATS (eren només link a vista global · cosa redundant) · ara pilar = grid de cards · click directe = navegació · -1 barra horizontal · -1 click al destí · WalletV2 + AccountingV2 · ctx-bar fusionada amb submenu (1 fila enlloc de 2) · tanca wo-project-hub-ia-aligned definitivament · 26 asserts v150';
+const BUILD_STAMP = '2026-05-21T08:00 · v151 · AUDIT pantalles + 5 migracions a SubmenuTabs canonical · 7 vistes ja canonical + 5 migrades · SettingsV2 (7 tabs · api-keys/theme/ai/payments/permaweb/manifesto/backup) · Opportunities (7 tabs · profiles/projects/wos/market/workshops/cvnodals/users) · CreateLive (4 preview tabs · castell/mapa/canvas/wos) · Notes (CAPTURE_TYPES amb count badges) · MobileMockup (4 screens · home/wo/wallet/activity) · backwards-compat preservat (display:none o handlers paral·lels) · pattern UX 100% consistent cross-vistes · doc audit docs/ux/v151-submenu-pattern-audit.md · 34 asserts';
 
 export default class DesignSystemView {
 

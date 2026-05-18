@@ -11,8 +11,9 @@
 // =============================================================================
 
 import { KB } from '../core/kb.js';
+import { renderSubmenuTabs, bindSubmenuTabs } from '../ui/SubmenuTabs.js';
 
-const TPL_VERSION = 'notes-v1.0';
+const TPL_VERSION = 'notes-v1.1-canonical';
 
 const CAPTURE_TYPES = Object.freeze([
     { id: 'note',    icon: '📝', label: 'Notes',     color: '#a8b2ff' },
@@ -45,6 +46,16 @@ export default class NotesView {
     }
 
     async afterRender() {
+        // v151 · canonical SubmenuTabs · canviar type filter sense recarregar
+        const mount = document.getElementById('ntsSubmenu');
+        if (mount) {
+            try { this._cleanupTabs?.(); } catch (_) {}
+            this._cleanupTabs = bindSubmenuTabs(mount, (typeId) => {
+                if (!CAPTURE_TYPES.some(c => c.id === typeId)) return;
+                this._activeFilter = typeId;
+                this.render();
+            }, { urlParam: 'type' });
+        }
         document.querySelectorAll('[data-action="evolve-to"]').forEach(btn => {
             btn.addEventListener('click', (e) => this._evolveTo(e.currentTarget));
         });
@@ -52,6 +63,8 @@ export default class NotesView {
             btn.addEventListener('click', (e) => this._deleteNote(e.currentTarget));
         });
     }
+
+    destroy() { try { this._cleanupTabs?.(); } catch (_) {} }
 
     async render() {
         const app = (typeof document !== 'undefined') ? document.getElementById('app') : null;
@@ -105,7 +118,18 @@ export default class NotesView {
                     <p>Tot el que has capturat amb el FAB (➕ flotant). Pots evolucionar qualsevol nota a <strong>projecte</strong>, <strong>work order</strong> o <strong>deliverable</strong> · o eliminar-la si ja no serveix.</p>
                 </div>
 
-                <div class="nts-tabs" role="tablist">
+                <!-- v151 · canonical SubmenuTabs · per CAPTURE_TYPES amb count badges -->
+                <div id="ntsSubmenu">${renderSubmenuTabs({
+                    tabs: CAPTURE_TYPES.map(c => ({
+                        id: c.id,
+                        label: c.label + ' (' + ((byType[c.id] || []).length) + ')',
+                        icon: c.icon,
+                    })),
+                    activeId: active.id,
+                    urlParam: 'type',
+                })}</div>
+                <!-- Legacy markup mantingut per compat enllaços externs (oculta amb display:none) -->
+                <div class="nts-tabs" role="tablist" style="display:none;">
                     ${CAPTURE_TYPES.map(c => {
                         const cnt = (byType[c.id] || []).length;
                         const isActive = c.id === active.id;
