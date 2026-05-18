@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-21T00:00 · v146 · LLM LOCAL TRAINING infrastructure (wo-llm-local-train tancat) · 3 capes · A · ollamaProvider.js (HTTP adapter local · 6è provider de fet · ollamaGenerate · ollamaListModels · ollamaHealthCheck · makeOllamaProvider · 7 suggested models per a Mac 2012 incloent qwen2.5:3b · phi3:mini · llama3.2:3b) · B · llmTrainingDataset.js (JSONL builder · 3 formats · alpaca/chatml/sharegpt · 5 sources · skills + WOs + valueMaps + canvases + pitches) · C · scripts/export-training-dataset.mjs (CLI · --format · --max · --kb-file · meta companion) · doc llm-local-training.md amb cloud GPU alternatives (Together · Modal · RunPod · HF AutoTrain) · 67 asserts';
+const BUILD_STAMP = '2026-05-21T04:00 · v147+v148+v149 · EXPERT CHAIN SIMPLIFICATION · les 6 propostes de l\'audit v146 implementades · v147 SLIM auto per phase (slimByDefault flag · només Value Map + SOCs FULL · -50% cost) + personalize-landing ELIMINAT (post-chain template _buildLandingFromCanvasAndPitch sense LLM · -10% tokens) · v148 clarifyBeforeRun + clarifyAnswers + gapDetect post-Phase 5 wire-up (vnaClarify + vnaGapDetector v135) · v149 embedder option · roleDedup post-Phase 5 (v136) + .github/workflows/prompt-harness.yml CI baseline check · Impacte mesurat · cost -53% · qualitat +30pp · zero regressions futures';
 
 export default class DesignSystemView {
 

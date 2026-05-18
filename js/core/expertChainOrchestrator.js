@@ -34,15 +34,19 @@ export const EXPERT_CHAIN_VERSION = 'v1.0';
 const { _parseJsonSafe } = adapterHelpers;
 
 // Ordre canonical de les 8 fases · KEY constant per a tests + emit
+// v147 · per-phase slim defaults · només crítiques requereixen FULL (raonament
+// estructural i contracte VNA estricte) · resta SLIM (43-73% reducció tokens).
+// Veure docs/audit-creation-prompts-v146.md · proposta B.2.
+// v147 · personalize-landing ELIMINAT · redundant amb canvas+pitch · landing
+// es genera post-chain via template (sense LLM) · proposta B.1.
 export const CHAIN_PHASES = Object.freeze([
-    { id: 'define-product-service',       skipKey: 'product',       taskKind: 'define-product-service' },
-    { id: 'personalize-canvas',           skipKey: 'canvas',        taskKind: 'personalize-canvas' },
-    { id: 'personalize-pitch',            skipKey: 'pitch',         taskKind: 'personalize-pitch' },
-    { id: 'personalize-landing',          skipKey: 'landing',       taskKind: 'personalize-landing' },
-    { id: 'design-value-map-rich',        skipKey: 'valueMap',      taskKind: 'design-value-map-rich' },
-    { id: 'generate-socs-from-value-map', skipKey: 'socs',          taskKind: 'generate-socs-from-value-map' },
-    { id: 'generate-sops-with-skills',    skipKey: 'sops',          taskKind: 'generate-sops-with-skills',   perItem: 'socs' },
-    { id: 'generate-wos-from-sop',        skipKey: 'wos',           taskKind: 'generate-wos-from-sop',       perItem: 'sops' },
+    { id: 'define-product-service',       skipKey: 'product',       taskKind: 'define-product-service',       slimByDefault: true  },
+    { id: 'personalize-canvas',           skipKey: 'canvas',        taskKind: 'personalize-canvas',           slimByDefault: true  },
+    { id: 'personalize-pitch',            skipKey: 'pitch',         taskKind: 'personalize-pitch',            slimByDefault: true  },
+    { id: 'design-value-map-rich',        skipKey: 'valueMap',      taskKind: 'design-value-map-rich',        slimByDefault: false },   // FULL · raonament VNA profund
+    { id: 'generate-socs-from-value-map', skipKey: 'socs',          taskKind: 'generate-socs-from-value-map', slimByDefault: false },   // FULL · estructura SOCs
+    { id: 'generate-sops-with-skills',    skipKey: 'sops',          taskKind: 'generate-sops-with-skills',    slimByDefault: true, perItem: 'socs' },
+    { id: 'generate-wos-from-sop',        skipKey: 'wos',           taskKind: 'generate-wos-from-sop',        slimByDefault: true, perItem: 'sops' },
 ]);
 
 // _costFromUsage · simple · USD * 0.92 ≈ EUR
@@ -144,18 +148,52 @@ export async function runExpertChain({
     skip = {},
     maxCostEur = 1.0,
     onEvent = null,
-    // v132c · slim mode · usa SYSTEM_BASE_SLIM (43% menys tokens) ·
-    // qualityThreshold · si scoreOutput<X · refà amb prompt FULL (escalation per qualitat)
-    slim = false,
+    // v147 · slim mode · 'auto' = per-phase slimByDefault (recomanat · -50% cost) ·
+    // true = SLIM globalment · false = FULL globalment (legacy)
+    slim = 'auto',
     qualityThreshold = 70,
     // v132c · mode completar · si context.existingMap té roles/transactions ·
     // el prompt diu "enrich aquest mapa, no regeneris des de zero"
     existingMap = null,
+    // v148 · pre-thinking clarify · si true · crida vnaClarify ABANS de la cadena
+    // i merge respostes (clarifyAnswers) al context per a reduir ambigüitat
+    clarifyBeforeRun = false,
+    clarifyAnswers = null,         // [{ id, text, answer }] · pre-respostes (si UI les ha demanat)
+    // v148 · gap detection post-Phase 5 · auto · resol "futbol sense scout" definitiu
+    gapDetect = true,
+    // v149 · role dedup · si embedder injectat · fusiona rols semànticament similars
+    embedder = null,
+    dedupThreshold = 0.85,
 } = {}) {
     const t0 = Date.now();
     // v132c · injecta existingMap al context perquè phase 5 el rebi
     if (existingMap && (existingMap.roles?.length || existingMap.transactions?.length)) {
         context = { ...context, existingMap };
+    }
+
+    // v148 · pre-thinking · si clarifyBeforeRun · resol ambigüitat description
+    // Cas 1 · clarifyAnswers passat per UI · merge directe (l'usuari ja ha respost)
+    // Cas 2 · clarifyBeforeRun=true sense answers · genera questions ara (raon · si
+    //         el caller vol fer-ho out-of-band · passar clarifyBeforeRun=false +
+    //         clarifyAnswers post-respost)
+    if (Array.isArray(clarifyAnswers) && clarifyAnswers.length > 0) {
+        try {
+            const { enrichContextWithAnswers } = await import('./vnaClarify.js');
+            context = enrichContextWithAnswers(context, clarifyAnswers);
+        } catch (_) {}
+    } else if (clarifyBeforeRun && typeof generateWithProvider === 'function') {
+        try {
+            const { vnaClarify } = await import('./vnaClarify.js');
+            const clarifyProvider = async (_m, opts) => generateWithProvider('auto-small', opts);
+            const r = await vnaClarify({ context, provider: clarifyProvider });
+            if (r.ok && r.questions?.length > 0) {
+                // Emetem questions al onEvent · el caller decideix com gestionar-les
+                // (mostrar UI · saltar · usar com a hints). Continuem sense respostes.
+                if (typeof onEvent === 'function') {
+                    try { onEvent({ step: 'clarify', status: 'questions', questions: r.questions, usage: r.usage }); } catch (_) {}
+                }
+            }
+        } catch (_) {}
     }
     const emit = (step, status, payload = {}) => {
         if (typeof onEvent === 'function') { try { onEvent({ step, status, ...payload }); } catch (_) {} }
@@ -260,19 +298,63 @@ export async function runExpertChain({
         }
 
         // Single-call phases (1-6)
-        // v132c · slim + qualityThreshold només aplicat a design-value-map-rich (fase 5)
-        // que és la fase pivotal · les altres fases sempre full per evitar regressions
-        const useSlim = slim && phase.id === 'design-value-map-rich';
-        const usedThreshold = useSlim ? qualityThreshold : 0;
+        // v147 · slim per phase · 'auto' = phase.slimByDefault (default · -50% cost) ·
+        // true|false = override global (legacy compat)
+        const useSlim = slim === 'auto' ? !!phase.slimByDefault
+                      : slim === true   ? true
+                      : false;
+        // qualityThreshold només actiu a design-value-map-rich (la fase pivotal)
+        const usedThreshold = phase.id === 'design-value-map-rich' ? qualityThreshold : 0;
         try {
             const r = await _runSingleTask({ taskKind: phase.taskKind, context: phaseCtx, generateWithProvider, preferredProvider, emit, slim: useSlim, qualityThreshold: usedThreshold });
             out.costTotal += r.cost;
             if (r.parsed) _applyPhaseOutput(phase, out, r.parsed);
             out.phasesRun.push(phase.id);
+
+            // v148 · post-Phase 5 · gap detection + multi-turn fill (resol "futbol sense scout")
+            if (phase.id === 'design-value-map-rich' && gapDetect && out.valueMap) {
+                try {
+                    const { detectGaps, runGapFillTurn } = await import('./vnaGapDetector.js');
+                    const gapResult = detectGaps({
+                        map:             out.valueMap,
+                        domainDetection: context.domainDetection,
+                        sectorContext:   context.sectorAgent ? { expected_role_kinds: context.sectorAgent.rolesInjectable } : null,
+                    });
+                    if (!gapResult.hasAll && gapResult.gaps.length > 0) {
+                        emit('phase', 'info', { phase: phase.id, gapsDetected: gapResult.gaps.length });
+                        // Provider adapter compatible amb runGapFillTurn signature
+                        const gapProvider = async (_m, opts) => generateWithProvider('auto-small', opts);
+                        const fillResult = await runGapFillTurn({ map: out.valueMap, gaps: gapResult.gaps, provider: gapProvider });
+                        if (fillResult.ok && !fillResult.noop) {
+                            out.valueMap = fillResult.updatedMap;
+                            emit('phase', 'info', { phase: phase.id, gapsFilled: fillResult.added?.roles?.length || 0, addedRoles: fillResult.added?.roles?.length || 0 });
+                        }
+                    }
+                } catch (e) { /* silent · gap detection is best-effort */ }
+            }
+
+            // v149 · post-Phase 5 · roleDedup si embedder injectat (Ollama local · OpenAI · etc)
+            if (phase.id === 'design-value-map-rich' && typeof embedder === 'function' && out.valueMap) {
+                try {
+                    const { dedupRoles } = await import('./roleDedup.js');
+                    const dedupResult = await dedupRoles({ map: out.valueMap, embedder, threshold: dedupThreshold });
+                    if (dedupResult.ok && !dedupResult.noChanges) {
+                        out.valueMap = dedupResult.updatedMap;
+                        emit('phase', 'info', { phase: phase.id, dedupMerged: dedupResult.merged?.length || 0, rolesBefore: dedupResult.rolesBefore, rolesAfter: dedupResult.rolesAfter });
+                    }
+                } catch (e) { /* silent · dedup is best-effort */ }
+            }
         } catch (e) {
             out.phaseErrors.push({ phase: phase.id, error: e?.message });
             emit('phase', 'error', { phase: phase.id, error: e?.message });
         }
+    }
+
+    // v147 · post-chain · landing template generator (no LLM · usa canvas+pitch)
+    if (!skip.landing && (out.canvas || out.pitch)) {
+        out.landing = _buildLandingFromCanvasAndPitch({ canvas: out.canvas, pitch: out.pitch, name: context.name });
+        out.phasesRun.push('landing-template');
+        emit('phase', 'done', { phase: 'landing-template', generated: 'from-canvas-pitch' });
     }
 
     emit('finish', 'done', { ms: Date.now() - t0, cost: out.costTotal, phases: out.phasesRun.length });
@@ -280,16 +362,41 @@ export async function runExpertChain({
     return out;
 }
 
+// v147 · landing template · canvas + pitch → landing object (sense LLM)
+// Substitueix `personalize-landing` (1 fase + ~1700 tokens estalviats)
+function _buildLandingFromCanvasAndPitch({ canvas = null, pitch = null, name = '' } = {}) {
+    return {
+        hero: {
+            title:       name || 'Projecte',
+            tagline:     pitch?.solution || canvas?.value_proposition || '',
+            description: canvas?.vision || canvas?.mission || pitch?.problem || '',
+        },
+        problem:  pitch?.problem  || null,
+        solution: pitch?.solution || null,
+        whyNow:   pitch?.why_now  || pitch?.whyNow || null,
+        traction: pitch?.traction || null,
+        canvas: canvas ? {
+            vision:           canvas.vision,
+            mission:          canvas.mission,
+            values:           canvas.values,
+            valueProposition: canvas.value_proposition || canvas.valueProposition,
+            stakeholders:     canvas.stakeholders,
+        } : null,
+        cta: [
+            { label: '📧 Contacta',         action: 'contact' },
+            { label: '📜 Signa un pacte',    action: 'pact' },
+            { label: '🧠 Explora KB',        action: 'kb' },
+        ],
+        generatedBy: 'template-canvas-pitch-v147',
+    };
+}
+
 // _buildPhaseContext · construeix el context de cada fase a partir dels outputs previs
 function _buildPhaseContext(phase, baseCtx, out) {
     const c = { ...baseCtx };
     // Fase 2+ · canvas pot rebre productService (encara que opcional)
     if (out.productService) c.product_service = out.productService;
-    // Fase 4 · landing rep canvas + pitch
-    if (phase.id === 'personalize-landing') {
-        c.canvas = out.canvas;
-        c.pitch = out.pitch;
-    }
+    // v147 · personalize-landing ELIMINAT · ara post-chain template (no LLM)
     // Fase 5 · value-map-rich rep canvas + pitch + domainDetection (v126)
     if (phase.id === 'design-value-map-rich') {
         c.canvas = out.canvas;

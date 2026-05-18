@@ -1,0 +1,54 @@
+name: Prompt quality harness · regression check (v149)
+
+# Auto-run el harness quan un PR canvia fitxers que afecten la generació
+# del mapa de valor. Si delta_score > -3pp o delta_cost > +10% · bloca merge
+# i comenta el delta al PR.
+#
+# Variant base · DRY-RUN (sense API key) · valida pipeline + estructura.
+# Per a baseline real amb LLM · cal afegir ANTHROPIC_API_KEY com a secret
+# (repo settings · ja preparat al codi via env ANTHROPIC_API_KEY).
+
+on:
+    pull_request:
+        paths:
+            - 'js/core/vnaExpertPrompts.js'
+            - 'js/core/domainDetector.js'
+            - 'js/core/vnaQuickSuggest.js'
+            - 'js/core/vnaClarify.js'
+            - 'js/core/vnaGapDetector.js'
+            - 'js/core/roleDedup.js'
+            - 'knowledge/sectors/*.md'
+            - 'docs/benchmarks/baseline.json'
+
+jobs:
+    harness:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout PR
+              uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+
+            - name: Run quality harness (dry-run smoke)
+              run: |
+                  node scripts/run-vna-benchmark.mjs --harness --dry-run --limit 5
+
+            - name: Run quality harness (live · if API key configured)
+              if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+              env:
+                  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+              run: |
+                  # Exit code 2 si regression vs baseline · GHA bloqueja merge
+                  node scripts/run-vna-benchmark.mjs --harness --limit 5 \
+                      --baseline docs/benchmarks/baseline.json
+
+            - name: Upload harness report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: harness-report-${{ github.run_id }}
+                  path: docs/benchmarks/harness-*.md
+                  retention-days: 30

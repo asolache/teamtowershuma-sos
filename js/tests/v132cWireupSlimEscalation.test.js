@@ -47,8 +47,10 @@ ok('B · injecta existingMap al context si present',               /context = \{
 ok('B · _runSingleTask accepta slim + qualityThreshold',           /async function _runSingleTask\([^)]*slim = false[^)]*qualityThreshold = 0/.test(orchSrc));
 ok('B · escalation per qualitat · si score < threshold refà amb FULL',
    orchSrc.includes('quality-below-threshold') && orchSrc.includes('escalatedToFull = true'));
-ok('B · slim només aplica a design-value-map-rich (no a les 7 altres fases)',
-   orchSrc.includes("slim && phase.id === 'design-value-map-rich'"));
+// v147 · slim moved to per-phase slimByDefault flag · escalation rubric segueix
+// només per a design-value-map-rich (la fase pivotal)
+ok('B · qualityThreshold només actiu a design-value-map-rich (rubric escalation)',
+   orchSrc.includes("phase.id === 'design-value-map-rich' ? qualityThreshold : 0"));
 ok('B · phase 5 builder injecta existingMap si baseCtx.existingMap té roles',
    /baseCtx\.existingMap && \(baseCtx\.existingMap\.roles\?\.length \|\| baseCtx\.existingMap\.transactions\?\.length\)/.test(orchSrc));
 
