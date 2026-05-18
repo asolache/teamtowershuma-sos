@@ -120,6 +120,11 @@ export default class HomeView {
             </div>
 
             <div class="home-actions">
+                <a href="/create" data-link class="action-card" style="background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(99,102,241,0.12));border-color:var(--accent-indigo);">
+                    <div class="icon">✨</div>
+                    <div class="label">Crear projecte</div>
+                    <div class="sublabel">Entrada · IA-driven</div>
+                </a>
                 <a href="/dashboard" data-link class="action-card">
                     <div class="icon">📊</div>
                     <div class="label">Dashboard</div>
@@ -128,17 +133,12 @@ export default class HomeView {
                 <a href="/team" data-link class="action-card">
                     <div class="icon">👥</div>
                     <div class="label">Team</div>
-                    <div class="sublabel">Padrón · VNA</div>
+                    <div class="sublabel">RBAC · audit</div>
                 </a>
-                <a href="/map" data-link class="action-card">
-                    <div class="icon">🕸️</div>
-                    <div class="label">Value Map</div>
-                    <div class="sublabel">Red de valor</div>
-                </a>
-                <a href="/paper" data-link class="action-card">
-                    <div class="icon">📄</div>
-                    <div class="label">Paper</div>
-                    <div class="sublabel">Chat · GTD</div>
+                <a href="/learn" data-link class="action-card">
+                    <div class="icon">📚</div>
+                    <div class="label">Aprendre</div>
+                    <div class="sublabel">Hub coneixement</div>
                 </a>
                 <a href="/settings" data-link class="action-card">
                     <div class="icon">⚙️</div>

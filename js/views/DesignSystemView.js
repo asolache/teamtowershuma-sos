@@ -32,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-21T06:00 · v150 · UX simplification · resol redundància detectada per @alvaro · ProjectHubV2 · L2 submenu + preview placeholders ELIMINATS (eren només link a vista global · cosa redundant) · ara pilar = grid de cards · click directe = navegació · -1 barra horizontal · -1 click al destí · WalletV2 + AccountingV2 · ctx-bar fusionada amb submenu (1 fila enlloc de 2) · tanca wo-project-hub-ia-aligned definitivament · 26 asserts v150';
+const BUILD_STAMP = '2026-05-21T10:00 · v152 · UX refinement · HomeView "Crear projecte" CTA prominent substitueix Value Map redundant + Aprendre substitueix Paper legacy mort · ProjectHubV2 zone7 Knowledge net (VNA/Canvas/SOCs/Tokenomics ja viuen als pilars · ara "Continuar creant" + Pitch doc + Workshops + Market) · navService learn-skills duplicat ELIMINAT (skills canonical /skills · learn tab skills va morir v128) · doc audit fusió pantalles (4 obsoletes + 4 redundants amb LearnView tabs · 8 vistes eliminables sprint v153+) · 19 asserts';
 
 export default class DesignSystemView {
 

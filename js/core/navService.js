@@ -83,8 +83,9 @@ export const NAV_DESTINATIONS = Object.freeze([
     { id: 'learn-sectors',icon: '🏭', label: 'Sectors CNAE',    href: '/learn?tab=sectors', global: true, category: 'learn',  hint: '21 SOCs CNAE · A-T · UV · match automàtic en crear projecte' },
     { id: 'learn-mind',   icon: '🕸',  label: 'Mind-graph',      href: '/learn?tab=mind',  global: true,  category: 'learn',   hint: 'Mind-as-Graph · stats per tipus + accés vista galàctica D3' },
     { id: 'learn-tags',   icon: '🏷', label: 'Tag cloud',       href: '/learn?tab=tags',  global: true,  category: 'learn',   hint: 'Folksonomia · etiquetes knowledge/ + KB · cloud freqüencial' },
-    { id: 'learn-skills', icon: '🤲', label: 'Skills',          href: '/learn?tab=skills', global: true, category: 'learn',  hint: '90 skills · 5 dominis · entrenament LLM local + plantilles offline + permaweb-shared (v120)' },
-    { id: 'skills',       icon: '📋', label: 'Catàleg skills',  href: '/skills',          global: true,  category: 'learn',   hint: '90 skills · 5 dominis · 3 tiers · 12 tipus de projecte (vista completa)' },
+    // v152 · learn-skills ELIMINAT · duplicat de 'skills' (/skills canonical) ·
+    // a més la tab "skills" del LearnView va ser eliminada a v128.
+    { id: 'skills',       icon: '🤲', label: 'Skills',          href: '/skills',          global: true,  category: 'learn',   hint: 'Catàleg complet · 90 skills · 5 dominis · 3 tiers · 12 tipus projecte' },
     { id: 'path',         icon: '🧠', label: 'Historial neural',href: '/path',            global: true,  category: 'learn',   hint: 'Path nodal cronològic · context bundles per a IA' },
     { id: 'notes',        icon: '📝', label: 'Notes captures',  href: '/notes',           global: true,  category: 'learn',   hint: 'Captures FAB · evolve a projecte / WO / deliverable' },
     { id: 'prompts-debug', icon: '🔍', label: 'Prompts debug',  href: '/prompts-debug',  global: true,  category: 'learn',   hint: 'Veu els prompts EXACTES que la IA reb per cada task · transparència total · context editable' },
