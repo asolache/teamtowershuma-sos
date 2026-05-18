@@ -185,13 +185,29 @@ export default class PromptsDebugView {
               sector: 'R' },
         ];
 
-        out.innerHTML = '<span style="color:#22c55e;">⏳ Anchoring Lab · ' + (PROJECTS.length * PROFILES.length) + ' crides LLM en paral·lel… (pot trigar 30-90s)</span>';
+        const preferredEngine = (document.getElementById('pdAnchoringProvider')?.value) || 'anthropic';
+        out.innerHTML = '<span style="color:#22c55e;">⏳ Anchoring Lab · ' + (PROJECTS.length * PROFILES.length) + ' crides LLM (' + preferredEngine + ', fallback auto) · 30-90s…</span>';
 
         try {
             const { quickSuggestMap } = await import('../core/vnaQuickSuggest.js');
-            const { generateWithProvider } = await import('../core/aiProviderService.js');
+            const { Orchestrator } = await import('../core/Orchestrator.js');
             const { FEW_SHOT_EXAMPLES } = await import('../core/vnaExpertPrompts.js');
             const { evaluateValueMapShape } = await import('../core/vnaShapeEvaluators.js');
+
+            // v160.1 · adaptador Orchestrator.callLLM → generateWithProvider({system,user})
+            // (igual pattern que ValueMapView._runAISuggestionQuickSuggest · usa
+            // l'auto-fallback del Orchestrator entre providers configurats)
+            const provider = async (_modelKey, opts) => {
+                const result = await Orchestrator.callLLM({
+                    preferredEngine,
+                    systemPrompt: opts.systemPrompt,
+                    userPrompt:   opts.userPrompt,
+                    responseFormat: 'json_object',
+                    temperature:  opts.temperature ?? 0.4,
+                });
+                const text = typeof result?.content === 'string' ? result.content : JSON.stringify(result?.content || {});
+                return { text, usage: result?.usage || null };
+            };
 
             // Build set of fewshot literal role names (lowercased) for overlap metric
             const fewShotRoleNames = new Set();
@@ -215,7 +231,7 @@ export default class PromptsDebugView {
                                 context: { name: proj.name, description: proj.description, sector: proj.sector, vna_zoom: 'meso' },
                                 slim: true,
                                 qualityThreshold: 60,
-                                generateWithProvider,
+                                generateWithProvider: provider,
                                 contextProfile: profile,
                             });
                             return { proj: proj.id, profile, ok: r.ok, ms: Date.now() - t0, map: r.map, score: r.score, tokens: r.tokens, escalated: r.escalatedToFull, error: r.error };
@@ -314,7 +330,23 @@ export default class PromptsDebugView {
                 return `<details style="margin-top:6px;"><summary style="cursor:pointer;color:var(--text-secondary);">${this._esc(proj.name)}</summary><ul style="margin:4px 0 0 14px;padding:0;list-style:disc;">${rows}</ul></details>`;
             }).join('');
 
-            out.innerHTML = metricsHtml + `<div style="margin-top:10px;">${detailsHtml}</div>`;
+            // v160.1 · detecció d'errors recurrents · ajuda diagnòstic
+            const errors = results.filter(r => !r.ok).map(r => r.error || '').join(' · ');
+            let warningBanner = '';
+            if (errors) {
+                const isBilling = /credit|quota|insufficient|402|429|billing|exceeded|balance/i.test(errors);
+                const isAuth    = /401|403|api[\s_-]?key|unauthor|forbidden/i.test(errors);
+                const isModelKey= /modelKey unknown|provider desconegut/i.test(errors);
+                let hint = '';
+                if (isBilling)   hint = '💳 Sembla problema de saldo/quota. Prova un altre provider al dropdown.';
+                else if (isAuth) hint = '🔑 API key no configurada o invàlida. Configura-la a /settings.';
+                else if (isModelKey) hint = '⚠ ModelKey error · reporta bug.';
+                else if (errors) hint = 'ℹ Veure detalls per projecte més avall.';
+                warningBanner = `<div style="background:rgba(239,68,68,0.1);border-left:3px solid var(--accent-red);padding:8px 10px;margin-top:8px;border-radius:4px;font-size:0.78rem;">
+                    ${hint} <code style="color:var(--text-muted);">${this._esc(errors.slice(0, 120))}</code>
+                </div>`;
+            }
+            out.innerHTML = warningBanner + metricsHtml + `<div style="margin-top:10px;">${detailsHtml}</div>`;
             // Store last results for the user to inspect via console
             try { window.__sos_anchoring_lab = { results, metrics: { fewshotOverlap: PROFILES.map(p => ({ p, v: fewshotOverlapPct(p) })), diversity: PROFILES.map(p => ({ p, v: crossProjectDiversity(p) })), shape: PROFILES.map(p => ({ p, v: avgShapeScore(p) })) } }; } catch (_) {}
         } catch (e) {
@@ -583,6 +615,16 @@ export default class PromptsDebugView {
 
                     <h3 style="margin-top:1rem;color:#22c55e;">🧬 VNA Anchoring Lab (v160)</h3>
                     <p style="font-size:0.78rem;color:var(--text-muted);">Compara 3 perfils de context · sos-current vs verna-minimal vs verna-guided · 5 projectes diversos · mètriques d'anchoring (fewshot overlap · cross-project diversity).</p>
+                    <div class="pd-ctx-field">
+                        <label>Provider preferit (auto fallback)</label>
+                        <select id="pdAnchoringProvider">
+                            <option value="anthropic">anthropic (Claude)</option>
+                            <option value="openai">openai (GPT)</option>
+                            <option value="gemini">gemini (Google)</option>
+                            <option value="deepseek">deepseek</option>
+                            <option value="minimax">minimax</option>
+                        </select>
+                    </div>
                     <button id="pdAnchoringLabRun" class="pd-reset" style="background:#22c55e;color:#fff;border-color:#22c55e;margin-top:6px;">🧬 Run Anchoring A/B (LLM · 5 projectes × 3 perfils)</button>
                     <div id="pdAnchoringResult" style="margin-top:8px;font-size:0.78rem;"></div>
                 </aside>
