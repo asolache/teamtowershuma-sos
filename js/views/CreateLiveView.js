@@ -287,6 +287,8 @@ export default class CreateLiveView {
                     phases_run: out.phasesRun,
                     phases_skipped: out.phasesSkipped,
                     phase_errors: out.phaseErrors,
+                    // v159 · canonical cycle metadata · auditable
+                    value_map_cycle: out.valueMapCycle || null,
                 },
                 created_at: new Date().toISOString(),
             };

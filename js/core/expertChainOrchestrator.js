@@ -164,6 +164,10 @@ export async function runExpertChain({
     // v149 · role dedup · si embedder injectat · fusiona rols semànticament similars
     embedder = null,
     dedupThreshold = 0.85,
+    // v159 · canonical cycle · substitueix fases 5+6+7 per runValueMapCycle
+    // (slim-first + shape eval booleà per fase · gating automàtic). Default ON
+    // perquè és estrictament millor que el path legacy (qualitat + cost).
+    useValueMapCycle = true,
 } = {}) {
     const t0 = Date.now();
     // v132c · injecta existingMap al context perquè phase 5 el rebi
@@ -251,7 +255,11 @@ export async function runExpertChain({
         phasesRun: [], phasesSkipped: [], phaseErrors: [],
     };
 
-    // Phase 1-5 · sequencial (cada un usa l'output de l'anterior)
+    // v159 · canonical cycle flag · si actiu, les fases 5+6+7 es substitueixen
+    // per una sola crida a runValueMapCycle (shape eval booleà gating per fase).
+    let valueMapCycleRan = false;
+
+    // Phase 1-8 · sequencial (cada un usa l'output de l'anterior)
     for (const phase of CHAIN_PHASES) {
         if (out.costTotal >= maxCostEur) {
             emit('budget-exceeded', 'stop', { spent: out.costTotal, limit: maxCostEur });
@@ -263,10 +271,84 @@ export async function runExpertChain({
             continue;
         }
 
+        // v159 · si el cycle ja ha corregut, salta phases 6+7 (delegades al cycle)
+        if (valueMapCycleRan && (phase.id === 'generate-socs-from-value-map' || phase.id === 'generate-sops-with-skills')) {
+            out.phasesRun.push(phase.id + '-via-cycle-v159');
+            emit('phase', 'skip', { phase: phase.id, reason: 'handled by runValueMapCycle (v159)' });
+            continue;
+        }
+
         emit('phase', 'start', { phase: phase.id, tier: pickTier(phase.taskKind) });
 
         // Build context for this phase from out (so each phase can use prev outputs)
         const phaseCtx = _buildPhaseContext(phase, context, out);
+
+        // v159 · phase 5 intercepted by runValueMapCycle quan useValueMapCycle=true
+        if (phase.id === 'design-value-map-rich' && useValueMapCycle) {
+            try {
+                const { runValueMapCycle } = await import('./vnaQuickSuggest.js');
+                const cycleResult = await runValueMapCycle({
+                    context: phaseCtx,
+                    existingMap: phaseCtx.existingMap || null,
+                    generateWithProvider,
+                    preferredProvider,
+                    qualityThreshold: 60,
+                    onProgress: (p) => emit('phase', 'cycle-progress', { phase: 'value-map-cycle', ...p }),
+                });
+                if (cycleResult.map?.data)  out.valueMap = cycleResult.map.data;
+                if (cycleResult.socs?.data) out.socs     = cycleResult.socs.data;
+                if (cycleResult.socs?.presentationHints) out.presentationHints = cycleResult.socs.presentationHints;
+                if (cycleResult.sops?.data) out.sops     = cycleResult.sops.data.flat();
+                valueMapCycleRan = true;
+                out.phasesRun.push('value-map-cycle');
+                out.valueMapCycle = {
+                    degraded:  cycleResult.degraded,
+                    ms:        cycleResult.ms,
+                    mapScore:  cycleResult.map?.score  || 0,
+                    socsScore: cycleResult.socs?.score || 0,
+                    sopsScore: cycleResult.sops?.score || 0,
+                    mapIssues:  cycleResult.map?.issues  || [],
+                    socsIssues: cycleResult.socs?.issues || [],
+                    sopsIssues: cycleResult.sops?.issues || [],
+                };
+                emit('phase', 'done', { phase: 'value-map-cycle', degraded: cycleResult.degraded, mapScore: out.valueMapCycle.mapScore, socsScore: out.valueMapCycle.socsScore, sopsScore: out.valueMapCycle.sopsScore });
+
+                // v148+v149 · gap detection + role dedup post-map (encara aplicable)
+                if (gapDetect && out.valueMap) {
+                    try {
+                        const { detectGaps, runGapFillTurn } = await import('./vnaGapDetector.js');
+                        const gapResult = detectGaps({
+                            map: out.valueMap,
+                            domainDetection: context.domainDetection,
+                            sectorContext: context.sectorAgent ? { expected_role_kinds: context.sectorAgent.rolesInjectable } : null,
+                        });
+                        if (!gapResult.hasAll && gapResult.gaps.length > 0) {
+                            const gapProvider = async (_m, opts) => generateWithProvider('auto-small', opts);
+                            const fillResult = await runGapFillTurn({ map: out.valueMap, gaps: gapResult.gaps, provider: gapProvider });
+                            if (fillResult.ok && !fillResult.noop) {
+                                out.valueMap = fillResult.updatedMap;
+                                emit('phase', 'info', { phase: 'value-map-cycle', gapsFilled: fillResult.added?.roles?.length || 0 });
+                            }
+                        }
+                    } catch (_) {}
+                }
+                if (typeof embedder === 'function' && out.valueMap) {
+                    try {
+                        const { dedupRoles } = await import('./roleDedup.js');
+                        const dedupResult = await dedupRoles({ map: out.valueMap, embedder, threshold: dedupThreshold });
+                        if (dedupResult.ok && !dedupResult.noChanges) {
+                            out.valueMap = dedupResult.updatedMap;
+                            emit('phase', 'info', { phase: 'value-map-cycle', dedupMerged: dedupResult.merged?.length || 0 });
+                        }
+                    } catch (_) {}
+                }
+                continue;
+            } catch (e) {
+                out.phaseErrors.push({ phase: 'value-map-cycle', error: e?.message });
+                emit('phase', 'error', { phase: 'value-map-cycle', error: e?.message, fallback: 'legacy' });
+                // Fall through to legacy single-task path
+            }
+        }
 
         // Per-item phases (sops · wos) · iterate over the source array
         if (phase.perItem) {
