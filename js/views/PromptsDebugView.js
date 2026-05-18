@@ -84,6 +84,8 @@ export default class PromptsDebugView {
         document.getElementById('pdAbLabRun')?.addEventListener('click', () => this._runAbLab());
         // v132f · A/B Lab live (LLM real) + dropdown de casos benchmark
         document.getElementById('pdAbLabRunLive')?.addEventListener('click', () => this._runAbLabLive());
+        // v160 · Anchoring Lab · cross-project A/B de 3 perfils de context
+        document.getElementById('pdAnchoringLabRun')?.addEventListener('click', () => this._runAnchoringLab());
         const benchSel = document.getElementById('pdBenchmarkCase');
         if (benchSel) {
             this._loadBenchmarkCases().then(() => {
@@ -155,6 +157,168 @@ export default class PromptsDebugView {
                 </div>`;
         } catch (e) {
             out.innerHTML = '<span style="color:var(--accent-red);">Error LLM · ' + this._esc(e?.message || String(e)) + ' · configura API key a /settings</span>';
+        }
+    }
+
+    // v160 · _runAnchoringLab · executa A/B cross-projecte amb 3 perfils de
+    // context (sos-current · verna-minimal · verna-guided) i 5 projectes
+    // diversos · calcula mètriques d'anchoring · taula comparativa.
+    async _runAnchoringLab() {
+        const out = document.getElementById('pdAnchoringResult');
+        if (!out) return;
+        const PROFILES  = ['sos-current', 'verna-minimal', 'verna-guided'];
+        const PROJECTS = [
+            { id: 'consultoria-ai',   name: 'Consultoria AI per a PYMES',
+              description: 'Consultoria boutique de 3 sòcies que ajuden PYMES industrials del Bages a integrar IA generativa als seus processos de venda i operacions · model SCCL · cicle MVP',
+              sector: 'M' },
+            { id: 'agro-cooperativa', name: 'Cooperativa agroecològica',
+              description: 'Cooperativa de productors agroecològics del Pirineu · 8 famílies · venda directa i caixes setmanals a Barcelona · cicle MVP en transició a validació',
+              sector: 'A' },
+            { id: 'arts-companyia',   name: 'Companyia teatre comunitari',
+              description: 'Companyia de teatre comunitari amb 12 actors no professionals que crea espectacles a partir de les històries del barri del Raval · finançament híbrid (taquilla + ajuts) · cicle validation',
+              sector: 'R' },
+            { id: 'edu-cooperativa',  name: 'Escola cooperativa de famílies',
+              description: 'Escola d\'iniciativa social on les famílies són sòcies cooperativistes · 60 alumnes 3-12 anys · pedagogia activa · 8 mestres + cuiner + administrativa · cicle scale',
+              sector: 'P' },
+            { id: 'sports-club',      name: 'Club esportiu amateur',
+              description: 'Club de futbol amateur de barri amb 4 equips formatius + 1 sènior · 60 jugadors + 8 entrenadors voluntaris · finançament quotes + petits patrocinadors · cicle mvp',
+              sector: 'R' },
+        ];
+
+        out.innerHTML = '<span style="color:#22c55e;">⏳ Anchoring Lab · ' + (PROJECTS.length * PROFILES.length) + ' crides LLM en paral·lel… (pot trigar 30-90s)</span>';
+
+        try {
+            const { quickSuggestMap } = await import('../core/vnaQuickSuggest.js');
+            const { generateWithProvider } = await import('../core/aiProviderService.js');
+            const { FEW_SHOT_EXAMPLES } = await import('../core/vnaExpertPrompts.js');
+            const { evaluateValueMapShape } = await import('../core/vnaShapeEvaluators.js');
+
+            // Build set of fewshot literal role names (lowercased) for overlap metric
+            const fewShotRoleNames = new Set();
+            Object.values(FEW_SHOT_EXAMPLES).forEach(ex => {
+                try {
+                    const parsed = JSON.parse(ex.assistantOutput);
+                    (parsed.roles || []).forEach(r => {
+                        if (r.name) fewShotRoleNames.add(String(r.name).toLowerCase());
+                        if (r.kind) fewShotRoleNames.add(String(r.kind).toLowerCase());
+                    });
+                } catch (_) {}
+            });
+
+            const tasks = [];
+            for (const proj of PROJECTS) {
+                for (const profile of PROFILES) {
+                    tasks.push((async () => {
+                        const t0 = Date.now();
+                        try {
+                            const r = await quickSuggestMap({
+                                context: { name: proj.name, description: proj.description, sector: proj.sector, vna_zoom: 'meso' },
+                                slim: true,
+                                qualityThreshold: 60,
+                                generateWithProvider,
+                                contextProfile: profile,
+                            });
+                            return { proj: proj.id, profile, ok: r.ok, ms: Date.now() - t0, map: r.map, score: r.score, tokens: r.tokens, escalated: r.escalatedToFull, error: r.error };
+                        } catch (e) {
+                            return { proj: proj.id, profile, ok: false, ms: Date.now() - t0, error: e?.message || String(e) };
+                        }
+                    })());
+                }
+            }
+            const results = await Promise.all(tasks);
+
+            // Compute metrics per profile
+            const byProfile = {};
+            PROFILES.forEach(p => { byProfile[p] = results.filter(r => r.profile === p); });
+
+            const allRoleNames = {};
+            PROFILES.forEach(p => {
+                allRoleNames[p] = new Set();
+                byProfile[p].forEach(r => {
+                    (r.map?.roles || []).forEach(role => {
+                        if (role.name) allRoleNames[p].add(String(role.name).toLowerCase());
+                    });
+                });
+            });
+
+            const fewshotOverlapPct = (profile) => {
+                const set = allRoleNames[profile];
+                if (!set.size) return 0;
+                let hits = 0;
+                set.forEach(n => { if (fewShotRoleNames.has(n)) hits++; });
+                return Math.round((hits / set.size) * 100);
+            };
+
+            const crossProjectDiversity = (profile) => {
+                const results_p = byProfile[profile].filter(r => r.ok && r.map?.roles?.length);
+                if (results_p.length < 2) return 0;
+                const totalRoles = results_p.reduce((s, r) => s + (r.map.roles?.length || 0), 0);
+                const unique = allRoleNames[profile].size;
+                return totalRoles > 0 ? Math.round((unique / totalRoles) * 100) : 0;
+            };
+
+            const avgShapeScore = (profile) => {
+                const results_p = byProfile[profile].filter(r => r.ok && r.map);
+                if (!results_p.length) return 0;
+                const scores = results_p.map(r => {
+                    try { return evaluateValueMapShape(r.map).score; } catch (_) { return 0; }
+                });
+                return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+            };
+
+            const avgTokens = (profile) => {
+                const results_p = byProfile[profile].filter(r => r.ok);
+                if (!results_p.length) return 0;
+                return Math.round(results_p.reduce((s, r) => s + (r.tokens || 0), 0) / results_p.length);
+            };
+
+            const okCount = (profile) => byProfile[profile].filter(r => r.ok).length;
+
+            // Render comparison table
+            const profileColor = { 'sos-current': '#a855f7', 'verna-minimal': '#22c55e', 'verna-guided': '#3b82f6' };
+            const metricsHtml = `
+                <div style="margin-top:10px;background:var(--bg-elevated);border-radius:6px;padding:10px;border-left:3px solid #22c55e;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+                        <thead><tr style="text-align:left;border-bottom:1px solid var(--border-default);">
+                            <th style="padding:4px;">Profile</th>
+                            <th style="padding:4px;">OK / 5</th>
+                            <th style="padding:4px;" title="% rols del output que coincideixen amb FEW_SHOT literal · LOWER = MILLOR">fewshot↓</th>
+                            <th style="padding:4px;" title="% rols únics entre els 5 projectes · HIGHER = MILLOR">diversity↑</th>
+                            <th style="padding:4px;" title="Shape eval score promig · HIGHER = MILLOR">shape↑</th>
+                            <th style="padding:4px;" title="Tokens del prompt · LOWER = més barat">tokens</th>
+                        </tr></thead>
+                        <tbody>
+                        ${PROFILES.map(p => `
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                <td style="padding:4px;color:${profileColor[p]};font-weight:600;">${p}</td>
+                                <td style="padding:4px;">${okCount(p)}/${PROJECTS.length}</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${fewshotOverlapPct(p)}%</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${crossProjectDiversity(p)}%</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${avgShapeScore(p)}</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${avgTokens(p)}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+
+            // Render per-project details (collapsed)
+            const detailsHtml = PROJECTS.map(proj => {
+                const rows = PROFILES.map(p => {
+                    const r = results.find(x => x.proj === proj.id && x.profile === p);
+                    if (!r) return '';
+                    if (!r.ok) return `<li style="color:var(--accent-red);">${p} · ❌ ${this._esc(r.error || 'failed')}</li>`;
+                    const roles = (r.map?.roles || []).map(rl => rl.name).join(' · ');
+                    return `<li><strong style="color:${profileColor[p]};">${p}</strong> · ${(r.map?.roles || []).length} rols · ${roles ? this._esc(roles.slice(0, 200)) : '(buit)'}</li>`;
+                }).join('');
+                return `<details style="margin-top:6px;"><summary style="cursor:pointer;color:var(--text-secondary);">${this._esc(proj.name)}</summary><ul style="margin:4px 0 0 14px;padding:0;list-style:disc;">${rows}</ul></details>`;
+            }).join('');
+
+            out.innerHTML = metricsHtml + `<div style="margin-top:10px;">${detailsHtml}</div>`;
+            // Store last results for the user to inspect via console
+            try { window.__sos_anchoring_lab = { results, metrics: { fewshotOverlap: PROFILES.map(p => ({ p, v: fewshotOverlapPct(p) })), diversity: PROFILES.map(p => ({ p, v: crossProjectDiversity(p) })), shape: PROFILES.map(p => ({ p, v: avgShapeScore(p) })) } }; } catch (_) {}
+        } catch (e) {
+            out.innerHTML = '<span style="color:var(--accent-red);">Anchoring Lab error · ' + this._esc(e?.message || String(e)) + ' · configura API key a /settings</span>';
         }
     }
 
@@ -416,6 +580,11 @@ export default class PromptsDebugView {
                     <button id="pdAbLabRun" class="pd-reset" style="background:var(--accent-purple);color:#fff;border-color:var(--accent-purple);">▶ Compara prompts (estàtic · sense LLM)</button>
                     <button id="pdAbLabRunLive" class="pd-reset" style="background:var(--accent-orange);color:#fff;border-color:var(--accent-orange);margin-top:6px;">⚡ Run live A/B (LLM real · necessita API key)</button>
                     <div id="pdAbLabResult" style="margin-top:8px;font-size:0.78rem;"></div>
+
+                    <h3 style="margin-top:1rem;color:#22c55e;">🧬 VNA Anchoring Lab (v160)</h3>
+                    <p style="font-size:0.78rem;color:var(--text-muted);">Compara 3 perfils de context · sos-current vs verna-minimal vs verna-guided · 5 projectes diversos · mètriques d'anchoring (fewshot overlap · cross-project diversity).</p>
+                    <button id="pdAnchoringLabRun" class="pd-reset" style="background:#22c55e;color:#fff;border-color:#22c55e;margin-top:6px;">🧬 Run Anchoring A/B (LLM · 5 projectes × 3 perfils)</button>
+                    <div id="pdAnchoringResult" style="margin-top:8px;font-size:0.78rem;"></div>
                 </aside>
 
                 <main id="pdPanel" class="pd-main">
