@@ -103,7 +103,7 @@ eq(r3.text,                'deepseek-reply',                          'C · deep
 eq(r3.usage.inputTokens,   80,                                        'C · deepseek · inputTokens');
 t(dsCap.url.includes('api.deepseek.com'),                             'C · deepseek · domain');
 t(dsCap.opts.headers.Authorization === 'Bearer TEST_KEY_DEEPSEEK',    'C · deepseek · Bearer');
-eq(dsCap.body.model,       'deepseek-v3',                             'C · deepseek · model.id');
+eq(dsCap.body.model,       'deepseek-chat',                           'C · deepseek · model.id (v163.5 · API real)');
 
 // ─── D · Minimax (chatcompletion_v2) ────────────────────────────────────
 const mmCap = {};

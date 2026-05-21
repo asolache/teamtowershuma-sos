@@ -22,9 +22,10 @@
 
 export const AI_MODELS = Object.freeze({
     // Anthropic · qualitat narrativa + raonament estructurat
-    'anthropic/opus-4.7':      Object.freeze({ provider:'anthropic', id:'claude-opus-4-7',         tier:'frontier', kind:'general',    quality:5, pricing:{input:15.00, output:75.00}, contextK:1000 }),
-    'anthropic/sonnet-4.6':    Object.freeze({ provider:'anthropic', id:'claude-sonnet-4-6',       tier:'mid',      kind:'general',    quality:4, pricing:{input: 3.00, output:15.00}, contextK: 200 }),
-    'anthropic/haiku-4.5':     Object.freeze({ provider:'anthropic', id:'claude-haiku-4-5',        tier:'small',    kind:'general',    quality:3, pricing:{input: 1.00, output: 5.00}, contextK: 200 }),
+    // v163.5 · IDs verificats · haiku 4.5 requereix dated suffix · opus/sonnet base alias OK
+    'anthropic/opus-4.7':      Object.freeze({ provider:'anthropic', id:'claude-opus-4-7',             tier:'frontier', kind:'general',    quality:5, pricing:{input:15.00, output:75.00}, contextK:1000 }),
+    'anthropic/sonnet-4.6':    Object.freeze({ provider:'anthropic', id:'claude-sonnet-4-6',           tier:'mid',      kind:'general',    quality:4, pricing:{input: 3.00, output:15.00}, contextK: 200 }),
+    'anthropic/haiku-4.5':     Object.freeze({ provider:'anthropic', id:'claude-haiku-4-5-20251001',   tier:'small',    kind:'general',    quality:3, pricing:{input: 1.00, output: 5.00}, contextK: 200 }),
 
     // OpenAI · GPT-5 + omni + minis
     'openai/gpt-5':            Object.freeze({ provider:'openai',    id:'gpt-5',                   tier:'frontier', kind:'general',    quality:5, pricing:{input: 1.25, output:10.00}, contextK: 400 }),
@@ -36,9 +37,11 @@ export const AI_MODELS = Object.freeze({
     'gemini/2.5-flash':        Object.freeze({ provider:'gemini',    id:'gemini-2.5-flash',        tier:'small',    kind:'multimodal', quality:3, pricing:{input: 0.15, output: 0.60}, contextK:1000 }),
     'gemini/2.5-flash-lite':   Object.freeze({ provider:'gemini',    id:'gemini-2.5-flash-lite',   tier:'micro',    kind:'general',    quality:2, pricing:{input: 0.075,output: 0.30}, contextK:1000 }),
 
-    // DeepSeek · raonament profund + ratio price/perf molt agressiu
-    'deepseek/v3':             Object.freeze({ provider:'deepseek',  id:'deepseek-v3',             tier:'mid',      kind:'general',    quality:4, pricing:{input: 0.27, output: 1.10}, contextK:  64 }),
-    'deepseek/r1':             Object.freeze({ provider:'deepseek',  id:'deepseek-r1',             tier:'mid',      kind:'reasoner',   quality:5, pricing:{input: 0.55, output: 2.19}, contextK:  64 }),
+    // DeepSeek · IDs reals de l'API · v3 = deepseek-chat · r1 = deepseek-reasoner
+    // v163.5 · BUG FIX · els valors anteriors (deepseek-v3 / deepseek-r1) NO existen
+    // a l'API · provocaven HTTP 400 a totes les crides del fluxe SOC/SOP/WO.
+    'deepseek/v3':             Object.freeze({ provider:'deepseek',  id:'deepseek-chat',           tier:'mid',      kind:'general',    quality:4, pricing:{input: 0.27, output: 1.10}, contextK:  64 }),
+    'deepseek/r1':             Object.freeze({ provider:'deepseek',  id:'deepseek-reasoner',       tier:'mid',      kind:'reasoner',   quality:5, pricing:{input: 0.55, output: 2.19}, contextK:  64 }),
 
     // Minimax · text + multimodal (audio/video) · text-only ràtio agressiu
     'minimax/m2':              Object.freeze({ provider:'minimax',   id:'minimax-m2',              tier:'small',    kind:'multimodal', quality:3, pricing:{input: 0.30, output: 1.20}, contextK: 200 }),

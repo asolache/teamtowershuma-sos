@@ -72,12 +72,17 @@ async function _anthropicGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch 
     }
     const model = AI_MODELS[modelKey];
     if (!model) throw new Error('anthropic · modelKey unknown · ' + modelKey);
+    // v163.5 · guard · userPrompt buit → API torna HTTP 400 (messages requires content)
+    const userContent = String(ctx.userPrompt || '').trim();
+    if (!userContent) {
+        throw new Error('anthropic · empty userPrompt · res a enviar · taskKind=' + (ctx.taskKind || '?'));
+    }
     const body = {
         model:       model.id,
         max_tokens:  ctx.maxOutputTokens || 1024,
         temperature: typeof ctx.temperature === 'number' ? ctx.temperature : 0.4,
         system:      ctx.systemPrompt || '',
-        messages: [{ role: 'user', content: ctx.userPrompt || '' }],
+        messages: [{ role: 'user', content: userContent }],
     };
     let res;
     try {
@@ -224,13 +229,18 @@ async function _deepseekGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch !
     }
     const model = AI_MODELS[modelKey];
     if (!model) throw new Error('deepseek · modelKey unknown · ' + modelKey);
+    // v163.5 · guard · userPrompt buit → API 400
+    const userContent = String(ctx.userPrompt || '').trim();
+    if (!userContent) {
+        throw new Error('deepseek · empty userPrompt · taskKind=' + (ctx.taskKind || '?'));
+    }
     const body = {
         model:       model.id,
         max_tokens:  ctx.maxOutputTokens || 1024,
         temperature: typeof ctx.temperature === 'number' ? ctx.temperature : 0.4,
         messages: [
             { role: 'system', content: ctx.systemPrompt || '' },
-            { role: 'user',   content: ctx.userPrompt   || '' },
+            { role: 'user',   content: userContent },
         ],
     };
     let res;
