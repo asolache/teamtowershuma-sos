@@ -3,8 +3,45 @@ sector_id: D
 sector_name: "Suministro de Energía Eléctrica, Gas y Vapor"
 sector_name_en: "Electricity, Gas & Steam Supply"
 cnae: "35"
-version: "v11.1"
-tags: ["energia", "electricidad", "gas", "renovables", "red-electrica", "utilities", "transicion-energetica"]
+version: "v131c"
+cnae_official: "CNAE-2009 D · Suministro energía eléctrica, gas, vapor y aire acondicionado (generació · transport · distribució · comercialització)"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/D.md v131c · cobreix utilities + renovables + cooperatives energètiques"
+tags: ["energia", "electricidad", "gas", "renovables", "red-electrica", "utilities", "transicion-energetica", "solar", "eolic", "cooperativa-energetica"]
+
+skill_level_taxonomy:
+  junior: "0-2 anys · operari planta · FP grau superior · supervisat"
+  mid: "3-7 anys · enginyer planta · ICAI · enginyer industrial"
+  senior: "8-15 anys · cap operació · interacció REE · CNMC"
+  principal: "15+ anys · director generació · estratègia transició energètica"
+
+sops_canonical:
+  - id: sop-planificacion-despacho
+    title: "Planificació despatx generació horari"
+    castell_level: tronc
+    description: "Previsió demanda · oferta mercat OMIE · casació · execució generació · liquidació."
+    steps_summary: "horari · 3 stakeholders · regulat REE"
+  - id: sop-manteniment-correctiu
+    title: "Manteniment correctiu equip"
+    castell_level: laterals
+    description: "Detecció avaria · diagnòstic · reparació · proves · alliberament servei."
+    steps_summary: "hores · 3 stakeholders · SLA"
+  - id: sop-onboarding-soci-coop
+    title: "Onboarding soci cooperativa energètica"
+    castell_level: pinya
+    description: "Sol·licitud · aportació · contracte subministrament · alta · informació consum."
+    steps_summary: "2-4 setmanes · 2 stakeholders · cooperative"
+  - id: sop-incident-major
+    title: "Gestió incident major (apagada · fallada)"
+    castell_level: pom_de_dalt
+    description: "Detecció · escalat · activació pla emergència · restabliment · informe REE/CNMC · revisió."
+    steps_summary: "hores · 6 stakeholders · regulat"
+  - id: sop-instalacio-fotovoltaica
+    title: "Instal·lació nova planta fotovoltaica"
+    castell_level: pom_de_dalt
+    description: "Estudi terreny · permisos · construcció · connexió xarxa · proves · alta CNMC."
+    steps_summary: "6-18 mesos · 8 stakeholders · projecte major"
 
 roles:
   - id: energy_director

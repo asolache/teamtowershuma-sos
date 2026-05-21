@@ -80,6 +80,439 @@ export default class PromptsDebugView {
             this._ctx = { ...DEFAULT_CTX };
             this.render();
         });
+        // v132c · A/B Lab estàtic (sense LLM)
+        document.getElementById('pdAbLabRun')?.addEventListener('click', () => this._runAbLab());
+        // v132f · A/B Lab live (LLM real) + dropdown de casos benchmark
+        document.getElementById('pdAbLabRunLive')?.addEventListener('click', () => this._runAbLabLive());
+        // v160 · Anchoring Lab · cross-project A/B de 3 perfils de context
+        document.getElementById('pdAnchoringLabRun')?.addEventListener('click', () => this._runAnchoringLab());
+        // v163 · Canvas Lab · valida que METASKILL preamble v162 millora canvas
+        document.getElementById('pdCanvasLabRun')?.addEventListener('click', () => this._runCanvasLab());
+        const benchSel = document.getElementById('pdBenchmarkCase');
+        if (benchSel) {
+            this._loadBenchmarkCases().then(() => {
+                benchSel.addEventListener('change', (e) => this._applyBenchmarkCase(e.target.value));
+            });
+        }
+    }
+
+    // v132f · carrega els 20 casos canonical i omple el dropdown
+    async _loadBenchmarkCases() {
+        const sel = document.getElementById('pdBenchmarkCase');
+        if (!sel) return;
+        try {
+            const res = await fetch('/knowledge/benchmarks/vna-quality-cases.json');
+            if (!res.ok) throw new Error('fetch ' + res.status);
+            const data = await res.json();
+            this._benchmarkCases = Array.isArray(data?.cases) ? data.cases : [];
+            for (const c of this._benchmarkCases) {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.id + ' · ' + (c.name || '').slice(0, 28);
+                sel.appendChild(opt);
+            }
+        } catch (e) {
+            // No critical · dropdown buit
+            console.warn('[PromptsDebug] benchmark cases unavailable ·', e?.message);
+        }
+    }
+
+    // v132f · aplica un cas benchmark al context · re-render
+    _applyBenchmarkCase(caseId) {
+        if (!caseId || !this._benchmarkCases) return;
+        const c = this._benchmarkCases.find(x => x.id === caseId);
+        if (!c) return;
+        this._ctx.name        = c.name;
+        this._ctx.description = c.description;
+        this._ctx.sector      = c.sector;
+        this.render();
+    }
+
+    // v132f · executa A/B test REAL amb LLM (usa generateWithProvider · necessita API key a /settings)
+    async _runAbLabLive() {
+        const out = document.getElementById('pdAbLabResult');
+        if (!out) return;
+        out.innerHTML = '<span style="color:var(--accent-orange);">⏳ Cridant LLM real (FULL i SLIM en paral·lel)…</span>';
+        try {
+            const { runABTest } = await import('../core/promptABTestService.js');
+            const { generateWithProvider } = await import('../core/aiProviderService.js');
+            const ctx = this._buildContext();
+            const r = await runABTest({
+                context: { name: ctx.name, description: ctx.description, sector: ctx.sector, vna_zoom: ctx.vna_zoom },
+                provider: generateWithProvider,
+                onProgress: (p) => {
+                    if (p.step === 'start') out.innerHTML = '<span style="color:var(--accent-orange);">⏳ A=' + p.promptA + 'tk · B=' + p.promptB + 'tk · esperant LLM…</span>';
+                },
+            });
+            const a = r.variants?.A; const b = r.variants?.B; const cmp = r.comparison;
+            const errA = a?.error ? '<span style="color:var(--accent-red);">⚠ ' + this._esc(a.error.slice(0, 60)) + '</span>' : '';
+            const errB = b?.error ? '<span style="color:var(--accent-red);">⚠ ' + this._esc(b.error.slice(0, 60)) + '</span>' : '';
+            out.innerHTML = `
+                <div style="background:var(--bg-elevated);border-radius:6px;padding:10px 12px;border-left:3px solid var(--accent-orange);">
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:6px;">
+                        <strong>🏆 Winner · ${this._esc(cmp?.winner || '—')}</strong>
+                        <code>${r.ms}ms</code>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;"><strong>A · FULL</strong><code>${a?.approxTokens || '—'} tk · score ${a?.score?.score ?? '—'} ${errA}</code></div>
+                    <div style="display:flex;justify-content:space-between;color:#22c55e;"><strong>B · SLIM</strong><code>${b?.approxTokens || '—'} tk · score ${b?.score?.score ?? '—'} ${errB}</code></div>
+                    <p style="margin:8px 0 0;font-size:0.72rem;color:var(--text-muted);">ΔScore · ${cmp?.deltaScore ?? '—'} · ${cmp?.summary ? this._esc(cmp.summary) : ''}</p>
+                </div>`;
+        } catch (e) {
+            out.innerHTML = '<span style="color:var(--accent-red);">Error LLM · ' + this._esc(e?.message || String(e)) + ' · configura API key a /settings</span>';
+        }
+    }
+
+    // v160 · _runAnchoringLab · executa A/B cross-projecte amb 3 perfils de
+    // context (sos-current · verna-minimal · verna-guided) i 5 projectes
+    // diversos · calcula mètriques d'anchoring · taula comparativa.
+    async _runAnchoringLab() {
+        const out = document.getElementById('pdAnchoringResult');
+        if (!out) return;
+        const PROFILES  = ['sos-current', 'verna-minimal', 'verna-guided'];
+        const PROJECTS = [
+            { id: 'consultoria-ai',   name: 'Consultoria AI per a PYMES',
+              description: 'Consultoria boutique de 3 sòcies que ajuden PYMES industrials del Bages a integrar IA generativa als seus processos de venda i operacions · model SCCL · cicle MVP',
+              sector: 'M' },
+            { id: 'agro-cooperativa', name: 'Cooperativa agroecològica',
+              description: 'Cooperativa de productors agroecològics del Pirineu · 8 famílies · venda directa i caixes setmanals a Barcelona · cicle MVP en transició a validació',
+              sector: 'A' },
+            { id: 'arts-companyia',   name: 'Companyia teatre comunitari',
+              description: 'Companyia de teatre comunitari amb 12 actors no professionals que crea espectacles a partir de les històries del barri del Raval · finançament híbrid (taquilla + ajuts) · cicle validation',
+              sector: 'R' },
+            { id: 'edu-cooperativa',  name: 'Escola cooperativa de famílies',
+              description: 'Escola d\'iniciativa social on les famílies són sòcies cooperativistes · 60 alumnes 3-12 anys · pedagogia activa · 8 mestres + cuiner + administrativa · cicle scale',
+              sector: 'P' },
+            { id: 'sports-club',      name: 'Club esportiu amateur',
+              description: 'Club de futbol amateur de barri amb 4 equips formatius + 1 sènior · 60 jugadors + 8 entrenadors voluntaris · finançament quotes + petits patrocinadors · cicle mvp',
+              sector: 'R' },
+        ];
+
+        const preferredEngine = (document.getElementById('pdAnchoringProvider')?.value) || 'anthropic';
+        out.innerHTML = '<span style="color:#22c55e;">⏳ Anchoring Lab · ' + (PROJECTS.length * PROFILES.length) + ' crides LLM (' + preferredEngine + ', fallback auto) · 30-90s…</span>';
+
+        try {
+            const { quickSuggestMap } = await import('../core/vnaQuickSuggest.js');
+            const { Orchestrator } = await import('../core/Orchestrator.js');
+            const { FEW_SHOT_EXAMPLES } = await import('../core/vnaExpertPrompts.js');
+            const { evaluateValueMapShape } = await import('../core/vnaShapeEvaluators.js');
+
+            // v160.1 · adaptador Orchestrator.callLLM → generateWithProvider({system,user})
+            // (igual pattern que ValueMapView._runAISuggestionQuickSuggest · usa
+            // l'auto-fallback del Orchestrator entre providers configurats)
+            const provider = async (_modelKey, opts) => {
+                const result = await Orchestrator.callLLM({
+                    preferredEngine,
+                    systemPrompt: opts.systemPrompt,
+                    userPrompt:   opts.userPrompt,
+                    responseFormat: 'json_object',
+                    temperature:  opts.temperature ?? 0.4,
+                });
+                const text = typeof result?.content === 'string' ? result.content : JSON.stringify(result?.content || {});
+                return { text, usage: result?.usage || null };
+            };
+
+            // v161 · landmark-based anchoring detection · exact match no captava
+            // anchoring semàntic (ex · "Fundador Ancoratge" vs few-shot "Founder Anchor").
+            // Extraiem paraules distintives (>4 chars · no genèriques) dels role.name + role.kind
+            // dels few-shots i comprovem substring containment al output. KISS · prou per
+            // detectar replicació de signatures característiques sense fals positiu massiu.
+            const GENERIC_WORDS = new Set([
+                'manager','founder','operations','creator','reviewer','facilitator','team',
+                'director','responsable','coordinador','gestor','cap','lead','operacions',
+                'col·la','colla','del','dels','les','los','par','par','project','projecte',
+            ]);
+            const fewShotLandmarks = new Set();
+            Object.values(FEW_SHOT_EXAMPLES).forEach(ex => {
+                try {
+                    const parsed = JSON.parse(ex.assistantOutput);
+                    (parsed.roles || []).forEach(r => {
+                        const tokens = String((r.name || '') + ' ' + (r.kind || ''))
+                            .toLowerCase()
+                            .split(/[^a-zàèéíòóúïü·]+/)
+                            .filter(t => t.length > 4 && !GENERIC_WORDS.has(t));
+                        tokens.forEach(t => fewShotLandmarks.add(t));
+                    });
+                } catch (_) {}
+            });
+
+            const tasks = [];
+            for (const proj of PROJECTS) {
+                for (const profile of PROFILES) {
+                    tasks.push((async () => {
+                        const t0 = Date.now();
+                        try {
+                            const r = await quickSuggestMap({
+                                context: { name: proj.name, description: proj.description, sector: proj.sector, vna_zoom: 'meso' },
+                                slim: true,
+                                qualityThreshold: 60,
+                                generateWithProvider: provider,
+                                contextProfile: profile,
+                            });
+                            return { proj: proj.id, profile, ok: r.ok, ms: Date.now() - t0, map: r.map, score: r.score, tokens: r.tokens, escalated: r.escalatedToFull, error: r.error };
+                        } catch (e) {
+                            return { proj: proj.id, profile, ok: false, ms: Date.now() - t0, error: e?.message || String(e) };
+                        }
+                    })());
+                }
+            }
+            const results = await Promise.all(tasks);
+
+            // Compute metrics per profile
+            const byProfile = {};
+            PROFILES.forEach(p => { byProfile[p] = results.filter(r => r.profile === p); });
+
+            const allRoleNames = {};
+            PROFILES.forEach(p => {
+                allRoleNames[p] = new Set();
+                byProfile[p].forEach(r => {
+                    (r.map?.roles || []).forEach(role => {
+                        if (role.name) allRoleNames[p].add(String(role.name).toLowerCase());
+                    });
+                });
+            });
+
+            const fewshotOverlapPct = (profile) => {
+                const set = allRoleNames[profile];
+                if (!set.size || !fewShotLandmarks.size) return 0;
+                let hits = 0;
+                set.forEach(n => {
+                    for (const lm of fewShotLandmarks) {
+                        if (n.includes(lm)) { hits++; break; }
+                    }
+                });
+                return Math.round((hits / set.size) * 100);
+            };
+
+            const crossProjectDiversity = (profile) => {
+                const results_p = byProfile[profile].filter(r => r.ok && r.map?.roles?.length);
+                if (results_p.length < 2) return 0;
+                const totalRoles = results_p.reduce((s, r) => s + (r.map.roles?.length || 0), 0);
+                const unique = allRoleNames[profile].size;
+                return totalRoles > 0 ? Math.round((unique / totalRoles) * 100) : 0;
+            };
+
+            const avgShapeScore = (profile) => {
+                const results_p = byProfile[profile].filter(r => r.ok && r.map);
+                if (!results_p.length) return 0;
+                const scores = results_p.map(r => {
+                    try { return evaluateValueMapShape(r.map).score; } catch (_) { return 0; }
+                });
+                return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+            };
+
+            const avgTokens = (profile) => {
+                const results_p = byProfile[profile].filter(r => r.ok);
+                if (!results_p.length) return 0;
+                return Math.round(results_p.reduce((s, r) => s + (r.tokens || 0), 0) / results_p.length);
+            };
+
+            const okCount = (profile) => byProfile[profile].filter(r => r.ok).length;
+
+            // Render comparison table
+            const profileColor = { 'sos-current': '#a855f7', 'verna-minimal': '#22c55e', 'verna-guided': '#3b82f6' };
+            const metricsHtml = `
+                <div style="margin-top:10px;background:var(--bg-elevated);border-radius:6px;padding:10px;border-left:3px solid #22c55e;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+                        <thead><tr style="text-align:left;border-bottom:1px solid var(--border-default);">
+                            <th style="padding:4px;">Profile</th>
+                            <th style="padding:4px;">OK / 5</th>
+                            <th style="padding:4px;" title="% rols del output que coincideixen amb FEW_SHOT literal · LOWER = MILLOR">fewshot↓</th>
+                            <th style="padding:4px;" title="% rols únics entre els 5 projectes · HIGHER = MILLOR">diversity↑</th>
+                            <th style="padding:4px;" title="Shape eval score promig · HIGHER = MILLOR">shape↑</th>
+                            <th style="padding:4px;" title="Tokens del prompt · LOWER = més barat">tokens</th>
+                        </tr></thead>
+                        <tbody>
+                        ${PROFILES.map(p => `
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                <td style="padding:4px;color:${profileColor[p]};font-weight:600;">${p}</td>
+                                <td style="padding:4px;">${okCount(p)}/${PROJECTS.length}</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${fewshotOverlapPct(p)}%</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${crossProjectDiversity(p)}%</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${avgShapeScore(p)}</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${avgTokens(p)}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+
+            // Render per-project details (collapsed)
+            const detailsHtml = PROJECTS.map(proj => {
+                const rows = PROFILES.map(p => {
+                    const r = results.find(x => x.proj === proj.id && x.profile === p);
+                    if (!r) return '';
+                    if (!r.ok) return `<li style="color:var(--accent-red);">${p} · ❌ ${this._esc(r.error || 'failed')}</li>`;
+                    const roles = (r.map?.roles || []).map(rl => rl.name).join(' · ');
+                    return `<li><strong style="color:${profileColor[p]};">${p}</strong> · ${(r.map?.roles || []).length} rols · ${roles ? this._esc(roles.slice(0, 200)) : '(buit)'}</li>`;
+                }).join('');
+                return `<details style="margin-top:6px;"><summary style="cursor:pointer;color:var(--text-secondary);">${this._esc(proj.name)}</summary><ul style="margin:4px 0 0 14px;padding:0;list-style:disc;">${rows}</ul></details>`;
+            }).join('');
+
+            // v160.1 · detecció d'errors recurrents · ajuda diagnòstic
+            const errors = results.filter(r => !r.ok).map(r => r.error || '').join(' · ');
+            let warningBanner = '';
+            if (errors) {
+                const isBilling = /credit|quota|insufficient|402|429|billing|exceeded|balance/i.test(errors);
+                const isAuth    = /401|403|api[\s_-]?key|unauthor|forbidden/i.test(errors);
+                const isModelKey= /modelKey unknown|provider desconegut/i.test(errors);
+                let hint = '';
+                if (isBilling)   hint = '💳 Sembla problema de saldo/quota. Prova un altre provider al dropdown.';
+                else if (isAuth) hint = '🔑 API key no configurada o invàlida. Configura-la a /settings.';
+                else if (isModelKey) hint = '⚠ ModelKey error · reporta bug.';
+                else if (errors) hint = 'ℹ Veure detalls per projecte més avall.';
+                warningBanner = `<div style="background:rgba(239,68,68,0.1);border-left:3px solid var(--accent-red);padding:8px 10px;margin-top:8px;border-radius:4px;font-size:0.78rem;">
+                    ${hint} <code style="color:var(--text-muted);">${this._esc(errors.slice(0, 120))}</code>
+                </div>`;
+            }
+            out.innerHTML = warningBanner + metricsHtml + `<div style="margin-top:10px;">${detailsHtml}</div>`;
+            // Store last results for the user to inspect via console
+            try { window.__sos_anchoring_lab = { results, metrics: { fewshotOverlap: PROFILES.map(p => ({ p, v: fewshotOverlapPct(p) })), diversity: PROFILES.map(p => ({ p, v: crossProjectDiversity(p) })), shape: PROFILES.map(p => ({ p, v: avgShapeScore(p) })) } }; } catch (_) {}
+        } catch (e) {
+            out.innerHTML = '<span style="color:var(--accent-red);">Anchoring Lab error · ' + this._esc(e?.message || String(e)) + ' · configura API key a /settings</span>';
+        }
+    }
+
+    // v163 · _runCanvasLab · valida METASKILL preamble v162 al canvas. Mateixa
+    // estructura que _runAnchoringLab però amb personalize-canvas + mètriques
+    // pròpies (genericity ↓ · diversity ↑ · completeness ↑).
+    async _runCanvasLab() {
+        const out = document.getElementById('pdCanvasResult');
+        if (!out) return;
+        const PROFILES  = ['sos-current', 'verna-minimal', 'verna-guided'];
+        const PROJECTS = [
+            { id: 'consultoria-ai',   name: 'Consultoria AI per a PYMES',
+              description: 'Consultoria boutique de 3 sòcies que ajuden PYMES industrials del Bages a integrar IA generativa als seus processos de venda i operacions · model SCCL · cicle MVP',
+              sector: 'M' },
+            { id: 'agro-cooperativa', name: 'Cooperativa agroecològica',
+              description: 'Cooperativa de productors agroecològics del Pirineu · 8 famílies · venda directa i caixes setmanals a Barcelona · cicle MVP en transició a validació',
+              sector: 'A' },
+            { id: 'arts-companyia',   name: 'Companyia teatre comunitari',
+              description: 'Companyia de teatre comunitari amb 12 actors no professionals que crea espectacles a partir de les històries del barri del Raval · finançament híbrid · cicle validation',
+              sector: 'R' },
+            { id: 'edu-cooperativa',  name: 'Escola cooperativa de famílies',
+              description: 'Escola d\'iniciativa social on les famílies són sòcies cooperativistes · 60 alumnes 3-12 anys · pedagogia activa · 8 mestres · cicle scale',
+              sector: 'P' },
+            { id: 'sports-club',      name: 'Club esportiu amateur',
+              description: 'Club de futbol amateur de barri · 4 equips formatius + 1 sènior · 60 jugadors + 8 entrenadors voluntaris · finançament quotes + petits patrocinadors · cicle mvp',
+              sector: 'R' },
+        ];
+
+        const preferredEngine = (document.getElementById('pdAnchoringProvider')?.value) || 'anthropic';
+        out.innerHTML = '<span style="color:#3b82f6;">⏳ Canvas Lab · ' + (PROJECTS.length * PROFILES.length) + ' crides LLM (' + preferredEngine + ', fallback auto) · 30-90s…</span>';
+
+        try {
+            const { buildPrompt } = await import('../core/vnaExpertPrompts.js');
+            const { Orchestrator } = await import('../core/Orchestrator.js');
+            const { computeGenericityCount, computeStakeholderDiversityPct, computeCanvasCompletenessPct } = await import('../core/canvasLabMetrics.js');
+
+            const callLLM = async (prompt) => {
+                const result = await Orchestrator.callLLM({
+                    preferredEngine,
+                    systemPrompt: prompt.system,
+                    userPrompt:   prompt.user,
+                    responseFormat: 'json_object',
+                    temperature:  0.4,
+                });
+                const text = typeof result?.content === 'string' ? result.content : JSON.stringify(result?.content || {});
+                let parsed = null;
+                try { parsed = JSON.parse(text); } catch (_) {
+                    const m = text.match(/\{[\s\S]*\}/);
+                    if (m) { try { parsed = JSON.parse(m[0]); } catch (_) {} }
+                }
+                return { parsed, tokens: prompt.approxTokens };
+            };
+
+            const tasks = [];
+            for (const proj of PROJECTS) {
+                for (const profile of PROFILES) {
+                    tasks.push((async () => {
+                        const t0 = Date.now();
+                        try {
+                            const prompt = buildPrompt({
+                                taskKind: 'personalize-canvas',
+                                context: { name: proj.name, description: proj.description, sector: proj.sector },
+                                contextProfile: profile,
+                            });
+                            const { parsed, tokens } = await callLLM(prompt);
+                            return { proj: proj.id, profile, ok: !!parsed, ms: Date.now() - t0, canvas: parsed, tokens };
+                        } catch (e) {
+                            return { proj: proj.id, profile, ok: false, ms: Date.now() - t0, error: e?.message || String(e) };
+                        }
+                    })());
+                }
+            }
+            const results = await Promise.all(tasks);
+
+            const byProfile = {};
+            PROFILES.forEach(p => { byProfile[p] = results.filter(r => r.profile === p); });
+
+            const avgGenericity = (profile) => {
+                const ok = byProfile[profile].filter(r => r.ok && r.canvas);
+                if (!ok.length) return 0;
+                const sum = ok.reduce((s, r) => s + computeGenericityCount(r.canvas), 0);
+                return Math.round((sum / ok.length) * 10) / 10; // 1 decimal
+            };
+            const avgCompleteness = (profile) => {
+                const ok = byProfile[profile].filter(r => r.ok && r.canvas);
+                if (!ok.length) return 0;
+                const sum = ok.reduce((s, r) => s + computeCanvasCompletenessPct(r.canvas), 0);
+                return Math.round(sum / ok.length);
+            };
+            const stakeDiversity = (profile) => {
+                const ok = byProfile[profile].filter(r => r.ok && r.canvas);
+                return computeStakeholderDiversityPct(ok.map(r => r.canvas));
+            };
+            const avgTokens = (profile) => {
+                const ok = byProfile[profile].filter(r => r.ok);
+                if (!ok.length) return 0;
+                return Math.round(ok.reduce((s, r) => s + (r.tokens || 0), 0) / ok.length);
+            };
+            const okCount = (profile) => byProfile[profile].filter(r => r.ok).length;
+
+            const profileColor = { 'sos-current': '#a855f7', 'verna-minimal': '#22c55e', 'verna-guided': '#3b82f6' };
+            const metricsHtml = `
+                <div style="margin-top:10px;background:var(--bg-elevated);border-radius:6px;padding:10px;border-left:3px solid #3b82f6;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+                        <thead><tr style="text-align:left;border-bottom:1px solid var(--border-default);">
+                            <th style="padding:4px;">Profile</th>
+                            <th style="padding:4px;">OK / ${PROJECTS.length}</th>
+                            <th style="padding:4px;" title="Paraules genèriques (qualitat/innovació/excel·lència…) per canvas · LOWER = MILLOR">generic↓</th>
+                            <th style="padding:4px;" title="% stakeholders únics entre projectes · HIGHER = MILLOR">divers↑</th>
+                            <th style="padding:4px;" title="% camps canvas omplerts · HIGHER = MILLOR">complete↑</th>
+                            <th style="padding:4px;">tokens</th>
+                        </tr></thead>
+                        <tbody>
+                        ${PROFILES.map(p => `
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                <td style="padding:4px;color:${profileColor[p]};font-weight:600;">${p}</td>
+                                <td style="padding:4px;">${okCount(p)}/${PROJECTS.length}</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${avgGenericity(p)}</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${stakeDiversity(p)}%</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${avgCompleteness(p)}%</td>
+                                <td style="padding:4px;font-family:var(--font-mono);">${avgTokens(p)}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+
+            const detailsHtml = PROJECTS.map(proj => {
+                const rows = PROFILES.map(p => {
+                    const r = results.find(x => x.proj === proj.id && x.profile === p);
+                    if (!r) return '';
+                    if (!r.ok) return `<li style="color:var(--accent-red);">${p} · ❌ ${this._esc(r.error || 'failed')}</li>`;
+                    const stakes = Array.isArray(r.canvas?.stakeholders) ? r.canvas.stakeholders.join(' · ') : '';
+                    const mission = (r.canvas?.mission || '').slice(0, 120);
+                    return `<li><strong style="color:${profileColor[p]};">${p}</strong> · mission · "${this._esc(mission)}" · stakeholders · ${this._esc(stakes.slice(0, 200))}</li>`;
+                }).join('');
+                return `<details style="margin-top:6px;"><summary style="cursor:pointer;color:var(--text-secondary);">${this._esc(proj.name)}</summary><ul style="margin:4px 0 0 14px;padding:0;list-style:disc;">${rows}</ul></details>`;
+            }).join('');
+
+            out.innerHTML = metricsHtml + `<div style="margin-top:10px;">${detailsHtml}</div>`;
+            try { window.__sos_canvas_lab = { results, metrics: { generic: PROFILES.map(p => ({ p, v: avgGenericity(p) })), diversity: PROFILES.map(p => ({ p, v: stakeDiversity(p) })), complete: PROFILES.map(p => ({ p, v: avgCompleteness(p) })) } }; } catch (_) {}
+        } catch (e) {
+            out.innerHTML = '<span style="color:var(--accent-red);">Canvas Lab error · ' + this._esc(e?.message || String(e)) + ' · configura API key a /settings</span>';
+        }
     }
 
     _buildContext() {
@@ -328,6 +761,38 @@ export default class PromptsDebugView {
                         </select>
                     </div>
                     <button id="pdResetCtx" class="pd-reset">↺ Reset al context per defecte</button>
+
+                    <h3 style="margin-top:1rem;color:var(--accent-purple);">🧪 A/B Lab (v132c+f)</h3>
+                    <p style="font-size:0.78rem;color:var(--text-muted);">Compara prompt FULL vs SLIM · valida hipòtesi "menys context > més".</p>
+                    <div class="pd-ctx-field">
+                        <label>Cas benchmark (v132f)</label>
+                        <select id="pdBenchmarkCase">
+                            <option value="">— context lliure —</option>
+                        </select>
+                    </div>
+                    <button id="pdAbLabRun" class="pd-reset" style="background:var(--accent-purple);color:#fff;border-color:var(--accent-purple);">▶ Compara prompts (estàtic · sense LLM)</button>
+                    <button id="pdAbLabRunLive" class="pd-reset" style="background:var(--accent-orange);color:#fff;border-color:var(--accent-orange);margin-top:6px;">⚡ Run live A/B (LLM real · necessita API key)</button>
+                    <div id="pdAbLabResult" style="margin-top:8px;font-size:0.78rem;"></div>
+
+                    <h3 style="margin-top:1rem;color:#22c55e;">🧬 VNA Anchoring Lab (v160)</h3>
+                    <p style="font-size:0.78rem;color:var(--text-muted);">Compara 3 perfils de context · sos-current vs verna-minimal vs verna-guided · 5 projectes diversos · mètriques d'anchoring (fewshot overlap · cross-project diversity).</p>
+                    <div class="pd-ctx-field">
+                        <label>Provider preferit (auto fallback)</label>
+                        <select id="pdAnchoringProvider">
+                            <option value="anthropic">anthropic (Claude)</option>
+                            <option value="openai">openai (GPT)</option>
+                            <option value="gemini">gemini (Google)</option>
+                            <option value="deepseek">deepseek</option>
+                            <option value="minimax">minimax</option>
+                        </select>
+                    </div>
+                    <button id="pdAnchoringLabRun" class="pd-reset" style="background:#22c55e;color:#fff;border-color:#22c55e;margin-top:6px;">🧬 Run Anchoring A/B (LLM · 5 projectes × 3 perfils)</button>
+                    <div id="pdAnchoringResult" style="margin-top:8px;font-size:0.78rem;"></div>
+
+                    <h3 style="margin-top:1rem;color:#3b82f6;">🎨 Canvas Anchoring Lab (v163)</h3>
+                    <p style="font-size:0.78rem;color:var(--text-muted);">Valida v162 · MET-METASKILL preamble · per a personalize-canvas. Mateixos 5 projectes × 3 perfils · mètriques · genericity (paraules buides ↓) · stakeholder diversity ↑ · completeness ↑.</p>
+                    <button id="pdCanvasLabRun" class="pd-reset" style="background:#3b82f6;color:#fff;border-color:#3b82f6;margin-top:6px;">🎨 Run Canvas A/B (LLM · 5 projectes × 3 perfils)</button>
+                    <div id="pdCanvasResult" style="margin-top:8px;font-size:0.78rem;"></div>
                 </aside>
 
                 <main id="pdPanel" class="pd-main">
@@ -335,6 +800,33 @@ export default class PromptsDebugView {
                 </main>
             </div>
         </div>`;
+    }
+
+    // v132c · panel A/B Lab · comparació estàtica FULL vs SLIM (sense LLM)
+    // Si l'usuari té cas a la KB amb LLM provider · pot córrer runABTest real
+    async _runAbLab() {
+        const out = document.getElementById('pdAbLabResult');
+        if (!out) return;
+        out.innerHTML = '<span style="color:var(--text-muted);">⏳ Comparant FULL vs SLIM…</span>';
+        try {
+            const { buildPrompt } = await import('../core/vnaExpertPrompts.js');
+            const { buildVariantBPrompt, scoreOutput } = await import('../core/promptABTestService.js');
+            const ctx = this._buildContext();
+            const full = buildPrompt({ taskKind: 'design-value-map-rich', context: ctx, slim: false });
+            const slim = buildPrompt({ taskKind: 'design-value-map-rich', context: ctx, slim: true });
+            const minB = buildVariantBPrompt(ctx);
+            const saving = (((full.approxTokens - slim.approxTokens) / full.approxTokens) * 100).toFixed(0);
+            const minPct = (((full.approxTokens - minB.approxTokens) / full.approxTokens) * 100).toFixed(0);
+            out.innerHTML = `
+                <div style="background:var(--bg-elevated);border-radius:6px;padding:8px 10px;border-left:3px solid var(--accent-purple);">
+                    <div style="display:flex;justify-content:space-between;"><strong>FULL</strong><code>${full.approxTokens} tk</code></div>
+                    <div style="display:flex;justify-content:space-between;color:#22c55e;"><strong>SLIM (v132c)</strong><code>${slim.approxTokens} tk · -${saving}%</code></div>
+                    <div style="display:flex;justify-content:space-between;color:var(--accent-orange);"><strong>MINIMAL</strong><code>${minB.approxTokens} tk · -${minPct}%</code></div>
+                    <p style="margin:8px 0 0;font-size:0.72rem;color:var(--text-muted);">SLIM manté els 5 principis Verna Allee · MODEL CASTELLER · contracte sortida. Per a A/B amb LLM real · usa <code>runABTest()</code> des de la KB.</p>
+                </div>`;
+        } catch (e) {
+            out.innerHTML = '<span style="color:var(--accent-red);">Error · ' + this._esc(e?.message || String(e)) + '</span>';
+        }
     }
 
     _esc(s) {

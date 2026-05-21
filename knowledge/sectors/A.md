@@ -3,8 +3,45 @@ sector_id: A
 sector_name: "Agricultura, Ganadería, Silvicultura y Pesca"
 sector_name_en: "Agriculture, Forestry & Fishing"
 cnae: "01-03"
-version: "v11.1"
-tags: ["agricultura", "ganaderia", "pesca", "agro", "alimentacion", "campo", "silvicultura", "cooperativa"]
+version: "v131c"
+cnae_official: "CNAE-2009 A · Agricultura, ganadería, silvicultura y pesca (cultivos · ganadería · silvicultura · pesca · acuicultura · cooperatives agràries)"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/A.md v131c · skill_levels + sops canonical agraris"
+tags: ["agricultura", "ganaderia", "pesca", "agro", "alimentacion", "campo", "silvicultura", "cooperativa", "agroecologia", "km0", "denominacion-origen"]
+
+skill_level_taxonomy:
+  junior: "0-2 anys · supervisat · sense titulació formal o FP grau mig agrari"
+  mid: "3-5 anys · autònom · gestiona parcel·la mitjana o explotació petita"
+  senior: "6-15 anys · cap d'explotació · denominació d'origen · cooperativa local"
+  principal: "15+ anys · referent sectorial · membre consells reguladors · innovació"
+
+sops_canonical:
+  - id: sop-temporada-cultiu
+    title: "Cicle complet d'un cultiu de temporada"
+    castell_level: tronc
+    description: "Preparació terra · sembra · cures · collita · post-collita · venda · descans terra."
+    steps_summary: "3-12 mesos · 3-5 stakeholders · estacional"
+  - id: sop-cooperativa-distribucio
+    title: "Distribució cooperativa setmanal"
+    castell_level: mans
+    description: "Recollida productors · classificació · packaging · rutes · entrega clients · facturació."
+    steps_summary: "setmanal · 4-6 stakeholders · logística core"
+  - id: sop-certificacio-ecologica
+    title: "Auditoria certificació ecològica (CCPAE)"
+    castell_level: laterals
+    description: "Preparació documental · visita auditor · mostres · informe · resolució · etiquetatge."
+    steps_summary: "anual · 2-3 stakeholders · gate per a etiqueta eco"
+  - id: sop-control-sanitari
+    title: "Control sanitari ramat / cultiu"
+    castell_level: laterals
+    description: "Inspecció rutinària · detecció anomalies · tractament · registre · trazabilitat."
+    steps_summary: "mensual a anual · 2 stakeholders · regulat"
+  - id: sop-venda-directe
+    title: "Venda directa al consumidor (mercat / botiga / online)"
+    castell_level: pinya
+    description: "Preparació estand/botiga · atenció client · venda · cobrament · feedback · neteja."
+    steps_summary: "diari/setmanal · 1-2 stakeholders · channel crític"
 
 roles:
   - id: farm_owner_manager

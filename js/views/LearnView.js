@@ -20,8 +20,21 @@ import { loadIndex, searchIndex, listByFolder, getRoadmap, listRoles, stats } fr
 import { ROADMAPS_BY_ROLE } from '../core/knowledgeRoadmaps.js';
 import { store } from '../core/store.js';
 import { KB } from '../core/kb.js';
+// v133 · migració al component canonical · pattern compartit cross-vistes
+import { renderSubmenuTabs, bindSubmenuTabs } from '../ui/SubmenuTabs.js';
 
-const TPL_VERSION = 'learn-v3-subhub';
+const TPL_VERSION = 'learn-v3-subhub-canonical';
+
+// v133 · taula declarativa dels 7 modes · alimenta SubmenuTabs sense duplicar literals
+const LEARN_TABS = Object.freeze([
+    { id: 'roadmaps', label: 'Roadmaps',  icon: '🤲' },
+    { id: 'carpetas', label: 'Knowledge', icon: '📚' },
+    { id: 'search',   label: 'Cerca',     icon: '🔍' },
+    { id: 'sectors',  label: 'Sectors',   icon: '🏭' },
+    { id: 'mind',     label: 'Mind',      icon: '🕸' },
+    { id: 'folders',  label: 'Carpetes',  icon: '📁' },
+    { id: 'tags',     label: 'Tags',      icon: '🏷' },
+]);
 
 // LEARN-CONSOLIDATION-PR-B · 7 modes ·
 //   roadmaps · carpetas · search       (originals · LEARN-HUB-001)
@@ -82,6 +95,10 @@ export default class LearnView {
         // v123-fix · si entrem al tab mind, hidratar stats reals del KB (abans
         // llegia store.nodes que mai no ha existit → sempre "Buit")
         if (this._mode === 'mind') this._hydrateMindStats();
+        // v133 · bind canonical · gestiona click + arrow keys + URL sync
+        const mount = document.getElementById('lvSubmenuMount');
+        if (mount) bindSubmenuTabs(mount, (newId) => this._setMode(newId), { urlParam: 'tab' });
+        // v133 · backwards compat · `data-mode` legacy (alguns enllaços externs poden usar-lo)
         document.querySelectorAll('[data-mode]').forEach(b =>
             b.addEventListener('click', (e) => this._setMode(e.currentTarget.dataset.mode)));
         document.querySelectorAll('[data-role]').forEach(b =>
@@ -203,15 +220,7 @@ export default class LearnView {
                     </div>
                 </div>
 
-                <div class="lv-tabs" role="tablist">
-                    <button class="lv-tab ${this._mode === 'roadmaps' ? 'active' : ''}" data-mode="roadmaps">🤲 Roadmaps</button>
-                    <button class="lv-tab ${this._mode === 'carpetas' ? 'active' : ''}" data-mode="carpetas">📚 Knowledge</button>
-                    <button class="lv-tab ${this._mode === 'search'   ? 'active' : ''}" data-mode="search">🔍 Cerca</button>
-                    <button class="lv-tab ${this._mode === 'sectors'  ? 'active' : ''}" data-mode="sectors">🏭 Sectors</button>
-                    <button class="lv-tab ${this._mode === 'mind'     ? 'active' : ''}" data-mode="mind">🕸 Mind</button>
-                    <button class="lv-tab ${this._mode === 'folders'  ? 'active' : ''}" data-mode="folders">📁 Carpetes</button>
-                    <button class="lv-tab ${this._mode === 'tags'     ? 'active' : ''}" data-mode="tags">🏷 Tags</button>
-                </div>
+                <div id="lvSubmenuMount">${renderSubmenuTabs({ tabs: LEARN_TABS, activeId: this._mode, urlParam: 'tab' })}</div>
 
                 ${this._mode === 'roadmaps' ? this._renderRoadmaps()
                  : this._mode === 'carpetas' ? this._renderCarpetas()

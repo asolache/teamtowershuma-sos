@@ -1,10 +1,47 @@
 ---
 sector_id: I
-sector_name: "Hostelería y Turismo"
+sector_name: "Hostelería"
 sector_name_en: "Accommodation & Food Services"
 cnae: "55-56"
-version: "v11.1"
-tags: ["hosteleria", "turismo", "hotel", "restaurante", "experiencia", "hospitalidad"]
+cnae_official: "CNAE-2009 I · Hostelería (allotjament · serveis de menjars i begudes · hotels · restaurants · cafeteries · càtering)"
+version: "v131c"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/I.md v131c · domainDetector.hotel-hospitality (I) també activa packs específics"
+tags: ["hosteleria", "turismo", "hotel", "restaurante", "experiencia", "hospitalidad", "OTA", "FB", "concierge", "caterer", "alberg", "BnB"]
+
+skill_level_taxonomy:
+  junior: "0-2 anys · cambrer/recepció · FP grau mig hostaleria"
+  mid: "3-7 anys · jefe de partida · supervisor recepció · sommelier"
+  senior: "8-15 anys · executive chef · director ops · revenue manager"
+  principal: "15+ anys · GM hotel · brand director · expansion strategy"
+
+sops_canonical:
+  - id: sop-check-in-checkout
+    title: "Check-in i check-out hotel"
+    castell_level: mans
+    description: "Acollida · validació reserva · cobrament · entrega claus · post-stay survey."
+    steps_summary: "10-20 min cada · 1-2 stakeholders · NPS clau"
+  - id: sop-service-fb-meal
+    title: "Servei F&B menjar (mise en place a sortida client)"
+    castell_level: pinya
+    description: "Mise en place · acollida · ordre · cuina · servei · cobrament · neteja."
+    steps_summary: "1-3h cobertura · 4 stakeholders · qualitat"
+  - id: sop-housekeeping-room
+    title: "Housekeeping habitació (turnaround)"
+    castell_level: pinya
+    description: "Inspecció · neteja · canvi roba · reposició amenities · inspecció final."
+    steps_summary: "30-45 min · 1 cambrera · turnover diari"
+  - id: sop-booking-distribution
+    title: "Distribució canals booking"
+    castell_level: tronc
+    description: "Channel manager · paritat preus · disponibilitat · OTA fees · upsell."
+    steps_summary: "diari · 2 stakeholders · revenue mgmt"
+  - id: sop-incident-guest
+    title: "Gestió queixa/incidència client"
+    castell_level: laterals
+    description: "Recollida queixa · escalat manager torn · resolució · compensació · seguiment review."
+    steps_summary: "minuts-hores · 3 stakeholders · gestió reputació online"
 
 roles:
   - id: general_manager_hotel

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>v132i · Mockup · Project Hub Subtabs · SOS</title>
+<style>
+:root {
+    --bg-base:        #0f172a;
+    --bg-panel:       #1e293b;
+    --bg-elevated:    #334155;
+    --text-main:      #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted:     #94a3b8;
+    --border-default: #475569;
+    --accent-indigo:  #6366f1;
+    --accent-purple:  #a855f7;
+    --accent-orange:  #f97316;
+    --accent-green:   #22c55e;
+    --accent-red:     #ef4444;
+    --radius-sm:      6px;
+    --radius-md:      10px;
+    --radius-lg:      14px;
+    --font-base:      -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
+    /* === sos-submenu tokens proposats v132i === */
+    --sos-submenu-height:        44px;
+    --sos-submenu-tab-padding:   0 14px;
+    --sos-submenu-active-color:  var(--accent-indigo);
+    --sos-submenu-active-bg:     rgba(99, 102, 241, 0.12);
+    --sos-submenu-hover-bg:      var(--bg-elevated);
+    --sos-submenu-border-bottom: 2px solid var(--accent-indigo);
+}
+
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--bg-base);
+    color: var(--text-main);
+    font-family: var(--font-base);
+    line-height: 1.5;
+}
+.wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+h1, h2, h3 { font-weight: 700; }
+h1 { font-size: 1.6rem; margin: 0 0 0.4rem; }
+h2 { font-size: 1.2rem; margin: 2rem 0 0.6rem; color: var(--accent-purple); border-bottom: 1px solid var(--border-default); padding-bottom: 0.3rem; }
+h3 { font-size: 1rem; margin: 1rem 0 0.4rem; color: var(--accent-indigo); }
+code { font-family: var(--font-mono); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; font-size: 0.85em; }
+.muted { color: var(--text-muted); font-size: 0.85rem; }
+
+/* ========================================================================
+   sos-submenu · PATTERN CANONICAL · v132i mockup
+   ======================================================================== */
+.sos-submenu {
+    display: flex;
+    align-items: stretch;
+    height: var(--sos-submenu-height);
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-default);
+    overflow-x: auto;
+    overflow-y: visible;
+    scrollbar-width: thin;
+    position: relative;
+}
+.sos-submenu-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: var(--sos-submenu-tab-padding);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 2px solid transparent;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+    font-family: inherit;
+}
+.sos-submenu-tab:hover { background: var(--sos-submenu-hover-bg); color: var(--text-main); }
+.sos-submenu-tab.is-active {
+    color: var(--sos-submenu-active-color);
+    background: var(--sos-submenu-active-bg);
+    border-bottom: var(--sos-submenu-border-bottom);
+}
+.sos-submenu-tab-icon { font-size: 1.05rem; }
+.sos-submenu-dropdown-wrap { position: relative; margin-left: auto; }
+.sos-submenu-dropdown-btn {
+    background: transparent; border: none; color: var(--text-secondary);
+    padding: var(--sos-submenu-tab-padding); font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; height: 100%; display: inline-flex; align-items: center; gap: 4px;
+    font-family: inherit;
+}
+.sos-submenu-dropdown-btn:hover { background: var(--sos-submenu-hover-bg); color: var(--text-main); }
+.sos-submenu-dropdown-panel {
+    position: absolute; right: 0; top: 100%;
+    background: var(--bg-panel); border: 1px solid var(--border-default);
+    border-radius: var(--radius-md); padding: 6px; min-width: 220px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    z-index: 10; display: none;
+}
+.sos-submenu-dropdown-panel.is-open { display: block; }
+.sos-submenu-dropdown-item {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 8px 12px; background: transparent; border: none;
+    color: var(--text-main); font-size: 0.88rem; cursor: pointer; border-radius: 4px;
+    font-family: inherit; text-align: left;
+}
+.sos-submenu-dropdown-item:hover { background: var(--bg-elevated); }
+.sos-submenu-dropdown-item .item-icon { font-size: 1.05rem; }
+
+/* ========================================================================
+   layout · simulacions
+   ======================================================================== */
+.mock-frame {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin: 1rem 0 2rem;
+}
+.mock-frame-header {
+    padding: 12px 18px;
+    background: linear-gradient(180deg, var(--bg-elevated), var(--bg-panel));
+    border-bottom: 1px solid var(--border-default);
+    display: flex; justify-content: space-between; align-items: center;
+}
+.mock-frame-title { font-weight: 700; font-size: 1.05rem; }
+.mock-frame-body { padding: 18px; min-height: 320px; }
+
+.proj-header {
+    padding: 16px 18px;
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-default);
+}
+.proj-header-title { font-size: 1.3rem; font-weight: 700; margin: 0 0 4px; }
+.proj-header-meta { color: var(--text-muted); font-size: 0.85rem; }
+
+/* ── tab content ── */
+.tab-content { padding: 22px; display: none; }
+.tab-content.is-active { display: block; }
+
+.kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+}
+.kpi-card {
+    background: var(--bg-elevated); border-radius: var(--radius-md); padding: 12px;
+}
+.kpi-label { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.kpi-value { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
+
+/* ── Presentation tab IA ── */
+.pres-hero {
+    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15));
+    border: 1px solid var(--accent-indigo);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+}
+.pres-hero-title { font-size: 1.5rem; font-weight: 700; margin: 0 0 6px; }
+.pres-hero-tag { color: var(--accent-purple); font-weight: 600; margin: 0 0 10px; }
+.pres-hero-desc { color: var(--text-secondary); margin: 0; }
+
+.pres-section { margin-top: 18px; }
+.pres-section-title { color: var(--accent-indigo); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin: 0 0 8px; }
+
+.canvas-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+}
+.canvas-cell {
+    background: var(--bg-elevated); border-radius: var(--radius-md); padding: 12px;
+    border-left: 3px solid var(--accent-indigo);
+}
+.canvas-cell-title { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
+.canvas-cell-list { margin: 0; padding-left: 14px; font-size: 0.85rem; }
+.canvas-cell-list li { margin-bottom: 3px; }
+
+.pitch-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+}
+.pitch-cell {
+    background: var(--bg-elevated); border-radius: var(--radius-md); padding: 12px;
+    border-left: 3px solid var(--accent-orange);
+}
+.pitch-cell-label {
+    font-size: 0.72rem; color: var(--accent-orange); font-weight: 700;
+    letter-spacing: 0.08em; margin: 0 0 4px;
+}
+.pitch-cell-text { font-size: 0.88rem; color: var(--text-main); margin: 0; line-height: 1.45; }
+
+.map-preview {
+    background: var(--bg-elevated); border-radius: var(--radius-md);
+    padding: 14px; display: flex; justify-content: space-between; align-items: center;
+}
+.map-stats { font-size: 0.85rem; color: var(--text-secondary); }
+.map-link {
+    color: var(--accent-indigo); text-decoration: none; font-weight: 600; font-size: 0.85rem;
+}
+.map-link:hover { text-decoration: underline; }
+
+.cta-row { display: flex; gap: 10px; margin-top: 10px; }
+.cta-btn {
+    padding: 10px 18px; border-radius: var(--radius-md); border: none;
+    font-weight: 700; cursor: pointer; font-family: inherit;
+    background: var(--accent-indigo); color: #fff;
+}
+.cta-btn.secondary { background: transparent; border: 1px solid var(--border-default); color: var(--text-main); }
+.cta-btn:hover { transform: translateY(-1px); }
+
+/* ── audit table ── */
+.audit-table {
+    width: 100%; border-collapse: collapse; font-size: 0.85rem;
+    background: var(--bg-panel); border-radius: var(--radius-md); overflow: hidden;
+}
+.audit-table th, .audit-table td {
+    padding: 10px 12px; border-bottom: 1px solid var(--border-default); text-align: left;
+}
+.audit-table th { background: var(--bg-elevated); color: var(--text-secondary); font-size: 0.78rem; }
+.audit-table tr:last-child td { border-bottom: none; }
+.audit-table code { background: rgba(99,102,241,0.15); }
+
+.callout {
+    background: rgba(34,197,94,0.08); border-left: 3px solid var(--accent-green);
+    padding: 12px 14px; border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    margin: 1rem 0; font-size: 0.88rem;
+}
+.callout.warn { background: rgba(249,115,22,0.08); border-left-color: var(--accent-orange); }
+.callout-title { font-weight: 700; margin-bottom: 4px; }
+
+/* ── legacy comparison ── */
+.lv-tab {
+    background: transparent; border: none; color: #cbd5e1;
+    padding: 8px 16px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+    border-bottom: 2px solid transparent; font-family: inherit;
+}
+.lv-tab.active { color: #6366f1; border-bottom: 2px solid #6366f1; }
+.legacy-row { display: flex; gap: 4px; background: #1e293b; padding: 4px; border-radius: 6px; }
+
+.foot {
+    color: var(--text-muted); font-size: 0.78rem; text-align: center;
+    margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border-default);
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>v132i · Mockup interactiu · Project Hub amb Subpestanyes</h1>
+<p class="muted">Per validació manual @alvaro · obre al navegador · clica les tabs i el dropdown.</p>
+
+<div class="callout">
+    <div class="callout-title">✓ Què validar manualment</div>
+    1) Que les 5 pestanyes principals tinguin sentit (Hub · Map · Kanban · Comptabilitat · Presentation) · 2) Que el dropdown "Més" amb Pactes/Sprints/KB/Settings sigui coherent · 3) Que la pestanya Presentation tingui l'Arquitectura d'Informació desitjada (Hero · Canvas · Pitch · Map preview · CTA) · 4) Que el patró visual (active state · hover · dropdown) sigui clar.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<h2>1 · Project Hub · vista completa simulada</h2>
+
+<div class="mock-frame">
+    <div class="mock-frame-header">
+        <span class="mock-frame-title">/project/forn-vall-cooperatiu</span>
+        <span class="muted">Mockup viu · click les tabs</span>
+    </div>
+
+    <div class="proj-header">
+        <h3 class="proj-header-title" style="color:var(--text-main);">Forn Vall · Cooperativa</h3>
+        <div class="proj-header-meta">Sector C · MVP · 12 sòcies treballadores · creat fa 3 mesos</div>
+    </div>
+
+    <nav class="sos-submenu" role="tablist" id="mainSubmenu">
+        <button class="sos-submenu-tab is-active" role="tab" data-submenu-tab="hub">
+            <span class="sos-submenu-tab-icon">🏠</span> Hub
+        </button>
+        <button class="sos-submenu-tab" role="tab" data-submenu-tab="map">
+            <span class="sos-submenu-tab-icon">🗺</span> Map
+        </button>
+        <button class="sos-submenu-tab" role="tab" data-submenu-tab="kanban">
+            <span class="sos-submenu-tab-icon">📋</span> Kanban
+        </button>
+        <button class="sos-submenu-tab" role="tab" data-submenu-tab="wallet">
+            <span class="sos-submenu-tab-icon">💰</span> Comptabilitat
+        </button>
+        <button class="sos-submenu-tab" role="tab" data-submenu-tab="presentation">
+            <span class="sos-submenu-tab-icon">🎯</span> Presentation
+        </button>
+        <div class="sos-submenu-dropdown-wrap">
+            <button class="sos-submenu-dropdown-btn" id="dropdownBtn" aria-haspopup="true" aria-expanded="false">
+                Més ▾
+            </button>
+            <div class="sos-submenu-dropdown-panel" id="dropdownPanel" role="menu">
+                <button class="sos-submenu-dropdown-item"><span class="item-icon">📜</span> Pactes <span class="muted">+ Legal agents</span></button>
+                <button class="sos-submenu-dropdown-item"><span class="item-icon">🚀</span> Sprints</button>
+                <button class="sos-submenu-dropdown-item"><span class="item-icon">🧠</span> KB del projecte</button>
+                <button class="sos-submenu-dropdown-item"><span class="item-icon">⚙</span> Settings</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- TAB 1 · HUB -->
+    <div class="tab-content is-active" data-tab-panel="hub">
+        <h3 style="margin-top:0;">🏠 Hub · estat del projecte</h3>
+        <div class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-label">Rols</div><div class="kpi-value">12</div></div>
+            <div class="kpi-card"><div class="kpi-label">Transaccions</div><div class="kpi-value">28</div></div>
+            <div class="kpi-card"><div class="kpi-label">WOs actius</div><div class="kpi-value">7</div></div>
+            <div class="kpi-card"><div class="kpi-label">Saldo</div><div class="kpi-value">€ 1,240</div></div>
+        </div>
+        <p class="muted" style="margin-top:14px;">Activity stream · contribucions recents · alerts...</p>
+    </div>
+
+    <!-- TAB 2 · MAP -->
+    <div class="tab-content" data-tab-panel="map">
+        <h3 style="margin-top:0;">🗺 Map · ValueMapView integrat</h3>
+        <p class="muted">Aquí es renderitzaria el ValueMapView com a subvista (no navegar fora). Castell + rols + transaccions + edició inline.</p>
+        <div class="map-preview" style="margin-top:16px;">
+            <div class="map-stats">🏛 6 nivells castell · 12 rols · 28 transaccions</div>
+            <span class="muted">[placeholder visual mapa]</span>
+        </div>
+    </div>
+
+    <!-- TAB 3 · KANBAN -->
+    <div class="tab-content" data-tab-panel="kanban">
+        <h3 style="margin-top:0;">📋 Kanban · WOs / tasks</h3>
+        <p class="muted">Vista kanban dels WOs del projecte · filtres per role o fase · drag&drop status.</p>
+        <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-top:14px;">
+            <div class="kpi-card"><div class="kpi-label">Backlog</div><div class="kpi-value">12</div></div>
+            <div class="kpi-card"><div class="kpi-label">In progress</div><div class="kpi-value">5</div></div>
+            <div class="kpi-card"><div class="kpi-label">Review</div><div class="kpi-value">3</div></div>
+            <div class="kpi-card"><div class="kpi-label">Done</div><div class="kpi-value">42</div></div>
+        </div>
+    </div>
+
+    <!-- TAB 4 · WALLET -->
+    <div class="tab-content" data-tab-panel="wallet">
+        <h3 style="margin-top:0;">💰 Comptabilitat valor + Wallet (del projecte)</h3>
+        <p class="muted">Top · saldo projecte + flow setmanal. Bottom · ledger contribucions per membre · filtre slicing-pie multipliers.</p>
+        <div class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-label">Saldo wallet</div><div class="kpi-value">€ 1,240</div></div>
+            <div class="kpi-card"><div class="kpi-label">Inflow mes</div><div class="kpi-value" style="color:var(--accent-green);">+€ 380</div></div>
+            <div class="kpi-card"><div class="kpi-label">Outflow mes</div><div class="kpi-value" style="color:var(--accent-red);">−€ 120</div></div>
+            <div class="kpi-card"><div class="kpi-label">Slicing pie %</div><div class="kpi-value">100%</div></div>
+        </div>
+    </div>
+
+    <!-- TAB 5 · PRESENTATION -->
+    <div class="tab-content" data-tab-panel="presentation">
+        <div class="pres-hero">
+            <h2 class="pres-hero-title">Forn Vall · Cooperativa</h2>
+            <div class="pres-hero-tag">Forn artesà cooperatiu a la Vall de Camprodon</div>
+            <p class="pres-hero-desc">12 sòcies treballadores · pa de fermentació natural · distribució directa a 4 botigues locals. Model SCCL · cicle MVP amb 3 mesos d'operació.</p>
+        </div>
+
+        <div class="pres-section">
+            <h4 class="pres-section-title">Canvas · estructura BMC simplificada</h4>
+            <div class="canvas-grid">
+                <div class="canvas-cell">
+                    <h5 class="canvas-cell-title">Segments</h5>
+                    <ul class="canvas-cell-list">
+                        <li>Famílies del barri</li>
+                        <li>Botigues locals</li>
+                        <li>Restaurants km0</li>
+                    </ul>
+                </div>
+                <div class="canvas-cell">
+                    <h5 class="canvas-cell-title">Value Propositions</h5>
+                    <ul class="canvas-cell-list">
+                        <li>Pa fermentació natural</li>
+                        <li>Cereal ecològic local</li>
+                        <li>Preu just productors</li>
+                    </ul>
+                </div>
+                <div class="canvas-cell">
+                    <h5 class="canvas-cell-title">Channels</h5>
+                    <ul class="canvas-cell-list">
+                        <li>Botiga al forn</li>
+                        <li>Distribució 4 botigues</li>
+                        <li>Web ecommerce</li>
+                    </ul>
+                </div>
+                <div class="canvas-cell">
+                    <h5 class="canvas-cell-title">Revenue Streams</h5>
+                    <ul class="canvas-cell-list">
+                        <li>Venda directa (60%)</li>
+                        <li>Distribució (30%)</li>
+                        <li>Subscripció caixa (10%)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="pres-section">
+            <h4 class="pres-section-title">Pitch · narrativa</h4>
+            <div class="pitch-grid">
+                <div class="pitch-cell">
+                    <div class="pitch-cell-label">PROBLEM</div>
+                    <p class="pitch-cell-text">El pa industrial inunda els pobles · no hi ha alternativa artesanal de proximitat ni model cooperatiu sostenible.</p>
+                </div>
+                <div class="pitch-cell">
+                    <div class="pitch-cell-label">SOLUTION</div>
+                    <p class="pitch-cell-text">Forn cooperatiu de 12 sòcies amb fermentació natural · cereal ecològic d'agricultors locals · preu just.</p>
+                </div>
+                <div class="pitch-cell">
+                    <div class="pitch-cell-label">WHY NOW</div>
+                    <p class="pitch-cell-text">Demanda creixent d'aliment artesà i model cooperatiu · suport públic SCCL · 4 botigues compromeses.</p>
+                </div>
+                <div class="pitch-cell">
+                    <div class="pitch-cell-label">TRACTION</div>
+                    <p class="pitch-cell-text">3 mesos operatius · 380€ inflow/mes · break-even projectat a mes 8.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="pres-section">
+            <h4 class="pres-section-title">Map preview · estructura castell</h4>
+            <div class="map-preview">
+                <div class="map-stats">🏛 6 nivells castell · 12 rols · 28 transaccions · 4 deliverables</div>
+                <a href="#" class="map-link">Veure mapa complet →</a>
+            </div>
+        </div>
+
+        <div class="pres-section">
+            <h4 class="pres-section-title">CTA</h4>
+            <div class="cta-row">
+                <button class="cta-btn">📧 Contacta</button>
+                <button class="cta-btn secondary">📜 Signa un pacte</button>
+                <button class="cta-btn secondary">🧠 Explora KB</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<h2>2 · Comparativa · legacy LearnView pattern vs canonical proposat</h2>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div>
+        <h3>Legacy · <code>.lv-tab</code> (LearnView actual)</h3>
+        <div class="legacy-row">
+            <button class="lv-tab active">🤲 Roadmaps</button>
+            <button class="lv-tab">📚 Knowledge</button>
+            <button class="lv-tab">🔍 Cerca</button>
+        </div>
+        <p class="muted" style="font-size:0.78rem;margin-top:6px;">Funciona, però sense hover state visible · sense dropdown · sense URL sync · pixel different per cada vista.</p>
+    </div>
+    <div>
+        <h3>Canonical · <code>.sos-submenu</code> (v133)</h3>
+        <nav class="sos-submenu" style="border-radius:var(--radius-md);">
+            <button class="sos-submenu-tab is-active">🤲 Roadmaps</button>
+            <button class="sos-submenu-tab">📚 Knowledge</button>
+            <button class="sos-submenu-tab">🔍 Cerca</button>
+        </nav>
+        <p class="muted" style="font-size:0.78rem;margin-top:6px;">Hover + active state explicits · dropdown integrat · URL sync · CSS vars compartides · accessible (aria-*).</p>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<h2>3 · Auditoria · 5 vistes amb submenú existent</h2>
+
+<table class="audit-table">
+<thead>
+<tr><th>Vista</th><th>Ruta</th><th>State</th><th>data-attr</th><th>CSS class</th><th>URL?</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>LearnView</strong> <span class="muted">(referent)</span></td><td><code>/learn</code></td><td><code>_mode</code></td><td><code>data-mode</code></td><td><code>.lv-tab</code></td><td>✓ <code>?tab</code></td></tr>
+<tr><td>SettingsV2View</td><td><code>/settings</code></td><td><code>_activeTab</code></td><td><code>data-tab</code></td><td>inline</td><td>?</td></tr>
+<tr><td>OpportunitiesView</td><td><code>/opportunities</code></td><td><code>_activeTab</code></td><td><code>data-op-tab</code></td><td><code>.op-tab</code></td><td>✓</td></tr>
+<tr><td>CreateLiveView</td><td><code>/create</code></td><td><code>_activeTab</code></td><td><code>data-cl-tab</code></td><td><code>.cl-tab</code></td><td>?</td></tr>
+<tr><td>NotesView</td><td><code>/notes</code></td><td>?</td><td>?</td><td><code>.nts-tab</code></td><td>?</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn" style="margin-top:14px;">
+    <div class="callout-title">⚠ 5 vistes · 5 convencions diferents</div>
+    Cost cognitiu acumulat · cal centralitzar a <code>js/ui/SubmenuTabs.js</code> i migrar progressivament.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<h2>4 · Decisions pendents per validar</h2>
+
+<table class="audit-table">
+<thead><tr><th>#</th><th>Pregunta</th><th>Recomanació</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>State name? <code>_mode</code> o <code>_activeTab</code>?</td><td><strong>_mode</strong> (curt · neutre · igual LearnView)</td></tr>
+<tr><td>2</td><td>Mobile · scroll horitzontal o stacked?</td><td><strong>Scroll horitzontal</strong></td></tr>
+<tr><td>3</td><td>URL param sempre <code>?tab=X</code>?</td><td><strong>Sí</strong> · sharable URLs</td></tr>
+<tr><td>4</td><td>Doc generator legal-agents = subdrawer de Pactes?</td><td><strong>Sí</strong> · redueix soroll menú</td></tr>
+<tr><td>5</td><td>Presentation seccions fixes o reorderables?</td><td><strong>Fixes v133</strong> · reorder v134</td></tr>
+<tr><td>6</td><td>Canvas · 4 cols (BMC simplificat) o 9?</td><td><strong>4 cols</strong> · mobile friendly</td></tr>
+<tr><td>7</td><td>Pitch · 4 seccions fixes (P/S/W/T) o N config?</td><td><strong>4 fixes v133</strong></td></tr>
+</tbody>
+</table>
+
+<div class="foot">
+    Mockup v132i · @alvaro · 2026-05-17 · pendent validació · si OK → v132j implementa <code>SubmenuTabs.js</code>
+</div>
+
+</div>
+
+<script>
+// Tabs main switching
+document.querySelectorAll('#mainSubmenu .sos-submenu-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#mainSubmenu .sos-submenu-tab').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const id = btn.getAttribute('data-submenu-tab');
+        document.querySelectorAll('[data-tab-panel]').forEach(p => p.classList.toggle('is-active', p.getAttribute('data-tab-panel') === id));
+    });
+});
+
+// Dropdown
+const dropdownBtn = document.getElementById('dropdownBtn');
+const dropdownPanel = document.getElementById('dropdownPanel');
+dropdownBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = dropdownPanel.classList.toggle('is-open');
+    dropdownBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+document.addEventListener('click', (e) => {
+    if (!dropdownPanel.contains(e.target) && !dropdownBtn.contains(e.target)) {
+        dropdownPanel.classList.remove('is-open');
+        dropdownBtn.setAttribute('aria-expanded', 'false');
+    }
+});
+// Keyboard nav
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        dropdownPanel.classList.remove('is-open');
+        dropdownBtn.setAttribute('aria-expanded', 'false');
+    }
+});
+</script>
+</body>
+</html>

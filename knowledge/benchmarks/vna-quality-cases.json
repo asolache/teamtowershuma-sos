@@ -1,0 +1,208 @@
+{
+  "version": "v132c-v1.0",
+  "purpose": "Benchmark canonical · 20 casos reals per a A/B testing del prompt VNA · evolutiu via /prompts-debug + LLM real",
+  "created": "2026-05-19",
+  "cases": [
+    {
+      "id": "case-sports-football",
+      "name": "FC Lleida",
+      "description": "Equip de futbol semiprofessional a Lleida · 25 jugadors plantilla · cantera de 80 joves · staff tècnic complet · pugem a tercera divisió aquest any",
+      "sector": "R",
+      "expected_domain": "sports-team",
+      "expected_roles_min": 8,
+      "expected_castell_levels_min": 5,
+      "must_include_role_kinds": ["head-coach", "player", "scout", "fan-base"],
+      "rationale": "El cas que va revelar el bug v126 (domainDetector) · ha de generar rols esportius reals · no rols d'arts"
+    },
+    {
+      "id": "case-arts-theatre",
+      "name": "Companyia La Calòrica",
+      "description": "Companyia de teatre amateur amb gira anual · 3 obres en producció · 12 actors + 2 directors artístics",
+      "sector": "R",
+      "expected_domain": "arts-performance",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["artistic-director", "performer", "dramaturg", "audience"]
+    },
+    {
+      "id": "case-coop-cares",
+      "name": "Cooperativa Cures Vall d'Aro",
+      "description": "Cooperativa d'iniciativa social que ofereix serveis de cura a domicili per a gent gran al Baix Empordà · 12 sòcies treballadores · model SCCL · cicle MVP",
+      "sector": "Q",
+      "expected_domain": "coop-cares",
+      "expected_roles_min": 7,
+      "expected_castell_levels_min": 5,
+      "must_include_role_kinds": ["caregiver", "coordinator", "family", "service-user"]
+    },
+    {
+      "id": "case-edu-school",
+      "name": "Escola Bressol Tres Pins",
+      "description": "Escola lliure cooperativa amb mestres acompanyants · 60 nens 0-3 anys · model pedagogia activa",
+      "sector": "P",
+      "expected_domain": "edu-formation",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["teacher", "student", "family"]
+    },
+    {
+      "id": "case-saas-startup",
+      "name": "CodeCorp",
+      "description": "Startup SaaS amb 5 enginyers + 1 product manager · plataforma de DevOps per a equips · pre-seed",
+      "sector": "J",
+      "expected_domain": "software-agency",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["cto-founder", "product-manager", "engineer-senior"]
+    },
+    {
+      "id": "case-bakery-coop",
+      "name": "Forn Vall",
+      "description": "Forn de pa cooperatiu amb grup de consum local + restaurant cooperatiu associat · 6 sòcies treballadores · masses mare + farines locals km0",
+      "sector": "C",
+      "expected_domain": "food-coop",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["baker-craftsperson", "distribution-coord", "consumer-member"]
+    },
+    {
+      "id": "case-energy-coop",
+      "name": "Som Energia",
+      "description": "Cooperativa energètica · comercialitzadora elèctrica + solar comunitari · 80.000 sòcies",
+      "sector": "D",
+      "expected_domain": "energy-coop",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["member-prosumer", "tech-installer", "energy-coordinator"]
+    },
+    {
+      "id": "case-religious-parish",
+      "name": "Parròquia Sant Just",
+      "description": "Comunitat religiosa cristiana de base · misses dominicals · catequesi · 400 feligresos",
+      "sector": "R",
+      "expected_domain": "religious-community",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["spiritual-leader", "community-member", "volunteer"]
+    },
+    {
+      "id": "case-political-movement",
+      "name": "PAH Sant Adrià",
+      "description": "Moviment social per al dret a l'habitatge · stop desnonaments · assemblea oberta setmanal",
+      "sector": "S",
+      "expected_domain": "political-movement",
+      "expected_roles_min": 7,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["assembly", "militant-active", "press-team", "legal-support"]
+    },
+    {
+      "id": "case-art-collective",
+      "name": "La Caldera",
+      "description": "Col·lectiu d'artistes plàstiques · taller compartit a Barcelona · open studios anual · 15 membres",
+      "sector": "R",
+      "expected_domain": "art-collective",
+      "expected_roles_min": 5,
+      "expected_castell_levels_min": 3,
+      "must_include_role_kinds": ["member-artist", "curator", "community-host"]
+    },
+    {
+      "id": "case-worker-coop",
+      "name": "Pa de Pagès SCCL",
+      "description": "Cooperativa de treball associat · 8 sòcies treballadores · forn artesà + tenda · sccl",
+      "sector": "C",
+      "expected_domain": "worker-coop",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["worker-member", "general-assembly", "governing-board"]
+    },
+    {
+      "id": "case-research-lab",
+      "name": "Lab Cosmologia ICCUB",
+      "description": "Grup de recerca en cosmologia · 4 postdocs + 8 doctorands · grants ERC + projecte H2020",
+      "sector": "M",
+      "expected_domain": "research-lab",
+      "expected_roles_min": 7,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["principal-investigator", "postdoc", "phd-student"]
+    },
+    {
+      "id": "case-fablab",
+      "name": "Fab Lab Barcelona",
+      "description": "Maker space comunitari · impressores 3D · CNC · laser · 150 membres · tallers setmanals",
+      "sector": "P",
+      "expected_domain": "maker-space",
+      "expected_roles_min": 5,
+      "expected_castell_levels_min": 3,
+      "must_include_role_kinds": ["lab-coordinator", "member-maker", "workshop-host"]
+    },
+    {
+      "id": "case-health-clinic",
+      "name": "Clínica Dr. Pérez",
+      "description": "Centre de salut amb metge de família + 2 especialistes + infermera · pacients particulars + mútues",
+      "sector": "Q",
+      "expected_domain": "health-clinic",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["physician-primary", "nurse", "patient", "health-insurance"]
+    },
+    {
+      "id": "case-hotel",
+      "name": "Hotel Petit Mont",
+      "description": "Hotel rural a la Cerdanya · 12 habitacions · restaurant + spa · cap setmana lliure",
+      "sector": "I",
+      "expected_domain": "hotel-hospitality",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["front-desk", "housekeeping", "kitchen-fb", "guest", "ota-channel"]
+    },
+    {
+      "id": "case-construction",
+      "name": "Obres Sant Cugat",
+      "description": "Empresa de construcció · rehabilitació · paletes especialitzats · cartera 5-10 obres residencials/any",
+      "sector": "F",
+      "expected_domain": "construction",
+      "expected_roles_min": 7,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["site-manager", "architect", "worker-mason", "client-owner"]
+    },
+    {
+      "id": "case-coworking",
+      "name": "Mola Coworking",
+      "description": "Coworking al barri · 30 membres + sala events · community manager",
+      "sector": "L",
+      "expected_domain": "coworking",
+      "expected_roles_min": 5,
+      "expected_castell_levels_min": 3,
+      "must_include_role_kinds": ["community-manager", "member-coworker", "event-host"]
+    },
+    {
+      "id": "case-ecommerce",
+      "name": "EcoTienda",
+      "description": "Botiga online D2C de productes ecològics · Shopify + marketplace · ~500 clients/mes",
+      "sector": "G",
+      "expected_domain": "ecommerce",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["ceo-founder", "marketing-growth", "operations-fulfill", "customer"]
+    },
+    {
+      "id": "case-radio-comm",
+      "name": "Ràdio L'Hospitalet",
+      "description": "Ràdio comunitària amb graella oberta i 12 conductors voluntaris · streaming + FM",
+      "sector": "J",
+      "expected_domain": "community-media",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["editor-in-chief", "show-host", "volunteer-contributor", "audience-listener"]
+    },
+    {
+      "id": "case-housing-coop",
+      "name": "La Borda",
+      "description": "Cooperativa d'habitatge en cessió d'ús · cohousing al Poblesec · 28 unitats · model COOP57",
+      "sector": "L",
+      "expected_domain": "housing-coop",
+      "expected_roles_min": 6,
+      "expected_castell_levels_min": 4,
+      "must_include_role_kinds": ["resident-member", "governing-council", "bank-finance"]
+    }
+  ]
+}

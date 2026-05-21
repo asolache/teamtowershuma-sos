@@ -3,8 +3,45 @@ sector_id: C
 sector_name: "Industria Manufacturera"
 sector_name_en: "Manufacturing"
 cnae: "10-33"
-version: "v11.1"
-tags: ["manufactura", "produccion", "industria", "fabrica", "operaciones"]
+version: "v131c"
+cnae_official: "CNAE-2009 C · Industria manufacturera (alimentació · tèxtil · química · farmacèutica · metall · electrònica · automoció · maquinària · mobles)"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/C.md v131c"
+tags: ["manufactura", "produccion", "industria", "fabrica", "operaciones", "lean-mfg", "industria-4.0", "automatització", "ISO-9001", "supply-chain"]
+
+skill_level_taxonomy:
+  junior: "0-2 anys · operari línia · FP grau mig industrial"
+  mid: "3-7 anys · cap d'equip · Six Sigma green belt · técnico mecánico"
+  senior: "8-15 anys · cap producció · black belt · líder Lean transformation"
+  principal: "15+ anys · director planta · Industry 4.0 strategy · global ops"
+
+sops_canonical:
+  - id: sop-line-changeover
+    title: "Canvi de línia / changeover SMED"
+    castell_level: tronc
+    description: "Buidat · neteja · canvi útils · ajustos · primera peça OK · alliberament línia."
+    steps_summary: "30 min-8h segons producte · 3-5 stakeholders"
+  - id: sop-quality-inspection
+    title: "Control qualitat al final de línia"
+    castell_level: laterals
+    description: "Mostreig AQL · medicions · ressenya defectes · acceptació/rebuig lot · informe."
+    steps_summary: "per lot · 2 stakeholders · ISO 9001"
+  - id: sop-mantenimiento-preventivo
+    title: "Manteniment preventiu programat"
+    castell_level: laterals
+    description: "Calendari TPM · check · canvi components · validació funcional · registre."
+    steps_summary: "setmanal a anual segons equip"
+  - id: sop-supply-chain-pedido
+    title: "Cicle comanda → entrega"
+    castell_level: mans
+    description: "Recepció comanda · MRP · producció · packaging · expedició · facturació."
+    steps_summary: "dies-setmanes · 5 stakeholders"
+  - id: sop-kaizen-millora
+    title: "Esdeveniment Kaizen setmanal"
+    castell_level: pinya
+    description: "Identificació problema · arrel · contramesura · prova · estandardització."
+    steps_summary: "setmanal · 5-8 stakeholders · Lean core"
 
 roles:
   - id: plant_director

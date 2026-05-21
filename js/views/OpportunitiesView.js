@@ -11,6 +11,7 @@
 
 import { store } from '../core/store.js';
 import { KB }    from '../core/kb.js';
+import { renderSubmenuTabs, bindSubmenuTabs } from '../ui/SubmenuTabs.js';
 import {
     PUBLIC_PROJECT_TYPE, projectRegistryEntryIdFor,
 } from '../core/publicProjectService.js';
@@ -135,9 +136,13 @@ export default class OpportunitiesView {
                     <p>Descobreix <strong>projectes</strong>, <strong>work orders obertes</strong>, <strong>productes</strong>, <strong>workshops</strong> i <strong>CV nodals</strong> publicats per altres operadors SOS via permaweb · ownerDid verificable + signatura ECDSA · cross-device · <strong>Discovery sempre free</strong> · publish 0,02-0,05€ per entitat (Free pla ×1.5 fee).</p>
                     <p style="font-size:12px;color:var(--text-muted);margin-top:6px;"><strong>⚠ Important</strong> · les entries amb txId que comença per <code>mock-</code> són locals · no es sincronitzen entre dispositius. Cal Wander connectat o keyfile Arweave a <a href="/identity" data-link style="color:var(--accent-indigo);">/identity</a> per a upload real.</p>
                 </header>
-                <!-- PUBLISH-SELECT-001 · tabs per tipus de contingut públic -->
-                <div class="op-tabs" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;border-bottom:1px solid var(--border-default);padding-bottom:6px;">
-                    ${TAB_DEFS.map(t => `<button class="op-tab" data-op-tab="${t.id}" style="background:${this._activeTab === t.id ? 'var(--accent-indigo)' : 'transparent'};color:${this._activeTab === t.id ? '#fff' : 'var(--text-secondary)'};border:1px solid ${this._activeTab === t.id ? 'var(--accent-indigo)' : 'var(--border-default)'};padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:0.82rem;font-weight:700;font-family:var(--font-base);">${t.icon} ${t.label}</button>`).join('')}
+                <!-- v151 · canonical SubmenuTabs · 7 tabs · same pattern cross-views -->
+                <div class="op-bar-fused" style="display:flex;align-items:stretch;margin-bottom:14px;">
+                    <div id="opSubmenu" class="op-bar-tabs" style="flex:1;min-width:0;overflow-x:auto;">${renderSubmenuTabs({
+                        tabs: TAB_DEFS.map(t => ({ id: t.id, label: t.label, icon: t.icon })),
+                        activeId: this._activeTab,
+                        urlParam: 'tab',
+                    })}</div>
                 </div>
                 <div class="op-stats" id="opStats"></div>
                 <div class="op-search">
@@ -158,10 +163,12 @@ export default class OpportunitiesView {
             this._filter = e.target.value.toLowerCase().trim();
             this._render();
         });
-        // PUBLISH-SELECT-001 · tabs · canviar entitat type
-        document.querySelectorAll('[data-op-tab]').forEach(btn => {
-            btn.addEventListener('click', () => this._switchTab(btn.getAttribute('data-op-tab')));
-        });
+        // v151 · canonical SubmenuTabs · re-render quan canvia tab
+        const opMount = document.getElementById('opSubmenu');
+        if (opMount) {
+            try { this._cleanupTabs?.(); } catch (_) {}
+            this._cleanupTabs = bindSubmenuTabs(opMount, (tabId) => this._switchTab(tabId), { urlParam: 'tab' });
+        }
         // PROJ-VERSIONING-001 sprint D · async fetch latest version per card
         // (cache TTL 15min · NO bloca render · update banner inline si latest > current)
         this._checkLatestVersions().catch(e => console.warn('[opportunities] latest check', e?.message));

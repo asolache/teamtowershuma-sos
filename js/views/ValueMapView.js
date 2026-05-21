@@ -2557,108 +2557,108 @@ export default class ValueMapView {
         status.style.color   = 'var(--text-muted)';
         status.textContent   = t('ai.enriching');
 
+        // v158 · canonical · path únic via quickSuggestMap · legacy eliminat
+        // (slim-first + escalation automàtic si score < 60 · 1 sol backend).
         try {
-            // Context-First: enriquecer con sector + subtype + projectType + roles existentes
-            // VALUEMAP-AI-CTX-001 · injectem projectType + subtypeId del store
-            // perquè la IA tingui més precisió (alineat amb VALUEMAP-GEN-001 a aiFillService)
-            const detectedSector = this._state.currentSector || null;
-            let projectMeta = '';
-            try {
-                if (this._state.projectId) {
-                    const { store } = await import('../core/store.js');
-                    const project = (store.getState().projects || []).find(p => p?.id === this._state.projectId);
-                    if (project) {
-                        const parts = [];
-                        if (project.projectType) parts.push('projectType: ' + project.projectType);
-                        if (project.subtypeId)   parts.push('subtype: ' + project.subtypeId);
-                        if (project.description) parts.push('description: ' + project.description.slice(0, 240));
-                        if (project.purpose)     parts.push('purpose: ' + project.purpose.slice(0, 240));
-                        // Subtype hint via sectorSubtypes
-                        if (project.sectorId && project.subtypeId) {
-                            try {
-                                const { getSubtypeById } = await import('../core/sectorSubtypes.js');
-                                const sub = getSubtypeById(project.sectorId, project.subtypeId);
-                                if (sub?.iaContextHint) parts.push('operativa típica del subtipus: ' + sub.iaContextHint);
-                            } catch (_) {}
-                        }
-                        if (parts.length) projectMeta = '\nProject context:\n' + parts.join('\n');
-                    }
-                }
-            } catch (_) { /* degrade silenciós */ }
-            const enrichedFreeText = freeText + projectMeta;
-            const ctxResult = await KnowledgeLoader.buildContext({
-                sector:      detectedSector,
-                freeText:    enrichedFreeText,
-                existingMap: hasRoles ? { roles: this._state.roles, transactions: this._state.transactions } : null,
-                includeVna:  true,
-                taskContext: hasRoles
-                    ? (getLang() === 'en' ? 'Suggest roles and transactions MISSING from the map. Do not repeat existing ones. Be concise.' : 'Sugiere roles y transacciones que FALTAN en el mapa. No repitas los existentes. Sé conciso.')
-                    : (getLang() === 'en' ? 'Generate a complete VNA map for the described organization. Minimum 6 roles, minimum 2 per level.' : 'Genera un mapa VNA completo para la organización descrita. Mínimo 6 roles, mínimo 2 por nivel.'),
-            });
-
-            status.textContent = t('ai.calling');
-
-            const isEn = getLang() === 'en';
-            const systemPrompt = (isEn
-                ? 'You are an expert in Value Network Analysis (Verna Allee methodology). Generate a VNA map in strict JSON format.'
-                : 'Eres un experto en Value Network Analysis (metodología Verna Allee). Genera un mapa VNA en formato JSON estricto.') + `
-
-RULES:
-- Roles = value flow activities, NOT job titles
-- Respond ONLY with valid JSON, no markdown blocks, no extra text
-- fmv_usd_h always null
-- open_question always null
-- ids in kebab-case, unique
-- ALL role names, descriptions, deliverables and health_hints MUST be written in ${isEn ? 'English' : 'Spanish'}
-${hasRoles ? '- DO NOT repeat existing roles: ' + this._state.roles.map(function(r){ return r.id; }).join(', ') : ''}
-
-CONTEXTO:
-${ctxResult.systemPrompt}`;
-
-            const userPrompt = freeText
-                ? 'Organización: ' + freeText
-                : (hasRoles ? 'Completa el mapa con los roles y transacciones que faltan.' : 'Genera un mapa VNA completo para el sector indicado en el contexto.');
-
-            status.textContent = t('ai.processing');
-
-            const result = await Orchestrator.callLLM({
-                preferredEngine: 'anthropic',
-                systemPrompt,
-                userPrompt,
-                responseFormat: 'json_object',
-                temperature:    0.3,
-            });
-
-            const data = result.content;
-            const roles = Array.isArray(data.roles)        ? data.roles        : [];
-            const txs   = Array.isArray(data.transactions) ? data.transactions : [];
-
-            if (roles.length === 0 && txs.length === 0) {
-                status.textContent = t('ai.no.results');
-                status.style.color = 'var(--accent-orange)';
-                btn.disabled = false;
-                spinner.style.display = 'none';
-                document.getElementById('vmapAIBtnText').textContent = '✦ Generar mapa de valor';
-                return;
-            }
-
-            this._aiProposals = { roles, transactions: txs };
-            this._renderProposals(roles, txs);
-
-            document.getElementById('vmapAIPhase1').style.display = 'none';
-            document.getElementById('vmapAIPhase2').style.display = 'block';
-
+            await this._runAISuggestionQuickSuggest({ freeText, hasRoles, btn, spinner, status });
         } catch (err) {
             console.error('[ValueMapView] IA error:', err);
-            status.textContent = '❌ Error: ' + err.message;
+            status.textContent = '❌ Error: ' + (err?.message || String(err));
             status.style.color = 'var(--accent-red)';
             btn.disabled = false;
             spinner.style.display = 'none';
             document.getElementById('vmapAIBtnText').textContent = '✦ Reintentar';
-            // Re-bind del botón tras error
             btn.addEventListener('click', () => this._runAISuggestion(), { once: true });
         }
     }
+
+    // v132e · path NOU · usa quickSuggestMap (vnaQuickSuggest.js · v132d)
+    // Backend unificat · 1 sol prompt · escalation automàtic si score < 60
+    async _runAISuggestionQuickSuggest({ freeText, hasRoles, btn, spinner, status }) {
+        status.textContent = t('ai.calling');
+        const { quickSuggestMap } = await import('../core/vnaQuickSuggest.js');
+
+        // Adapter · Orchestrator.callLLM → generateWithProvider({system, user, ...})
+        const provider = async (_modelKey, opts) => {
+            const result = await Orchestrator.callLLM({
+                preferredEngine: 'anthropic',
+                systemPrompt:    opts.systemPrompt,
+                userPrompt:      opts.userPrompt,
+                responseFormat:  'json_object',
+                temperature:     opts.temperature ?? 0.3,
+            });
+            // Adapt return shape · quickSuggestMap espera { text, usage }
+            const text = typeof result?.content === 'string'
+                ? result.content
+                : JSON.stringify(result?.content || {});
+            return { text, usage: result?.usage || null };
+        };
+
+        // Build description amb projectMeta (preservar comportament v131 ·
+        // injectem subtype hint + lifecycle del store)
+        let description = freeText;
+        try {
+            if (this._state.projectId) {
+                const { store } = await import('../core/store.js');
+                const project = (store.getState().projects || []).find(p => p?.id === this._state.projectId);
+                if (project) {
+                    const parts = [];
+                    if (project.description) parts.push(project.description.slice(0, 240));
+                    if (project.purpose)     parts.push(project.purpose.slice(0, 240));
+                    if (project.sectorId && project.subtypeId) {
+                        const { getSubtypeById } = await import('../core/sectorSubtypes.js');
+                        const sub = getSubtypeById(project.sectorId, project.subtypeId);
+                        if (sub?.iaContextHint) parts.push('Operativa típica del subtipus · ' + sub.iaContextHint);
+                    }
+                    if (parts.length) description = (freeText ? freeText + ' · ' : '') + parts.join(' · ');
+                }
+            }
+        } catch (_) { /* degrade silenciós */ }
+
+        status.textContent = t('ai.processing');
+
+        const r = await quickSuggestMap({
+            context: {
+                name:        this._state.projectId || 'mapa-actual',
+                description: description || '(sense descripció · usa el sector i existingMap)',
+                sector:      this._state.currentSector || null,
+                vna_zoom:    this._state.vna_zoom || 'mid',
+            },
+            existingMap: hasRoles ? {
+                roles:        this._state.roles,
+                transactions: this._state.transactions,
+            } : null,
+            slim: true,                  // default v132e · saving ~40% tokens
+            qualityThreshold: 60,        // escalation a FULL si pobre
+            generateWithProvider: provider,
+            onProgress: (p) => {
+                if (p.step === 'escalating') status.textContent = '⚡ Escalant a prompt complet (qualitat baixa)…';
+                if (p.step === 'done')       status.textContent = t('ai.done') || '✓ Llest';
+            },
+        });
+
+        if (!r.ok || !r.map || (r.map.roles.length === 0 && r.map.transactions.length === 0)) {
+            status.textContent = t('ai.no.results');
+            status.style.color = 'var(--accent-orange)';
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            document.getElementById('vmapAIBtnText').textContent = '✦ Generar mapa de valor';
+            return;
+        }
+
+        this._aiProposals = { roles: r.map.roles, transactions: r.map.transactions };
+        this._renderProposals(r.map.roles, r.map.transactions);
+        document.getElementById('vmapAIPhase1').style.display = 'none';
+        document.getElementById('vmapAIPhase2').style.display = 'block';
+
+        // v132e · UI hint si escalat
+        if (r.escalatedToFull) {
+            try { console.info('[vmap·v132e] output escalat a FULL prompt · score final', r.score?.score); } catch (_) {}
+        }
+    }
+
+    // v158 · _runAISuggestionLegacy ELIMINAT · path únic via quickSuggestMap.
+
 
     // ── Renderizar cards de propuesta ─────────────────────────────────────────
     _renderProposals(roles, txs) {

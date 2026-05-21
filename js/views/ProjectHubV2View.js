@@ -29,8 +29,65 @@ import { computeProcessStats } from '../core/processService.js';
 import { budgetStatus, getSpend } from '../core/aiBudgetService.js';
 import { getSessionTotalEur, formatCostEur } from '../core/aiCostTracker.js';
 import { auditOrg } from '../core/tddFrameworkService.js';
+// v134/v136 · SubmenuTabs canonical + IA-aligned 6 tabs + dropdown
+import { renderSubmenuTabs, bindSubmenuTabs, getActiveTabFromUrl } from '../ui/SubmenuTabs.js';
 
-const TPL_VERSION = 'hub-v2-v1.0';
+const TPL_VERSION = 'hub-v2-v1.1-canonical-tabs';
+
+// v134 IA aligned · 6 tabs als 5 pilars del menú principal + Equip
+const HUB_TABS = Object.freeze([
+    { id: 'hub',           label: 'Hub',           icon: '🏠' },
+    { id: 'crear',         label: 'Crear',         icon: '🎨' },
+    { id: 'treballar',     label: 'Treballar',     icon: '🔨' },
+    { id: 'comptabilitzar',label: 'Comptabilitzar',icon: '💶' },
+    { id: 'connectar',     label: 'Connectar',     icon: '🔗' },
+    { id: 'equip',         label: 'Equip',         icon: '👥' },
+]);
+const HUB_DROPDOWN = Object.freeze([
+    { id: 'aprendre', label: 'Aprendre (KB projecte)', icon: '🧠' },
+    { id: 'sprints',  label: 'Sprints management',    icon: '🚀' },
+    { id: 'lifecycle',label: 'Lifecycle dashboard',   icon: '🌀' },
+    { id: 'settings', label: 'Settings projecte',     icon: '⚙' },
+]);
+
+// v141+v142 · Mapping pilar → vistes globals · cada link té id (per al sub-submenu l2)
+// + href (per a "Obre vista completa") + kind (per al render in-tab preview lleuger)
+const HUB_PILLAR_LINKS = Object.freeze({
+    crear: [
+        { id: 'canvas',       href: '/canvas',       label: 'Canvas',       icon: '🎨', kind: 'canvas' },
+        { id: 'pitch',        href: '/pitch',        label: 'Pitch',        icon: '📣', kind: 'pitch' },
+        { id: 'pact',         href: '/pact',         label: 'Pacte',        icon: '🤝', kind: 'pact' },
+        { id: 'presentation', href: '/presentation', label: 'Presentation', icon: '🎤', kind: 'presentation' },
+    ],
+    treballar: [
+        { id: 'map',       href: '/map',       label: 'Map',       icon: '🗺', kind: 'map' },
+        { id: 'kanban',    href: '/kanban',    label: 'Kanban',    icon: '📋', kind: 'kanban' },
+        { id: 'sops',      href: '/sops',      label: 'SOPs',      icon: '📜', kind: 'sops' },
+        { id: 'quality',   href: '/quality',   label: 'Qualitat',  icon: '🎯', kind: 'quality' },
+        { id: 'sprint',    href: '/sprint',    label: 'Sprint',    icon: '🐝', kind: 'sprint' },
+        { id: 'lifecycle', href: '/lifecycle', label: 'Lifecycle', icon: '🌀', kind: 'lifecycle' },
+    ],
+    comptabilitzar: [
+        { id: 'wallet',     href: '/wallet/v2',        label: 'Wallet',       icon: '💼', kind: 'wallet' },
+        { id: 'accounting', href: '/accounting/v2',    label: 'Comptes',      icon: '📒', kind: 'accounting' },
+        { id: 'value',      href: '/value-accounting', label: 'Pastís valor', icon: '🥧', kind: 'value' },
+        { id: 'invoices',   href: '/invoices',         label: 'Factures',     icon: '🧾', kind: 'invoices' },
+        { id: 'tokenomics', href: '/tokenomics',       label: 'Tokenomics',   icon: '🪙', kind: 'tokenomics' },
+    ],
+    connectar: [
+        { id: 'proposals', href: '/proposals', label: 'Propostes',       icon: '📝', kind: 'proposals' },
+        { id: 'market',    href: '/market',    label: 'Mercat',          icon: '🛒', kind: 'market' },
+        { id: 'registry',  href: '/registry',  label: 'Registry públic', icon: '📡', kind: 'registry' },
+    ],
+    equip: [
+        { id: 'members',     href: '/team?tab=projects',    label: 'Membres',      icon: '🧬', kind: 'team-members' },
+        { id: 'roles',       href: '/team?tab=roles',       label: 'Rols',         icon: '🤲', kind: 'team-roles' },
+        { id: 'permissions', href: '/team?tab=permissions', label: 'Permisos',     icon: '🔐', kind: 'team-permissions' },
+        { id: 'invites',     href: '/team?tab=projects',    label: 'Convidacions', icon: '✉',  kind: 'team-invites' },
+    ],
+});
+
+const VALID_TAB_IDS = new Set([...HUB_TABS, ...HUB_DROPDOWN].map(t => t.id));
 
 export default class ProjectHubV2View {
 
@@ -46,6 +103,12 @@ export default class ProjectHubV2View {
             : null;
         this._project = null;
         this._notFoundHtml = null;
+        // v136 · IA-aligned tab routing
+        const urlTab = getActiveTabFromUrl('tab', 'hub');
+        this._mode = VALID_TAB_IDS.has(urlTab) ? urlTab : 'hub';
+        // v150 · L2 submenu eliminat · pilar tabs ara són grid de cards amb
+        // navegació directa a la vista global (zero preview redundant).
+        this._cleanupTabs = null;
     }
 
     // Router pattern · getHtml + afterRender
@@ -128,6 +191,21 @@ export default class ProjectHubV2View {
 
     async afterRender() {
         if (this._project) this._bind();
+        // v136 · bind canonical submenu · re-render quan canvia tab
+        // v150 · L2 submenu eliminat · no més bindings de sub-tab
+        const mount = document.getElementById('hubSubmenu');
+        if (mount) {
+            try { this._cleanupTabs?.(); } catch (_) {}
+            this._cleanupTabs = bindSubmenuTabs(mount, (newId) => {
+                if (!VALID_TAB_IDS.has(newId) || newId === this._mode) return;
+                this._mode = newId;
+                this.render();
+            }, { urlParam: 'tab' });
+        }
+    }
+
+    destroy() {
+        try { this._cleanupTabs?.(); } catch (_) {}
     }
 
     async render() {
@@ -235,23 +313,15 @@ export default class ProjectHubV2View {
         </style>
 
         <div class="hub-shell">
-            <div class="hub-topbar">
-                <a href="/dashboard" data-link class="hub-logo">🗼 Team<span>Towers</span></a>
-                <span style="color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Project Hub v2 · 5-click rule</span>
-                <span style="flex:1;"></span>
-                <a href="/project/${encodeURIComponent(project.id)}" data-link class="hub-back">← Hub clàssic</a>
+
+            <div id="hubSubmenu" style="border-bottom:1px solid var(--border-default);">
+                ${renderSubmenuTabs({ tabs: HUB_TABS, dropdown: HUB_DROPDOWN, activeId: this._mode, urlParam: 'tab' })}
             </div>
 
             <div class="hub-main">
-                ${this._zone0_Legendary({ project, todayWos, bs, sessionEur })}
-                ${this._zone1_OrgBar({ project, org, orgAudit })}
-                ${this._zone2_Today({ todayWos, cashBalance })}
-                ${this._zone3_Processes({ processes })}
-                ${this._zone4_Suggestions({ suggestions })}
-                ${this._zone5_Activity({ feed })}
-                ${this._zone6_Actions({ project, bs, sessionEur })}
-                ${this._zone7_Knowledge({ project })}
-                ${this._zone8_AdvancedTools({ project })}
+                ${this._mode === 'hub'
+                    ? this._renderHubContent({ project, todayWos, bs, sessionEur, suggestions, feed, org, orgAudit, processes, cashBalance })
+                    : this._renderPillarContent(this._mode, project)}
             </div>
         </div>`;
     }
@@ -259,6 +329,93 @@ export default class ProjectHubV2View {
     // ZONE 0 · LEGENDARY HERO · stats clau visibles d'un cop d'ull
     // Quality score · canvas vision preview · WO progress · cost IA · num rols
     // 5 cards en 1 fila amb les claus del projecte
+    // v136 · Hub tab content · embolcalla les 8 zones existents (7-zones + legendary)
+    _renderHubContent({ project, todayWos, bs, sessionEur, suggestions, feed, org, orgAudit, processes, cashBalance }) {
+        return `
+            ${this._zone0_Legendary({ project, todayWos, bs, sessionEur })}
+            ${this._zone1_OrgBar({ project, org, orgAudit })}
+            ${this._zone2_Today({ todayWos, cashBalance })}
+            ${this._zone3_Processes({ processes })}
+            ${this._zone4_Suggestions({ suggestions })}
+            ${this._zone5_Activity({ feed })}
+            ${this._zone6_Actions({ project, bs, sessionEur })}
+            ${this._zone7_Knowledge({ project })}
+            ${this._zone8_AdvancedTools({ project })}`;
+    }
+
+    // v142 · Pillar tab content · sub-submenu l2 + in-tab content lleuger per sub
+    // v150 · pilar content · grid de cards · click directe a la vista global
+    // (sense L2 submenu redundant · sense preview placeholder que només era
+    // un link a la vista) · -1 barra horizontal · -1 click al destí real.
+    _renderPillarContent(pilarId, project) {
+        const links = HUB_PILLAR_LINKS[pilarId] || [];
+        const pilarMeta = HUB_TABS.find(t => t.id === pilarId) || HUB_DROPDOWN.find(t => t.id === pilarId);
+        const pilarLabel = pilarMeta ? (pilarMeta.icon + ' ' + pilarMeta.label) : pilarId;
+
+        if (links.length === 0) {
+            return `<div class="hub-zone" style="text-align:center;padding:2rem;">
+                <h2 style="margin:0 0 8px;">${this._esc(pilarLabel)}</h2>
+                <p style="color:var(--text-muted);margin:0;">Aquest pilar encara no té vistes assignades.</p>
+            </div>`;
+        }
+
+        const cards = links.map(l => {
+            const sep = l.href.includes('?') ? '&' : '?';
+            const href = l.href + sep + 'project=' + encodeURIComponent(project.id);
+            const desc = this._pilarCardDesc(l.kind);
+            return `<a href="${this._esc(href)}" data-link class="hub-pilar-card">
+                <div class="hub-pilar-card-icon">${this._esc(l.icon || '·')}</div>
+                <div class="hub-pilar-card-label">${this._esc(l.label)}</div>
+                <div class="hub-pilar-card-desc">${this._esc(desc)}</div>
+            </a>`;
+        }).join('');
+
+        return `
+            <div class="hub-zone" style="padding:0;overflow:hidden;">
+                <div class="hub-zone-head" style="padding:12px 16px;margin:0;border-bottom:1px solid var(--border-default);">
+                    <h2 style="margin:0;">${this._esc(pilarLabel)} <span style="color:var(--text-muted);font-weight:400;font-size:0.8rem;">· ${links.length} vistes · click directe</span></h2>
+                </div>
+                <div class="hub-pilar-grid" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">${cards}</div>
+            </div>
+            <style>
+                .hub-pilar-card { background:var(--bg-elevated); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:16px; text-align:center; text-decoration:none; color:var(--text-main); transition:transform 0.15s ease, border-color 0.15s ease; display:flex; flex-direction:column; align-items:center; gap:6px; }
+                .hub-pilar-card:hover { transform:translateY(-2px); border-color:var(--accent-indigo); }
+                .hub-pilar-card-icon { font-size:1.7rem; }
+                .hub-pilar-card-label { font-size:0.92rem; font-weight:700; }
+                .hub-pilar-card-desc { font-size:0.75rem; color:var(--text-muted); line-height:1.3; }
+            </style>`;
+    }
+
+    // v150 · descripció curta per cada kind (1 línia) · suficient per a card grid
+    _pilarCardDesc(kind) {
+        const map = {
+            canvas:           'Visió · missió · valors · stakeholders',
+            pitch:            'One-pager públic · 6 seccions',
+            pact:             'Pacte de socis · ECDSA signatures',
+            presentation:     'Landing read-only · roles + tx + SOPs',
+            map:              'Mapa de valor VNA · rols · transactions',
+            kanban:           'Work orders · backlog → in-progress → done',
+            sops:             'Procediments · publicables al mercat',
+            quality:          'Rubric 12-criteris + integritat 7-regles',
+            sprint:           'Sprint orchestrator · IA runs autonomous',
+            lifecycle:        '10 fases · status % · next-best-action',
+            wallet:           'Saldo + flow + transferència entre projectes',
+            accounting:       'Ledger double-entry · P&L per període',
+            value:            'Slicing Pie · equity dinàmic Moyer',
+            invoices:         'CRUD invoices · IVA · auto-ledger',
+            tokenomics:       'Disseny token · 6 grups + vesting',
+            proposals:        'IA brief + skill matching · win rate',
+            market:           'Aquest projecte al mercat · traction',
+            registry:         'Permaweb public registry · signat',
+            'team-members':   'Llistat persones · trust score',
+            'team-roles':     'Catàleg rols · founder/ops/contributor/viewer',
+            'team-permissions':'Matriu RBAC fine-grained',
+            'team-invites':   'Convidacions pendents · expiry 7d',
+        };
+        return map[kind] || '';
+    }
+
+
     _zone0_Legendary({ project, todayWos, bs, sessionEur }) {
         const score   = project.rubricScore ?? project.score ?? null;
         const status  = project.rubricStatus ?? project.status ?? (score >= 85 ? 'gold' : score >= 70 ? 'silver' : score >= 50 ? 'bronze' : 'red');
@@ -389,21 +546,138 @@ export default class ProjectHubV2View {
         </div>`;
     }
 
+    // v153 · _zone2_Today enriquit · KPIs + Top 3 WOs prioritaris + cash flow + upcoming
     _zone2_Today({ todayWos, cashBalance }) {
+        const woWeekDone = (todayWos || []).filter(w => {
+            const c = w.content || w; const ts = c.completedAt || c.doneAt;
+            return ts && (Date.now() - ts) < 7 * 86400000;
+        }).length;
+        const alertsCount = (todayWos || []).filter(w => {
+            const c = w.content || w; return c.priority === 'critical' || c.priority === 'high';
+        }).length;
+        // Top 3 WOs prioritaris · sort per priority + due
+        const PRIO_ORDER = { critical: 4, high: 3, medium: 2, low: 1 };
+        const top3 = [...(todayWos || [])]
+            .sort((a, b) => (PRIO_ORDER[b.priority] || 0) - (PRIO_ORDER[a.priority] || 0))
+            .slice(0, 3);
+        // Cash flow setmanal · 7 dies · bar visual simple
+        const days7 = this._weeklyFlow(this._project?.ledger || []);
+        const maxAbs = Math.max(...days7.map(d => Math.max(Math.abs(d.inflow), Math.abs(d.outflow))), 1);
+        const projId = encodeURIComponent(this.projectId);
+
         return `
         <div class="hub-zone">
             <div class="hub-zone-head">
-                <h2>🎯 Avui · ${todayWos.length} WOs · cash ${formatCostEur(cashBalance)}</h2>
-                <a href="/kanban?project=${encodeURIComponent(this.projectId)}" data-link>→ Kanban</a>
+                <h2>🎯 Avui · activitat del projecte</h2>
+                <a href="/kanban?project=${projId}" data-link>→ Kanban complet</a>
             </div>
-            ${todayWos.length === 0
-                ? '<div class="hub-empty">Cap WO pendent · crea\'n una a Kanban</div>'
-                : `<div class="hub-today-grid">${todayWos.map(w => `
-                    <div class="hub-wo-item">
-                        <div class="ttl">${this._esc(w.title || w.id)}</div>
-                        <div class="meta">${this._esc(w.priority || 'medium')} · ${this._esc(w.status)}</div>
-                    </div>`).join('')}</div>`}
-        </div>`;
+
+            <!-- v153 · 4 KPI cards -->
+            <div class="hub-today-kpis">
+                <div class="hub-today-kpi">
+                    <div class="num">${(todayWos || []).length}</div>
+                    <div class="lbl">WOs actius</div>
+                </div>
+                <div class="hub-today-kpi">
+                    <div class="num">${woWeekDone}</div>
+                    <div class="lbl">Done setmana</div>
+                </div>
+                <div class="hub-today-kpi">
+                    <div class="num">${formatCostEur(cashBalance)}</div>
+                    <div class="lbl">Saldo wallet</div>
+                </div>
+                <div class="hub-today-kpi" style="${alertsCount > 0 ? 'border-color:var(--accent-orange);' : ''}">
+                    <div class="num" style="${alertsCount > 0 ? 'color:var(--accent-orange);' : ''}">${alertsCount}</div>
+                    <div class="lbl">Prioritat alta</div>
+                </div>
+            </div>
+
+            <!-- v153 · Top 3 WOs prioritaris -->
+            ${top3.length === 0
+                ? '<div class="hub-empty" style="margin-top:10px;">Cap WO pendent · <a href="/kanban?project=' + projId + '" data-link style="color:var(--accent-indigo);">crea\'n una a Kanban →</a></div>'
+                : `<div class="hub-today-top3" style="margin-top:12px;">
+                    <div class="hub-today-subhead">📌 Top 3 prioritaris</div>
+                    ${top3.map(w => {
+                        const c = w.content || w;
+                        const prioColor = c.priority === 'critical' ? 'var(--accent-red)'
+                            : c.priority === 'high' ? 'var(--accent-orange)'
+                            : c.priority === 'medium' ? 'var(--accent-indigo)' : 'var(--text-muted)';
+                        const dueStr = c.dueAt ? this._formatRelativeTime(c.dueAt) : '';
+                        return `<a href="/kanban?project=${projId}&wo=${encodeURIComponent(w.id || c.id || '')}" data-link class="hub-today-wo">
+                            <div class="ttl">${this._esc(c.title || w.title || w.id)}</div>
+                            <div class="meta">
+                                <span class="prio" style="color:${prioColor};">● ${this._esc(c.priority || 'medium')}</span>
+                                <span class="status">${this._esc(c.status || w.status || 'pending')}</span>
+                                ${dueStr ? `<span class="due">⏰ ${this._esc(dueStr)}</span>` : ''}
+                            </div>
+                        </a>`;
+                    }).join('')}
+                </div>`}
+
+            <!-- v153 · Cash flow setmanal · bar visual -->
+            ${days7.some(d => d.inflow > 0 || d.outflow > 0) ? `
+                <div class="hub-today-cashflow" style="margin-top:14px;">
+                    <div class="hub-today-subhead">💸 Cash flow · 7 dies</div>
+                    <div class="hub-cf-bars">
+                        ${days7.map(d => {
+                            const inH = (d.inflow / maxAbs) * 100;
+                            const outH = (d.outflow / maxAbs) * 100;
+                            return `<div class="hub-cf-day" title="${d.label} · +${d.inflow.toFixed(2)}€ · -${d.outflow.toFixed(2)}€">
+                                <div class="bar-stack">
+                                    <div class="bar-in"  style="height:${inH}%;"></div>
+                                    <div class="bar-out" style="height:${outH}%;"></div>
+                                </div>
+                                <div class="day-lbl">${d.short}</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+        <style>
+            .hub-today-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; }
+            .hub-today-kpi { background:rgba(255,255,255,0.04); border:1px solid var(--border-default); border-radius:8px; padding:10px 12px; text-align:center; }
+            .hub-today-kpi .num { font-size:1.4rem; font-weight:800; color:var(--accent-indigo); font-family:var(--font-mono); }
+            .hub-today-kpi .lbl { font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; margin-top:3px; }
+            .hub-today-subhead { font-size:0.78rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+            .hub-today-top3 { display:flex; flex-direction:column; gap:6px; }
+            .hub-today-wo { display:flex; flex-direction:column; gap:3px; padding:8px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border-default); border-radius:6px; text-decoration:none; color:var(--text-main); transition:all 0.15s; }
+            .hub-today-wo:hover { border-color:var(--accent-indigo); background:rgba(99,102,241,0.08); }
+            .hub-today-wo .ttl { font-size:0.88rem; font-weight:600; }
+            .hub-today-wo .meta { display:flex; gap:10px; font-size:0.72rem; color:var(--text-muted); }
+            .hub-today-wo .meta .prio { font-weight:700; }
+            .hub-cf-bars { display:flex; gap:6px; align-items:flex-end; height:60px; padding:6px 0; }
+            .hub-cf-day { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+            .hub-cf-day .bar-stack { width:100%; height:50px; display:flex; flex-direction:column-reverse; justify-content:flex-start; gap:1px; align-items:stretch; }
+            .hub-cf-day .bar-in { background:var(--accent-green); border-radius:1px; min-height:1px; }
+            .hub-cf-day .bar-out { background:var(--accent-red); border-radius:1px; min-height:1px; }
+            .hub-cf-day .day-lbl { font-size:0.62rem; color:var(--text-muted); text-transform:uppercase; }
+        </style>`;
+    }
+
+    // v153 · _weeklyFlow · pure · 7 dies inflow/outflow per al cash flow bar chart
+    _weeklyFlow(ledger = []) {
+        const now = Date.now();
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+            const t = new Date(now - i * 86400000);
+            const dayStart = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+            const dayEnd = dayStart + 86400000;
+            let inflow = 0, outflow = 0;
+            for (const e of (ledger || [])) {
+                const c = e.content || e;
+                const ts = c.ts || c.createdAt || 0;
+                if (ts < dayStart || ts >= dayEnd) continue;
+                const amt = c.amount || 0;
+                if (amt > 0) inflow += amt; else outflow += Math.abs(amt);
+            }
+            days.push({
+                label: t.toLocaleDateString(),
+                short: ['Dg','Dl','Dt','Dc','Dj','Dv','Ds'][t.getDay()],
+                inflow, outflow,
+            });
+        }
+        return days;
     }
 
     _zone3_Processes({ processes }) {
@@ -493,14 +767,16 @@ export default class ProjectHubV2View {
     }
 
     _zone7_Knowledge({ project }) {
+        // v152 · Knowledge cards redundants amb el pilar Treballar (Map · SOPs · Quality)
+        // i el pilar Comptabilitzar (Tokenomics) · netejat per a no duplicar navegació.
+        // Mantenim només els que NO viuen com a pilar sub-tab encara · Pitch doc ·
+        // Workshops · Market. Substituïm "VNA · Mapa de valor" per CTA "Continuar creant"
+        // que porta al CreateLiveView amb el projecte actual com a base (mode iteració).
         const items = [
-            { ic: '🎨', nm: 'Canvas',     ds: '5 pilars',        href: '/canvas?project=' + project.id },
-            { ic: '📣', nm: 'Pitch doc',  ds: 'Investor doc IA-sint.', href: '/pitch-doc/' + project.id },
-            { ic: '🗺️', nm: 'VNA',        ds: 'Mapa de valor',   href: '/map?project=' + project.id },
-            { ic: '📋', nm: 'SOCs',       ds: 'Standard Op Concepts', href: '/sops?project=' + project.id },
-            { ic: '🪙', nm: 'Tokenomics', ds: 'Equity + token',  href: '/tokenomics?project=' + project.id },
-            { ic: '🎓', nm: 'Workshops',  ds: 'Formació',        href: '/workshops?project=' + project.id },
-            { ic: '🛒', nm: 'Market',     ds: 'Productes/serveis', href: '/market?project=' + project.id },
+            { ic: '✨', nm: 'Continuar creant', ds: 'Iterar el projecte amb IA',  href: '/create-live?project=' + project.id },
+            { ic: '📣', nm: 'Pitch doc',       ds: 'Investor doc IA-sint.',       href: '/pitch-doc/' + project.id },
+            { ic: '🎓', nm: 'Workshops',       ds: 'Formació · publicable',        href: '/workshops?project=' + project.id },
+            { ic: '🛒', nm: 'Market',          ds: 'Productes/serveis al mercat', href: '/market?project=' + project.id },
         ];
         return `
         <div class="hub-zone">

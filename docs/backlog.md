@@ -4709,3 +4709,199 @@ L'esquelet ja té el backend de xarxa social · només cal **explicit-lo** ·
 ---
 
 *Documento vivo · actualizat el 2026-05-15 amb el sprint analysis & design v2/v3 + UX hub + social.*
+
+---
+
+## v132 backlog (NEW · 2026-05-18 @alvaro · request post-v131c)
+
+### `wo-prompt-ab-test-vna` · A/B test prompt VNA · "menys context > més context?"
+- **Pregunta clau** · El botó "Sugerir con IA" a `/map?project=X` genera output molt bo · per què? Hipòtesi: el flow de creació actual potser dóna massa context i això satura el model.
+- **Doc plan complet** · `docs/backlog-v131c-ab-test-vna.md` (5 sub-items A → E)
+- **Entregables** · `promptABTestService.js` · panel A/B Lab a `/prompts-debug` · benchmark dataset 20 casos reals · `PROMPT-EFFICIENCY-LESSONS.md`
+- **Mètriques per validar hipòtesi** · win rate Variant A (llarg) vs B (curt) · cost/output token · diversitat rol kinds · % transaccions intangibles
+- **Status** · backlog · prioritat alta (impacte directe qualitat SOS)
+- **Effort** · L (~2 dies)
+- **Tags** · sprint-v132 · ia-quality · evidence-based
+
+### `wo-skills-marketplace-ui` · UI catàleg agregat /skills view (post-v131c)
+- **Backend ja existeix** · `skillsMarketplaceService.js` (v131c) amb agregació + cross-sector + matchCandidatesToWO + taxonomySummary
+- **Pendent UI** · panel "Marketplace · skills més demandades cross-sector · top per nivell" a /skills
+- **Effort** · M
+- **Tags** · sprint-v132 · skills · marketplace
+
+### `wo-sector-skill-levels-roles` · skill_levels per role (v131c només té taxonomy general)
+- **Status** · taxonomia general declarada per cada sector v131c (10 sectors restants) · però `skill_levels` per role concret només a K/L/M/N/Q/R (v131b)
+- **Pendent** · afegir block `skill_levels:` dins cada role als 10 sectors restants
+- **Effort** · M
+- **Tags** · sprint-v132 · sectors · skills
+
+### `wo-sector-quality-rubric-integration` · integrar rubric al flow creació
+- **Backend ja existeix** · `sectorQualityRubric.js` (v131c) amb evaluateProjectAgainstSector + summarizeRubricResult
+- **Pendent** · cridar al final del runExpertChain · mostrar score + recommendations al ResultBar del CreateLive
+- **Effort** · S
+- **Tags** · sprint-v132 · quality · sectors
+
+---
+
+*Backlog actualitzat 2026-05-18 amb v131c entregables + v132 plan.*
+
+---
+
+## v132 LMS + Sectors fusion · NOVA SÈRIE (request @alvaro 2026-05-18 post-v131c)
+
+> Doc complet de strategy + design · `docs/lms-sectors-fusion-v132.md`
+
+### `wo-research-lms` · PRIMER de la sèrie LMS
+- **Què** · esquelet research del LMS de SOS · base per a wo-lms-content-engine · wo-lms-api-market · wo-lms-permaweb-publishing
+- **Sub-tasques** · benchmark Moodle/OpenEdX/Canvas/LearnDash/Chamilo · LMS comercials moderns API capabilities · estratègia build vs buy · API spec v0.1 · auth (SBT) · monetització · schema dades LMS Content Node compatible Scorm + xAPI
+- **Entregable** · doc estratègic + diagrama arquitectural + API spec v0.1 + 3-5 user stories
+- **Effort** · L (2-3 dies research + 1 dia drafting)
+- **Tags** · sprint-v132 · lms · research · api-market · foundational
+
+### `wo-sectors-fusion` · unificar /sectors + /learn?tab=sectors + sector-agents
+- **Què** · fusionar les 3 vistes en una vista unificada potent · nou `SectorAgentExplorerView` (ruta `/sectors/agents/:id`) amb 7 tabs (Identity · Roles · Skills · SOPs · Patterns · Agent prompt · Used in)
+- **No perdre roles bilingüe** · readiness · CNAE seeds existents
+- **Effort** · XL (5-7 dies)
+- **Tags** · sprint-v134-135 · sectors · UX · fusion
+
+### `wo-dynamic-kb-index` · indexador automatitzat KB + GitHub + Permaweb
+- **Què** · auto-detecta novetats al repo GitHub (webhook) + KB local + permaweb · genera `knowledge/_index.json` · API endpoint `/api/kb-index/latest`
+- **Notificacions** · feed neural-path (visible a /path)
+- **Effort** · L (2-3 dies)
+- **Tags** · sprint-v133 · kb · automation · permaweb
+
+### Roadmap sequencial proposat
+- **v132** · wo-research-lms (foundational · sense codi · només strategy)
+- **v133** · wo-dynamic-kb-index (automatització · base per a LMS content discovery)
+- **v134-135** · wo-sectors-fusion (UX major redesign)
+- **v136+** · wo-lms-content-engine · wo-lms-api-market · wo-lms-permaweb-publishing (sèrie LMS execució real)
+
+
+---
+
+## 🎯 ROADMAP ESTRATÈGIC A ALFA (v132 → v150 · 10 setmanes)
+
+> Plan complet · `docs/strategic-roadmap-to-alpha-v132.md`
+
+### 6 fases · 18 sprints · ~10 setmanes
+
+| Fase | Sprints | Setmanes | Focus | Mètrica fi |
+|---|---|---:|---|---|
+| 1 · Estabilització | v132-134 | 1.5 | Zero bugs · backends reals (Stripe + crypto) | Zero WARN/ERROR · onboarding ≥70% |
+| 2 · Quality UX | v135-137 | 2.0 | Sectors fusion · sosTopbar · mobile · components canonical | Lighthouse ≥90 a top-4 vistes |
+| 3 · Comercial | v138-140 | 1.5 | Self-serve · pricing actiu · trial · billing portal | 5 testers paguen sense humà |
+| 4 · LMS + Knowledge | v141-145 | 2.5 | LMS engine + content + API public | 3 cohorts usen LMS · API consumida x2 partners |
+| 5 · Comunitat | v146-148 | 1.5 | Cohort 0 · trust public · referrals | 50 perfils signats · 30 attestations · 5 referrals |
+| 6 · Launch | v149-150 | 1.0 | Docs + i18n + alpha launch + comms | GA actiu · 500+ visitants/dia |
+
+### 18 WOs amb prioritat estratègica
+
+**Fase 1 · Estabilització** ·
+- `wo-research-lms` · L · v132 (foundational doc)
+- `wo-prompt-ab-test-vna` · L · v132 (evidence-based prompt tuning)
+- `wo-import-backup-projects-fix-v2` · S · v132 (E2E tests)
+- `wo-dynamic-kb-index` · L · v133 (auto-indexer)
+- `wo-stripe-edge-deploy` · M · v133 (backend deploy)
+- `wo-crypto-rpc-verify` · M · v134 (real RPC verify)
+- `wo-onboarding-flow-v1` · L · v134 (tutorial primer projecte)
+
+**Fase 2 · Quality UX** ·
+- `wo-sectors-fusion` · XL · v135 (vista nova SectorAgentExplorer)
+- `wo-sostopbar-migration` · XL · v136 (migrar 14 vistes)
+- `wo-mobile-audit` · L · v136 (53 vistes a 360px)
+- `wo-sosempty-state` · M · v137 (component canonical)
+- `wo-sosloading` · M · v137 (component canonical)
+- `wo-skills-marketplace-ui` · M · v137 (UI panel cross-sector)
+
+**Fase 3 · Comercial actiu** ·
+- `wo-landing-page-public` · L · v138
+- `wo-pricing-page-activa` · M · v138
+- `wo-plan-enforcer-soft` · M · v139
+- `wo-sosbutton-tokens` · S · v139
+- `wo-trial-flow` · M · v140
+- `wo-billing-portal` · M · v140
+
+**Fase 4 · LMS + Knowledge** ·
+- `wo-lms-content-engine` · XL · v141
+- `wo-sector-skill-levels-roles` · M · v141
+- `wo-lms-content-bootstrap` · XL · v142 (5 cursos seed)
+- `wo-lms-api-market` · L · v143
+- `wo-knowledge-permaweb-publish` · M · v144
+- `wo-sector-quality-rubric-integration` · S · v145
+
+**Fase 5 · Comunitat + Trust** ·
+- `wo-cohort-0-onboarding` · L · v146
+- `wo-attestation-public-feed` · M · v146
+- `wo-trust-score-public` · M · v147
+- `wo-feedback-loop` · M · v147
+- `wo-referral-program` · M · v148
+
+**Fase 6 · Docs + Launch** ·
+- `wo-docs-site-public` · L · v149
+- `wo-i18n-completion` · L · v149
+- `wo-alpha-launch-checklist` · M · v150
+- `wo-alpha-launch-comms` · M · v150
+
+### Decisions per resoldre amb @alvaro
+
+1. Alfa pública oberta o whitelist primer? → recomanat **whitelist cohort 0 + 50 invitats** primer
+2. Pricing real des v138 o gratuit fins v150? → recomanat **pricing visible v138 amb trial 14d**
+3. LMS build vs OpenEdX integration? → recomanat **build minimal core + Scorm/xAPI players**
+4. Comunicació pre-alpha · quan comencem? → recomanat **changelog public des v132 · newsletter mensual des v138**
+
+### Pla post-alfa (≥ v151)
+
+- v151-160 · beta amb permaweb federat real entre instàncies SOS
+- v161-180 · Matriu integration · 6 vectors complets · DAO multisig
+- v181-200 · marketplace skills i agreements amb royalties
+- v200+ · GA · 1.0 release · roadmap públic
+
+---
+
+*ROADMAP ESTRATÈGIC pujat al backlog 2026-05-18 · 18 sprints · 10 setmanes a alfa pública.*
+
+---
+
+## 🚨 v132a · DECISIONS RESOLTES @alvaro + BUG ARCHIVE FEATURE (2026-05-19)
+
+### Decisions @alvaro · resoltes
+
+1. **Whitelist o pública oberta?** → ✅ **WHITELIST** · alfa amb la xarxa pròpia d'@alvaro
+2. **Pricing alfa?** → ✅ **GRATUIT amb saldo aportat per @alvaro** · saldo del bossillo personal a alfa testers · COMPTA com a **aportació de valor** al projecte ajudat amb el **multiplicador alfa @alvaro** (Slicing Pie extension · ×6 efectiu)
+3. **LMS build vs OpenEdX?** → ✅ **BUILD HYBRID** · core minimal SOS + scorm-again + xAPI player open source (doc educatiu a `docs/lms-build-vs-openedx-tutorial.md`)
+4. **Comunicació pre-alpha?** → pendent · proposat changelog public des v132 + newsletter mensual des v138
+
+### Nous WOs · v132a
+
+#### `wo-archive-project-feature` · BUG · feature perduda a migració v2
+- **Status** · ✅ FET (v132a) · botó "📦 Arxivar" + "↺ Desarxivar" a `/projects` cards · NO trenca contabilitat (ledger append-only · immutable)
+- **Comportament** · projectes archivats no apareixen a · /wallet/v2 Projectes · /search · /map · /value-accounting llistes
+- **Reversible** · click "↺ Desarxivar" recupera 100% (cap dada perduda)
+
+#### `wo-tokenomics-slicing-pie-canonical` · ✅ FET (v132a)
+- **Doc canonical** · `knowledge/vision/slicing-pie-mike-moyer.md`
+- **Continguts** · multiplicadors canonical Moyer (×4 cash · ×2 hours · ×0 ideas) + extension SOS V11 (phase multipliers idea/MVP/validation/scale/mature) + alfa bonus @alvaro
+
+#### `wo-phase-multipliers-v141` · pendent integració
+- **Què** · `valueAccountingService.calculateSlices()` ha d'aplicar phase_multiplier segons fase del projecte
+- **Sprint** · v141 · paral·lel a wo-lms-content-engine
+- **Effort** · S
+- **Tags** · sprint-v141 · tokenomics · slicing-pie
+
+#### `wo-alfa-bonus-multiplier-v138` · pendent
+- **Què** · al wallet del projecte ajudat per @alvaro durant alfa · els tops-ups del seu bossillo personal es marquen com a "contribució @alvaro" amb multiplicador alfa (×6 efectiu)
+- **Sprint** · v138 (fase comercial) · alineat amb pricing
+- **Effort** · M
+- **Tags** · sprint-v138 · alfa · tokenomics
+
+#### `wo-comms-pre-alpha-decision` · esperant @alvaro
+- **Pregunta pendent** · quan comencem comunicació pre-alpha?
+- **Opcions** ·
+  a) Changelog public des v132 (transparent · risk feedback negatiu)
+  b) Newsletter privat cohort 0 (controlat · focus testers)
+  c) Stealth fins v150 (clàssic launch big bang)
+- **Recomanació** · opció B (cohort 0 newsletter) + opció A (changelog readonly) en paral·lel
+
+---
+
+*Backlog actualitzat 2026-05-19 amb v132a fixes + decisions resoltes.*

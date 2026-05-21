@@ -91,7 +91,8 @@ const ROUTES = [
     // CANVAS-WIZARD sprint A · /canvas?project=X · 5-step project canvas
     { path: '/canvas',       view: () => import('./views/ProjectCanvasView.js') },
     // LEDGER-ACCOUNTING sprint A · /accounting?project=X · double-entry
-    { path: '/accounting',   view: () => import('./views/AccountingView.js') },
+    { path: '/accounting',     view: () => import('./views/AccountingView.js') },
+    { path: '/accounting/v2',  view: () => import('./views/AccountingV2View.js') },   // v144 · canonical · /accounting redirigirà aquí
     // LIFECYCLE-DASHBOARD sprint A · /lifecycle?project=X · 10 phases status
     { path: '/lifecycle',    view: () => import('./views/ProjectLifecycleView.js') },
     // INVOICE-BILLING sprint A · /invoices?project=X · CRUD + auto-ledger
@@ -108,6 +109,10 @@ const ROUTES = [
     { path: '/improve',      view: () => import('./views/ImprovementLoopView.js') },
     // DESIGN-SYSTEM sprint A · /design · mockup deluxe + arquitectura informació + components
     { path: '/design',       view: () => import('./views/DesignSystemView.js') },
+    // v133 · preview · Project Hub V3 amb 5 subpestanyes (Hub·Map·Kanban·Wallet·Presentation + dropdown Més)
+    { path: '/project-hub-v3-preview', view: () => import('./views/ProjectHubV3PreviewView.js') },
+    // v140 · vista GLOBAL Equip · RBAC + audit log cross-projects (wo-team-permissions-view)
+    { path: '/team', view: () => import('./views/TeamView.js') },
     { path: null,         view: () => import('./views/HomeView.js')     },
 ];
 
@@ -313,17 +318,14 @@ async function router() {
             });
         } catch (e) { console.warn('[Router · breadcrumb]', e); }
 
-        // PROJ-QUALITY-001 sprint C · Project subnav · sub-barra contextual amb
-        // 10 tabs del projecte actiu + score qualitat + cta "Següent".
-        // Apareix sols si hi ha ?project= o /project/{id}. Idempotent.
+        // v137 · UX cleanup · paintProjectSubnav ELIMINAT · les noves tabs
+        // canòniques del Project Hub V2 substitueixen el subnav antic
+        // (sos-psub). El CTA "Següent" es mostra ara a la fila del
+        // breadcrumb. Si quedés DOM antic d'una navegació anterior, l'amaguem.
         try {
-            const projects = (store.getState().projects || []);
-            await paintProjectSubnav({
-                pathname: window.location.pathname,
-                search:   window.location.search,
-                projects,
-            });
-        } catch (e) { console.warn('[Router · project-subnav]', e); }
+            const slot = document.getElementById('sos-project-subnav-slot');
+            if (slot) { slot.innerHTML = ''; slot.style.display = 'none'; }
+        } catch (_) {}
 
         // UX-AUDIT-001 sprint F · bottom nav mòbil · 5 categories canòniques
         try {

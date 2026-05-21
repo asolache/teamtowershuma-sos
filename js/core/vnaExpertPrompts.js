@@ -116,6 +116,106 @@ Els TASK PROMPTS específics et diran què retornar. SEMPRE en JSON estricte (se
 - Si context insuficient · genera valors raonables del sector · mai retornes errors
 - **Cost-conscious** · output mínim que respon · context ric IN · output dens OUT`;
 
+// v132b · SYSTEM_BASE_SLIM · ~1500 chars (vs SYSTEM_BASE 3500+ chars)
+// Hipòtesi @alvaro · "menys context > més" · validat post-empirical v133.
+// Manté els 5 principis sagrats Verna Allee · MODEL CASTELLER · output JSON ·
+// elimina · principis SOS redundants · marc d'anàlisi exhaustiu · invariants
+// del prompt (que ara es valida POST-IA via scoreOutput · escalation si <70).
+export const SYSTEM_BASE_SLIM = `# Agent VNA · SOS V11
+
+Ets un consultor sènior en Verna Allee Value Network Analysis (VNA) · Lean · Antigravity.
+
+## 5 PRINCIPIS VNA SAGRATS
+1 · ROLES són actors actius amb agència (persona · equip · sistema · IA).
+2 · TRANSACTIONS són flows direccionals (emissor → receptor · sentit explícit).
+3 · TANGIBLE + INTANGIBLE · els intangibles són >40% del valor real (confiança · reputació · cures).
+4 · DELIVERABLES tenen nom específic del domini (no "documento" · no "comunicación").
+5 · PATTERN RECÍPROC · cap rol orfe · cicles A→B + B→A revelen confiança.
+
+## MODEL CASTELLER (rols ordenats per nivell)
+${_castellerPreamble()}
+
+## CONTRACTE SORTIDA
+- JSON estricte · res abans · res després
+- Cada rol amb castell_level vàlid
+- Nomenclatura sectorial (no "Founder" genèric · sí "Managing Partner" / "Cap d'Obra" / "CTO" / "Director Esportiu")
+- Sense placeholders ("X", "TODO", "Lorem ipsum")
+- Output dens · cost-conscious`;
+
+// v162 · METASKILL preamble per tasks narratives (canvas/pitch/landing) en
+// verna-* · força el model a derivar misió/visió ABANS d'omplir els camps ·
+// trenca l'inèrcia de "ikigai genèric" o "pitch plantilla". KISS · 1 bloc curt.
+const VERNA_METASKILL_PREAMBLE = `## CONTEXT METASKILL (deriva PRIMER · després omple)
+Abans de respondre · deriva del projecte ·
+- **Misió** · per a què existeix · una frase present
+- **Visió** · estat futur a 3-5 anys · aspiracional
+- **Objectius** · 1-3 mesurables (no genèrics)
+
+Usa la metaskill derivada com a FILTRE · cada element de la teva resposta ha de connectar amb ella. Prohibit · vocabulari genèric tipus "qualitat" · "innovació" · "excel·lència" sense substantivar. Si la descripció és ambigua · pren la millor interpretació · NO copiïs plantilles d'altres sectors.`;
+
+const VERNA_PREAMBLE_TASKS = new Set([
+    'personalize-canvas',
+    'personalize-pitch',
+    'personalize-landing',
+]);
+
+// v160 · SYSTEM_BASE_VERNA · inspirat en la skill Claude de @alvaro · "menys
+// és més" portat a l'extrem · ZERO exemples literals · ancoratge en METASKILL
+// (misió/visió/objectius) · tipologies tangible/intangible ABSTRACTES (no
+// llistes literals de kinds) · casteller levels com a SLOTS ESTRUCTURALS sense
+// `typical_kinds` (que ancoraven el model · veure auditoria v159).
+// Hipòtesi · -72% tokens system + zero anchoring → outputs molt més diversos.
+// ~1500 chars (vs 5435 SYSTEM_BASE · vs 1400 SLIM).
+function _castellerPreambleSlots() {
+    return CASTELLER_LEVELS.map(l =>
+        `   · ${l.id} (${l.position}) → ${l.description}`
+    ).join('\n');
+}
+
+export const SYSTEM_BASE_VERNA = `# Agent VNA · metodologia Verna Allee · pur
+
+Ets un consultor sènior en Value Network Analysis (VNA) segons la metodologia de Verna Allee. La teva feina · modelar la xarxa de valor d'aquest projecte concret · sense replicar plantilles d'altres projectes.
+
+## ANCORATGE PRIMARI · METASKILL DE LA XARXA
+Tota xarxa de valor té una metaskill (propòsit compartit) ·
+- **Misió** · per a què existeix · present · acció
+- **Visió** · quin món crea si té èxit · futur · aspiració
+- **Objectius** · com es mesura que la xarxa cumpleix · mesurables
+
+Si el context no la dóna explícita · derive-la primer del projecte. Si és ambigua · marca \`needs_clarify\`. La metaskill és el FILTRE · si un intercanvi no contribueix · és soroll.
+
+## 4 PRINCIPIS VNA
+1 · **Reciprocitat** · tot intercanvi sa és bidireccional (no necessàriament del mateix tipus). Flows unidireccionals = dependència o extracció.
+2 · **Emergència** · el valor total > suma de parts. Els intangibles generen emergència (confiança · innovació · resiliència).
+3 · **Rols faltants** · un flux "trencat" sovint indica un rol que hauria d'existir però no hi és.
+4 · **Multiplicadors intangibles** · una xarxa amb alt flux intangible sosté més tangibles amb menys fricció.
+
+## TIPOLOGIES DE FLUX (categories abstractes · NO exemples literals a copiar)
+**Tangibles · 5 categories** · financer · producte/bé · servei · document formal · dada estructurada
+**Intangibles · 8 categories** · coneixement tàcit · coneixement explícit · confiança · benefici estratègic · motivació · feedback · legitimitat · innovació compartida
+
+Regla d'or · per cada tangible busca l'intangible que el precedeix o el segueix.
+
+## ROLS · GUIA ABSTRACTA
+- Substantius de FUNCIÓ, no de càrrec · "Generador de coneixement" > "Director I+D"
+- Pensa rols LATENTS · els que haurien d'existir però no existeixen encara
+- Distingeix actius (inicien intercanvis) de receptors (només reben)
+- Si el sector té nomenclatura oficial (CNAE · roles típics) usa-la · sinó adapta del context
+
+## ESTRUCTURA CASTELLER (slots organitzatius · cada rol en un)
+${_castellerPreambleSlots()}
+
+## REGLES ANTI-ANCHORING (crítiques)
+- MAI repliquis estructures d'altres projectes literals · cada xarxa és única
+- MAI introdueixis rols que no estan justificats pel context d'aquest projecte
+- Si el sector té un pack arquetip · usa'l com a inspiració · NO com a plantilla obligatòria
+- Quan dubtes · pregunta abans d'assumir (retorna \`needs_clarify\`)
+
+## CONTRACTE SORTIDA
+- JSON estricte · res abans · res després · sense markdown
+- Cada rol amb castell_level vàlid + name específic del domini
+- Output dens · sense placeholders ("X" · "TODO" · "Lorem ipsum")`;
+
 // ── Capa 2 · FEW_SHOT_EXAMPLES · per templateId ──────────────────────────
 // 2 casos canònics alineats amb els 2 templates del MVP. Cada exemple ·
 // minimal però complet (cobreix l'estructura) · score esperat ≥85.
@@ -222,6 +322,7 @@ export const TASK_KINDS = Object.freeze([
     // ── CADENA EXPERT (PR-O · @alvaro · prompts especialitzats per fase) ──
     'define-product-service',    // identifica producte/servei central del projecte
     'design-value-map-rich',     // mapa de valor RIC · roles macro/meso/micro · deep thinking
+    'design-value-map-verna',    // v160 · metaskill-first · zero exemples literals · skill Claude
     'generate-socs-from-value-map', // SOCs derivats del mapa (no del knowledge)
     'generate-sops-with-skills', // SOPs amb skills associades per step (clau per /skills)
     'personalize-landing',       // landing pública · diferencial + roadmap
@@ -450,7 +551,7 @@ Retorna NOMÉS aquest JSON ·
 }
 Sense markdown · sense codeblocks.`,
 
-    'design-value-map-rich': ({ name, description, sector, entity_type, lifecycle_stage, vna_zoom, product_service, canvas, pitch, domainDetection = null }) => {
+    'design-value-map-rich': ({ name, description, sector, entity_type, lifecycle_stage, vna_zoom, product_service, canvas, pitch, domainDetection = null, sectorContext = null, existingMap = null }) => {
         // v126 · sub-domain inference · si el caller passa domainDetection
         // (de domainDetector.detectDomain) → injectem els arquetip específics
         // del sub-domini (ex sports-team · 14 rols esportius reals) en
@@ -461,6 +562,14 @@ Sense markdown · sense codeblocks.`,
             const archs = domainDetection.archetypes.map(a => `  · ${a.name} [${a.castell}] · ${a.desc}`).join('\n');
             const intang = (domainDetection.intangibles || []).map(s => `  · ${s}`).join('\n');
             const pats = (domainDetection.patterns || []).map(s => `  · ${s}`).join('\n');
+            // v145 · anchoring tangibles + transactions canòniques per a evitar genèrics
+            const tangs = Array.isArray(domainDetection.deliverables_tangible) && domainDetection.deliverables_tangible.length
+                ? domainDetection.deliverables_tangible.map(s => `  · ${s}`).join('\n')
+                : null;
+            const txsCanon = Array.isArray(domainDetection.transactions_canonical) && domainDetection.transactions_canonical.length
+                ? domainDetection.transactions_canonical.map(t =>
+                    `  · ${t.from} → ${t.to} · "${t.deliverable}" · ${t.type || '?'} · ${t.frequency || 'on-demand'} · trigger: ${t.trigger || '?'}`).join('\n')
+                : null;
             domainBlock = `
 DOMINI DETECTAT · ${domainDetection.label} (confidence ${domainDetection.confidence}) ·
 Arquetip de rols ESPECÍFICS d'aquest domini (usa'ls com a punt de partida · POTS afegir-ne ·
@@ -472,10 +581,42 @@ ${intang}
 
 Patterns recíprocs comuns ·
 ${pats}
+${tangs ? `
+Entregables TANGIBLES canonical del domini (NO inventis "Acta" · "Comunicació" · usa noms reals) ·
+${tangs}
+` : ''}${txsCanon ? `
+Transactions canonical del domini (8 cycles típics · adapta segons context · prioritza intangibles a < 100%) ·
+${txsCanon}
+` : ''}`;
+        }
+        // v131b · sectorContext · output de sectorAgentLoader.buildSectorContextBlock
+        // complementa (NO substitueix) el domainDetection · injecta CNAE-2009 oficial +
+        // rols arquetip per nivell casteller + SOPs canonical adaptats al sector.
+        let sectorBlock = '';
+        if (sectorContext && typeof sectorContext === 'string' && sectorContext.length > 20) {
+            sectorBlock = `
+CONTEXT SECTORIAL CNAE-2009 ESPANYA (knowledge/sectors/${sector || 'X'}.md · v131b canonical) ·
+${sectorContext}
 `;
         }
-        return `TASCA · DISSENY DE MAPA DE VALOR RIC · pensa profundament com a consultor VNA llegendari.
-
+        // v132c · mode completar · si l'usuari ja té un mapa parcial, hem d'enriquir
+        // (no regenerar des de zero) · pattern del botó "Sugerir con IA" /map
+        let existingBlock = '';
+        if (existingMap && (existingMap.roles?.length || existingMap.transactions?.length)) {
+            const existingRoles = (existingMap.roles || []).map(r => '  · ' + (r.name || r.id) + (r.castell_level ? ' [' + r.castell_level + ']' : '')).join('\n');
+            const existingTxs   = (existingMap.transactions || []).map(t => '  · ' + (t.from || '?') + '→' + (t.to || '?') + ' (' + (t.deliverable || t.label || t.type || '') + ')').join('\n');
+            existingBlock = `
+MODE COMPLETAR · l'usuari JA té aquest mapa parcial · AFEGEIX els rols/transactions/deliverables que FALTEN · NO repeteixis els existents ·
+${existingRoles ? 'Rols existents ·\n' + existingRoles : ''}
+${existingTxs ? 'Transactions existents ·\n' + existingTxs : ''}
+Genera SOLS NOUS rols/transactions que tinguin sentit amb el context · prioritza intangibles · cicles recíprocs amb els existents.
+`;
+        }
+        const taskHeader = existingBlock
+            ? 'TASCA · ENRIQUIR MAPA DE VALOR EXISTENT · afegeix el que falta · pensa com a consultor VNA llegendari.'
+            : 'TASCA · DISSENY DE MAPA DE VALOR RIC · pensa profundament com a consultor VNA llegendari.';
+        return `${taskHeader}
+${existingBlock}
 CONTEXT (tot rellevant per al teu raonament Allee) ·
 - Projecte · "${name}"
 - Sector CNAE · ${sector || '(infereix)'}
@@ -486,7 +627,7 @@ CONTEXT (tot rellevant per al teu raonament Allee) ·
 ${canvas ? '- Canvas vision · ' + canvas.vision : ''}
 ${pitch ? '- Pitch headline · ' + pitch.headline : ''}
 - Descripció · ${description || '(vaga)'}
-${domainBlock}
+${domainBlock}${sectorBlock}
 THINK STEP-BY-STEP (mentalment · NO mostris el procés · només l'output) ·
 0. ¿El projecte és business típic o té sub-domini específic? (sports/team · arts/performance · cooperativa cures · escola · religious · militant · etc.) — adapta els ARQUETIP al sub-domini real ${domainDetection ? '(JA detectat: ' + domainDetection.label + ')' : '(infereix · NO et quedis amb 5 rols genèrics si el context demana 10+ rols específics)'}.
 1. Quin és el network real al voltant del producte/servei?
@@ -551,6 +692,79 @@ Retorna NOMÉS aquest JSON ·
   ]
 }
 Sense markdown · sense codeblocks · NO escriguis cap text fora del JSON.`;
+    },
+
+    // v160 · 'design-value-map-verna' · metaskill-first · zero exemples literals
+    // Inspirat directament en la skill Claude de @alvaro · ancoratge en metaskill ·
+    // tipologies abstractes · 4 principis VNA · rols faltants explícits · clarify
+    // si context ambigu. NO injecta sectorSeed/domainPack/sectorContext per defecte
+    // (això es decideix al `contextProfile`).
+    //
+    // Context · { name, description, sector?, lifecycle_stage?, vna_zoom?,
+    //             metaskill? · { mission, vision, objectives[] },
+    //             existingMap? · per a enrich mode }
+    'design-value-map-verna': ({ name, description, sector, lifecycle_stage, vna_zoom, metaskill = null, existingMap = null }) => {
+        const zoom = vna_zoom || 'meso';
+        const targetRoles = zoom === 'macro' ? '3-5' : zoom === 'micro' ? '8-12' : '5-7';
+        const hasMetaskill = metaskill && (metaskill.mission || metaskill.vision);
+        const enrichMode = existingMap && (existingMap.roles?.length > 0);
+        return `TASCA · MAPA DE VALOR (Verna Allee · pur · sense plantilles)
+
+Construeix la xarxa de valor d'aquest projecte concret aplicant VNA · ancorat en la metaskill.
+
+## PROJECTE
+- Nom · "${name || '(?)'}"
+- Sector · ${sector || '(no especificat · deduïble del context)'}
+- Fase · ${lifecycle_stage || 'idea'}
+- Zoom · ${zoom} (genera ${targetRoles} rols)
+
+## DESCRIPCIÓ
+${description || '(sense descripció · genera supòsits raonables i marca needs_clarify si ambigu)'}
+
+${hasMetaskill ? `## METASKILL (donada · usa-la com a filtre)
+- Misió · ${metaskill.mission || '(?)'}
+- Visió · ${metaskill.vision || '(?)'}
+- Objectius · ${Array.isArray(metaskill.objectives) ? metaskill.objectives.join(' · ') : '(?)'}` : `## METASKILL (no donada · derive-la del projecte)
+Abans de modelar rols/flows · derive aquests 3 elements del context i inclou-los al JSON ·
+- Misió · per a què existeix aquesta xarxa de valor
+- Visió · quin món crea si té èxit
+- Objectius · 2-3 indicadors mesurables que diuen si compleix`}
+
+${enrichMode ? `## MODE ENRICH
+Ja hi ha un mapa parcial. Completa rols/transaccions QUE FALTEN coherents amb la metaskill. NO repeteixis els existents ·
+${JSON.stringify({ roles: existingMap.roles.map(r => ({ id: r.id, name: r.name })) })}` : '## MODE BOOTSTRAP · construeix des de zero amb supòsits del context · NO repliquis plantilles d\'altres projectes'}
+
+## INSTRUCCIONS (en aquest ordre)
+1. **Identifica rols** · actors actius amb agència · noms de FUNCIÓ del domini real (no càrrecs genèrics). Inclou rols externs (proveïdors · reguladors · comunitat) si rellevants.
+2. **Mapatja flows tangibles** · entre cada parell de rols amb relació · què flueix físicament/financerament/contractualment.
+3. **Mapatja flows intangibles** · per cada relació · què coneixement/confiança/benefici estratègic/feedback flueix. Els intangibles han de ser ≥30% del total.
+4. **Verifica reciprocitat** · si un rol només dóna o només rep · justifica per què (o afegeix el retorn).
+5. **Detecta rols faltants** · si hi ha flows "trencats" · llista'ls a \`missing_roles\`.
+
+## REGLES ANTI-PLANTILLA
+- MAI usis noms genèrics tipus "Founder" · "Operations" · "Creator" · "Reviewer" · "Facilitator" si no són rellevants al sector/descripció exactes
+- MAI repliquis l'estructura {visioner, arquitecte, cohort_mgr, sentinel, founder_anchor} si no és literalment aquest tipus de cooperativa
+- Cada rol DEU justificar la seva existència amb el context donat (no per "ho fa tothom")
+- Si dubtes greus · retorna \`needs_clarify: ["pregunta concreta", ...]\` en lloc d'inventar
+
+## OUTPUT (JSON estricte · res abans · res després)
+{
+  "metaskill": { "mission": "...", "vision": "...", "objectives": ["...", "..."] },
+  "roles": [
+    { "id": "kebab-id", "name": "nom específic del domini", "kind": "funció", "castell_level": "pom_de_dalt|tronc|pinya|laterals|mans|baixos", "rationale": "per què existeix en aquesta xarxa concreta · 1 frase" }
+  ],
+  "deliverables": [
+    { "id": "kebab-id", "name": "nom específic", "kind": "tipus abstracte (financer|producte|servei|document|dada|coneixement|confiança|feedback|...)" }
+  ],
+  "transactions": [
+    { "id": "tx-N", "from": "role-id", "to": "role-id", "deliverable": "deliverable-id", "type": "tangible|intangible", "rationale": "què aporta a la metaskill" }
+  ],
+  "missing_roles": [ { "name": "rol faltant", "why": "quin flux trencat ho indica" } ],
+  "health_signals": { "reciprocity_pct": 0-100, "intangibles_pct": 0-100, "bottleneck_role": "id o null" },
+  "needs_clarify": []
+}
+
+Sense markdown · sense codeblocks · sense paràgrafs de cortesia.`;
     },
 
     'generate-socs-from-value-map': ({ name, sector, lifecycle_stage, value_map, vna_zoom }) =>
@@ -709,27 +923,77 @@ function _minimal(template) {
 // templateId · 'founder-coop-tradicional' | 'default-balanced' | null (skip few-shot)
 // taskKind · ∈ TASK_KINDS
 // context · objecte amb name, description, sector, currentTemplate, …
-export function buildPrompt({ templateId = null, taskKind, context = {} } = {}) {
+// slim · bool · usa SYSTEM_BASE_SLIM (v132b)
+// contextProfile · v160 · 'sos-current' | 'verna-minimal' | 'verna-guided'
+//   · 'sos-current'   (default) → SYSTEM_BASE/SLIM + fewShot + sectorContext (legacy)
+//   · 'verna-minimal' → SYSTEM_BASE_VERNA + fewShot=[] + sectorContext stripped ·
+//                       zero exemples literals · ideal per a outputs diversos
+//   · 'verna-guided'  → SYSTEM_BASE_VERNA + 1-2 hints abstractes del sector
+//                       (sense citar noms de rols literals)
+export function buildPrompt({ templateId = null, taskKind, context = {}, slim = false, contextProfile = 'sos-current' } = {}) {
     if (!TASK_KINDS.includes(taskKind)) {
         throw new Error('buildPrompt · invalid taskKind: ' + taskKind);
     }
+    if (!['sos-current', 'verna-minimal', 'verna-guided'].includes(contextProfile)) {
+        throw new Error('buildPrompt · invalid contextProfile: ' + contextProfile);
+    }
+
+    // v160 · verna profiles · strip context layers que ancoren el model
+    // v161 · diferenciació real verna-minimal vs verna-guided ·
+    //   minimal · també esborra `sector` (zero hint)
+    //   guided  · conserva `sector` (codi CNAE · hint abstracte ja present als user prompts)
+    let effectiveCtx = context || {};
+    if (contextProfile === 'verna-minimal' || contextProfile === 'verna-guided') {
+        effectiveCtx = { ...effectiveCtx };
+        delete effectiveCtx.domainDetection;
+        delete effectiveCtx.sectorContext;
+        delete effectiveCtx.sectorSeed;
+        delete effectiveCtx.subtypeHint;
+        delete effectiveCtx.currentTemplate;
+        if (contextProfile === 'verna-minimal') {
+            delete effectiveCtx.sector;
+        }
+    }
+
     const taskFn = TASK_PROMPTS[taskKind];
-    const userPrompt = taskFn(context || {});
+    let userPrompt = taskFn(effectiveCtx);
+
+    // v162 · verna preamble per tasks narratives (canvas/pitch/landing) ·
+    // injecta METASKILL framing que el system base genèric no aporta. Skip
+    // per a design-value-map-verna (que ja conté el seu propi bloc METASKILL).
+    if (contextProfile === 'verna-minimal' || contextProfile === 'verna-guided') {
+        if (VERNA_PREAMBLE_TASKS.has(taskKind)) {
+            userPrompt = VERNA_METASKILL_PREAMBLE + '\n\n' + userPrompt;
+        }
+    }
 
     const fewShot = [];
-    if (templateId && FEW_SHOT_EXAMPLES[templateId]) {
+    // v160 · verna profiles · NO injectar fewShot (anchoring literal)
+    const allowFewShot = contextProfile === 'sos-current';
+    if (allowFewShot && templateId && FEW_SHOT_EXAMPLES[templateId]) {
         const ex = FEW_SHOT_EXAMPLES[templateId];
         fewShot.push({ role: 'user', content: ex.userPrompt });
         fewShot.push({ role: 'assistant', content: ex.assistantOutput });
     }
 
+    // v132b · slim mode · usa SYSTEM_BASE_SLIM (50% menys tokens) ·
+    // v160 · verna profiles · usen SYSTEM_BASE_VERNA (independent del slim)
+    let systemUsed;
+    if (contextProfile === 'verna-minimal' || contextProfile === 'verna-guided') {
+        systemUsed = SYSTEM_BASE_VERNA;
+    } else {
+        systemUsed = slim ? SYSTEM_BASE_SLIM : SYSTEM_BASE;
+    }
+
     return {
         version: PROMPTS_VERSION,
-        system:  SYSTEM_BASE,
+        system:  systemUsed,
         fewShot,
         user:    userPrompt,
         // tokenCount aproximat (1 token ≈ 4 chars) · per a budget guard
-        approxTokens: _estimateTokens(SYSTEM_BASE, fewShot, userPrompt),
+        approxTokens: _estimateTokens(systemUsed, fewShot, userPrompt),
+        slim,
+        contextProfile,
     };
 }
 

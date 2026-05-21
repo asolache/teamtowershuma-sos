@@ -121,32 +121,114 @@ export function generateWosFromSop(sopSlug, steps, options = {}) {
 // ─── Builder del userPrompt para auto-ejecución IA (H7.2) ───────────────────
 // Pública para test. Construye el userPrompt que se enviará al LLM cuando
 // el operador pulse "▶ Ejecutar con IA" en una WO de tipo IA.
+//
+// v155 · refactor · port de Sprint's 6-section structured prompt approach
+// (audit Sprint vs Kanban v154 · "el que millora qualitat entregable").
+// L'estructura clara de seccions força el LLM a output complet · validable
+// per humà en < 5 min · sense parts buides.
 export function buildExecutionPrompt(wo) {
     const c = wo.content || {};
     const ass = c.assignee || {};
+    const kind = _detectWoKind(c);
+
     const lines = [
-        'Ejecuta esta Work Order del SOS V11 (Swarm Operative System) y devuelve el entregable correspondiente en español, en Markdown limpio.',
+        '# TASCA · Executa aquesta Work Order del SOS V11',
         '',
-        'WORK ORDER:',
-        '- Título: ' + (c.title || '(sin título)'),
-        '- Descripción: ' + (c.description || '(sin descripción)'),
-        c.sopRef  ? '- SOP de referencia: `' + c.sopRef + '`'   : null,
-        c.stepRef ? '- Paso del SOP: `' + c.stepRef + '`'       : null,
-        c.workshopId ? '- Workshop asociado: ' + c.workshopId    : null,
-        '- Engine asignado: ' + (ass.engine || 'anthropic'),
-        '- Aprobación: ' + (c.approvalRule || 'manual'),
+        'Genera l\'entregable corresponent en MARKDOWN ESTRUCTURAT seguint EXACTAMENT les 5 seccions de sortida descrites més avall. Cap secció pot quedar buida. Català o castellà segons descripció.',
         '',
-        'REGLAS IRRENUNCIABLES:',
-        '1. Respeta el SOC raíz `soc-teamtowers-brand` y los SOCs específicos que recibes en el contexto.',
-        '2. NO inventes datos. Si falta información, marca `[pendiente — el operador debe añadir contexto]`.',
-        '3. NO incluyas precios; usa `[VER CATÁLOGO]` o `[PRECIO]` como placeholder.',
-        '4. Cita textualmente del SOP cuando aplique (entre comillas).',
-        '5. Output autocontenido y autosuficiente para que un humano pueda revisarlo y aprobarlo en menos de 5 minutos.',
+        '## CONTEXT WO',
+        '- **id**: `' + (wo.id || c.id || '(sense id)') + '`',
+        '- **título**: ' + (c.title || '(sense títol)'),
+        '- **descripció**: ' + (c.description || '(sense descripció)'),
+        c.sopRef     ? '- **SOP referència**: `' + c.sopRef + '`'             : null,
+        c.stepRef    ? '- **Pas del SOP**: `' + c.stepRef + '`'                : null,
+        c.workshopId ? '- **Workshop associat**: ' + c.workshopId              : null,
+        c.priority   ? '- **prioritat**: ' + c.priority                         : null,
+        '- **engine**: ' + (ass.engine || 'anthropic'),
+        '- **aprovació**: ' + (c.approvalRule || 'manual'),
+        '- **kind inferit**: ' + kind,
+        '',
+        '## REGLES IRRENUNCIABLES (compliance · REGLAS IRRENUNCIABLES)',
+        '1. Respecta el SOC raíz / soc-teamtowers-brand i els SOCs específics que reps al context system.',
+        '2. NO inventis dades · NO inventes datos. Si falta info, marca `[pendent — l\'operador ha d\'afegir context]`.',
+        '3. NO incloguis preus · NO incluyas precios · usa `[VER CATÀLEG]` o `[VER CATÁLOGO]` com a placeholder.',
+        '4. Cita textualment del SOP quan apliqui (entre cometes).',
+        '5. Output autocontingut · revisable en < 5 min per humà.',
     ];
     if (c.approvalRule === 'tdd-auto' && c.tddCheck) {
-        lines.push('6. El output debe estar construido para pasar este test booleano: `' + c.tddCheck + '`. Diseña la estructura del output para que ese check evalúe `true`.');
+        lines.push('6. **TDD check · test booleano** · el output ha d\'estar construït per passar aquest test booleà · `' + c.tddCheck + '`. Dissenya l\'estructura perquè evalui `true`.');
     }
+
+    // v155 · 5 seccions estructurades · adaptades al kind de WO
+    lines.push('', '## 📦 ENTREGABLE · 5 seccions OBLIGATÒRIES (no n\'ometis cap)');
+    if (kind === 'code' || kind === 'engineering') {
+        lines.push(
+            '### 1. Resum executiu (3-4 línies)',
+            'Què aporta aquest entregable · per què val la pena · valor diferencial al projecte.',
+            '',
+            '### 2. Pla d\'implementació',
+            'Llistat dels fitxers/components a crear o modificar · 1 línia descripció per cada un · ordre seqüencial.',
+            '',
+            '### 3. API surface / contracte',
+            'Exports principals · signatures · format input/output · sense implementació interna.',
+            '',
+            '### 4. Test plan + riscos',
+            '- Tests · llistat grups (A · B · C…) + què verifica cada un.',
+            '- Riscos · 2-3 identificats + mitigació concreta.',
+            '',
+            '### 5. Aplicació + verificació',
+            'Pasos exactes per a aplicar manualment · comanda terminal si cal · verificació booleana (com saps que ha funcionat).',
+        );
+    } else if (kind === 'content' || kind === 'copy' || kind === 'pitch' || kind === 'doc') {
+        lines.push(
+            '### 1. Resum executiu (3-4 línies)',
+            'Què aporta · per a qui · diferencial.',
+            '',
+            '### 2. Outline · estructura del document',
+            'Llistat de seccions amb 1 línia descripció per cada una.',
+            '',
+            '### 3. Cos del document (draft complet)',
+            'Tot el contingut · llest per publicar · sense placeholders genèrics (excepte els marcats [VER CATÀLEG]).',
+            '',
+            '### 4. CTAs + següents passos',
+            'Crides a l\'acció · 1 primària + 2 secundàries · enllaços relatius si apliquen.',
+            '',
+            '### 5. Riscos + revisió suggerida',
+            'Què revisar · 2-3 punts crítics per al humà · checklist booleà.',
+        );
+    } else {
+        // Generic kind · default 5 sections (procediment · audit · comm · etc)
+        lines.push(
+            '### 1. Resum executiu (3-4 línies)',
+            'Què aporta aquest entregable · per què · valor diferencial.',
+            '',
+            '### 2. Output principal',
+            'El contingut canonical demanat · estructura clara · sense parts buides.',
+            '',
+            '### 3. Decisions preses + alternatives descartades',
+            'Per cada decisió no òbvia · 1 línia rationale · 1 línia alternativa descartada + per què.',
+            '',
+            '### 4. Test/verificació booleana',
+            'Com saps que aquest output ha funcionat · check explícit (humà o automàtic) · format · "Aquesta sortida és vàlida si X · Y · Z".',
+            '',
+            '### 5. Riscos + següents passos',
+            'Riscos detectats · mitigació · 2-3 next steps concrets.',
+        );
+    }
+    lines.push(
+        '',
+        'IMPORTANT · les 5 seccions han d\'estar TOTES presents · titulades exactament com indicat · cap "TBD" o "pendent" excepte als placeholders permesos.',
+    );
     return lines.filter(Boolean).join('\n');
+}
+
+// v155 · _detectWoKind · pure · infereix tipus WO per adaptar seccions del prompt
+function _detectWoKind(c) {
+    if (!c) return 'generic';
+    const txt = ((c.title || '') + ' ' + (c.description || '') + ' ' + (c.sopRef || '')).toLowerCase();
+    if (/code|implement|refactor|engineer|test|api|backend|frontend|component|module|library/i.test(txt)) return 'code';
+    if (/content|copy|landing|pitch|blog|article|doc|writeup|post/i.test(txt)) return 'content';
+    return 'generic';
 }
 
 // ─── Cálculo de coste de una WO ─────────────────────────────────────────────
@@ -285,10 +367,12 @@ export default class KanbanView {
                 </select>
                 <button class="kb-btn" id="kbBtnFromSop">📋 Desde SOP</button>
                 <button class="kb-btn kb-btn-primary" id="kbBtnNew">＋ Nueva WO</button>
-                <label id="kbSwarmToggle" style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:4px;background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.30);font-size:0.78rem;cursor:pointer;color:#a8b2ff;user-select:none;" title="Mode swarm · cada WO té botó auto-run amb agent IA · llegeix de docs/backlog.yaml">
+                <label id="kbSwarmToggle" style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:4px;background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.30);font-size:0.78rem;cursor:pointer;color:#a8b2ff;user-select:none;" title="Mode swarm · cada WO té botó auto-run amb agent IA">
                     <input type="checkbox" id="kbSwarmCheckbox" style="width:14px;height:14px;cursor:pointer;accent-color:#a855f7;">
                     🐝 Swarm mode
                 </label>
+                <!-- v156 · Autonomous loop · processa N WOs pending amb agent IA in-place (substitueix botó /sprint) -->
+                <button class="kb-btn" id="kbBtnAutonomousLoop" style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:0;" title="Processa totes les WOs pending del projecte actiu amb agent IA · seqüencial · trace al WO mateix · in-place (substitueix /sprint)">🤖 Run autonomous loop</button>
             </div>
 
             <div class="kb-main">
@@ -317,6 +401,8 @@ export default class KanbanView {
         this._render();
         document.getElementById('kbBtnNew').addEventListener('click',     () => this._openCreateModal());
         document.getElementById('kbBtnFromSop').addEventListener('click', () => this._openFromSopModal());
+        // v156 · autonomous loop (substitueix botó /sprint)
+        document.getElementById('kbBtnAutonomousLoop')?.addEventListener('click', () => this._runAutonomousLoop());
 
         // SWARM-RELOC-001 · swarm mode toggle · persisteix a localStorage per
         // projecte · si actiu · cada WO té botó "🐝 Auto-run" amb agent IA
@@ -477,12 +563,141 @@ export default class KanbanView {
 
     // ─── H7.2 · Auto-ejecución de WO por IA ─────────────────────────────────
     // Construye contexto via KnowledgeLoader (SOCs + SOP + projectId) →
+    // ─── v156 · _runAutonomousLoop · processa pending WOs amb IA in-place ──
+    // Substitueix la funcionalitat de /sprint "Run autonomous loop" PERÒ
+    // operant sobre les WOs del kanban del projecte actiu · output queda
+    // vinculat a cada WO (no a sprint_run nodes desconnectats). UX més coherent.
+    async _runAutonomousLoop() {
+        const pending = (this.workOrders || []).filter(w => {
+            const c = w.content || w;
+            const status = c.status || 'backlog';
+            return (status === 'backlog' || status === 'pending') &&
+                   c.assignee?.kind === 'ai';
+        });
+        if (pending.length === 0) {
+            try { const { toast } = await import('../core/uxComponents.js');
+                toast({ kind: 'info', text: 'Cap WO IA pending · res a processar', ttl: 3000 });
+            } catch (_) {}
+            return;
+        }
+        const max = parseInt(prompt('Quantes WOs pending vols processar amb IA?\n\nWOs IA pending detectades · ' + pending.length + '\n\n(Cancel·la per a no executar)', String(Math.min(5, pending.length))), 10);
+        if (!max || max < 1) return;
+        const batch = pending.slice(0, max);
+        const btn = document.getElementById('kbBtnAutonomousLoop');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ 0/' + batch.length + '…'; }
+        // v157 · col·lecciona resultats · silent mode evita modals que es solapen ·
+        // al final mostra summary amb tots els outputs · cada un revisable+ledgerizable
+        const results = [];
+        for (let i = 0; i < batch.length; i++) {
+            if (btn) btn.textContent = '⏳ ' + (i + 1) + '/' + batch.length + '…';
+            try {
+                const r = await this._executeAi(batch[i].id, { __silent: true });
+                results.push(r || { ok: false, wo: batch[i], state: 'unknown' });
+            } catch (e) {
+                console.warn('[kanban] autonomous loop · WO failed', batch[i].id, e?.message);
+                results.push({ ok: false, wo: batch[i], state: 'error', error: e?.message });
+            }
+        }
+        if (btn) { btn.disabled = false; btn.textContent = '🤖 Run autonomous loop'; }
+        // Re-render board to show updated statuses
+        this._renderBoard?.();
+        this._renderStats?.();
+        // v157 · summary modal · totes les WOs processades · revisable + ledgerize per cada un
+        this._openAutonomousLoopSummary(results);
+    }
+
+    // v157 · summary modal post-autonomous-loop · llista totes les WOs processades ·
+    // permet veure aiOutput · ledgerize · re-run · sense perdre cap.
+    _openAutonomousLoopSummary(results = []) {
+        const root = document.getElementById('kbExecRoot');
+        if (!root) return;
+        const ok   = results.filter(r => r.ok).length;
+        const fail = results.length - ok;
+        const rowsHtml = results.map((r, i) => {
+            const wo = r.wo || {};
+            const c  = wo.content || {};
+            const stateColor = r.state === 'ready'       ? '#22c55e'
+                            : r.state === 'tdd-passed'  ? '#22c55e'
+                            : r.state === 'tdd-failed'  ? '#facc15'
+                            : r.state === 'error'       ? '#ef4444'
+                            : '#94a3b8';
+            const stateIcon = r.state === 'ready' || r.state === 'tdd-passed' ? '✓' : '✗';
+            const aiOutPreview = (r.aiOutput || '').slice(0, 200).replace(/[<>&]/g, (ch) => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[ch])) + ((r.aiOutput || '').length > 200 ? '…' : '');
+            const woId = wo.id || c.id || '?';
+            return `
+            <div data-loop-row="${i}" style="background:rgba(255,255,255,0.03);border:1px solid var(--border-default);border-left:3px solid ${stateColor};border-radius:6px;padding:10px 12px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:200px;">
+                        <div style="font-weight:700;font-size:0.92rem;">
+                            <span style="color:${stateColor};">${stateIcon}</span> ${(c.title || woId).replace(/[<>&]/g, ch=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[ch]))}
+                        </div>
+                        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">
+                            ${r.state || 'unknown'} · tokens ${(r.tokens?.prompt_tokens || 0)}↓ / ${(r.tokens?.completion_tokens || 0)}↑ · ${(r.latencyMs || 0)}ms
+                            ${r.error ? ' · err · ' + r.error.slice(0, 80) : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-shrink:0;">
+                        <button class="kb-btn" data-loop-view="${i}" style="font-size:0.78rem;padding:4px 10px;">👁 Veure</button>
+                        ${r.ok && r.state !== 'tdd-passed' ? `<button class="kb-btn kb-btn-primary" data-loop-ledger="${woId}" style="font-size:0.78rem;padding:4px 10px;">✓ Ledger</button>` : ''}
+                        <button class="kb-btn" data-loop-rerun="${woId}" style="font-size:0.78rem;padding:4px 10px;">🔁 Re-run</button>
+                    </div>
+                </div>
+                ${r.aiOutput ? `<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:0.76rem;color:var(--text-secondary);">Preview · primers 200 chars</summary><pre style="font-size:0.72rem;background:var(--bg-elevated);padding:8px;border-radius:4px;margin-top:4px;white-space:pre-wrap;max-height:200px;overflow:auto;">${aiOutPreview}</pre></details>` : ''}
+            </div>`;
+        }).join('');
+        root.innerHTML = `
+            <div class="kb-exec-bg" id="kbExecBg" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;">
+                <div class="kb-exec-modal" style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:12px;padding:1.5rem;max-width:1000px;width:100%;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+                        <h2 style="margin:0;font-size:1.2rem;">🤖 Loop autonomous · summary</h2>
+                        <div style="display:flex;gap:10px;align-items:center;font-size:0.85rem;">
+                            <span style="color:#22c55e;font-weight:700;">${ok} ✓</span>
+                            <span style="color:${fail > 0 ? '#facc15' : 'var(--text-muted)'};font-weight:700;">${fail} ✗</span>
+                            <span style="color:var(--text-muted);">de ${results.length}</span>
+                            <button class="kb-btn" id="kbExecClose" style="margin-left:10px;">Tancar</button>
+                        </div>
+                    </div>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 14px;">Cada WO ja s'ha guardat amb el seu output. Pots revisar · ledgerizar (acceptar+contabilitzar) · o re-executar.</p>
+                    ${rowsHtml || '<div style="color:var(--text-muted);text-align:center;padding:2rem;">Cap resultat</div>'}
+                </div>
+            </div>`;
+        const close = () => { root.innerHTML = ''; };
+        document.getElementById('kbExecBg').addEventListener('click', e => { if (e.target.id === 'kbExecBg') close(); });
+        document.getElementById('kbExecClose').addEventListener('click', close);
+        // Per-row actions · view detail modal · ledger · re-run
+        root.querySelectorAll('[data-loop-view]').forEach(b => b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const i = parseInt(b.getAttribute('data-loop-view'), 10);
+            const r = results[i];
+            if (!r) return;
+            this._openExecutionModal(r.wo, { state: r.state, text: r.aiOutput, tokens: r.tokens || {}, latencyMs: r.latencyMs });
+        }));
+        root.querySelectorAll('[data-loop-ledger]').forEach(b => b.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const woId = b.getAttribute('data-loop-ledger');
+            try { await this._ledgerize(woId, {}); b.textContent = '✓ Ledgered'; b.disabled = true; }
+            catch (err) { console.warn('[kanban] ledger failed', err); }
+        }));
+        root.querySelectorAll('[data-loop-rerun]').forEach(b => b.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const woId = b.getAttribute('data-loop-rerun');
+            b.disabled = true; b.textContent = '⏳';
+            try { await this._executeAi(woId); }
+            catch (err) { console.warn('[kanban] rerun failed', err); }
+            finally { b.disabled = false; b.textContent = '🔁 Re-run'; }
+        }));
+    }
+
     // llama Orchestrator.callLLM → captura tokens reales → actualiza WO →
     // si approvalRule='tdd-auto' y tddCheck pasa, transiciona a ledgered.
     async _executeAi(woId, extras = {}) {
         const wo = this.workOrders.find(x => x.id === woId);
-        if (!wo) return;
+        if (!wo) return null;
         const c = { ...wo.content, ...extras };
+        // v157 · silent mode · skip modal opening (per al autonomous loop · evita
+        // que cada modal sobreescrigui el següent · només l'últim era visible).
+        // Retorna { ok, wo, aiOutput, error } perquè el caller agregui resultats.
+        const silent = !!extras.__silent;
 
         // Resolver SOCs/SOPs a inyectar
         const socs = Array.isArray(c.socRefs) && c.socRefs.length
@@ -490,7 +705,7 @@ export default class KanbanView {
             : ['teamtowers-brand'];
         const sops = c.sopRef ? [c.sopRef.replace(/^sop-/, '')] : [];
 
-        this._openExecutionModal(wo, { state: 'loading' });
+        if (!silent) this._openExecutionModal(wo, { state: 'loading' });
         const startedAt = Date.now();
 
         try {
@@ -521,23 +736,52 @@ export default class KanbanView {
                 console.warn('[kanban] buildWoContext failed · fallback al base context', e?.message);
             }
 
-            // Cache-bust dinámico para Orchestrator (ver BUG-002/003)
-            const { Orchestrator } = await import('../core/Orchestrator.js?v=' + Date.now());
-            const result = await Orchestrator.callLLM({
-                preferredEngine: c.assignee?.engine || 'anthropic',
-                systemPrompt:    sosHeader ? (sosHeader + '\n\n---\n\n' + ctx.systemPrompt) : ctx.systemPrompt,
-                userPrompt:      buildExecutionPrompt({ ...wo, content: c }),
-                responseFormat:  'text',
-                temperature:     0.3,
-            });
-
-            const aiOutput = (typeof result.content === 'string')
-                ? result.content
-                : (result.content?.raw || JSON.stringify(result.content, null, 2));
-            const tokens = result.telemetry?.tokens || {};
-            const latencyMs = result.telemetry?.latencyMs || (Date.now() - startedAt);
+            // v155 · escalation chain 5 providers (com Sprint via runSprintItem) ·
+            // robustesa · si Anthropic té credit baix · automàticament salta a
+            // OpenAI → Gemini → DeepSeek → Minimax. Fallback final · Orchestrator
+            // legacy directe (per a edge cases de runEscalation no disponible).
+            const systemPromptCombined = sosHeader ? (sosHeader + '\n\n---\n\n' + ctx.systemPrompt) : ctx.systemPrompt;
+            const userPrompt = buildExecutionPrompt({ ...wo, content: c });
+            let aiOutput = '', tokens = {}, latencyMs = 0, attempts = null, modelKey = null;
+            try {
+                const { generateWithProvider } = await import('../core/aiProviderService.js');
+                const { runEscalation }        = await import('../core/aiRouterService.js');
+                const generate = (mk) => generateWithProvider(mk, {
+                    systemPrompt:    systemPromptCombined,
+                    userPrompt,
+                    maxOutputTokens: 1800,
+                    temperature:     0.3,
+                });
+                const r = await runEscalation({
+                    taskKind:         'creative-narrative',   // mateixa que Sprint draft
+                    generate,
+                    preferredProvider: c.assignee?.engine || null,
+                });
+                aiOutput = r.output?.text || '';
+                tokens   = { prompt_tokens: r.output?.usage?.inputTokens || 0, completion_tokens: r.output?.usage?.outputTokens || 0 };
+                latencyMs = Date.now() - startedAt;
+                attempts = r.attempts || null;
+                modelKey = r.modelKey || r.output?.modelKey || null;
+            } catch (escErr) {
+                // Fallback · si runEscalation no disponible (cas edge) · usa Orchestrator legacy
+                console.warn('[kanban] runEscalation failed · fallback Orchestrator · ' + (escErr?.message || ''));
+                const { Orchestrator } = await import('../core/Orchestrator.js?v=' + Date.now());
+                const result = await Orchestrator.callLLM({
+                    preferredEngine: c.assignee?.engine || 'anthropic',
+                    systemPrompt:    systemPromptCombined,
+                    userPrompt,
+                    responseFormat:  'text',
+                    temperature:     0.3,
+                });
+                aiOutput = (typeof result.content === 'string')
+                    ? result.content
+                    : (result.content?.raw || JSON.stringify(result.content, null, 2));
+                tokens = result.telemetry?.tokens || {};
+                latencyMs = result.telemetry?.latencyMs || (Date.now() - startedAt);
+            }
 
             // Actualizar WO con tokens y output. status='done' (lista para aprobar).
+            // v155 · trace escalation · aiAttempts + aiModelKey · UX failover visible
             const updated = {
                 ...wo,
                 content: {
@@ -548,6 +792,8 @@ export default class KanbanView {
                     actualHours: Math.max(0, latencyMs / 3600000),  // h equiv (anecdótico)
                     aiLatencyMs: latencyMs,
                     aiSources: ctx.sources,
+                    aiAttempts: attempts,                            // v155 · failover trace
+                    aiModelKey: modelKey,                            // v155 · model real que ha respost
                     status:    'done',
                 },
             };
@@ -558,37 +804,39 @@ export default class KanbanView {
                 const passed = this._evalTdd(c.tddCheck, aiOutput);
                 if (passed) {
                     await this._ledgerize(woId, {});
-                    this._openExecutionModal({ ...updated, content: { ...updated.content, status: 'ledgered' } }, {
+                    if (!silent) this._openExecutionModal({ ...updated, content: { ...updated.content, status: 'ledgered' } }, {
                         state: 'tdd-passed',
                         text:  aiOutput,
                         tokens, latencyMs, sources: ctx.sources,
                     });
-                    return;
+                    return { ok: true, wo: updated, aiOutput, state: 'tdd-passed', tokens, latencyMs };
                 } else {
                     // TDD falló: vuelve a backlog para revisión humana.
                     const failed = { ...updated, content: { ...updated.content, status: 'backlog', tddFailed: true } };
                     await this._save(failed);
-                    this._openExecutionModal(failed, {
+                    if (!silent) this._openExecutionModal(failed, {
                         state: 'tdd-failed',
                         text:  aiOutput,
                         tokens, latencyMs, sources: ctx.sources,
                     });
-                    return;
+                    return { ok: false, wo: failed, aiOutput, state: 'tdd-failed', tokens, latencyMs };
                 }
             }
 
-            this._openExecutionModal(updated, {
+            if (!silent) this._openExecutionModal(updated, {
                 state: 'ready',
                 text:  aiOutput,
                 tokens, latencyMs,
                 sources: ctx.sources,
             });
+            return { ok: true, wo: updated, aiOutput, state: 'ready', tokens, latencyMs };
         } catch (err) {
             console.error('[H7.2] Error ejecutando WO con IA:', err);
-            this._openExecutionModal(wo, {
+            if (!silent) this._openExecutionModal(wo, {
                 state: 'error',
                 msg: err.message + '\n\nVerifica tu API key en /settings y que netlify dev esté corriendo.',
             });
+            return { ok: false, wo, aiOutput: null, state: 'error', error: err?.message || String(err) };
         }
     }
 
@@ -676,20 +924,16 @@ export default class KanbanView {
                 if (!woId) return;
                 const wo = (this.workOrders || []).find(w => w.id === woId);
                 if (!wo) return;
+                // v156 · resol bug "swarm redirigeix a /sprint" · ara executa IN-PLACE
+                // dins el kanban via _executeAi (canonical · 5 seccions estructurades +
+                // runEscalation chain v155). Sprint vista queda en deprecation.
                 btn.disabled = true;
-                btn.textContent = '⏳ Llançant swarm loop...';
+                btn.textContent = '⏳ Llançant agent IA…';
                 try {
-                    const { toast } = await import('../core/uxComponents.js');
-                    toast({
-                        kind: 'info',
-                        text: '🐝 Swarm autonomous loop · veure /sprint per a status',
-                        ttl: 4000,
-                    });
-                    // Per a alfa · redirigim a /sprint amb el WO pre-seleccionat
-                    setTimeout(() => {
-                        window.location.href = '/sprint?wo=' + encodeURIComponent(woId);
-                    }, 1500);
-                } catch (e) {
+                    await this._executeAi(woId);
+                } catch (err) {
+                    console.warn('[kanban] swarm run failed', err);
+                } finally {
                     btn.disabled = false;
                     btn.textContent = '🐝 Auto-run amb agent IA';
                 }

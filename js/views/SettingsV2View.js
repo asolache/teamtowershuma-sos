@@ -23,6 +23,7 @@ import { toast } from '../core/uxComponents.js';
 import { setBudget, getBudget, budgetStatus, _resetAll as resetBudget } from '../core/aiBudgetService.js';
 import { renderTierIndicatorHtml } from '../core/aiTierIndicator.js';
 import { renderCanonicalBadge } from '../core/deprecatedBanner.js';
+import { renderSubmenuTabs, bindSubmenuTabs } from '../ui/SubmenuTabs.js';
 import {
     SOS_PLANS, VALID_PLAN_IDS, DEFAULT_TOPUP_AMOUNTS,
     validatePublishableKey, detectKeyType, validatePaymentLinkUrl,
@@ -87,6 +88,11 @@ export default class SettingsV2View {
             .sv2-back:hover { color:var(--text-main); background:var(--glass-hover); }
 
             .sv2-main { max-width:880px; margin:0 auto; padding:1.2rem 1rem; }
+            /* v151 · canonical submenu + actions area */
+            .sv2-bar-fused { display:flex; align-items:stretch; border-bottom:1px solid var(--border-default); margin-bottom:1.2rem; }
+            .sv2-bar-tabs { flex:1; min-width:0; overflow-x:auto; }
+            .sv2-bar-tabs .sos-submenu { border-bottom:none; }
+            .sv2-bar-actions { display:flex; align-items:center; gap:6px; padding:0 12px; border-left:1px solid var(--border-default); flex-shrink:0; }
             .sv2-tabs { display:flex; gap:4px; border-bottom:1px solid var(--border-default); margin-bottom:1.2rem; overflow-x:auto; }
             .sv2-tab { padding:10px 16px; background:transparent; color:var(--text-secondary); border:0; border-bottom:2px solid transparent; cursor:pointer; font-size:0.85rem; font-weight:600; white-space:nowrap; transition:all 0.15s; }
             .sv2-tab:hover { color:var(--text-main); }
@@ -135,14 +141,21 @@ export default class SettingsV2View {
             </div>
 
             <div class="sv2-main">
-                <div class="sv2-tabs" role="tablist">
-                    <button class="sv2-tab active" data-tab="api-keys" role="tab">🔑 API keys</button>
-                    <button class="sv2-tab" data-tab="theme" role="tab">🎨 Tema</button>
-                    <button class="sv2-tab" data-tab="ai-defaults" role="tab">🤖 IA</button>
-                    <button class="sv2-tab" data-tab="payments" role="tab">💳 Pagaments</button>
-                    <button class="sv2-tab" data-tab="permaweb" role="tab">🌐 Permaweb</button>
-                    <button class="sv2-tab" data-tab="manifesto" role="tab">📜 Manifesto</button>
-                    <button class="sv2-tab" data-tab="backup" role="tab">💾 Backup</button>
+                <!-- v151 · canonical submenu + actions area (right) -->
+                <div class="sv2-bar-fused">
+                    <div id="sv2Submenu" class="sv2-bar-tabs">${renderSubmenuTabs({
+                        tabs: [
+                            { id: 'api-keys',   label: 'API keys',  icon: '🔑' },
+                            { id: 'theme',      label: 'Tema',      icon: '🎨' },
+                            { id: 'ai-defaults',label: 'IA',        icon: '🤖' },
+                            { id: 'payments',   label: 'Pagaments', icon: '💳' },
+                            { id: 'permaweb',   label: 'Permaweb',  icon: '🌐' },
+                            { id: 'manifesto',  label: 'Manifesto', icon: '📜' },
+                            { id: 'backup',     label: 'Backup',    icon: '💾' },
+                        ],
+                        activeId: this._activeTab,
+                        urlParam: 'tab',
+                    })}</div>
                 </div>
 
                 <div class="sv2-panel active" data-panel="api-keys">
@@ -392,6 +405,18 @@ export default class SettingsV2View {
     // ── Bind ──────────────────────────────────────────────────────────────
 
     _bindTabs() {
+        // v151 · canonical SubmenuTabs · re-render panel actiu quan canvia
+        const mount = document.getElementById('sv2Submenu');
+        if (mount) {
+            try { this._cleanupTabs?.(); } catch (_) {}
+            this._cleanupTabs = bindSubmenuTabs(mount, (tabId) => {
+                document.querySelectorAll('.sv2-panel').forEach(p => {
+                    p.classList.toggle('active', p.dataset.panel === tabId);
+                });
+                this._activeTab = tabId;
+            }, { urlParam: 'tab' });
+        }
+        // Legacy support · binding .sv2-tab (per compat externs)
         document.querySelectorAll('.sv2-tab').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tabId = btn.dataset.tab;

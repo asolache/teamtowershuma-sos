@@ -19,6 +19,8 @@
 // L'objectiu és validar IA + UX abans de programar la PWA real (la
 // implementació final pot ser PWA o Capacitor wrapper · zero backend).
 
+import { renderSubmenuTabs, bindSubmenuTabs } from '../ui/SubmenuTabs.js';
+
 export default class MobileMockupView {
     constructor() { document.title = 'Mobile Mockup · SOS V11'; }
 
@@ -93,7 +95,18 @@ export default class MobileMockupView {
                 <p>UX-AUDIT-001 sprint A2 · Mockup estàtic de la futura PWA mobile per a operadors. 4 pantalles que cobreixen el cicle complet: <strong>WO assignats → cronometratge → evidència → ledger → permaweb/blockchain</strong>. La implementació final pot ser PWA o Capacitor amb el mateix codi local-first del SOS desktop · zero backend nou.</p>
             </div>
 
-            <div class="mm-tabs">
+            <!-- v151 · canonical SubmenuTabs · mantenim mm-tabs ocultes per backwards-compat -->
+            <div id="mmSubmenu">${renderSubmenuTabs({
+                tabs: [
+                    { id: 'home',     label: 'Home',      icon: '🏠' },
+                    { id: 'wo',       label: 'WO Detail', icon: '⏱' },
+                    { id: 'wallet',   label: 'Wallet',    icon: '💳' },
+                    { id: 'activity', label: 'Activity',  icon: '📡' },
+                ],
+                activeId: 'home',
+                urlParam: 'screen',
+            })}</div>
+            <div class="mm-tabs" style="display:none;">
                 <button class="mm-tab active" data-mm-screen="home">🏠 Home</button>
                 <button class="mm-tab" data-mm-screen="wo">⏱ WO Detail</button>
                 <button class="mm-tab" data-mm-screen="wallet">💳 Wallet</button>
@@ -375,6 +388,15 @@ export default class MobileMockupView {
     }
 
     async afterRender() {
+        // v151 · canonical SubmenuTabs · re-render block actiu quan canvia screen
+        const mmMount = document.getElementById('mmSubmenu');
+        if (mmMount) {
+            try { this._cleanupTabs?.(); } catch (_) {}
+            this._cleanupTabs = bindSubmenuTabs(mmMount, (screen) => {
+                document.querySelectorAll('.mm-screen-block').forEach(b => b.classList.remove('active'));
+                document.querySelector(`[data-mm-block="${screen}"]`)?.classList.add('active');
+            }, { urlParam: 'screen' });
+        }
         const tabs   = document.querySelectorAll('.mm-tab');
         const blocks = document.querySelectorAll('.mm-screen-block');
         tabs.forEach(t => {

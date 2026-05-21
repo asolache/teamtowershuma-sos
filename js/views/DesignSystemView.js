@@ -11,6 +11,7 @@
 import { label, labelN, applyToNavDestinations, listLabels, TOKENS } from '../core/sosCopy.js';
 import { attachAIFormFeedback, renderInlineFeedbackHtml } from '../core/aiFormFeedback.js';
 import { formatActivityEvent } from '../core/aiActivityFeedback.js';
+import { renderSubmenuTabs, bindSubmenuTabs } from '../ui/SubmenuTabs.js';
 
 // MENU_PROPOSAL · arquitectura d'informació v2 · agrupació clara per
 // "viatge del fundador" (Foundation → Execution → Value → Commercial)
@@ -31,7 +32,7 @@ const MENU_ORIGINAL = Object.freeze([
 ]);
 
 // BUILD STAMP · canvia a cada deploy per facilitar troubleshooting cache
-const BUILD_STAMP = '2026-05-18T19:00 · v131 · SECTOR CNAE AUDIT + sectorAgentLoader · fix 6 mappings crítics (K Financieras 64-66 · L Inmobiliarias 68 · M Profesionales 69-75 · N Administrativas 77-82 · Q Sanitarias 86-88 · R Arts/Esports 90-93) + S scope reduït · P scope expandit · loader anti-contaminació (no injecta rols legacy-mismatch) · 70 asserts nous';
+const BUILD_STAMP = '2026-05-21T09:30 · v163 · CANVAS Anchoring Lab · valida METASKILL preamble v162 · nou módul canvasLabMetrics.js puro amb 3 mètriques (computeGenericityCount · llista 24 paraules buides CA/ES/EN · word boundary safe · computeStakeholderDiversityPct · unique/total · computeCanvasCompletenessPct · 8 camps canonical canvas · 12.5pt cada un) · botó "🎨 Run Canvas A/B" a /prompts-debug · mateixos 5 projectes × 3 perfils que value-map Lab · taula comparativa generic↓/divers↑/complete↑/tokens · 21 asserts v163 · ZERO regressions · ara podem mesurar empíricament si verna-guided millora canvas · proper · run amb API key real i decidir si promoure verna-guided a default · v162 · CANVAS+PITCH verna-style · METASKILL preamble injectat automàticament per personalize-canvas/pitch/landing en verna-minimal+verna-guided (Misió/Visió/Objectius derivats PRIMER · prohibició vocabulari genèric "qualitat"·"innovació"·"excel·lència" sense substantivar) · design-value-map-verna NO rep doble preamble (ja té el seu propi) · expertChainOrchestrator propaga contextProfile a totes les fases (single + per-item + escalation full) · 18 asserts v162 · ZERO regressions sos-current · prep · ara qualsevol caller pot demanar verna-guided per al chain complet · proper · Anchoring Lab estès a canvas + SOC shape eval propi · v161 · v161 · KISS prep next skills · FIX verna-guided no-op (ara conserva codi CNAE com a hint abstracte vs verna-minimal que també strippa sector) · FIX fewshot_overlap detector exact-match→landmark substring (paraules >4 chars · sense generics tipus founder/manager) · captures "Visioner"·"Arquitecte"·"Cohort" als outputs · cross-language limit conegut (anchor EN vs ancoratge CA) · 14 asserts v161 · ZERO regressions v160 · prep skill SOCs/Canvas/Pitch/Presentation-v2 amb mateixa filosofia METASKILL-first · v160 · ANTI-ANCHORING · Skill Claude de @alvaro replicada · NOU SYSTEM_BASE_VERNA (~762 tk · -48% vs SYSTEM_BASE) ancorat en METASKILL (misió/visió/objectius) · ZERO exemples literals · tipologies tangible/intangible ABSTRACTES (5+8 categories) · 4 principis VNA (reciprocitat · emergència · rols faltants · multiplicadors) · casteller levels com a SLOTS SENSE typical_kinds · NOU task design-value-map-verna metaskill-first amb missing_roles + needs_clarify + health_signals · NOU flag contextProfile a buildPrompt (sos-current · verna-minimal · verna-guided) · verna-* fa strip de domainDetection + sectorContext + sectorSeed + currentTemplate + fewShot (les 4 fonts d\'anchoring identificades a v159 audit) · quickSuggestMap + runValueMapCycle propaguen contextProfile · NOVA SECCIÓ "VNA Anchoring Lab" a /prompts-debug · 5 projectes diversos × 3 perfils en paral·lel · mètriques fewshot_overlap (↓ better) · cross_project_diversity (↑ better) · shape eval score · 38 asserts v160';
 
 export default class DesignSystemView {
 
@@ -63,6 +64,32 @@ export default class DesignSystemView {
             fb.setError(label('err.ai_failed'));
         });
         document.getElementById('dsBtnClear')?.addEventListener('click', () => fb.clear());
+
+        // v132k · Demo viu SubmenuTabs · clica tabs · dropdown · arrow keys
+        const live = document.getElementById('dsSubmenuLive');
+        const output = document.getElementById('dsSubmenuOutput');
+        if (live) {
+            live.innerHTML = renderSubmenuTabs({
+                tabs: [
+                    { id: 'hub',          label: 'Hub',           icon: '🏠' },
+                    { id: 'map',          label: 'Map',           icon: '🗺' },
+                    { id: 'kanban',       label: 'Kanban',        icon: '📋' },
+                    { id: 'wallet',       label: 'Comptabilitat', icon: '💰' },
+                    { id: 'presentation', label: 'Presentation',  icon: '🎯' },
+                ],
+                dropdown: [
+                    { id: 'pacts',    label: 'Pactes (+ Legal agents)', icon: '📜' },
+                    { id: 'sprints',  label: 'Sprints',                 icon: '🚀' },
+                    { id: 'kb',       label: 'KB del projecte',         icon: '🧠' },
+                    { id: 'settings', label: 'Settings',                icon: '⚙' },
+                ],
+                activeId: 'hub',
+                urlParam: 'demoTab',
+            });
+            bindSubmenuTabs(live, (newId, prevId) => {
+                if (output) output.textContent = '→ activat · ' + newId + ' (prev · ' + (prevId || 'cap') + ') · URL ?demoTab=' + newId;
+            }, { urlParam: 'demoTab' });
+        }
     }
 
     _htmlMain() {
@@ -295,6 +322,13 @@ export default class DesignSystemView {
                         <span class="ds-stat-chip" style="background:${TOKENS.colors.success}20;color:${TOKENS.colors.success};border-color:${TOKENS.colors.success}50;">total · ${totalLabels}</span>
                     </div>
                     <p style="margin-top:0.8rem;">Quan calgui nou copy · afegir clau <code>category.subkey</code> a <code>sosCopy.js</code> · les views consumeixen via <code>label('category.subkey')</code>.</p>
+                </div>
+
+                <div class="ds-section" id="dsSubmenuDemo">
+                    <h2>🧭 SubmenuTabs · pattern canonical (v132j+k)</h2>
+                    <p>Component compartit · <code>js/ui/SubmenuTabs.js</code> · validat al mockup v132i. Klicka les tabs · obre el dropdown · prova ← → al teclat (focus a la barra).</p>
+                    <div id="dsSubmenuLive" style="margin:1rem 0;border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden;background:var(--bg-panel);"></div>
+                    <div id="dsSubmenuOutput" style="font-family:var(--font-mono);font-size:0.82rem;color:var(--text-muted);padding:8px 12px;background:var(--bg-elevated);border-radius:var(--radius-sm);">cap canvi encara · clica una tab</div>
                 </div>
 
                 <div class="ds-section">

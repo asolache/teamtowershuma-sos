@@ -3,8 +3,12 @@ sector_id: J
 sector_name: "Información y Comunicaciones"
 sector_name_en: "Information & Communication"
 cnae: "58-63"
-version: "v11.1"
-tags: ["media", "editorial", "comunicacion", "telecomunicaciones", "plataformas", "contenidos", "publicidad"]
+cnae_official: "CNAE-2009 J · Información y comunicaciones (edición · cinematografía · radio/TV · telecomunicaciones · programación informática · consultoría TI · serveis d'informació)"
+version: "v131b"
+agent_type: sector-context
+roles_status: canonical
+canonical_archetypes_source: "knowledge/sectors/J.md v131b · cobreix editorial + media + telecomunicacions + software (el K.md tech legacy s'ha consolidat aquí · domainDetector.software-agency match J·M)"
+tags: ["media", "editorial", "comunicacion", "telecomunicaciones", "plataformas", "contenidos", "publicidad", "software", "SaaS", "IT-consulting", "cloud", "data", "ciberseguridad"]
 
 roles:
   - id: editorial_director

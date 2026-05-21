@@ -30,6 +30,8 @@ import {
 } from '../core/skillTaxonomyExtension.js';
 import { PROJECT_TYPES, PANTHEON_GUARDIANS, getGuardianById } from '../core/critical108Roles.js';
 import { renderExplainerBadge, bindExplainerBadges, ensureExplainerStyle } from '../core/didacticService.js';
+// v154 · canonical SubmenuTabs · mateix pattern que LearnView · Wallet · Accounting · etc
+import { renderSubmenuTabs, bindSubmenuTabs, getActiveTabFromUrl } from '../ui/SubmenuTabs.js';
 
 const GUARDIAN_COLOR = Object.freeze({
     afrodita:'#c25a3a', apolo:'#fbbf24', atenea:'#5a6e4f', demeter:'#8b9a3a',
@@ -53,6 +55,7 @@ export default class SkillsExplorerView {
     constructor() {
         document.title = 'Skills · catàleg universal · SOS V11';
         this.filters = { category: '', audience: '', projectType: '', tier: '', search: '' };
+        this._cleanupTabs = null;
     }
 
     async getHtml() {
@@ -64,23 +67,29 @@ export default class SkillsExplorerView {
         this.filters.tier        = params.get('tier') || '';
         this.filters.search      = params.get('q') || '';
         const cov = coverageReportExtended();
+        // v154 · canonical SubmenuTabs · category filter (substitueix se-topbar + se-stats-row velles)
+        const catTabs = [
+            { id: '',                            label: 'Totes',         icon: '🌐' },
+            ...Object.entries(SKILL_CATEGORIES).map(([id, meta]) => ({
+                id,
+                label: meta.label + ' (' + ((cov.byCategory[id]) || 0) + ')',
+                icon: meta.icon,
+            })),
+        ];
         return `
         ${this._renderStyle()}
         <div class="se-shell">
-            <div class="se-topbar">
-                <a href="/" data-link class="se-logo">🗼 Team<span>Towers</span></a>
-                <span class="se-title">🧠 Skills · catàleg universal ${renderExplainerBadge('vna', { size: 'xs' })} ${renderExplainerBadge('folksonomy', { size: 'xs' })} ${renderExplainerBadge('taxonomy', { size: 'xs' })}</span>
-                <div class="se-spacer"></div>
-                <a href="/learn" data-link class="se-link">📜 Conceptes</a>
-                
+            <!-- v154 · canonical submenu (substitueix se-topbar custom) -->
+            <div id="seSubmenu" style="background:var(--bg-panel);border-bottom:1px solid var(--border-default);">
+                ${renderSubmenuTabs({ tabs: catTabs, activeId: this.filters.category, urlParam: 'category' })}
             </div>
 
             <div class="se-main">
                 <header class="se-hero">
-                    <h1 class="mat-hero-h1">90 <strong>skills</strong> · 5 categories · 5 audiències · 12 tipus de projecte</h1>
-                    <p class="se-hero-sub">SKILL-TAX-002 · taxonomia universal SOS amb foco al públic potencial Matriu. Compatible amb estàndards externs (ESCO · O*NET · LinkedIn) · pendent de mapping bidireccional al sprint B.</p>
+                    <h1 class="mat-hero-h1">🧠 Skills · catàleg universal ${renderExplainerBadge('vna', { size: 'xs' })} ${renderExplainerBadge('taxonomy', { size: 'xs' })}</h1>
+                    <p class="se-hero-sub">90 skills · 5 categories · 5 audiències · 12 tipus de projecte · SKILL-TAX-002 · compatible ESCO/O*NET/LinkedIn (mapping bidireccional sprint B).</p>
 
-                    <div class="se-stats-row">
+                    <div class="se-stats-row" style="display:none;">
                         ${Object.entries(cov.byCategory).map(([cat, count]) => {
                             const meta = SKILL_CATEGORIES[cat];
                             const color = CATEGORY_COLOR[cat] || '#888';
@@ -228,6 +237,20 @@ export default class SkillsExplorerView {
         ensureExplainerStyle();
         bindExplainerBadges(document);
 
+        // v154 · canonical SubmenuTabs · category filter
+        const seMount = document.getElementById('seSubmenu');
+        if (seMount) {
+            try { this._cleanupTabs?.(); } catch (_) {}
+            this._cleanupTabs = bindSubmenuTabs(seMount, (catId) => {
+                this.filters.category = catId;
+                // Sync select dropdown si encara existeix
+                const sel = document.getElementById('seCategory');
+                if (sel) sel.value = catId;
+                this._renderResults();
+                this._syncUrlState();
+            }, { urlParam: 'category' });
+        }
+
         const update = () => {
             this.filters.search      = document.getElementById('seSearch')?.value || '';
             this.filters.category    = document.getElementById('seCategory')?.value || '';
@@ -343,5 +366,5 @@ export default class SkillsExplorerView {
         }
     }
 
-    destroy() { /* nothing */ }
+    destroy() { try { this._cleanupTabs?.(); } catch (_) {} }
 }

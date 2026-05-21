@@ -13,13 +13,34 @@ import { KB } from '../core/kb.js';
 import { buildFeed, summarizeFeed } from '../core/activityFeedService.js';
 import { computeNetworkStats, computeTopFollowed, followCounts } from '../core/socialGraphService.js';
 import { emptyStateHtml } from '../core/uxComponents.js';
+import { renderSubmenuTabs, bindSubmenuTabs, getActiveTabFromUrl } from '../ui/SubmenuTabs.js';
+
+const FILTER_TABS = Object.freeze([
+    { id: 'all',     label: 'Tot',       icon: '📋' },
+    { id: 'wos',     label: 'WOs',       icon: '⚡' },
+    { id: 'pacts',   label: 'Pactes',    icon: '🤝' },
+    { id: 'ledger',  label: 'Ledger',    icon: '💰' },
+    { id: 'network', label: 'Network',   icon: '🌐' },
+]);
+const VALID_FILTERS = new Set(FILTER_TABS.map(f => f.id));
+
+const FILTER_TO_KINDS = Object.freeze({
+    all:     null,                                                              // no filter
+    wos:     ['wo-claimed', 'wo-ledgered', 'wo-completed', 'wo-pending'],       // WO derivers
+    pacts:   ['pact-signed', 'pact-created', 'pact-amended'],
+    ledger:  ['ledger-credit', 'ledger-debit', 'invoice-paid', 'invoice-issued'],
+    network: ['follow-created', 'attestation-issued'],
+});
 
 export default class TimelineView {
 
     constructor() {
         if (typeof document !== 'undefined') document.title = 'Timeline · SOS';
-        this._sortMode = 'chrono';
+        const urlFilter = getActiveTabFromUrl('filter', 'all');
+        this._filterMode = VALID_FILTERS.has(urlFilter) ? urlFilter : 'all';
+        this._sortMode = getActiveTabFromUrl('sort', 'chrono') || 'chrono';
         this._meHandle = null;
+        this._cleanupFilter = null;
     }
 
     async getHtml() {
@@ -34,25 +55,50 @@ export default class TimelineView {
         ]);
         this._meHandle = (members.find(m => m && (m.content?.isPrimary || m.isPrimary))?.content?.handle) || null;
 
-        const feed = buildFeed({
+        const fullFeed = buildFeed({
             sources: { attestations, pacts, wos, ledger, invoices, proposals },
             userHandle: this._meHandle,
-            limit: 30,
+            limit: 200,                       // pull more · filter applies post-build
             sortBy: this._sortMode,
         });
+        // v153 · filter perspectives · WOs / Pacts / Ledger / Network
+        const allowedKinds = FILTER_TO_KINDS[this._filterMode];
+        const feed = allowedKinds == null
+            ? fullFeed.slice(0, 30)
+            : fullFeed.filter(e => allowedKinds.some(k => e.kind === k || (e.kind || '').startsWith(k))).slice(0, 30);
         const networkStats = computeNetworkStats(attestations);
         const topFollowed = computeTopFollowed(attestations, { limit: 5 });
         const myCounts = this._meHandle
             ? followCounts({ handle: this._meHandle, attestations })
             : null;
 
-        return this._renderShell({ feed, networkStats, topFollowed, myCounts });
+        return this._renderShell({ feed, fullFeedCount: fullFeed.length, networkStats, topFollowed, myCounts });
     }
 
     async afterRender() {
+        // v153 · canonical SubmenuTabs · perspective filter
+        const filterMount = document.getElementById('tlvFilter');
+        if (filterMount) {
+            try { this._cleanupFilter?.(); } catch (_) {}
+            this._cleanupFilter = bindSubmenuTabs(filterMount, async (newFilter) => {
+                if (!VALID_FILTERS.has(newFilter)) return;
+                this._filterMode = newFilter;
+                const app = document.getElementById('app');
+                if (app) {
+                    app.innerHTML = await this.getHtml();
+                    await this.afterRender();
+                }
+            }, { urlParam: 'filter' });
+        }
+        // Sort buttons (legacy · funcional)
         document.querySelectorAll('[data-sort]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 this._sortMode = btn.dataset.sort;
+                try {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('sort', this._sortMode);
+                    window.history.replaceState({}, '', url.toString());
+                } catch (_) {}
                 const app = document.getElementById('app');
                 if (app) {
                     app.innerHTML = await this.getHtml();
@@ -62,6 +108,8 @@ export default class TimelineView {
         });
     }
 
+    destroy() { try { this._cleanupFilter?.(); } catch (_) {} }
+
     async render() {
         const app = (typeof document !== 'undefined') ? document.getElementById('app') : null;
         if (!app) return;
@@ -69,7 +117,7 @@ export default class TimelineView {
         await this.afterRender();
     }
 
-    _renderShell({ feed, networkStats, topFollowed, myCounts }) {
+    _renderShell({ feed, fullFeedCount, networkStats, topFollowed, myCounts }) {
         return `
         <style>
             .tlv-shell { min-height:100dvh; background:var(--bg-dark); color:var(--text-main); font-family:var(--font-base); padding-bottom:2rem; }
@@ -104,20 +152,19 @@ export default class TimelineView {
         </style>
 
         <div class="tlv-shell">
-            <div class="tlv-topbar">
-                <a href="/home" data-link class="tlv-logo">🗼 Team<span>Towers</span></a>
-                <span style="color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Timeline · social</span>
-                <span style="flex:1;"></span>
-                <a href="/registry" data-link style="color:var(--text-secondary);font-size:0.78rem;padding:4px 10px;text-decoration:none;">→ Registry</a>
+            <!-- v153 · canonical SubmenuTabs · perspective filter · topbar custom eliminat -->
+            <div id="tlvFilter" style="background:var(--bg-panel);border-bottom:1px solid var(--border-default);">
+                ${renderSubmenuTabs({ tabs: FILTER_TABS, activeId: this._filterMode, urlParam: 'filter' })}
             </div>
 
             <div class="tlv-main">
                 <div>
                     <div class="tlv-section">
-                        <h2>💬 Activitat recent · ${feed.length} events</h2>
+                        <h2>💬 Activitat recent · ${feed.length} de ${fullFeedCount} events · filtre ${this._esc(this._filterMode)}</h2>
                         <div class="tlv-sort">
                             <button class="tlv-sort-btn ${this._sortMode === 'chrono' ? 'active' : ''}" data-sort="chrono">🕒 Cronològic</button>
                             <button class="tlv-sort-btn ${this._sortMode === 'relevance' ? 'active' : ''}" data-sort="relevance">⚡ Rellevància</button>
+                            <a href="/registry" data-link style="margin-left:auto;color:var(--accent-indigo);font-size:0.72rem;text-decoration:none;padding:5px 12px;">→ Registry</a>
                         </div>
                         ${feed.length === 0
                             ? emptyStateHtml({

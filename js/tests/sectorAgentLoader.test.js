@@ -89,16 +89,16 @@ for (const id of ['K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'F']) {
     }
 }
 
-// ─── F · rolesInjectable · evita contaminació ──────────────────────────
-console.log('\n— F · rolesInjectable · anti-contaminació');
+// ─── F · rolesInjectable · post-v131b · K/L canonical ──────────────────
+console.log('\n— F · rolesInjectable · post-v131b deep rewrite');
 {
     const kAgent = await loadSectorAgent('K');
-    ok('F · K · rolesInjectable=false (legacy-mismatch)',     kAgent.rolesInjectable === false);
-    ok('F · K · rolesStatus = legacy-mismatch',                kAgent.rolesStatus === 'legacy-mismatch');
+    ok('F · K · rolesInjectable=true (canonical post-v131b)',  kAgent.rolesInjectable === true);
+    ok('F · K · rolesStatus = canonical',                       kAgent.rolesStatus === 'canonical');
 }
 {
     const lAgent = await loadSectorAgent('L');
-    ok('F · L · rolesInjectable=false (legacy-mismatch)',     lAgent.rolesInjectable === false);
+    ok('F · L · rolesInjectable=true (canonical post-v131b)',  lAgent.rolesInjectable === true);
 }
 {
     const fAgent = await loadSectorAgent('F');
@@ -124,7 +124,8 @@ console.log('\n— G · buildSectorContextBlock · text per al prompt');
     const block = buildSectorContextBlock(kAgent);
     ok('G · K · bloc inclou sector_name correct (Financieras)', block.includes('Financieras'));
     ok('G · K · bloc inclou CNAE 64-66',      block.includes('64-66'));
-    ok('G · K · bloc NO injecta rols (legacy-mismatch)', !block.includes('Rols arquetip canonical') && block.includes('migrant a v131b'));
+    ok('G · K · bloc injecta rols canonical (post-v131b)',
+       block.includes('Rols arquetip canonical') && /CIO|CFO|Portfolio|Risk/i.test(block));
 }
 
 // ─── H · listSectorAgents · enumeració completa ────────────────────────
@@ -133,14 +134,14 @@ const all = await listSectorAgents();
 ok('H · 21 sectors carregats',                all.length === 21);
 ok('H · tots els canonical sectors presents',  CANONICAL_SECTOR_IDS.slice(0, -1).every(id => all.some(a => a.sectorId === id)));   // U vs UV
 const mismatch = await listSectorAgents({ statusFilter: 'legacy-mismatch' });
-ok('H · 6 fitxers amb legacy-mismatch (K·L·M·N·Q·R)', mismatch.length === 6);
+ok('H · 0 fitxers amb legacy-mismatch (post-v131b deep rewrite)', mismatch.length === 0);
 
-// ─── I · auditCnaeAlignment · CI-friendly ──────────────────────────────
+// ─── I · auditCnaeAlignment · CI-friendly · post-v131b ────────────────
 console.log('\n— I · auditCnaeAlignment · CI report');
 const report = await auditCnaeAlignment();
 ok('I · report.total = 21',                   report.total === 21);
-ok('I · report.canonical >= 8',               report.canonical >= 8);
-ok('I · report.mismatch = 6',                 report.mismatch === 6);
+ok('I · report.canonical >= 14 (post-v131b)', report.canonical >= 14);
+ok('I · report.mismatch = 0 (eliminat post-v131b)', report.mismatch === 0);
 ok('I · report.errors buit (post-v131)',      report.errors.length === 0);
 
 // ─── J · construction.md orfe ELIMINAT ─────────────────────────────────

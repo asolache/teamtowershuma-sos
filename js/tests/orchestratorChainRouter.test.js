@@ -50,11 +50,13 @@ ok('A · listAllRoutings retorna array de {task, tier, routing, costMultiplier}'
     Array.isArray(routings) && routings.length === allMapped.length &&
     routings.every(r => r.task && r.tier && r.routing && typeof r.costMultiplier === 'number'));
 
-// ─── B · CHAIN_PHASES · 8 fases canòniques ────────────────────────
-console.log('\n— B · expertChainOrchestrator · 8 fases canòniques');
-ok('B · 8 fases definides',          CHAIN_PHASES.length === 8, 8, CHAIN_PHASES.length);
+// ─── B · CHAIN_PHASES · 7 fases canòniques (v147 · landing post-chain template) ──
+console.log('\n— B · expertChainOrchestrator · 7 fases canòniques (post v147)');
+ok('B · 7 fases definides (era 8 · landing post-chain template)',
+                                       CHAIN_PHASES.length === 7, 7, CHAIN_PHASES.length);
 const phaseIds = CHAIN_PHASES.map(p => p.id);
-for (const id of ['define-product-service', 'personalize-canvas', 'personalize-pitch', 'personalize-landing', 'design-value-map-rich', 'generate-socs-from-value-map', 'generate-sops-with-skills', 'generate-wos-from-sop']) {
+// v147 · personalize-landing eliminat (ara post-chain via _buildLandingFromCanvasAndPitch)
+for (const id of ['define-product-service', 'personalize-canvas', 'personalize-pitch', 'design-value-map-rich', 'generate-socs-from-value-map', 'generate-sops-with-skills', 'generate-wos-from-sop']) {
     ok('B · fase canonical ' + id, phaseIds.includes(id));
 }
 ok('B · sops és per-item (per cada SOC)', CHAIN_PHASES.find(p => p.id === 'generate-sops-with-skills')?.perItem === 'socs');
@@ -150,9 +152,10 @@ const result2 = await runExpertChain({
     skip: { landing: true, wos: true },
     onEvent: (e) => events2.push(e),
 });
-ok('D · landing SKIPPED (no és present)',     result2.phasesSkipped.includes('personalize-landing'));
+// v147 · landing eliminat de CHAIN_PHASES · ara és post-chain template ·
+// skip.landing salta el template generation (result.landing queda null)
+ok('D · landing skip salta template post-chain', result2.landing === null);
 ok('D · wos SKIPPED (no és present)',         result2.phasesSkipped.includes('generate-wos-from-sop'));
-ok('D · result2.landing null',                result2.landing === null);
 ok('D · result2.wos.length === 0',            result2.wos.length === 0);
 // Però la resta funcionen
 ok('D · result2.productService present',      !!result2.productService);

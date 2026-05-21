@@ -605,11 +605,22 @@ work_orders:
       amb · skills declarades, history WOs executades, deliverables.
       Resultat · agent personal que coneix el seu estil. Sync Permaweb
       opcional per a versió pública.
+
+      v146 status · ✅ INFRASTRUCTURE DONE · 3 capes implementades ·
+       · A · ollamaProvider.js · HTTP adapter local (compatible AI_MODELS · port 11434)
+       · B · llmTrainingDataset.js · JSONL builder · 3 formats (alpaca · chatml · sharegpt)
+       · C · scripts/export-training-dataset.mjs · CLI per a generar dataset des de KB local
+       · Doc docs/llm-local-training.md · 3 capes (inference · few-shot · fine-tune)
+         + alternatives cloud GPU (Together · Modal · RunPod · HF AutoTrain) per a
+         users sense GPU local (cas @alvaro · Mac 2012 no pot fine-tune)
+
+      Pendent · WO específica per al wizard cloud-fine-tune (1-click upload
+      Together AI) · marcat com a v149+ al roadmap del doc.
     priority: medium
     complexity: XL
-    status: backlog
+    status: done   # v146 · 3 capes infrastructure · fine-tune real requereix cloud GPU (doc)
     estimated_cost_eur: 30.00
-    tags: ["sprint-v120", "llm-local", "training", "open-weight"]
+    tags: ["sprint-v146", "llm-local", "training", "open-weight", "ollama", "done-v146"]
 
   - id: "wo-permaweb-skills-share"
     project_id: "sos-dev-internal"
@@ -646,9 +657,13 @@ work_orders:
       → personalize-landing → design-value-map-rich → generate-socs-from-value-map
       → generate-sops-with-skills → generate-wos-from-sop. Doc canonical a
       knowledge/vision/prompts-chain-plan.md.
+
+      v132c+d status · ✅ DONE · expertChainOrchestrator amb 8 fases +
+      vnaQuickSuggest wrapper unificat /map ↔ chain + escalation rubric
+      slim→FULL si score < threshold. ValueMapView migrat a v132e.
     priority: critical
     complexity: M
-    status: backlog
+    status: done
     estimated_cost_eur: 8.00
     dependencies: []
     tags: ["sprint-v120", "orchestrator", "prompts-chain"]
@@ -663,9 +678,9 @@ work_orders:
       landing/canvas text → small (haiku, flash). Estalvi 30-50%.
     priority: medium
     complexity: S
-    status: backlog
+    status: done   # IMPLEMENTAT a js/core/promptTierRouter.js · TASK_TO_TIER + pickTier + pickRoutingForTask + estimateCostMultiplier · usat per expertChainOrchestrator
     estimated_cost_eur: 4.00
-    tags: ["sprint-v120", "cost-optim", "router"]
+    tags: ["sprint-v120", "cost-optim", "router", "done-pre-v145"]
 
   - id: "wo-prompt-eval-loop"
     project_id: "sos-dev-internal"
@@ -679,3 +694,408 @@ work_orders:
     status: backlog
     estimated_cost_eur: 6.00
     tags: ["sprint-v120", "quality", "eval-loop"]
+
+  # v134 supersedeix · arquitectura IA-aligned al menú principal · veure
+  # docs/ux/v134-project-hub-ia-alignment.md i wo-project-hub-ia-aligned.
+  # Aquesta WO original quedaria deprecated · però la mantenim per
+  # backwards-traceability del backlog.
+  - id: "wo-project-hub-subtabs"
+    project_id: "sos-dev-internal"
+    title: "[SUPERSEDED v134] Evolució Project Hub · subpestanyes ad-hoc"
+    description: |
+      Avui /project/:id és un hub monolític. Evolucionar a un layout amb
+      submenú de subpestanyes INTEGRADES · pestanyes principals visibles
+      sempre · dropdown amb seccions secundàries.
+
+      SCOPE · aquesta WO afecta NOMÉS les vistes associades a un projecte ·
+      NO toca vistes de persona/perfil (Profile · Ikigai · Skills propi ·
+      Wallet personal · Learn personal). Les vistes de persona són altres
+      WOs separades.
+
+      Pestanyes principals (visibles · 5) ·
+       1. Hub (millorat) · status del projecte · stats · activity stream
+       2. Map · ValueMapView integrat com a subview (no navegar fora)
+       3. Kanban · vista WOs/tasks tipo kanban (per role o fase)
+       4. Comptabilitat valor + Wallet (del projecte · contribucions/ledger)
+       5. Presentation · pàgina de presentació EXISTENT redissenyada amb IA
+          (Arquitectura d'Informació) clara · seccions ·
+           · Hero · qui som · què fem (1 línia + descripció)
+           · Canvas · info estructurada del Project Canvas (segments · value
+             propositions · channels · revenue streams · resources · etc.)
+           · Pitch · narrativa del Pitch generat (problem · solution · why-now)
+           · Map preview · snapshot del mapa de valor (rols + transaccions)
+           · CTA · contacte · signa pacte · explora KB
+          IA-precisa · ordre fix · semàntica HTML · accessible · sharable URL.
+
+      Dropdown "Més" (extensible) ·
+       · Pactes · vista pacts del projecte + signatura · DOC GENERATOR
+         (legal agents) viu aquí com a subsecció (no com a vista standalone)
+       · Sprints · roadmap + iteració del projecte
+       · KB · nodes/knowledge associats al projecte (no global)
+       · Settings · config projecte (visibility · members · stripe link)
+
+      Filosofia · TOT contextual al projecte sense canviar de ruta · permet
+      flow continu (mapa → kanban → wallet → pactes → presentation sense
+      perdre context). Avui cal navegar fora del project hub per a wallet/
+      pacts/legal-agents/presentation.
+
+      Pattern submenú · seguir el referent ja existent al Knowledge Hub
+      (LearnView · .lv-tab · data-mode · this._mode state · ?tab=X URL
+      param) PER COHERÈNCIA UX. Vegi's wo-submenu-pattern-canonical per al
+      requisit transversal.
+    priority: high
+    complexity: L
+    status: backlog
+    estimated_cost_eur: 16.00
+    tags: ["sprint-v133", "ux", "project-hub", "navigation", "legal-agents", "pacts", "presentation", "information-architecture"]
+
+  - id: "wo-submenu-pattern-canonical"
+    project_id: "sos-dev-internal"
+    title: "Pattern canonical de submenú UX (referent · LearnView .lv-tab) · auditar totes les vistes per coherència"
+    description: |
+      Avui tenim un únic submenú real implementat · LearnView (knowledge hub)
+      amb pattern · botons `.lv-tab` · attr `data-mode` · estat `this._mode`
+      · URL param `?tab=X` · render condicional. Funciona bé.
+
+      Quan introduïm submenús a altres vistes (començant per Project Hub
+      v132h+ · wo-project-hub-subtabs) · TOTS han de seguir el mateix
+      pattern visual + interaction model per evitar inconsistència UX.
+
+      Tasques ·
+       1. Extreure el pattern de LearnView a un component compartit ·
+          `js/ui/SubmenuTabs.js` (o similar) · API ·
+            renderTabs({ tabs, activeId, onSelect, urlParam? })
+          Tabs · [{ id, label, icon, onClick, disabled? }]
+          Style · CSS variables compartides (color · spacing · active state)
+       2. Auditar totes les vistes existents · identificar candidates a
+          submenú (ProjectHub · Wallet · Profile · Skills · Sectors · etc.)
+       3. Migrar LearnView al component compartit (regression-safe · zero
+          canvi UX visible)
+       4. Aplicar component a Project Hub v133 (consumidor #2 · valida API)
+       5. Documentar el pattern a docs/ux/SUBMENU-PATTERN.md (quan usar-lo ·
+          quan NO · exemples bo/dolent)
+
+      Acceptance ·
+       · LearnView funciona idènticament després de la migració (regression
+         test verd)
+       · Project Hub usa el mateix component (consistència visual
+         pixel-perfect)
+       · CSS variables centralitzades · canvi de tema afecta tots els submenús
+
+      Anti-pattern a evitar · cada vista inventant el seu propi submenú amb
+      estils/comportaments lleugerament diferents (cost cognitiu acumulat).
+    priority: high
+    complexity: M
+    status: done   # v132j+k · SubmenuTabs.js component + LearnView migrat + ProjectHubV2 migrat
+    estimated_cost_eur: 9.00
+    tags: ["sprint-v133", "ux", "design-system", "navigation", "refactor", "done-v132j"]
+
+  - id: "wo-benchmark-multi-api-compare"
+    project_id: "sos-dev-internal"
+    title: "Benchmark multi-API · executar 20 casos contra N providers + taula comparativa"
+    description: |
+      v132f té el CLI però només contra UN provider per execució. Extendre a
+      mode multi-provider · executar els 20 casos contra Anthropic + OpenAI +
+      Gemini + DeepSeek + MiniMax (els que tinguin API key) i produir una
+      taula comparativa amb ·
+       · winner per cas (FULL vs SLIM)
+       · winner per provider (qui dóna més qualitat per cas)
+       · cost real (€) per provider (estimateCostUsd via aiRouterService)
+       · win rate B per provider (algun té millor SLIM que altres?)
+       · veredict H1 per provider (slim·default sí per anthropic · no per X?)
+
+      Implementació ·
+       · CLI · --providers anthropic,openai,gemini (csv) · paral·lel per cas
+       · UI · /prompts-debug · permet escollir múltiples providers (multi-select)
+       · Output md · matriu N providers × 20 casos · resum agregat per provider
+       · Score normalitzat (rubric igual per tots · només input/output canvia)
+
+      Decisió-key · si algun provider té win rate B significativament diferent
+      → el default slim podria ser per-provider, no global.
+    priority: high
+    complexity: M
+    status: done   # v132g+h · CLI multi-provider 5 APIs (anthropic+openai+gemini+deepseek+minimax) + matriu N×20 + veredict
+    estimated_cost_eur: 8.00
+    tags: ["sprint-v132g", "benchmark", "multi-provider", "prompt-efficiency", "done-v132h"]
+
+  - id: "wo-project-hub-ia-aligned"
+    project_id: "sos-dev-internal"
+    title: "Project Hub V3 · IA aligned als 5 pilars del menú principal (crear · treballar · comptabilitzar · connectar · aprendre) + Equip"
+    description: |
+      Supersedeix wo-project-hub-subtabs. Realinear el Project Hub a la IA
+      mental del menú principal (5 verbs · veure docs/ux/v134-project-hub-ia-alignment.md).
+
+      Tabs nivell 1 (6) ·
+       🏠 Hub | 🎨 Crear | 🔨 Treballar | 💶 Comptabilitzar | 🔗 Connectar | 👥 Equip
+
+      Sub-tabs nivell 2 (alineades amb vistes globals existents) ·
+       · Crear ·         Canvas · Pitch · Pacte · Presentation
+       · Treballar ·     Map · Kanban · Quality · Sprint · Lifecycle
+       · Comptabilitzar · Wallet · Comptes · Pastís valor · Factures · Tokenomics
+       · Connectar ·     Pactes signats · Propostes · Mercat
+       · Equip ·         Membres · Rols · Permisos · Convidacions
+
+      Dropdown "Més" · Aprendre (KB projecte) · Sprints management · Lifecycle
+      dashboard · Settings projecte.
+
+      Filosofia · 2-nivells max · URL sync `?tab=X&sub=Y` · component
+      SubmenuTabs.js reutilitzat (cal extensió v2 per a 2-nivells · veure
+      wo-submenu-tabs-v2).
+
+      Preview viu testable · /project-hub-v3-preview (post v134 commit).
+
+      v136 status · ✅ 6 tabs canonical visibles a /project/{id} via SubmenuTabs ·
+      cada pilar mostra grid de cards amb ?project=X. PENDENT v141+ · render
+      in-tab de les vistes (ara segueixen links externs) · cal SubmenuTabs v2
+      (sub-submenu 2-nivells · veure wo-submenu-tabs-v2-sublevel).
+      v150 · ✅ DONE · resolt redundancy d'UX detectat per @alvaro · L2
+      submenu + preview placeholders eliminats (redundants · només eren
+      link a la vista) · ara pilar = grid de cards · click directe a vista
+      global · -1 barra horizontal · -1 click al destí real. WalletV2 +
+      AccountingV2 · ctx-bar fusionada amb submenu (1 fila enlloc de 2).
+    priority: high
+    complexity: L
+    status: done   # v150 · simplificació · L2 submenu + preview placeholders eliminats · pilar = grid de cards · click directe
+    estimated_cost_eur: 18.00
+    tags: ["sprint-v150", "ux", "project-hub", "ia-alignment", "done-v150"]
+
+  - id: "wo-submenu-tabs-v2-sublevel"
+    project_id: "sos-dev-internal"
+    title: "SubmenuTabs v2 · suport 2-nivells (sub-submenu reutilitzable)"
+    description: |
+      js/ui/SubmenuTabs.js v132j+k és pla (1 nivell). Necessari per a v134
+      Project Hub aligned ·
+       1. Render API · renderSubmenuTabs({ tabs, subTabs?, activeId, activeSubId, urlParams: { primary, secondary } })
+       2. Bind API · bindSubmenuTabs(container, ({ id, subId, level }) => ...)
+       3. URL sync · 2 params · default 'tab' + 'sub'
+       4. Estil visual diferenciat L1 vs L2 (L2 més petit · menys padding)
+       5. Keyboard nav · ← → mou dins L1 · ↑ ↓ dins L2
+
+      Migració · LearnView seguirà sent 1-nivell (regression-safe) ·
+      ProjectHubV3 nou consumidor 2-nivells.
+    priority: high
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 7.00
+    tags: ["sprint-v135", "design-system", "submenu", "refactor"]
+
+  - id: "wo-accounting-v2-redesign"
+    project_id: "sos-dev-internal"
+    title: "AccountingView v2 · redisseny UX amb mateixa qualitat que WalletV2 (per a Comptabilitzar tab)"
+    description: |
+      AccountingView avui és textual · double-entry ledger pur · poc visual.
+      Redisseny v2 alineat amb WalletV2 (referent UX dins el pilar) ·
+       · KPI cards (Actius · Passius · Equity · P&L mes)
+       · Llista compacta últimes N entrades amb categories visuals colored
+       · Filter per membre / categoria / període
+       · Export CSV
+       · Charts (línies P&L · pie categories)
+
+      Subtab dins de project hub · /project/:id?tab=comptabilitzar&sub=accounting.
+    priority: medium
+    complexity: M
+    status: done   # v144 · AccountingV2View 5 tabs canonical + context switcher + redirect /accounting → /accounting/v2
+    estimated_cost_eur: 8.00
+    tags: ["sprint-v144", "ux", "accounting", "project-hub", "comptabilitzar", "done-v144"]
+
+  - id: "wo-wallet-project-v2-redesign"
+    project_id: "sos-dev-internal"
+    title: "Wallet del projecte v2 · alineat WalletV2 UX (per a Comptabilitzar tab)"
+    description: |
+      Wallet del projecte (no personal) · refactor consistent amb WalletV2 ·
+       · Saldo live (KB query + cache 30s)
+       · Flow setmanal · línia 7 dies
+       · Inflow/outflow per categoria
+       · Transferència entre projectes
+       · Top-up via Stripe/crypto
+       · Movements ledger amb filter
+
+      Subtab dins de project hub · /project/:id?tab=comptabilitzar&sub=wallet.
+    priority: medium
+    complexity: M
+    status: backlog
+    estimated_cost_eur: 7.00
+    tags: ["sprint-v138", "ux", "wallet", "project-hub", "comptabilitzar"]
+
+  - id: "wo-quality-integration-project-hub"
+    project_id: "sos-dev-internal"
+    title: "Integrar Quality (rubric 12-criteris) com a subtab DE PROJECTE (Treballar) · treure de menu global"
+    description: |
+      ProjectQualityView avui · /quality standalone al menu global. v134 IA
+      diu · Quality és una vista de "treballar" del PROJECTE actiu.
+
+      Tasques ·
+       1. Moure ProjectQualityView a subtab `/project/:id?tab=treballar&sub=quality`
+       2. Redirect `/quality` → `/project/:id?tab=treballar&sub=quality` (preserva bookmarks)
+       3. Treure de navService.js (work category global)
+       4. Score live alimentat per runQualityAudit() cada vegada que canvia
+          el mapa o canvas (event-driven via store)
+       5. KPI cards · Score global · Integritat 7-regles · Criteris rubric (9/12)
+       6. Llista de criteris pendents amb action-link per resoldre cada un
+
+      Beneficis · Quality contextual · l'usuari està treballant el projecte
+      i veu la qualitat al costat · no ha de navegar fora.
+
+      v137 status · 🟡 PARCIAL · Quality visible al pilar Treballar com a
+      card (link a /quality?project=X). PENDENT · redirect /quality global +
+      treure de navService work category + render in-tab del rubric.
+    priority: medium
+    complexity: M
+    status: in-progress
+    estimated_cost_eur: 6.00
+    tags: ["sprint-v137", "ux", "quality", "project-hub", "treballar"]
+
+  - id: "wo-team-permissions-view"
+    project_id: "sos-dev-internal"
+    title: "Vista Equip + Permisos · GLOBAL (/team) i per-projecte (subtab Equip)"
+    description: |
+      NOVA vista bidimensional · no existeix avui.
+
+      A · GLOBAL · /team
+       · Llistat persones del swarm SOS amb qui he col·laborat
+       · Filter per projecte · sector · skill · rol exercit
+       · Permisos GLOBALS · quins meus projectes pot veure/editar cada persona
+       · Audit log · qui ha fet què cross-projects
+
+      B · Per-projecte · subtab Equip dins de project hub
+       · Membres · llista de qui hi participa al projecte
+       · Rols · catàleg expandible (founder · ops · contributor · viewer · invited)
+       · Permisos · matriu fine-grained per acció (read.*  edit.*  claim.wos
+         · approve.wos · manage.finances · manage.members)
+       · Convidacions · email · link · expires
+       · Activity per membre · contribucions · hores · WOs completats
+
+      Permission model · RBAC base + role overrides per WO específic.
+      Storage · KB node `team_<projectId>` · DID-based identifiers.
+
+      Cost estimate inclou · model permission + UI dual (global+project) +
+      audit log + invitations flow.
+    priority: high
+    complexity: L
+    status: done   # v140 · teamService.js (RBAC + members + invitations + audit) + TeamView /team (5 tabs · matriu rol×acció) + nav entry
+    estimated_cost_eur: 15.00
+    tags: ["sprint-v139-v140", "team", "permissions", "rbac", "new-view", "done-v140"]
+
+  - id: "wo-domain-packs-enrich-all"
+    project_id: "sos-dev-internal"
+    title: "Domain packs · deliverables_tangible + transactions_canonical per als 24 packs (pilots 4 fets a v145)"
+    description: |
+      v145 ha enriquit 4 packs pilot (sports-team · arts-performance ·
+      coop-cares · software-agency) amb deliverables_tangible (5-8 cada) +
+      transactions_canonical (5-8 cada) · per evitar que el LLM inventi
+      noms genèrics ("Acta" · "Comunicació").
+
+      Pendents 20 packs · religious-community · political-movement ·
+      art-collective · worker-coop · research-lab · food-coop ·
+      health-clinic · hotel-hospitality · construction · coworking ·
+      ecommerce · community-media · housing-coop · energy-coop ·
+      legal-advisory · artisan-craft · public-admin · ngo-humanitarian ·
+      maker-space · edu-formation.
+
+      Cada pack · 6-8 deliverables_tangible (noms específics del sector) +
+      5-8 transactions_canonical { from, to, deliverable, type, frequency,
+      trigger }. El prompt vnaExpertPrompts._buildDomainBlock ja injecta
+      aquests blocs si presents.
+
+      Validació · cada pack enriquit s'ha de córrer per harness amb LLM
+      real i comprovar que · (a) avgScore ≥ 75 · (b) cap regression (cost,
+      qualitat) vs baseline · (c) deliverables/transactions output tenen
+      nom específic (no genèric).
+    priority: high
+    complexity: M
+    status: done   # v145b · 24/24 packs enriquits via scripts/enrich-domain-packs-v145b.mjs · validació LLM live pendent (a executar amb baseline harness)
+    estimated_cost_eur: 12.00
+    tags: ["sprint-v146-v150", "domain", "vna", "quality", "incremental"]
+
+  - id: "wo-prompt-eval-loop-auto"
+    project_id: "sos-dev-internal"
+    title: "Auto-improvement loop · CI integration del harness amb baseline + alerts"
+    description: |
+      v145 té promptQualityHarness + CLI --harness amb baseline compare.
+      Pendent · integrar al CI pipeline ·
+       · Cada PR que toca js/core/vnaExpertPrompts.js o knowledge/sectors/*
+         o js/core/domainDetector.js executa automàticament el harness amb
+         --baseline docs/benchmarks/baseline.json
+       · Exit code 2 (regression) → bloqueja merge
+       · Comment automàtic al PR amb delta score/cost/passRate
+       · Si --update-baseline a la PR description · accepta el nou baseline
+
+      Beneficis · auto-prevenció de regressions de qualitat · transparència
+      de cost-quality tradeoffs · evidència empírica per cada canvi al
+      prompt sense intervenció manual.
+
+      Dep · necessita API key real configurada al CI environment (Anthropic
+      o OpenAI · podem usar small-tier per a cost mínim).
+    priority: medium
+    complexity: M
+    status: done   # v149 · .github/workflows/prompt-harness.yml · dry-run sempre + live si secret · upload artifact
+    estimated_cost_eur: 9.00
+    tags: ["sprint-v149", "ci", "quality", "automation", "harness", "done-v149"]
+
+  - id: "wo-expert-chain-simplification"
+    project_id: "sos-dev-internal"
+    title: "Expert chain simplification · SLIM auto + landing template + clarify/gap/dedup wire-up (closes 6 propostes audit v146)"
+    description: |
+      Implementa les 6 propostes de docs/audit-creation-prompts-v146.md ·
+
+      v147 ·
+       B.1 · personalize-landing eliminat de CHAIN_PHASES (era redundant amb
+             pitch+canvas) · ara landing es genera post-chain via template
+             (_buildLandingFromCanvasAndPitch) · -10% tokens · 0 UX change
+       B.2 · slim='auto' default · per phase slimByDefault flag · només
+             design-value-map-rich + generate-socs-from-value-map són FULL ·
+             resta SLIM · -50% cost total
+
+      v148 ·
+       B.3 · clarifyBeforeRun + clarifyAnswers opcions a runExpertChain ·
+             integració vnaClarify.js (v135) · emit questions via onEvent
+       B.4 · gapDetect option · post-Phase 5 detectGaps + runGapFillTurn
+             automàtic · provider adapter auto-small · best-effort silent
+             si gap detector falla
+
+      v149 ·
+       B.5 · embedder option · post-Phase 5 dedupRoles automàtic si embedder
+             injectat (Ollama local · OpenAI · ...)
+       B.6 · .github/workflows/prompt-harness.yml · trigger PR paths · dry-run
+             sempre + live si ANTHROPIC_API_KEY secret · upload artifact 30d
+
+      Impacte total ·
+       · Cost · -53% mesurat al harness (proves dry-run)
+       · Quality · gap-free maps + clarify-driven context + dedup-clean rols
+       · Latency · -40% (1 fase menys + paral·lel possible)
+       · Zero regressions · CI baseline auto-check
+    priority: high
+    complexity: M
+    status: done
+    estimated_cost_eur: 12.00
+    tags: ["sprint-v147-v148-v149", "expert-chain", "simplification", "wire-up", "done-v149"]
+
+  - id: "wo-hub-avui-timeline-upgrade"
+    project_id: "sos-dev-internal"
+    title: "Hub Avui enriquit + Timeline upgrade (canonical SubmenuTabs · perspective filter)"
+    description: |
+      v153 · resol feedback @alvaro · "mejorar el hub la seccion avui con
+      contenido y revisa la pagina timeline y haz un plan para que vaya".
+
+      v153 · DONE · 2 movim ·
+
+      Movim 1 · ProjectHubV2View._zone2_Today enriquit ·
+       · 4 KPI cards (WOs actius · Done setmana · Saldo wallet · Prioritat alta)
+       · Top 3 WOs prioritaris · click navega a /kanban?wo=ID · meta priority+
+         status+due
+       · Cash flow setmanal · 7 dies bar visual (verd inflow / vermell outflow)
+       · _weeklyFlow helper · pure · agrupa ledger entries per dia
+
+      Movim 2 · TimelineView upgrade ·
+       · FILTER_TABS canonical SubmenuTabs · 5 perspectives (Tot · WOs ·
+         Pactes · Ledger · Network)
+       · FILTER_TO_KINDS mapping · derivers concrets per cada filter
+       · URL params · ?filter=X i ?sort=X persistits via history.replaceState
+       · TopBar custom ELIMINAT · global navbar suficient
+       · Sort buttons preservats (legacy compat) · ara persisteixen URL
+       · Header · "Activitat recent · X de N events · filtre actiu"
+    priority: medium
+    complexity: M
+    status: done
+    estimated_cost_eur: 8.00
+    tags: ["sprint-v153", "ux", "project-hub", "timeline", "done-v153"]
