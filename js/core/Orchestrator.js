@@ -30,7 +30,9 @@ const BASE_PRICING = {
 };
 
 // ─── MODELO PRIMARIO ─────────────────────────────────────────────
-const ANTHROPIC_MODEL   = 'claude-sonnet-4-20250514';
+// v163.6 · alineat amb aiRouterService · Sonnet 4.6 (el 4-20250514 vell
+// estava donant 400 en algunes cuentes · Sonnet 4.6 és el current GA)
+const ANTHROPIC_MODEL   = 'claude-sonnet-4-6';
 const ANTHROPIC_VERSION = '2023-06-01';
 
 // ─── PROXY: siempre relativo — funciona en local y en Netlify ────
