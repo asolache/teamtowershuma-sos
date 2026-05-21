@@ -23,6 +23,7 @@ const ROUTES = [
     { path: '/create',      view: () => import('./views/ProjectCreationV2View.js') },
     { path: '/create-live',  view: () => import('./views/CreateLiveView.js') },
     { path: '/prompts-debug', view: () => import('./views/PromptsDebugView.js') },
+    { path: '/matriu-curriculum', view: () => import('./views/MatriuCurriculumView.js') },
     { path: '/map',       view: () => import('./views/ValueMapView.js')  },
     { path: '/workshops', view: () => import('./views/WorkshopsView.js') },
     { path: '/kanban',    view: () => import('./views/KanbanView.js')   },

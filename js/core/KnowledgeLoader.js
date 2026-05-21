@@ -811,4 +811,136 @@ export class KnowledgeLoader {
             (p.signal ? ' — Señal: ' + p.signal : '')
         ).join('\n') + '\n';
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  v163 · MATRIU CURRICULUM (additive · teamtowers-matriu submodule)
+    //  Lectura purament read-only del currículum pedagògic (11 dominis · 15+
+    //  competències · skill-seeds · SOPs). Reutilitza parseFile/_parseYaml
+    //  existents · NO modifica els mètodes legacy.
+    //  Submodule a /knowledge/matriu/ · pinned via .gitmodules.
+    // ══════════════════════════════════════════════════════════════════════════
+    static MATRIU_DOMAINS = Object.freeze([
+        'd00-inner-work', 'd01-project-definition', 'd02-value-mapping',
+        'd03-team-structure', 'd04-value-accounting', 'd05-ai-agent-operations',
+        'd06-contracts-payments', 'd07-project-communication',
+        'd08-products-market', 'd09-communities-of-practice', 'd10-metanoia',
+    ]);
+
+    // loadMatriuFile · wrapper sobre loadFile · prefix matriu/
+    static async loadMatriuFile(relpath) {
+        if (!relpath) return null;
+        return this.loadFile('matriu/' + relpath);
+    }
+
+    // parseMatriuFile · wrapper sobre parseFile · mateix parser frontmatter
+    // + post-processing additiu per a llistes string plain (`key:\n  - str`)
+    // que el _parseYaml legacy no captura. Idempotent · si la key ja és array
+    // no buit, no la sobreescriu.
+    static async parseMatriuFile(relpath) {
+        if (!relpath) return null;
+        const fullPath = 'matriu/' + relpath;
+        const parsed = await this.parseFile(fullPath);
+        if (!parsed) return null;
+        const raw = await this.loadFile(fullPath);
+        if (raw) {
+            const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+            if (fmMatch) {
+                const stringLists = this._extractMatriuStringLists(fmMatch[1]);
+                for (const [k, v] of Object.entries(stringLists)) {
+                    const cur = parsed.frontmatter[k];
+                    if (!Array.isArray(cur) || cur.length === 0) {
+                        parsed.frontmatter[k] = v;
+                    }
+                }
+            }
+        }
+        return parsed;
+    }
+
+    // _extractMatriuStringLists · helper privat · captura el patró
+    //   key:
+    //     - string1
+    //     - string2
+    // (no objectes · es para si troba una entrada amb `:`). Mai cridat des de
+    // mètodes legacy · només des de parseMatriuFile.
+    static _extractMatriuStringLists(rawFrontmatter) {
+        const out = {};
+        const lines = rawFrontmatter.split('\n');
+        let i = 0;
+        while (i < lines.length) {
+            const keyMatch = lines[i].match(/^(\w[\w_-]*):\s*$/);
+            if (!keyMatch) { i++; continue; }
+            const key = keyMatch[1];
+            const items = [];
+            i++;
+            while (i < lines.length) {
+                const itemMatch = lines[i].match(/^  -\s+(.+?)\s*$/);
+                if (!itemMatch) break;
+                const itemStr = itemMatch[1];
+                if (itemStr.includes(':')) break; // object item · stop
+                items.push(itemStr.replace(/^["']|["']$/g, '').trim());
+                i++;
+            }
+            if (items.length > 0) out[key] = items;
+        }
+        return out;
+    }
+
+    // listMatriuDomains · retorna metadades dels 11 dominis · sense body
+    // Útil per a navegació · taula d'índex · filtres per sos_module.
+    static async listMatriuDomains() {
+        const items = [];
+        for (const id of this.MATRIU_DOMAINS) {
+            const p = await this.parseMatriuFile('domains/' + id + '.md');
+            if (!p) {
+                items.push({ id, name: id, status: 'missing', sos_module: null, competencies: [] });
+                continue;
+            }
+            const fm = p.frontmatter || {};
+            items.push({
+                id:           fm.id          || id,
+                name:         fm.name        || id,
+                status:       fm.status      || 'unknown',
+                mode:         fm.mode        || null,
+                sos_module:   fm.sos_module  || null,
+                cop_ref:      fm.cop_ref     || null,
+                sos_context:  fm.sos_context || null,
+                competencies: Array.isArray(fm.competencies) ? fm.competencies : [],
+            });
+        }
+        return items;
+    }
+
+    // getMatriuDomain · domini complet (frontmatter + body markdown) per id
+    static async getMatriuDomain(domainId) {
+        if (!domainId) return null;
+        const p = await this.parseMatriuFile('domains/' + domainId + '.md');
+        if (!p) return null;
+        return {
+            id:          domainId,
+            frontmatter: p.frontmatter || {},
+            body:        p.body        || '',
+        };
+    }
+
+    // getMatriuCompetency · competència per id (ex · c-02.1-identify-vna-roles)
+    static async getMatriuCompetency(competencyId) {
+        if (!competencyId) return null;
+        const p = await this.parseMatriuFile('competencies/' + competencyId + '.md');
+        if (!p) return null;
+        return {
+            id:          competencyId,
+            frontmatter: p.frontmatter || {},
+            body:        p.body        || '',
+        };
+    }
+
+    // getMatriuBySosModule · filtra dominis matriu per nom de mòdul SOS
+    // (ex · "VNA Mapper", "Pitch & Landing Studio"). Útil per cross-link
+    // SOS view ↔ currículum (mostrar competències pedagògiques rellevants).
+    static async getMatriuBySosModule(sosModule) {
+        if (!sosModule) return [];
+        const all = await this.listMatriuDomains();
+        return all.filter(d => d.sos_module === sosModule);
+    }
 }
