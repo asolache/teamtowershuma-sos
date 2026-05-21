@@ -17,6 +17,7 @@ import { LEGACY_REDIRECTS } from './core/routerRedirects.js';
 const ROUTES = [
     { path: '/',          view: () => import('./views/DashboardV2View.js') },
     { path: '/home',      view: () => import('./views/DashboardV2View.js') },
+    { path: '/dashboard', view: () => import('./views/DashboardV2View.js') }, // v163.4 · 49 callers usen /dashboard · alias canònic per evitar fallback a HomeView legacy
     // V2-EVOL Fase C · /dashboard ja no carrega V1 · redirigeix a / via
     // LEGACY_REDIRECTS. Features V1 (Onboarding · Member panel) migrades.
     // KB inline panel · explorable via /folders · /tags · /mind.
