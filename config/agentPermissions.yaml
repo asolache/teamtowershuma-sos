@@ -1,0 +1,163 @@
+# agentPermissions.yaml
+# Ruta: /config/agentPermissions.yaml (al arrel del repo SOS V11)
+#
+# Tabla central de permisos de lectura por agente.
+# El KnowledgeLoader la lee al inicializar y la consulta en canAgentRead().
+#
+# REGLA FÉRREA (no configurable):
+#   private/** nunca es accesible para ningún agente, sin excepción.
+#   Solo el usuario via getBiographyFile(filename, {userConsent:true}).
+#
+# Sintaxi:
+#   - allowed: lista de globs que el agente puede leer
+#   - forbidden_explicit: defensa en profundidad (redundante con private/**)
+#   - requires_explicit_user_consent: marcador informativo, no ejecutado por el KL
+#
+# Sin `allowed` declarado: el agente puede leer todo el reservoir por defecto
+# (mantiene compatibilidad con agentes legacy que no estén aún configurados).
+
+agents:
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Agentes principales del swarm SOS V11
+  # ────────────────────────────────────────────────────────────────────────
+
+  agent_genesis_architect:
+    description: "Sintetitza VNA i diseny inicial de projectes"
+    allowed:
+      - "knowledge/**"
+    forbidden_explicit:
+      - "private/**"
+
+  agent_dharma_ontologist:
+    description: "Categoritza i ontologitza coneixement (sectors, VNA, Matriu)"
+    allowed:
+      - "knowledge/**"
+    forbidden_explicit:
+      - "private/**"
+
+  agent_synaptic_weaver:
+    description: "Connecta peces de coneixement entre dominis"
+    allowed:
+      - "knowledge/**"
+    forbidden_explicit:
+      - "private/**"
+
+  agent_swarm_orchestrator:
+    description: "Coordina crides al swarm"
+    allowed:
+      - "knowledge/**"
+      - "config/**"  # pot llegir aquesta mateixa taula (introspecció)
+    forbidden_explicit:
+      - "private/**"
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Agentes especialitzats per dominis de la Matriu
+  # ────────────────────────────────────────────────────────────────────────
+
+  agent_problem_clarifier:
+    description: "D-01 · Articula el dolor real del projecte"
+    allowed:
+      - "knowledge/matriu/domains/d01-*/**"
+      - "knowledge/matriu/competencies/c-01.*"
+      - "knowledge/matriu/skill-seeds/s-pain-*"
+      - "knowledge/matriu/skill-seeds/s-stakeholder-*"
+    forbidden_explicit:
+      - "private/**"
+
+  agent_stakeholder_finder:
+    description: "D-01 · Identifica primers stakeholders"
+    allowed:
+      - "knowledge/matriu/domains/d01-*/**"
+      - "knowledge/matriu/competencies/c-01.2-*"
+      - "knowledge/matriu/skill-seeds/s-stakeholder-*"
+      - "knowledge/matriu/skill-seeds/s-influence-*"
+    forbidden_explicit:
+      - "private/**"
+
+  agent_purpose_distiller:
+    description: "D-01 · Refina propòsit i motivació externa"
+    allowed:
+      - "knowledge/matriu/domains/d01-*/**"
+      - "knowledge/matriu/competencies/c-01.3-*"
+      - "knowledge/matriu/skill-seeds/s-trend-*"
+      - "knowledge/matriu/skill-seeds/s-team-uniqueness-*"
+      - "knowledge/matriu/skill-seeds/s-life-thread-*"
+    forbidden_explicit:
+      - "private/**"
+    # NOTA: per al "per què ara · per què tu" no necessita biografia profunda.
+    # La motivació íntima la treballa agent_introspection_mirror amb consentiment.
+
+  agent_vna_mapper:
+    description: "D-02 · Modela xarxa VNA del projecte"
+    allowed:
+      - "knowledge/matriu/domains/d02-*/**"
+      - "knowledge/matriu/competencies/c-02.*"
+      - "knowledge/matriu/skill-seeds/s-vna-*"
+      - "knowledge/matriu/skill-seeds/s-transaction-*"
+      - "knowledge/matriu/skill-seeds/s-persona-role-*"
+      - "knowledge/matriu/skill-seeds/s-network-balance-*"
+      - "knowledge/matriu/skill-seeds/s-pathology-*"
+      - "knowledge/matriu/skill-seeds/s-value-conversion-*"
+      - "knowledge/matriu/skill-seeds/s-conversion-impact-*"
+      - "knowledge/sectors/**"     # sectors CNAE per a context
+    forbidden_explicit:
+      - "private/**"
+
+  agent_mvp_designer:
+    description: "D-01 · Dissenya MVPs viables a 4 setmanes"
+    allowed:
+      - "knowledge/matriu/competencies/c-01.4-*"
+      - "knowledge/matriu/skill-seeds/s-mvp-*"
+    forbidden_explicit:
+      - "private/**"
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Agent introspectiu (cas especial · D-00)
+  # ────────────────────────────────────────────────────────────────────────
+
+  agent_introspection_mirror:
+    description: |
+      D-00 · Acompanya treball intern.
+      Excepció única: pot accedir a biografia NOMÉS si el cursant ho demana
+      explícitament a la sessió actual amb userConsent=true.
+      Cap accés en background, cap accés per buildContext automatic.
+    allowed:
+      - "knowledge/matriu/domains/d00-*/**"
+      - "knowledge/matriu/competencies/c-00.*"
+      - "knowledge/matriu/skill-seeds/s-personal-*"
+      - "knowledge/matriu/skill-seeds/s-blind-spot-*"
+      - "knowledge/matriu/skill-seeds/s-knowledge-architecture-*"
+      - "knowledge/matriu/skill-seeds/s-delegation-*"
+      - "knowledge/matriu/skill-seeds/s-dissolution-*"
+      - "knowledge/matriu/skill-seeds/s-identity-*"
+      - "knowledge/matriu/skill-seeds/s-daily-practice-*"
+      - "knowledge/matriu/skill-seeds/s-adherence-*"
+      - "knowledge/matriu/skill-seeds/s-cognitive-*"
+      - "knowledge/matriu/skill-seeds/s-mind-function-*"
+      - "knowledge/matriu/skill-seeds/s-motivation-*"
+    forbidden_explicit:
+      - "private/**"   # ferreny per defecte
+    requires_explicit_user_consent:
+      - "private/biography/**"   # marcador informatiu
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Agents per a la part comptable (D-04)
+  # ────────────────────────────────────────────────────────────────────────
+
+  agent_token_economist:
+    description: "D-04 · Slicing Pie i ledger"
+    allowed:
+      - "knowledge/matriu/domains/d04-*/**"
+      - "knowledge/matriu/competencies/c-04.*"
+      - "knowledge/vision/slicing-pie-mike-moyer.md"
+    forbidden_explicit:
+      - "private/**"
+
+  agent_fair_value_appraiser:
+    description: "D-04 · Estima FMV per rol"
+    allowed:
+      - "knowledge/matriu/competencies/c-04.2-*"
+      - "knowledge/sectors/**"
+    forbidden_explicit:
+      - "private/**"

@@ -835,9 +835,10 @@ export class KnowledgeLoader {
     // parseMatriuFile · wrapper sobre parseFile · mateix parser frontmatter
     // + post-processing additiu per a llistes string plain (`key:\n  - str`)
     // que el _parseYaml legacy no captura. Idempotent · si la key ja és array
-    // no buit, no la sobreescriu.
+    // no buit, no la sobreescriu. v163.2 · guard reservoir.
     static async parseMatriuFile(relpath) {
         if (!relpath) return null;
+        this._assertReservoirOnly(relpath, 'parseMatriuFile');
         const fullPath = 'matriu/' + relpath;
         const parsed = await this.parseFile(fullPath);
         if (!parsed) return null;
@@ -899,11 +900,14 @@ export class KnowledgeLoader {
             const fm = p.frontmatter || {};
             items.push({
                 id:           fm.id          || id,
+                slug:         id,                          // v163.2 · alias del slug
                 name:         fm.name        || id,
                 status:       fm.status      || 'unknown',
                 mode:         fm.mode        || null,
                 sos_module:   fm.sos_module  || null,
+                sosModule:    fm.sos_module  || null,      // v163.2 · camelCase per patch test
                 cop_ref:      fm.cop_ref     || null,
+                copRef:       fm.cop_ref     || null,      // v163.2 · camelCase per patch test
                 sos_context:  fm.sos_context || null,
                 competencies: Array.isArray(fm.competencies) ? fm.competencies : [],
             });
@@ -912,8 +916,10 @@ export class KnowledgeLoader {
     }
 
     // getMatriuDomain · domini complet (frontmatter + body markdown) per id
+    // v163.2 · guard contra path traversal (test integració del patch)
     static async getMatriuDomain(domainId) {
         if (!domainId) return null;
+        this._assertReservoirOnly(domainId, 'getMatriuDomain');
         const p = await this.parseMatriuFile('domains/' + domainId + '.md');
         if (!p) return null;
         return {
@@ -924,8 +930,10 @@ export class KnowledgeLoader {
     }
 
     // getMatriuCompetency · competència per id (ex · c-02.1-identify-vna-roles)
+    // v163.2 · guard contra path traversal
     static async getMatriuCompetency(competencyId) {
         if (!competencyId) return null;
+        this._assertReservoirOnly(competencyId, 'getMatriuCompetency');
         const p = await this.parseMatriuFile('competencies/' + competencyId + '.md');
         if (!p) return null;
         return {
@@ -942,5 +950,319 @@ export class KnowledgeLoader {
         if (!sosModule) return [];
         const all = await this.listMatriuDomains();
         return all.filter(d => d.sos_module === sosModule);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  v163.2 · MATRIU PATCH v0.1 (additiu sobre v163.1)
+    //  Afegeix · skill-seeds & sops accessors · per-domain comps · LLM context
+    //  builder · privacy guard reservoir/biography · permission system.
+    //  Zero mètodes legacy modificats.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // _assertReservoirOnly · guard contra accés accidental a biography
+    // Llançar al principi de tots els mètodes que carreguen fitxers Matriu.
+    static _assertReservoirOnly(path, callerName = '') {
+        if (!path) return;
+        const normalized = String(path).replace(/\\/g, '/');
+        if (normalized.includes('private/') || normalized.includes('/private')) {
+            const msg = '[KnowledgeLoader] BLOCKED reservoir-only call from "' +
+                callerName + '" attempted to access biography path: ' + path;
+            console.error(msg);
+            throw new Error(msg);
+        }
+    }
+
+    // getMatriuSkillSeed · carrega skill-seed pedagògica per id
+    static async getMatriuSkillSeed(skillId) {
+        if (!skillId) return null;
+        this._assertReservoirOnly('matriu/skill-seeds/' + skillId, 'getMatriuSkillSeed');
+        return this.parseMatriuFile('skill-seeds/' + skillId + '.md');
+    }
+
+    // getMatriuSop · carrega SOP del currículum (matriu/sops/ · diferent de
+    // knowledge/sops/ legacy)
+    static async getMatriuSop(sopId) {
+        if (!sopId) return null;
+        this._assertReservoirOnly('matriu/sops/' + sopId, 'getMatriuSop');
+        return this.parseMatriuFile('sops/' + sopId + '.md');
+    }
+
+    // listMatriuCompetenciesByDomain · totes les competències d'un domini
+    static async listMatriuCompetenciesByDomain(domainId) {
+        const d = await this.getMatriuDomain(domainId);
+        if (!d || !d.frontmatter) return [];
+        const compIds = Array.isArray(d.frontmatter.competencies) ? d.frontmatter.competencies : [];
+        const out = [];
+        for (const cId of compIds) {
+            const c = await this.getMatriuCompetency(cId);
+            if (c) out.push(c);
+        }
+        return out;
+    }
+
+    // buildMatriuContext · construeix bloc de context LLM enriquit amb material
+    // del currículum (paral·lel a buildContext() · standalone o combinable).
+    static async buildMatriuContext(options = {}) {
+        const {
+            domain        = null,
+            competency    = null,
+            skillSeed     = null,
+            mode          = null,
+            includeSkills = true,
+            includeSops   = false,
+            maxChars      = MAX_CONTEXT_CHARS,
+        } = options;
+
+        const parts   = [];
+        const sources = [];
+
+        if (mode) {
+            const all = await this.listMatriuDomains();
+            const filtered = all.filter(d => d.mode === mode);
+            if (filtered.length > 0) {
+                parts.push(
+                    '## MATRIU · Dominis ' + mode.toUpperCase() + '\n' +
+                    filtered.map(d =>
+                        '- **' + d.id + '** · ' + d.name +
+                        (d.sos_module ? ' [SOS: ' + d.sos_module + ']' : '')
+                    ).join('\n')
+                );
+                sources.push('matriu/[mode=' + mode + ']');
+            }
+        }
+
+        if (domain) {
+            const d = await this.getMatriuDomain(domain);
+            if (d && d.frontmatter) {
+                parts.push(
+                    '## MATRIU · ' + (d.frontmatter.name || domain).toUpperCase() + '\n' +
+                    'Objectiu: ' + (d.frontmatter.objective || '') + '\n\n' +
+                    (d.body || '').substring(0, 3000)
+                );
+                sources.push('matriu/domains/' + domain + '.md');
+
+                const comps = await this.listMatriuCompetenciesByDomain(domain);
+                if (comps.length > 0) {
+                    parts.push(
+                        '### Competències d\'aquest domini\n' +
+                        comps.map(c =>
+                            '- **' + (c.frontmatter.id || '?') + '** · ' + (c.frontmatter.name || '') +
+                            '\n  ' + (c.frontmatter.objective || '')
+                        ).join('\n')
+                    );
+                }
+
+                if (includeSkills) {
+                    const seedIds = new Set();
+                    comps.forEach(c => (c.frontmatter.skill_seeds || []).forEach(s => seedIds.add(s)));
+                    if (seedIds.size > 0) {
+                        const seeds = [];
+                        for (const sId of seedIds) {
+                            const s = await this.getMatriuSkillSeed(sId);
+                            if (s) seeds.push(s);
+                        }
+                        parts.push(
+                            '### Skill-seeds disponibles\n' +
+                            seeds.map(s =>
+                                '- **' + (s.frontmatter.id || '?') + '** (agent: ' +
+                                (s.frontmatter.agent_ref || '?') + ')\n  ' +
+                                String(s.frontmatter.purpose || '').substring(0, 200)
+                            ).join('\n')
+                        );
+                    }
+                }
+
+                if (includeSops) {
+                    const sopIds = new Set();
+                    comps.forEach(c => (c.frontmatter.sops || []).forEach(s => sopIds.add(s)));
+                    if (sopIds.size > 0) {
+                        parts.push(
+                            '### SOPs d\'aquest domini\n' +
+                            Array.from(sopIds).map(id => '- ' + id).join('\n')
+                        );
+                    }
+                }
+            }
+        }
+
+        if (competency) {
+            const c = await this.getMatriuCompetency(competency);
+            if (c) {
+                parts.push(
+                    '## MATRIU · Competència ' + (c.frontmatter.id || competency) + '\n' +
+                    'Nom: ' + (c.frontmatter.name || '') + '\n' +
+                    'Objectiu: ' + (c.frontmatter.objective || '') + '\n\n' +
+                    (c.body || '').substring(0, 3000)
+                );
+                sources.push('matriu/competencies/' + competency + '.md');
+            }
+        }
+
+        if (skillSeed) {
+            const s = await this.getMatriuSkillSeed(skillSeed);
+            if (s) {
+                parts.push(
+                    '## MATRIU · Skill-seed ' + (s.frontmatter.id || skillSeed) + '\n' +
+                    (s.body || '')
+                );
+                sources.push('matriu/skill-seeds/' + skillSeed + '.md');
+            }
+        }
+
+        let systemPrompt = parts.join('\n\n---\n\n');
+        if (systemPrompt.length > maxChars) {
+            systemPrompt = systemPrompt.substring(0, maxChars) +
+                '\n\n[contexto Matriu truncado — ' + maxChars + ' chars max]';
+        }
+        return { systemPrompt, sources };
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  PERMISSIONS · taula per agent · agentPermissions.yaml
+    // ──────────────────────────────────────────────────────────────────────
+    static _permissionsCache = null;
+
+    static async loadAgentPermissions() {
+        if (this._permissionsCache) return this._permissionsCache;
+        try {
+            const res = await fetch('/config/agentPermissions.yaml');
+            if (!res.ok) {
+                this._permissionsCache = { agents: {} };
+                return this._permissionsCache;
+            }
+            const text = await res.text();
+            this._permissionsCache = this._parseAgentPermissionsYaml(text);
+            return this._permissionsCache;
+        } catch (e) {
+            this._permissionsCache = { agents: {} };
+            return this._permissionsCache;
+        }
+    }
+
+    // Mini-parser ad-hoc nested · estructura coneguda agents:>id:>{description,allowed[],forbidden_explicit[],requires_explicit_user_consent[]}
+    // El _parseYaml legacy només suporta 1 nivell · aquest n'aguanta 2 (agent → camps).
+    static _parseAgentPermissionsYaml(text) {
+        const result = { agents: {} };
+        const lines = String(text || '').split('\n');
+        let i = 0;
+        // Avança fins a "agents:"
+        while (i < lines.length && !/^agents:\s*$/.test(lines[i])) i++;
+        if (i >= lines.length) return result;
+        i++;
+        let currentAgent = null;
+        let currentList  = null;
+        let currentListIndent = 0;
+        while (i < lines.length) {
+            const line = lines[i];
+            if (/^\s*#/.test(line) || /^\s*$/.test(line)) { i++; continue; }
+            // Agent header · 2 espais indent · "  agent_xxx:"
+            const agentMatch = line.match(/^  ([a-zA-Z_][\w-]*):\s*$/);
+            if (agentMatch) {
+                currentAgent = agentMatch[1];
+                result.agents[currentAgent] = { allowed: [], forbidden_explicit: [], requires_explicit_user_consent: [] };
+                currentList = null;
+                i++;
+                continue;
+            }
+            if (!currentAgent) { i++; continue; }
+            // Camp scalar · "    description: ..."
+            const scalarMatch = line.match(/^    ([a-zA-Z_][\w-]*):\s*"?([^"\n]*?)"?\s*$/);
+            if (scalarMatch && scalarMatch[2] !== '') {
+                result.agents[currentAgent][scalarMatch[1]] = scalarMatch[2];
+                currentList = null;
+                i++;
+                continue;
+            }
+            // Camp llista · "    allowed:"
+            const listHeader = line.match(/^    ([a-zA-Z_][\w-]*):\s*$/);
+            if (listHeader) {
+                currentList = listHeader[1];
+                result.agents[currentAgent][currentList] = [];
+                i++;
+                continue;
+            }
+            // Item de llista · "      - "knowledge/matriu/...""
+            const itemMatch = line.match(/^      -\s+"?([^"\n]+?)"?\s*$/);
+            if (itemMatch && currentList) {
+                result.agents[currentAgent][currentList].push(itemMatch[1].replace(/\s+#.*$/, '').trim());
+                i++;
+                continue;
+            }
+            // Block scalar pipe/folded (descripció multi-línia) · saltem
+            if (/^\s+[|>]/.test(line)) { i++; continue; }
+            i++;
+        }
+        return result;
+    }
+
+    // canAgentRead · verifica permisos d'un agent per a un path.
+    // Regla férrea · `private/` denegat sempre · zero excepcions.
+    static async canAgentRead(agentId, path) {
+        if (!path) return false;
+        const normalized = String(path).replace(/\\/g, '/');
+        if (normalized.includes('private/') || normalized.includes('/private')) return false;
+        if (!agentId) return true;
+        const perms = await this.loadAgentPermissions();
+        const rules = perms.agents && perms.agents[agentId];
+        if (!rules) return true;
+        if (Array.isArray(rules.forbidden_explicit)) {
+            for (const p of rules.forbidden_explicit) {
+                if (this._matchPattern(p, normalized)) return false;
+            }
+        }
+        if (Array.isArray(rules.allowed) && rules.allowed.length > 0) {
+            for (const p of rules.allowed) {
+                if (this._matchPattern(p, normalized)) return true;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    // _matchPattern · glob simple · * = [^/]* · ** = .*
+    // v163.2 · sufix `/**` també matcheja el pare directe (semàntica natural:
+    // "aquest path o qualsevol descendent"). Necessari perquè els dominis Matriu
+    // són fitxers `.md` directes i el YAML usa `domains/d02-*/**`.
+    static _matchPattern(pattern, path) {
+        if (this._patternToRegex(pattern).test(path)) return true;
+        if (pattern.endsWith('/**')) {
+            const trimmed = pattern.slice(0, -3);
+            if (this._patternToRegex(trimmed).test(path))           return true;
+            if (this._patternToRegex(trimmed + '.md').test(path))   return true;
+        }
+        return false;
+    }
+
+    static _patternToRegex(pattern) {
+        return new RegExp(
+            '^' +
+            pattern
+                .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+                .replace(/\*\*/g, '@@DOUBLE@@')
+                .replace(/\*/g, '[^/]*')
+                .replace(/@@DOUBLE@@/g, '.*')
+            + '$'
+        );
+    }
+
+    // getBiographyFile · API explícita amb userConsent obligatori.
+    // Mai accessible per agents · stack-trace check defensiu.
+    static async getBiographyFile(filename, opts = {}) {
+        const { userConsent = false } = opts;
+        if (!userConsent) {
+            throw new Error('[KnowledgeLoader] getBiographyFile requires userConsent=true. Biography is private.');
+        }
+        const stack = (new Error()).stack || '';
+        if (/agent_|swarm_|orchestrat/i.test(stack)) {
+            console.error('[KnowledgeLoader] BLOCKED · biography access from agent-like caller');
+            throw new Error('Biography access denied for agent callers');
+        }
+        try {
+            const res = await fetch('/private/biography/' + filename);
+            if (!res.ok) return null;
+            return await res.text();
+        } catch (_) {
+            return null;
+        }
     }
 }
