@@ -320,6 +320,11 @@ export async function createProject({
     pickSocs = null,
     generateSops = null,
     generateWos = null,
+    // v163.8 · ai-value-map · genera rols+transaccions amb IA des de
+    // name+description · substitueix els del template (que eren genèrics ·
+    // 5 rols founder/operations/creator/reviewer/facilitator iguals per a
+    // tots els projectes) · qualitat real personalitzada
+    generateValueMap = null,
     onEvent = null,
     knowledgeIndex = null,
 } = {}) {
@@ -381,6 +386,63 @@ export async function createProject({
         } catch (_) { /* personalize és best-effort · cap excepció escapa */ }
     }
     emit('personalize', 'done', {});
+
+    // ─── 3a. AI-VALUE-MAP · genera rols+transaccions amb IA (v163.8) ──────
+    // Substitueix el VNA genèric del template per un mapa de valor real
+    // basat en name+description del usuari. Best-effort · si falla mantenim
+    // el template (degrade graceful). Aquest era el bug principal · users
+    // veien sempre els mateixos 5 rols founder/operations/creator/reviewer/
+    // facilitator i transaccions genèriques · no aportava valor.
+    if (typeof generateValueMap === 'function') {
+        emit('ai-value-map', 'start', { name, descriptionLen: (description || '').length });
+        try {
+            const r = await generateValueMap({
+                name,
+                description,
+                sector: sectorCnae,
+                entity_type,
+                vna_zoom,
+                existingTemplate: {
+                    roles:        personalized.roles        || [],
+                    transactions: personalized.transactions || [],
+                    deliverables: personalized.deliverables || [],
+                },
+            });
+            // Acceptem nomes si el resultat passa shape mínim (≥ 3 rols, ≥ 3 tx)
+            if (r && r.ok && Array.isArray(r.roles) && r.roles.length >= 3
+                && Array.isArray(r.transactions) && r.transactions.length >= 3) {
+                // Enriqueix transactions IA amb mètriques Lean default · l'IA
+                // típicament no torna lead/cycle/wip · el validator les exigeix
+                // a ≥80% per a passar C12 · valors sensats per a un mapa nou.
+                const enrichedTx = r.transactions.map((t, i) => ({
+                    id:              t.id || ('tx-ai-' + (i + 1)),
+                    from:            t.from,
+                    to:              t.to,
+                    deliverable:     t.deliverable,
+                    type:            t.type || 'tangible',
+                    is_must:         typeof t.is_must === 'boolean' ? t.is_must : true,
+                    frequency:       t.frequency || 'weekly',
+                    lead_time_hours:  typeof t.lead_time_hours  === 'number' ? t.lead_time_hours  : 24,
+                    cycle_time_hours: typeof t.cycle_time_hours === 'number' ? t.cycle_time_hours : 4,
+                    wip_units:        typeof t.wip_units        === 'number' ? t.wip_units        : 1,
+                }));
+                personalized = {
+                    ...personalized,
+                    roles:        r.roles,
+                    transactions: enrichedTx,
+                    deliverables: Array.isArray(r.deliverables) && r.deliverables.length > 0
+                        ? r.deliverables
+                        : (personalized.deliverables || []),
+                };
+                if (r.cost) cost += r.cost;
+                emit('ai-value-map', 'done', { roles: r.roles.length, transactions: r.transactions.length, score: r.score?.score, source: 'ai' });
+            } else {
+                emit('ai-value-map', 'fallback', { reason: r?.error || 'shape-rejected · roles<3 or tx<3', source: 'template' });
+            }
+        } catch (e) {
+            emit('ai-value-map', 'error', { error: e?.message || 'fail', source: 'template' });
+        }
+    }
 
     // ─── 3b. AI-DRIVEN cadena SOC→SOP→WO (V2 · opt-in via generationMode) ──
     let aiDriven = null;

@@ -151,6 +151,43 @@ export function buildAiCallbacks({
     };
 
     return {
+        // v163.8 · generateValueMap · IA-generat roles+transactions des de
+        // name+description · substitueix el VNA genèric del template
+        generateValueMap: async ({ name, description, sector, entity_type, vna_zoom, existingTemplate }) => {
+            const gp = await _ensureProvider();
+            if (!gp) { _logError('generate-value-map', new Error('no-provider')); return { ok: false, error: 'no-provider' }; }
+            try {
+                const { quickSuggestMap } = await import('./vnaQuickSuggest.js');
+                const r = await quickSuggestMap({
+                    context: { name, description, sector, entity_type, vna_zoom: vna_zoom || 'mid' },
+                    // NO passem existingMap · volem que la IA crei un mapa nou
+                    // basat NOMÉS en name+description (la queixa del usuari era
+                    // que el template imposava 5 rols genèrics)
+                    slim:                false,   // prompt full · qualitat
+                    qualityThreshold:    70,      // exigim score >= 70
+                    generateWithProvider: gp,
+                    preferredProvider:    await _ensurePreferred(),
+                });
+                if (!r || !r.ok) {
+                    _logError('generate-value-map', new Error(r?.error || 'unknown'));
+                    return { ok: false, error: r?.error || 'no-result' };
+                }
+                _report('generate-value-map', r.modelKey || null, r.cost || 0);
+                return {
+                    ok:           true,
+                    roles:        r.map.roles        || [],
+                    transactions: r.map.transactions || [],
+                    deliverables: r.map.deliverables || [],
+                    cost:         r.cost   || 0,
+                    score:        r.score  || null,
+                    modelKey:     r.modelKey || null,
+                };
+            } catch (e) {
+                _logError('generate-value-map', e);
+                return { ok: false, error: e?.message || 'fail' };
+            }
+        },
+
         pickSocs: async ({ candidates, ctx }) => {
             const gp = await _ensureProvider();
             if (!gp) { _logError('classify-and-pick-socs', new Error('no-provider')); return { selected: candidates.slice(0, 5), cost: 0 }; }
