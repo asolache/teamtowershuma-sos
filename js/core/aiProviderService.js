@@ -20,6 +20,28 @@
 
 import { AI_MODELS, estimateCostUsd } from './aiRouterService.js';
 
+// ── v163.7 · _fetchWithTimeout · evita penjades silencioses si LLM tarda
+// massa · 45s default cobreix el 99% de respostes anthropic/openai amb
+// 1800 max_tokens · si supera, abort i propagar error al runEscalation
+// perquè avanci al següent model de la cadena.
+const _DEFAULT_TIMEOUT_MS = 45_000;
+async function _fetchWithTimeout(url, opts = {}, timeoutMs = _DEFAULT_TIMEOUT_MS, fetchFn) {
+    const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const tid = setTimeout(() => { try { ctl?.abort(); } catch (_) {} }, timeoutMs);
+    try {
+        return await fetchFn(url, ctl ? { ...opts, signal: ctl.signal } : opts);
+    } catch (e) {
+        if (e?.name === 'AbortError') {
+            const err = new Error('llm-timeout · ' + timeoutMs + 'ms · url=' + url);
+            err.code = 'timeout';
+            throw err;
+        }
+        throw e;
+    } finally {
+        clearTimeout(tid);
+    }
+}
+
 // ── KB-bound API key loader · idempotent · cache 60s ───────────────────────
 const _apiKeyCache = new Map();   // provider → { key, fetchedAt }
 const _CACHE_TTL_MS = 60_000;
@@ -86,7 +108,7 @@ async function _anthropicGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch 
     };
     let res;
     try {
-        res = await fetchFn(ANTHROPIC_API, {
+        res = await _fetchWithTimeout(ANTHROPIC_API, {
             method:  'POST',
             headers: {
                 'x-api-key':         apiKey,
@@ -95,7 +117,7 @@ async function _anthropicGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch 
                 'anthropic-dangerous-direct-browser-access': 'true',
             },
             body: JSON.stringify(body),
-        });
+        }, 45_000, fetchFn);
     } catch (e) {
         throw new Error('anthropic · fetch failed · ' + (e?.message || 'unknown'));
     }
@@ -143,11 +165,11 @@ async function _openaiGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch !==
     };
     let res;
     try {
-        res = await fetchFn(OPENAI_API, {
+        res = await _fetchWithTimeout(OPENAI_API, {
             method:  'POST',
             headers: { 'Authorization': 'Bearer ' + apiKey, 'content-type': 'application/json' },
             body:    JSON.stringify(body),
-        });
+        }, 45_000, fetchFn);
     } catch (e) { throw new Error('openai · fetch failed · ' + (e?.message || 'unknown')); }
     if (!res.ok) {
         let detail = null;
@@ -191,11 +213,11 @@ async function _geminiGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch !==
     };
     let res;
     try {
-        res = await fetchFn(url, {
+        res = await _fetchWithTimeout(url, {
             method:  'POST',
             headers: { 'content-type': 'application/json' },
             body:    JSON.stringify(body),
-        });
+        }, 45_000, fetchFn);
     } catch (e) { throw new Error('gemini · fetch failed · ' + (e?.message || 'unknown')); }
     if (!res.ok) {
         let detail = null;
@@ -245,11 +267,11 @@ async function _deepseekGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch !
     };
     let res;
     try {
-        res = await fetchFn(DEEPSEEK_API, {
+        res = await _fetchWithTimeout(DEEPSEEK_API, {
             method:  'POST',
             headers: { 'Authorization': 'Bearer ' + apiKey, 'content-type': 'application/json' },
             body:    JSON.stringify(body),
-        });
+        }, 45_000, fetchFn);
     } catch (e) { throw new Error('deepseek · fetch failed · ' + (e?.message || 'unknown')); }
     if (!res.ok) {
         let detail = null;
@@ -293,11 +315,11 @@ async function _minimaxGenerate(modelKey, ctx = {}, { fetchFn = (typeof fetch !=
     };
     let res;
     try {
-        res = await fetchFn(MINIMAX_API, {
+        res = await _fetchWithTimeout(MINIMAX_API, {
             method:  'POST',
             headers: { 'Authorization': 'Bearer ' + apiKey, 'content-type': 'application/json' },
             body:    JSON.stringify(body),
-        });
+        }, 45_000, fetchFn);
     } catch (e) { throw new Error('minimax · fetch failed · ' + (e?.message || 'unknown')); }
     if (!res.ok) {
         let detail = null;

@@ -1,9 +1,27 @@
 [build]
   publish = "."
 
-# Sin cache — assets cambian frecuentemente
+# v163.7 · no-cache RECURSIU per JS · el patró /*.js de Netlify només
+# matcheja el root · /js/views/X.js i /js/core/X.js no els aplicaven cap-
+# çaleres · resultat · usuaris carregaven fitxers vells després del deploy.
+# Cobertura ampliada a tots els subdirectoris amb wildcards.
 [[headers]]
   for = "/*.js"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/js/*/*"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/js/*/*/*"
   [headers.values]
     Cache-Control = "no-cache, must-revalidate"
 

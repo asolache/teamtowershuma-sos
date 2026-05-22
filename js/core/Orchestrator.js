@@ -47,6 +47,17 @@ const KB_KEY_DEEPSEEK  = 'sos_key_deepseek';
 const KB_KEY_GEMINI    = 'sos_key_gemini';
 const KB_KEY_MINIMAX   = 'sos_key_minimax';
 
+// v163.7 · timeout per crida LLM · evita penjades silencioses si el proxy
+// o l'API tarda massa · 45s cobreix el 99% de respostes amb 8192 tokens
+const LLM_TIMEOUT_MS = 45_000;
+function _fetchWithTimeout(url, opts = {}) {
+    const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const tid = setTimeout(() => { try { ctl?.abort(); } catch (_) {} }, LLM_TIMEOUT_MS);
+    return fetch(url, ctl ? { ...opts, signal: ctl.signal } : opts)
+        .finally(() => clearTimeout(tid))
+        .catch(e => { if (e?.name === 'AbortError') { const err = new Error('llm-timeout · ' + LLM_TIMEOUT_MS + 'ms'); err.code = 'timeout'; throw err; } throw e; });
+}
+
 // ─── MINIMAX CONFIG ──────────────────────────────────────────────
 // platform.minimax.io · API internacional (https://api.minimax.io/v1).
 // Endpoint: /text/chatcompletion_v2 · body OpenAI-compatible.
@@ -226,7 +237,7 @@ class OrchestratorCore {
                             messages:    [{ role: 'user', content: userPrompt }]
                         };
 
-                        const response = await fetch(ANTHROPIC_PROXY_URL, {
+                        const response = await _fetchWithTimeout(ANTHROPIC_PROXY_URL, {
                             method:  'POST',
                             headers: { 'content-type': 'application/json' },
                             body:    JSON.stringify(requestBody)
@@ -253,7 +264,7 @@ class OrchestratorCore {
                             messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt + (responseFormat === 'json_object' ? '\n\nResponde ÚNICAMENTE con JSON válido.' : '') }]
                         };
                         if (responseFormat === 'json_object') body.response_format = { type: 'json_object' };
-                        const r = await fetch('/api/openai-proxy', {
+                        const r = await _fetchWithTimeout('/api/openai-proxy', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ apiKey, ...body })
                         });
@@ -270,7 +281,7 @@ class OrchestratorCore {
                             messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt + (responseFormat === 'json_object' ? '\n\nResponde ÚNICAMENTE con JSON válido.' : '') }]
                         };
                         if (responseFormat === 'json_object') body.response_format = { type: 'json_object' };
-                        const r = await fetch('/api/deepseek-proxy', {
+                        const r = await _fetchWithTimeout('/api/deepseek-proxy', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ apiKey, ...body })
                         });
@@ -286,7 +297,7 @@ class OrchestratorCore {
                         const models   = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
                         let gRes = null;
                         for (const m of models) {
-                            const r = await fetch('/api/gemini-proxy', {
+                            const r = await _fetchWithTimeout('/api/gemini-proxy', {
                                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     apiKey, model: m,
@@ -313,7 +324,7 @@ class OrchestratorCore {
                                 { role: 'user',   content: userPrompt + (responseFormat === 'json_object' ? '\n\nResponde ÚNICAMENTE con JSON válido.' : '') }
                             ]
                         };
-                        const r = await fetch('/api/minimax-proxy', {
+                        const r = await _fetchWithTimeout('/api/minimax-proxy', {
                             method:  'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body:    JSON.stringify({ apiKey, ...body })
